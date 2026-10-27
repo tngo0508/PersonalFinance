@@ -27,7 +27,7 @@
     let countdown = null;
     let announcement = null;
     let lastActivityWrite = 0;
-    let checkInPending = false;
+    let signingOut = false;
     let leaving = false;
     let tickTimer = null;
     // Used when localStorage is unavailable (private mode, blocked storage): the tab counts on its own.
@@ -126,64 +126,64 @@
      * @returns {Promise<void>}
      */
     async function signOut (idle) {
-        if (leaving) {
+        if (signingOut || leaving) {
             return;
         }
+        signingOut = true;
         window.clearInterval(tickTimer);
         try {
-            await fetch(config.logoutUrl, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'RequestVerificationToken': window.PFUtils.getAntiForgeryToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
+            await postWithToken(config.logoutUrl);
         } catch (error) {
             // Offline or already signed out: the cookie's own expiry still ends the session.
         }
-        write(KEYS.signedOut, JSON.stringify({ idle: idle, at: Date.now() }));
+        announceSignedOut(idle);
         goToLogin(idle);
     }
 
     /**
-     * Tell the server the user is still here; this renews the sign-in cookie. One check-in at a time.
+     * Tell the other tabs this tab is signed out, so they go to Login too.
+     * @param {boolean} idle - Whether the sign-out was for inactivity.
      * @returns {void}
      */
-    function checkIn () {
-        if (checkInPending || leaving) {
-            return;
-        }
-        checkInPending = true;
-        postCheckIn().finally(() => {
-            checkInPending = false;
+    function announceSignedOut (idle) {
+        write(KEYS.signedOut, JSON.stringify({ idle: idle, at: Date.now() }));
+    }
+
+    /**
+     * POST with the antiforgery token, marked as a script request so a signed-out answer is 401, not a redirect.
+     * @param {string} url - The URL to post to.
+     * @returns {Promise<Response>} The response.
+     */
+    function postWithToken (url) {
+        return fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'RequestVerificationToken': window.PFUtils.getAntiForgeryToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
     }
 
     /**
-     * POST the check-in: a 401 means the server already signed the Account out.
+     * Tell the server the user is still here; this renews the sign-in cookie. The attempt is recorded before it is
+     * sent, so no other tab sends one at the same time and a failure waits for the next 5-minute slot. A 401 means the
+     * server already signed the Account out.
      * @returns {Promise<void>}
      */
-    async function postCheckIn () {
-        const startedAt = Date.now();
+    async function checkIn () {
+        if (leaving) {
+            return;
+        }
+        write(KEYS.lastCheckIn, Date.now());
         try {
-            const response = await fetch(config.checkInUrl, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'RequestVerificationToken': window.PFUtils.getAntiForgeryToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
+            const response = await postWithToken(config.checkInUrl);
             if (response.status === 401) {
+                announceSignedOut(true);
                 goToLogin(true);
-                return;
-            }
-            if (response.ok) {
-                write(KEYS.lastCheckIn, startedAt);
             }
         } catch (error) {
-            // Network failure: the next tick tries again.
+            // Network failure: the next check-in after new input tries again.
         }
     }
 
@@ -329,9 +329,7 @@
         const form = event.target;
         const action = form && form.getAttribute ? form.getAttribute('action') || '' : '';
         if (action.split('?')[0].toLowerCase() === config.logoutUrl.toLowerCase()) {
-            leaving = true;
-            window.clearInterval(tickTimer);
-            write(KEYS.signedOut, JSON.stringify({ idle: false, at: Date.now() }));
+            announceSignedOut(false);
         }
     }
 

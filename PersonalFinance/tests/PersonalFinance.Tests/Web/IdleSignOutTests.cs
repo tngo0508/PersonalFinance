@@ -82,7 +82,7 @@ public class IdleSignOutTests
     [Fact]
     public async Task CheckIn_RenewsTheCookie()
     {
-        CookieValidatePrincipalContext context = await ValidateAsync(HttpMethods.Post, IdleSignOutController.CheckInPath);
+        CookieValidatePrincipalContext context = await ValidateAsync(HttpMethods.Post, IdleSignOutOptions.CheckInPath);
 
         Assert.True(context.ShouldRenew);
     }
@@ -111,7 +111,7 @@ public class IdleSignOutTests
         };
         IdleSignOutCookie.RenewOnCheckIn(events);
 
-        CookieValidatePrincipalContext context = CreateValidateContext(HttpMethods.Post, IdleSignOutController.CheckInPath);
+        CookieValidatePrincipalContext context = CreateValidateContext(HttpMethods.Post, IdleSignOutOptions.CheckInPath);
         await events.OnValidatePrincipal(context);
 
         Assert.Null(context.Principal);
@@ -128,8 +128,8 @@ public class IdleSignOutTests
         Assert.Null(checkIn.GetCustomAttribute<AllowAnonymousAttribute>());
         Assert.NotNull(checkIn.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>());
         HttpPostAttribute post = Assert.Single(checkIn.GetCustomAttributes<HttpPostAttribute>());
-        RouteAttribute route = typeof(IdleSignOutController).GetCustomAttribute<RouteAttribute>()!;
-        Assert.Equal(IdleSignOutController.CheckInPath, $"/{route.Template}/{post.Template}");
+        Assert.Equal("/idle-sign-out/check-in", post.Template);
+        Assert.Null(typeof(IdleSignOutController).GetCustomAttribute<RouteAttribute>());
     }
 
     [Fact]

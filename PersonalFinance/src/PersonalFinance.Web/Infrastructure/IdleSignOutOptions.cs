@@ -8,6 +8,9 @@ public sealed class IdleSignOutOptions
 {
     public const string SectionName = "IdleSignOut";
 
+    /// <summary>The browser's check-in, which renews the cookie (<c>IdleSignOutController.CheckIn</c>).</summary>
+    public const string CheckInPath = "/idle-sign-out/check-in";
+
     /// <summary>Minutes with no user activity before the Account is signed out.</summary>
     public int TimeoutMinutes { get; set; } = 30;
 

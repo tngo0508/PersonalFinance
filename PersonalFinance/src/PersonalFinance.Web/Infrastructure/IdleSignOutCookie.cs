@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
-using PersonalFinance.Web.Controllers;
 
 namespace PersonalFinance.Web.Infrastructure;
 
@@ -53,5 +52,5 @@ internal static class IdleSignOutCookie
 
     private static bool IsCheckIn(HttpRequest request) =>
         HttpMethods.IsPost(request.Method) &&
-        request.Path.Equals(IdleSignOutController.CheckInPath, StringComparison.OrdinalIgnoreCase);
+        request.Path.Equals(IdleSignOutOptions.CheckInPath, StringComparison.OrdinalIgnoreCase);
 }
