@@ -1,11 +1,9 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -170,12 +168,7 @@ public class ExternalAuthenticationTests
 
     private static ServiceProvider BuildTestServiceProvider(string? googleClientId = null, string? googleClientSecret = null)
     {
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddSingleton<IWebHostEnvironment, TestWebHostEnvironment>();
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseInMemoryDatabase($"AuthTest_{Guid.NewGuid():N}"));
-        services.AddDefaultIdentity<IdentityUser>().AddEntityFrameworkStores<AppDbContext>();
+        IServiceCollection services = IdentityHarness.RegisterIdentity("AuthTest");
 
         if (!string.IsNullOrEmpty(googleClientId) && !string.IsNullOrEmpty(googleClientSecret))
         {
