@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [12.2.0] - 2026-10-27
+
+### Added
+
+- **Convertible Currencies**: a new list in Shared of the 11 currencies the coming currency converter can convert between (USD, VND, JPY, EUR, GBP, CNY, KRW, THB, SGD, AUD, CAD), each with its ISO 4217 minor units and a translated display name (#445, map #433).
+  - It sits beside the Supported Currencies and includes all of them. Amounts still store only USD or VND: a JPY amount is still rejected.
+
+### Changed
+
+- **Daily rates for every Convertible Currency**: the daily rate refresh now stores a USD rate for all 10 non-USD Convertible Currencies, not just VND. Each new currency fills its history from 2015-01-01 on the first run, from Frankfurter, with the currency-api as the latest-rate fallback. No schema change.
+- **Docs**: the glossary defines Convertible Currency, and ADR 0016 notes that rates are stored for the Convertible Currencies while amounts stay on the Supported Currencies.
+
 ## [12.1.0] - 2026-10-26
 
 ### Added

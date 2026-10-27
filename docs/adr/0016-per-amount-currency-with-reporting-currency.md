@@ -23,6 +23,9 @@ Wayfinder map #335 (tickets #337, #342, #343).
    Same-currency items short-circuit. A missing rate is shown, never silently zero.
 4. **Rates are system data**: an `ExchangeRate` table (USD base only, inverse computed) filled daily by a refresher from
    Frankfurter (primary) and fawazahmed0 currency-api (fallback), both key-free and licence-compatible with ADR 0009.
+   The refresher quotes every Convertible Currency, not only the Supported Currencies, using Frankfurter's blended rate
+   for all of them; the converter names the source and the rate's date. Amounts still store only a Supported Currency
+   (amended 2026-10-27, map #433).
 
 ## Considered Options
 

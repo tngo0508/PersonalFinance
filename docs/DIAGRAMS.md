@@ -889,8 +889,8 @@ The Research dashboard never calls a data source from a request. A daily job reb
 dataset from official public sources ([ADR 0012](adr/0012-research-data-from-official-public-sources.md)); the pages
 read those rows. Security identifiers are used in memory during a refresh and never stored ([ADR
 0010](adr/0010-research-never-stores-security-identifiers.md)). The same job adds the day's exchange rates
-([ADR 0016](adr/0016-per-amount-currency-with-reporting-currency.md)): `FxRatesRefresher` reads Frankfurter from the day
-after its latest stored rate and, when Frankfurter fails, the currency-api's latest rate instead. It needs no SEC
+([ADR 0016](adr/0016-per-amount-currency-with-reporting-currency.md)): `FxRatesRefresher` reads Frankfurter, for each Convertible
+Currency but USD, from the day after its latest stored rate (or 2015-01-01) and, when Frankfurter fails, the currency-api's latest rate instead. It needs no SEC
 contact, so it runs even when the SEC datasets are skipped.
 
 ```mermaid
