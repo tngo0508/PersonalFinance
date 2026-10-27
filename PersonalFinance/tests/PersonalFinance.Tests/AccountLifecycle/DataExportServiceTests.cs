@@ -76,8 +76,8 @@ public class DataExportServiceTests
         // Exactly one record per section, so a section without a text field cannot leak the other Account's row.
         AssertOneOfEverything(export);
         Assert.Equal("mine name", export.Community.Pseudonym);
-        Assert.Equal((await db.CommunityStories.SingleAsync(s => s.UserId == UserId)).Id,
-            Assert.Single(export.Community.Comments).StoryId);
+        Assert.Equal((await db.CommunityStrategies.SingleAsync(s => s.UserId == UserId)).Id,
+            Assert.Single(export.Community.Comments).StrategyId);
         string json = JsonSerializer.Serialize(export);
         Assert.Contains("mine", json);
         Assert.DoesNotContain("theirs", json);
@@ -197,9 +197,8 @@ public class DataExportServiceTests
         Assert.Equal("Regular", Assert.Single(Assert.Single(export.SavingsGoals).Contributions).Kind);
         Assert.Single(export.SavedArticles);
         Assert.Single(export.PriorityWalks);
-        Assert.Single(export.Community.Stories);
+        Assert.Equal("Approved", Assert.Single(export.Community.Strategies).Status);
         Assert.Single(export.Community.Comments);
-        Assert.Single(export.Community.StoryLikes);
         Assert.Single(export.Community.CommentLikes);
         Assert.Equal("Yes", Assert.Single(export.Community.PollVotes).Answer);
         Assert.Equal("Idea", Assert.Single(export.Feedback).Category);
@@ -300,7 +299,7 @@ public class DataExportServiceTests
         Assert.Null(export.BudgetDataSource);
         Assert.Null(export.Language);
         Assert.Empty(export.BudgetTransactions);
-        Assert.Empty(export.Community.Stories);
+        Assert.Empty(export.Community.Strategies);
     }
 
     [Fact]
@@ -311,7 +310,6 @@ public class DataExportServiceTests
 
         AzureSqlTranslation.AssertTranslates(service.BudgetTransactionsQuery(UserId));
         AzureSqlTranslation.AssertTranslates(service.BudgetMonthLinesQuery(UserId));
-        AzureSqlTranslation.AssertTranslates(service.StoryLikesQuery(UserId));
         AzureSqlTranslation.AssertTranslates(service.PollVotesQuery(UserId));
         AzureSqlTranslation.AssertTranslates(service.AccountRolesQuery(UserId));
     }

@@ -1,15 +1,20 @@
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.ApiService.Infrastructure;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Community;
+using PersonalFinance.Shared.Enums;
 using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Features.Community;
 
 /// <summary>
-/// RESTful API controller for the Guild Hall (the Community Feature): the Pseudonym, polls, comments, stories and
+/// RESTful API controller for the Guild Hall (the Community Feature): the Pseudonym, polls, comments, Strategies and
 /// likes. All endpoints are scoped to the current user identified by the authenticated Account (see
-/// XUserIdAuthenticationHandler); the author of a post is always that Account.
+/// XUserIdAuthenticationHandler); the author of a post is always that Account. Reviewing Strategies requires the
+/// Admin Policy.
 /// </summary>
 [Authorize]
 [ApiController]
@@ -18,22 +23,30 @@ namespace PersonalFinance.ApiService.Features.Community;
 public class CommunityController : ControllerBase
 {
     private readonly ICommunityService _communityService;
+    private readonly IValidator<CommunityStrategyRequestDto> _strategyValidator;
+    private readonly IValidator<CommunityStrategyReviewRequestDto> _reviewValidator;
 
-    public CommunityController(ICommunityService communityService)
+    public CommunityController(ICommunityService communityService,
+        IValidator<CommunityStrategyRequestDto> strategyValidator,
+        IValidator<CommunityStrategyReviewRequestDto> reviewValidator)
     {
         _communityService = communityService;
+        _strategyValidator = strategyValidator;
+        _reviewValidator = reviewValidator;
     }
 
     /// <summary>
-    /// Gets the full Guild Hall data (the viewer's Pseudonym, polls, stories, comments) for a user.
+    /// Gets the full Guild Hall data (the viewer's Pseudonym, polls, the board's Strategies, comments) for a user,
+    /// with the board limited to <paramref name="category"/> when one is given.
     /// </summary>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<CommunityResponseDto>> GetCommunity(
+        [FromQuery] string? category = null,
         CancellationToken cancellationToken = default)
     {
         string userId = User.GetUserId();
-        CommunityResponseDto response = await _communityService.GetCommunityAsync(userId, cancellationToken);
+        CommunityResponseDto response = await _communityService.GetCommunityAsync(userId, category, cancellationToken);
         return Ok(response);
     }
 
@@ -64,7 +77,7 @@ public class CommunityController : ControllerBase
     }
 
     /// <summary>
-    /// Adds a comment to a poll or story under the user's Pseudonym.
+    /// Adds a comment to a poll or an Approved Strategy under the user's Pseudonym.
     /// </summary>
     [HttpPost("comment")]
     [ProducesResponseType(StatusCodes.Status201Created)]
@@ -107,61 +120,68 @@ public class CommunityController : ControllerBase
     }
 
     /// <summary>
-    /// Submits a new community story under the user's Pseudonym.
+    /// Pins a Strategy under the user's Pseudonym. It is stored Pending and only its author sees it until an Admin
+    /// approves it. A money amount does not reject it; the Admin queue flags it.
     /// </summary>
-    [HttpPost("story")]
+    [HttpPost("strategies")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<CommunityStoryDto>> SubmitStory(
-        [FromBody] CommunityStoryRequestDto request,
+    public async Task<ActionResult<CommunityStrategyDto>> SubmitStrategy(
+        [FromBody] CommunityStrategyRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        string userId = User.GetUserId();
-        CommunityStoryDto story = await _communityService.SubmitStoryAsync(userId, request, cancellationToken);
-        return CreatedAtAction(nameof(GetCommunity), story);
+        ValidationResult validation = await _strategyValidator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
+        {
+            return BadRequest(validation.ToApiError());
+        }
+
+        CommunityStrategyDto strategy = await _communityService.SubmitStrategyAsync(User.GetUserId(), request, cancellationToken);
+        return CreatedAtAction(nameof(GetCommunity), strategy);
     }
 
     /// <summary>
-    /// Toggles a like on a story.
+    /// Lists the Strategies in <paramref name="status"/> for the Admin queue (Pending by default), oldest first.
     /// </summary>
-    [HttpPost("story/{storyId}/like")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<StoryLikeResult>> ToggleStoryLike(
-        int storyId,
+    [HttpGet("strategies/review")]
+    [Authorize(Policy = AppPolicies.RequireAdmin)]
+    [ProducesResponseType(typeof(List<CommunityStrategyReviewItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<List<CommunityStrategyReviewItemDto>>> ListStrategiesForReview(
+        [FromQuery] CommunityStrategyStatus status = CommunityStrategyStatus.Pending,
         CancellationToken cancellationToken = default)
     {
-        string userId = User.GetUserId();
-        StoryLikeResult result = await _communityService.ToggleStoryLikeAsync(userId, storyId, cancellationToken);
-        return Ok(result);
+        if (!Enum.IsDefined(status))
+        {
+            throw new ApiErrorException(ApiErrorKeys.Community.StrategyReviewStatus, "Unknown Strategy status.",
+                nameof(status));
+        }
+
+        return Ok(await _communityService.ListStrategiesForReviewAsync(status, cancellationToken));
     }
 
     /// <summary>
-    /// Gets all community stories for the current user.
+    /// Approves or rejects a Strategy. Unknown (or soft-deleted) Strategies return 404.
     /// </summary>
-    [HttpGet("Stories")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<CommunityStoryDto>>> GetStories(
-        CancellationToken cancellationToken = default)
-    {
-        string userId = User.GetUserId();
-        CommunityResponseDto response = await _communityService.GetCommunityAsync(userId, cancellationToken);
-        return Ok(response.Stories ?? new List<CommunityStoryDto>());
-    }
-
-    /// <summary>
-    /// Gets a single story by ID.
-    /// </summary>
-    [HttpGet("story/{storyId}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [HttpPut("strategies/{strategyId:int}/status")]
+    [Authorize(Policy = AppPolicies.RequireAdmin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<CommunityStoryDto>> GetStoryById(
-        int storyId,
+    public async Task<IActionResult> ReviewStrategy(int strategyId,
+        [FromBody] CommunityStrategyReviewRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        string userId = User.GetUserId();
-        CommunityStoryDto? story = await _communityService.GetStoryByIdAsync(userId, storyId, cancellationToken);
-        if (story == null)
-            return NotFound();
-        return Ok(story);
+        ValidationResult validation = await _reviewValidator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
+        {
+            return BadRequest(validation.ToApiError());
+        }
+
+        return await _communityService.ReviewStrategyAsync(strategyId, request.Status, cancellationToken)
+            ? NoContent()
+            : NotFound();
     }
 }

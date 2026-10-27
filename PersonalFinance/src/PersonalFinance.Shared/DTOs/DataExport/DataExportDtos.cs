@@ -330,28 +330,32 @@ public class DataExportCommunityDto
     /// <summary>The Account's Pseudonym; null if it has never opened the Guild Hall.</summary>
     public string? Pseudonym { get; set; }
 
-    public List<DataExportStoryDto> Stories { get; set; } = [];
+    /// <summary>The Account's Strategies in every status, oldest first.</summary>
+    public List<DataExportStrategyDto> Strategies { get; set; } = [];
 
     public List<DataExportCommentDto> Comments { get; set; } = [];
-
-    public List<DataExportStoryLikeDto> StoryLikes { get; set; } = [];
 
     public List<DataExportCommentLikeDto> CommentLikes { get; set; } = [];
 
     public List<DataExportPollVoteDto> PollVotes { get; set; } = [];
 }
 
-public class DataExportStoryDto
+public class DataExportStrategyDto
 {
-    public string Title { get; set; } = string.Empty;
-
-    public string Summary { get; set; } = string.Empty;
-
-    public string Body { get; set; } = string.Empty;
-
     public string Category { get; set; } = string.Empty;
 
-    public DateTime PublishedAtUtc { get; set; }
+    public string Title { get; set; } = string.Empty;
+
+    public string Tried { get; set; } = string.Empty;
+
+    public string Happened { get; set; } = string.Empty;
+
+    public string Keeping { get; set; } = string.Empty;
+
+    /// <summary>Pending, Approved or Rejected.</summary>
+    public string Status { get; set; } = string.Empty;
+
+    public DateTime CreatedAtUtc { get; set; }
 }
 
 public class DataExportCommentDto
@@ -361,18 +365,8 @@ public class DataExportCommentDto
     /// <summary>The poll the comment was posted on, if any.</summary>
     public int? PollId { get; set; }
 
-    /// <summary>The story the comment was posted on, if any.</summary>
-    public int? StoryId { get; set; }
-
-    public DateTime CreatedAtUtc { get; set; }
-}
-
-public class DataExportStoryLikeDto
-{
-    public int StoryId { get; set; }
-
-    /// <summary>The liked story's title; null when the story is no longer available.</summary>
-    public string? StoryTitle { get; set; }
+    /// <summary>The Strategy the comment was posted on, if any.</summary>
+    public int? StrategyId { get; set; }
 
     public DateTime CreatedAtUtc { get; set; }
 }

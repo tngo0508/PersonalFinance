@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Community;
+using PersonalFinance.Shared.Enums;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
 using PersonalFinance.Web.Models.Community;
@@ -13,8 +14,8 @@ namespace PersonalFinance.Tests.Community;
 
 /// <summary>
 /// The Guild Hall page's controller over a faked ApiService: the view gets the viewer's Pseudonym and each post's
-/// author as the API reports it, a Former member's post is labelled in the request's Language, and the re-roll answers
-/// with the new name.
+/// author as the API reports it, the board is filtered only by a known category, a Former member's post is labelled in
+/// the request's Language, the re-roll answers with the new name, and a pinned Strategy answers with its waiting note.
 /// </summary>
 public class CommunityControllerTests
 {
@@ -25,10 +26,10 @@ public class CommunityControllerTests
         proxy.Returns(nameof(ICommunityApi.GetCommunityAsync), new CommunityResponseDto
         {
             Pseudonym = "Steady Heron",
-            Stories =
+            Strategies =
             [
-                new CommunityStoryDto { Id = 1, AuthorPseudonym = "Quiet Kestrel" },
-                new CommunityStoryDto { Id = 2, AuthorPseudonym = null },
+                new CommunityStrategyDto { Id = 1, AuthorPseudonym = "Steady Heron", IsOwn = true, Status = CommunityStrategyStatus.Pending },
+                new CommunityStrategyDto { Id = 2, AuthorPseudonym = null, Status = CommunityStrategyStatus.Approved },
             ],
             RecentComments = [new CommunityCommentDto { Id = 3, AuthorPseudonym = "Steady Heron", IsOwn = true }],
         });
@@ -37,12 +38,72 @@ public class CommunityControllerTests
 
         CommunityViewModel model = Assert.IsType<CommunityViewModel>(view.Model);
         Assert.Equal("Steady Heron", model.Pseudonym);
-        Assert.Collection(model.Stories,
-            story => Assert.Equal("Quiet Kestrel", story.AuthorPseudonym),
-            story => Assert.Null(story.AuthorPseudonym));
+        Assert.Null(model.Category);
+        Assert.Collection(model.Strategies,
+            strategy =>
+            {
+                Assert.Equal("Steady Heron", strategy.AuthorPseudonym);
+                Assert.True(strategy.IsOwn);
+                Assert.Equal(CommunityStrategyStatus.Pending, strategy.Status);
+            },
+            strategy => Assert.Null(strategy.AuthorPseudonym));
         CommunityComment comment = Assert.Single(model.RecentComments);
         Assert.Equal("Steady Heron", comment.AuthorPseudonym);
         Assert.True(comment.IsOwn);
+    }
+
+    [Theory]
+    [InlineData("Debt", "Debt")]
+    [InlineData("Lottery", null)]
+    [InlineData(null, null)]
+    public async Task Index_FiltersTheBoard_OnlyByOneOfTheBoardsCategories(string? asked, string? filter)
+    {
+        (ICommunityApi api, ApiProxy<ICommunityApi> proxy) = ApiProxy.Create<ICommunityApi>();
+        proxy.Returns(nameof(ICommunityApi.GetCommunityAsync), new CommunityResponseDto());
+
+        ViewResult view = Assert.IsType<ViewResult>(await CreateController(api).Index(asked));
+
+        Assert.Equal(filter, Assert.IsType<CommunityViewModel>(view.Model).Category);
+        Assert.Equal(filter, proxy.Arguments.Single()[0]);
+    }
+
+    [Fact]
+    public async Task SubmitStrategy_AnswersWithTheWaitingNote_ItsCategoryInTheRequestLanguage()
+    {
+        using var culture = new UiCultureScope("vi");
+        (ICommunityApi api, ApiProxy<ICommunityApi> proxy) = ApiProxy.Create<ICommunityApi>();
+        proxy.Returns(nameof(ICommunityApi.SubmitStrategyAsync), new CommunityStrategyDto
+        {
+            Id = 5,
+            AuthorPseudonym = "Kind Otter",
+            IsOwn = true,
+            Category = "Groceries",
+            Title = "Pantry audit",
+            Tried = "t",
+            Happened = "h",
+            Keeping = "k",
+            Status = CommunityStrategyStatus.Pending,
+        });
+
+        JsonResult json = Assert.IsType<JsonResult>(await CreateController(api).SubmitStrategy(
+            new CommunityController.StrategyRequest { Category = "Groceries", Title = "Pantry audit", Tried = "t", Happened = "h", Keeping = "k" }));
+
+        CommunityStrategyRequestDto sent = Assert.IsType<CommunityStrategyRequestDto>(proxy.Arguments.Single()[0]);
+        Assert.Equal("Pantry audit", sent.Title);
+        using JsonDocument answer = JsonDocument.Parse(JsonSerializer.Serialize(json.Value));
+        JsonElement strategy = answer.RootElement.GetProperty("strategy");
+        Assert.True(answer.RootElement.GetProperty("success").GetBoolean());
+        Assert.Equal(5, strategy.GetProperty("id").GetInt32());
+        Assert.Equal(TestLocalization.Vietnamese("Community.Category.Groceries"), strategy.GetProperty("category").GetString());
+        Assert.Equal("Kind Otter", strategy.GetProperty("author").GetString());
+        Assert.Equal("Pantry audit", strategy.GetProperty("title").GetString());
+    }
+
+    [Fact]
+    public void SubmitStrategy_ValidatesTheAntiforgeryToken()
+    {
+        Assert.NotNull(typeof(CommunityController).GetMethod(nameof(CommunityController.SubmitStrategy))!
+            .GetCustomAttributes(typeof(ValidateAntiForgeryTokenAttribute), inherit: false).SingleOrDefault());
     }
 
     [Fact]

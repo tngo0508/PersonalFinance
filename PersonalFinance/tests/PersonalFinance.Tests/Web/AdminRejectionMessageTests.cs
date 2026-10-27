@@ -59,7 +59,8 @@ public class AdminRejectionMessageTests
         var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "admin-user")], "TestAuthType");
         var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
 
-        return new AdminController(adminApi, feedbackApi, NullLogger<AdminController>.Instance, TestLocalization.Localizer)
+        return new AdminController(adminApi, feedbackApi, ApiProxy.Create<ICommunityApi>().Api,
+            NullLogger<AdminController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext { HttpContext = httpContext },
             TempData = new TempDataDictionary(httpContext, new TestTempDataProvider())
