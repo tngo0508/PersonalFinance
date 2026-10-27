@@ -8,6 +8,7 @@ using PersonalFinance.ApiService.Features.Analysis;
 using PersonalFinance.ApiService.Features.BudgetPlanner;
 using PersonalFinance.ApiService.Features.BudgetTracker;
 using PersonalFinance.ApiService.Features.Community;
+using PersonalFinance.ApiService.Features.CurrencyConverter;
 using PersonalFinance.ApiService.Features.Dashboard;
 using PersonalFinance.ApiService.Features.Feedback;
 using PersonalFinance.ApiService.Features.GoogleDrive;
@@ -77,7 +78,8 @@ try
         .AddFeedbackFeature()
         .AddAdminFeature()
         .AddAccountLifecycleFeature()
-        .AddMoneyPrioritiesFeature();
+        .AddMoneyPrioritiesFeature()
+        .AddCurrencyConverterFeature();
 
     // HTTP: controllers, FluentValidation validators, RFC 7807 ProblemDetails, OpenAPI document.
     builder.Services.AddControllers(options => options.Filters.Add<ApiErrorExceptionFilter>())

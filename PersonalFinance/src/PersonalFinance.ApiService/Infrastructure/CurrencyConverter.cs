@@ -50,9 +50,10 @@ internal sealed class CurrencyConverter : ICurrencyConverter
     public async Task<ReportingConversion> PrepareAsync(string reportingCurrency, IEnumerable<MoneyAt> amounts,
         CancellationToken cancellationToken = default)
     {
-        SupportedCurrency reporting = SupportedCurrencies.Find(reportingCurrency)
-                                      ?? throw new ArgumentException($"'{reportingCurrency}' is not a supported currency.",
-                                          nameof(reportingCurrency));
+        ConvertibleCurrency reporting = ConvertibleCurrencies.Find(reportingCurrency)
+                                        ?? throw new ArgumentException(
+                                            $"'{reportingCurrency}' is not a convertible currency.",
+                                            nameof(reportingCurrency));
         DateOnly today = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
 
         var keys = new HashSet<RateKey>();
@@ -117,9 +118,9 @@ internal sealed class CurrencyConverter : ICurrencyConverter
         List<ExchangeRateRow> window = (await Rows(quote)
                 .Where(r => r.Date >= from && r.Date <= to)
                 .OrderBy(r => r.Date)
-                .Select(r => new { r.Date, r.Rate })
+                .Select(r => new { r.Date, r.Rate, r.Source })
                 .ToListAsync(cancellationToken))
-            .Select(r => new ExchangeRateRow(r.Date, r.Rate))
+            .Select(r => new ExchangeRateRow(r.Date, r.Rate, r.Source))
             .ToList();
 
         // The rate before the window, so a day whose nearest prior rate lies further back than the look-back still finds it.
@@ -145,9 +146,9 @@ internal sealed class CurrencyConverter : ICurrencyConverter
 
         var latest = await rows
             .OrderByDescending(r => r.Date)
-            .Select(r => new { r.Date, r.Rate })
+            .Select(r => new { r.Date, r.Rate, r.Source })
             .FirstOrDefaultAsync(cancellationToken);
-        return latest is null ? null : new ExchangeRateRow(latest.Date, latest.Rate);
+        return latest is null ? null : new ExchangeRateRow(latest.Date, latest.Rate, latest.Source);
     }
 
     private void Store(RateKey key, ExchangeRateRow? row, Dictionary<RateKey, ExchangeRateRow?> rates)
