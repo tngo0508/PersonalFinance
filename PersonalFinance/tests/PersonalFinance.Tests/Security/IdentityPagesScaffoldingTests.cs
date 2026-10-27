@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
 using PersonalFinance.Data;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Areas.Identity.Pages.Account;
@@ -241,20 +240,5 @@ public class IdentityPagesScaffoldingTests
             var values = new RouteValueDictionary(routeContext.Values);
             return $"{routeContext.Protocol}://app.test/{values["area"]}{values["page"]}";
         }
-    }
-
-    private sealed class TestWebHostEnvironment : IWebHostEnvironment
-    {
-        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
-
-        public string WebRootPath { get; set; } = AppContext.BaseDirectory;
-
-        public string ApplicationName { get; set; } = "PersonalFinance.Web";
-
-        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
-
-        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
-
-        public string EnvironmentName { get; set; } = "Development";
     }
 }

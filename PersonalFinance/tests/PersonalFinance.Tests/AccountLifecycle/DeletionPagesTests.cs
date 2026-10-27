@@ -14,7 +14,6 @@ using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using PersonalFinance.Data;
@@ -368,20 +367,5 @@ public class DeletionPagesTests
             var values = new RouteValueDictionary(routeContext.Values);
             return $"{routeContext.Protocol}://app.test/{values["area"]}{values["page"]}?token={values["token"]}";
         }
-    }
-
-    private sealed class TestWebHostEnvironment : IWebHostEnvironment
-    {
-        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
-
-        public string WebRootPath { get; set; } = AppContext.BaseDirectory;
-
-        public string ApplicationName { get; set; } = "PersonalFinance.Web";
-
-        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
-
-        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
-
-        public string EnvironmentName { get; set; } = "Development";
     }
 }

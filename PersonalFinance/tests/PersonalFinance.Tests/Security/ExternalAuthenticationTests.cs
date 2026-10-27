@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using PersonalFinance.Data;
@@ -199,15 +198,5 @@ public class ExternalAuthenticationTests
         ServiceProvider provider = services.BuildServiceProvider();
         provider.GetRequiredService<AppDbContext>().Database.EnsureCreated();
         return provider;
-    }
-
-    private sealed class TestWebHostEnvironment : IWebHostEnvironment
-    {
-        public string WebRootPath { get; set; } = string.Empty;
-        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
-        public string ApplicationName { get; set; } = "PersonalFinance.Web";
-        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
-        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
-        public string EnvironmentName { get; set; } = "Development";
     }
 }
