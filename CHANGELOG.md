@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [12.3.3] - 2026-10-27
+
+### Changed
+
+- **Sidebar duplicates removed**: the sidebar no longer repeats the Admin Dashboard and Send feedback links, which stay in the account menu and the footer (#452).
+  - Admins open the Admin Dashboard from the account menu; signed-in Accounts send feedback from the footer link. The unused `Shell.Nav.Admin` and `Shell.Nav.AdminDashboard` resources are removed.
+  - On phones the footer now clears the fixed bottom navigation, so its last links, Send feedback among them, are no longer hidden behind it.
+
 ## [12.3.2] - 2026-10-27
 
 ### Changed
