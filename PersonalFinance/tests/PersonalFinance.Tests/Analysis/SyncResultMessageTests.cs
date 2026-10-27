@@ -104,12 +104,17 @@ public class SyncResultMessageTests
     public async Task Sync_FailingWithTheSheetsOwnReason_ReportsThatReasonInVietnamese()
     {
         using var culture = new RequestCultureScope("vi-VN");
-        AnalysisController controller =
-            CreateController(Failed(Keys.GoogleDrive.NoBudgetTable, DriveResultMessages.NoBudgetTable.Message));
+        AnalysisController controller = CreateController(new SyncSpreadsheetResponseDto
+        {
+            Success = false,
+            ErrorMessage = DriveResultMessages.NoBudgetTable.Message,
+            Error = DriveResultMessages.NoBudgetTable
+        });
 
         await controller.Sync(1, "file-1", "Budget.xlsx");
 
-        Assert.Equal(TestLocalization.Vietnamese(Keys.GoogleDrive.NoBudgetTable), controller.TempData["ErrorMessage"]);
+        Assert.Equal(TestLocalization.Vietnamese(Keys.GoogleDrive.NoBudgetTable)
+            .Replace("{summary}", "Summary", StringComparison.Ordinal), controller.TempData["ErrorMessage"]);
     }
 
     private static SyncSpreadsheetResponseDto Failed(string key, string english) => new()

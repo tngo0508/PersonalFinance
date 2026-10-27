@@ -65,14 +65,19 @@ internal static class DriveResultMessages
     public static ApiErrorEntryDto WorkbookUnreadable => ResultMessage.Entry(Keys.WorkbookUnreadable,
         "The spreadsheet could not be read as an Excel workbook.");
 
+    // The sheet and column names below are what the parser looks for, so they are arguments: a translation keeps them
+    // in English.
     public static ApiErrorEntryDto NoBudgetTable => ResultMessage.Entry(Keys.NoBudgetTable,
-        "No monthly budget table was found. The sheet needs income and expense rows with month columns, or a Summary sheet.");
+        "No monthly budget table was found. The sheet needs income and expense rows with month columns, or a Summary sheet.",
+        Names(("summary", "Summary")));
 
     public static ApiErrorEntryDto NoTransactionsTable => ResultMessage.Entry(Keys.NoTransactionsTable,
-        "No transactions table was found. Add a sheet with Date and Amount column headers.");
+        "No transactions table was found. Add a sheet with Date and Amount column headers.",
+        Names(("date", "Date"), ("amount", "Amount")));
 
     public static ApiErrorEntryDto NoTransactionsSheet => ResultMessage.Entry(Keys.NoTransactionsSheet,
-        "No transactions table was found in any sheet. Ensure the spreadsheet has a sheet named 'Transactions' with Date and Amount column headers.");
+        "No transactions table was found in any sheet. Ensure the spreadsheet has a sheet named 'Transactions' with Date and Amount column headers.",
+        Names(("sheet", "Transactions"), ("date", "Date"), ("amount", "Amount")));
 
     public static ApiErrorEntryDto DownloadFailed => ResultMessage.Entry(Keys.DownloadFailed,
         "The spreadsheet could not be downloaded from Google Drive. Check that the drive is still shared and your API key is valid.");
@@ -95,4 +100,9 @@ internal static class DriveResultMessages
     /// </summary>
     public static ApiErrorEntryDto? ForStoredError(string? errorMessage, string syncStatus) =>
         errorMessage is not null && syncStatus == NeedsReauthStatus ? CredentialsInvalid : null;
+
+    /// <summary>Text arguments that name a sheet or a column.</summary>
+    private static Dictionary<string, ApiErrorArgDto> Names(params (string Name, string Value)[] names) =>
+        names.ToDictionary(name => name.Name,
+            name => new ApiErrorArgDto { Kind = ApiErrorArgKind.Text, Value = name.Value }, StringComparer.Ordinal);
 }

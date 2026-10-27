@@ -49,5 +49,14 @@
   "public float": "lượng cổ phiếu tự do chuyển nhượng",
   "holdings": "khoản nắm giữ",
   "tracked funds": "quỹ được theo dõi",
-  "watchlist": "danh sách theo dõi"
+  "watchlist": "danh sách theo dõi",
+
+  "workbook": "sổ làm việc",
+  "worksheet": "trang tính",
+  "worksheets": "trang tính",
+  "Google Drive API": "Google Drive API",
+  "General access": "Quyền truy cập chung",
+  "Anyone with the link": "Bất kỳ ai có đường liên kết",
+  "Restricted": "Bị hạn chế",
+  "Viewer": "Người xem"
 }

@@ -240,7 +240,27 @@ public class DriveResultMessageTests
 
         IActionResult result = await CreateController(api).SpreadsheetTransactions("file-1");
 
-        Assert.Equal(TestLocalization.Vietnamese(Keys.NoTransactionsTable), ErrorMessageOf(result));
+        Assert.Equal(TestLocalization.Vietnamese(Keys.NoTransactionsTable)
+            .Replace("{date}", "Date", StringComparison.Ordinal)
+            .Replace("{amount}", "Amount", StringComparison.Ordinal), ErrorMessageOf(result));
+    }
+
+    [Fact]
+    public void TheSheetAndColumnNamesTheParserReads_StayInEnglishInVietnamese()
+    {
+        using var culture = new RequestCultureScope("vi-VN");
+        var budget = new MonthlyBudgetReportDto { Error = DriveResultMessages.NoBudgetTable };
+        var transactions = new SpreadsheetTransactionsDto { Error = DriveResultMessages.NoTransactionsSheet };
+
+        GoogleDriveText.Localize(TestLocalization.Localizer, budget);
+        GoogleDriveText.Localize(TestLocalization.Localizer, transactions);
+
+        Assert.Contains("\"Summary\"", budget.ErrorMessage);
+        Assert.Contains("\"Transactions\"", transactions.ErrorMessage);
+        Assert.Contains("Date", transactions.ErrorMessage);
+        Assert.Contains("Amount", transactions.ErrorMessage);
+        Assert.DoesNotContain("{", transactions.ErrorMessage);
+        Assert.NotEqual(DriveResultMessages.NoTransactionsSheet.Message, transactions.ErrorMessage);
     }
 
     [Fact]
