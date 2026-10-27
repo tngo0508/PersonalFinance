@@ -49,13 +49,14 @@ public class FeedbackController : ControllerBase
         ValidationResult validation = await _submitValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(validation.ToApiError());
         }
 
         SubmitFeedbackResult result = await _feedbackService.SubmitAsync(User.GetUserId(), request, cancellationToken);
         if (result.RateLimited)
         {
-            return StatusCode(StatusCodes.Status429TooManyRequests, new { error = FeedbackMessages.RateLimited });
+            throw new ApiErrorException(ApiErrorKeys.Feedback.RateLimited, FeedbackMessages.RateLimited,
+                statusCode: StatusCodes.Status429TooManyRequests);
         }
 
         return NoContent();
@@ -75,7 +76,8 @@ public class FeedbackController : ControllerBase
     {
         if (status is not null && !Enum.IsDefined(status.Value))
         {
-            return BadRequest(new { errors = new[] { FeedbackMessages.UnknownStatus } });
+            throw new ApiErrorException(ApiErrorKeys.Feedback.StatusUnknown, FeedbackMessages.UnknownStatus,
+                nameof(status));
         }
 
         return Ok(await _feedbackService.ListAsync(status, cancellationToken));
@@ -96,7 +98,7 @@ public class FeedbackController : ControllerBase
         ValidationResult validation = await _changeStatusValidator.ValidateAsync(request, cancellationToken);
         if (!validation.IsValid)
         {
-            return BadRequest(new { errors = validation.Errors.Select(e => e.ErrorMessage) });
+            return BadRequest(validation.ToApiError());
         }
 
         return await _feedbackService.ChangeStatusAsync(id, request.Status, cancellationToken)

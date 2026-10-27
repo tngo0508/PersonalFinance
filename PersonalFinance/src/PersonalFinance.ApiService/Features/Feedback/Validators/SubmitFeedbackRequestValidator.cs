@@ -8,7 +8,7 @@ namespace PersonalFinance.ApiService.Features.Feedback.Validators;
 
 /// <summary>
 /// Validator for a request to send Feedback. <c>NotEmpty</c> also rejects a whitespace-only message, which would be
-/// stored empty once trimmed.
+/// stored empty once trimmed. Every rule carries its <see cref="ApiErrorKeys.Feedback"/> key (ADR 0017).
 /// </summary>
 internal sealed class SubmitFeedbackRequestValidator : AbstractValidator<SubmitFeedbackRequest>
 {
@@ -16,19 +16,26 @@ internal sealed class SubmitFeedbackRequestValidator : AbstractValidator<SubmitF
     {
         RuleFor(x => x.Category)
             .IsInEnum()
-            .WithMessage(FeedbackMessages.UnknownCategory);
+                .WithErrorCode(ApiErrorKeys.Feedback.CategoryUnknown)
+                .WithMessage(FeedbackMessages.UnknownCategory);
 
         RuleFor(x => x.Message)
             .NotEmpty()
-            .WithMessage(FeedbackMessages.MessageRequired)
+                .WithErrorCode(ApiErrorKeys.Feedback.MessageRequired)
+                .WithMessage(FeedbackMessages.MessageRequired)
             .MaximumLength(FeedbackLimits.MessageMaxLength)
-            .WithMessage(FeedbackMessages.MessageTooLong);
+                .WithErrorCode(ApiErrorKeys.Feedback.MessageLength)
+                .WithMessage(FeedbackMessages.MessageTooLong)
+                .WithState(_ => ErrorArgs.Number("max", FeedbackLimits.MessageMaxLength));
 
         RuleFor(x => x.PageUrl)
             .MaximumLength(FeedbackLimits.PageUrlMaxLength)
-            .WithMessage(FeedbackMessages.PageTooLong)
+                .WithErrorCode(ApiErrorKeys.Feedback.PageTooLong)
+                .WithMessage(FeedbackMessages.PageTooLong)
+                .WithState(_ => ErrorArgs.Number("max", FeedbackLimits.PageUrlMaxLength))
             .Must(AppRelativePath.IsValid)
-            .WithMessage(FeedbackMessages.PageNotAppRelative)
+                .WithErrorCode(ApiErrorKeys.Feedback.PageNotAppRelative)
+                .WithMessage(FeedbackMessages.PageNotAppRelative)
             .When(x => !string.IsNullOrEmpty(x.PageUrl));
     }
 }

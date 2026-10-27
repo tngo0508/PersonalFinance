@@ -6,6 +6,7 @@ using PersonalFinance.ApiService.Features.Feedback;
 using PersonalFinance.ApiService.Features.Feedback.Validators;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
 using FeedbackApiController = PersonalFinance.ApiService.Features.Feedback.FeedbackController;
@@ -90,8 +91,10 @@ public class FeedbackStatusEndpointTests
     {
         await using AppDbContext db = CreateContext();
 
-        IActionResult result = await CreateController(db).List((FeedbackStatus)99);
+        ApiErrorException error =
+            await Assert.ThrowsAsync<ApiErrorException>(() => CreateController(db).List((FeedbackStatus)99));
 
-        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, error.StatusCode);
+        Assert.Equal(ApiErrorKeys.Feedback.StatusUnknown, error.Key);
     }
 }

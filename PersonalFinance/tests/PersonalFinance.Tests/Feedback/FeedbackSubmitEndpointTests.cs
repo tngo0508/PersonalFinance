@@ -7,6 +7,7 @@ using PersonalFinance.ApiService.Features.Feedback.Validators;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
 using FeedbackApiController = PersonalFinance.ApiService.Features.Feedback.FeedbackController;
@@ -49,8 +50,7 @@ public class FeedbackSubmitEndpointTests
 
         BadRequestObjectResult badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Empty(await db.Feedback.ToListAsync());
-        object? errors = badRequest.Value!.GetType().GetProperty("errors")!.GetValue(badRequest.Value);
-        return Assert.IsAssignableFrom<IEnumerable<string>>(errors);
+        return Assert.IsType<ApiErrorDto>(badRequest.Value).Errors.Select(entry => entry.Key);
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public class FeedbackSubmitEndpointTests
         IEnumerable<string> errors = await AssertBadRequestAsync(db,
             new SubmitFeedbackRequest { Category = FeedbackCategory.Idea, Message = message });
 
-        Assert.Contains("Message is required.", errors);
+        Assert.Contains(ApiErrorKeys.Feedback.MessageRequired, errors);
     }
 
     [Fact]
@@ -94,7 +94,7 @@ public class FeedbackSubmitEndpointTests
             Message = new string('a', 2001)
         });
 
-        Assert.Contains("Message must be 2,000 characters or fewer.", errors);
+        Assert.Contains(ApiErrorKeys.Feedback.MessageLength, errors);
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public class FeedbackSubmitEndpointTests
         IEnumerable<string> errors = await AssertBadRequestAsync(db,
             new SubmitFeedbackRequest { Category = FeedbackCategory.Bug, Message = "Hi", PageUrl = pageUrl });
 
-        Assert.Contains("Page must be a path within the app.", errors);
+        Assert.Contains(ApiErrorKeys.Feedback.PageNotAppRelative, errors);
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class FeedbackSubmitEndpointTests
             PageUrl = "/" + new string('a', 500)
         });
 
-        Assert.Contains("Page must be 500 characters or fewer.", errors);
+        Assert.Contains(ApiErrorKeys.Feedback.PageTooLong, errors);
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public class FeedbackSubmitEndpointTests
         IEnumerable<string> errors = await AssertBadRequestAsync(db,
             new SubmitFeedbackRequest { Category = (FeedbackCategory)99, Message = "Hi" });
 
-        Assert.Contains("Choose a category: Bug, Idea or Other.", errors);
+        Assert.Contains(ApiErrorKeys.Feedback.CategoryUnknown, errors);
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class FeedbackSubmitEndpointTests
     }
 
     [Fact]
-    public async Task Submit_WhenRateLimited_Returns429WithTheSharedMessage()
+    public async Task Submit_WhenRateLimited_Rejects429WithItsKey()
     {
         await using AppDbContext db = CreateContext();
         FeedbackApiController controller = CreateController(db);
@@ -179,11 +179,10 @@ public class FeedbackSubmitEndpointTests
             await controller.Submit(new SubmitFeedbackRequest { Category = FeedbackCategory.Idea, Message = "Hi" });
         }
 
-        IActionResult result = await controller.Submit(
-            new SubmitFeedbackRequest { Category = FeedbackCategory.Idea, Message = "Hi" });
+        ApiErrorException error = await Assert.ThrowsAsync<ApiErrorException>(() => controller.Submit(
+            new SubmitFeedbackRequest { Category = FeedbackCategory.Idea, Message = "Hi" }));
 
-        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(StatusCodes.Status429TooManyRequests, objectResult.StatusCode);
-        Assert.Contains(FeedbackMessages.RateLimited, objectResult.Value!.ToString());
+        Assert.Equal(StatusCodes.Status429TooManyRequests, error.StatusCode);
+        Assert.Equal(ApiErrorKeys.Feedback.RateLimited, error.Key);
     }
 }

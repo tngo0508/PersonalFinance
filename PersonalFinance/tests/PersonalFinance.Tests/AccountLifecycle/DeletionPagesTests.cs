@@ -122,7 +122,8 @@ public class DeletionPagesTests
     public async Task Delete_TheLastAdmin_ShowsWhy_AndSendsNoEmail()
     {
         await using Harness harness = await Harness.CreateAsync(withPassword: true,
-            failure: await ApiExceptionAsync(HttpStatusCode.Conflict, AccountDeletionMessages.LastAdmin));
+            failure: await ApiExceptionAsync(HttpStatusCode.Conflict, ApiErrorKeys.AccountLifecycle.LastAdmin,
+                AccountDeletionMessages.LastAdmin));
         harness.Page.Input.Password = Password;
 
         IActionResult result = await harness.Page.OnPostAsync();
@@ -163,7 +164,8 @@ public class DeletionPagesTests
     [InlineData(HttpStatusCode.BadRequest)]
     public async Task CancelButton_WithAnInvalidToken_SaysTheLinkIsNotValid(HttpStatusCode status)
     {
-        CancelDeletionModel page = CancelPage(new FakeAccountDeletionApi { CancelFailure = await ApiExceptionAsync(status, "x") },
+        CancelDeletionModel page = CancelPage(new FakeAccountDeletionApi { CancelFailure = await ApiExceptionAsync(status,
+            ApiErrorKeys.AccountLifecycle.InvalidCancelLink, AccountDeletionMessages.InvalidCancelLink) },
             "used-token");
 
         await page.OnPostAsync();
@@ -224,12 +226,14 @@ public class DeletionPagesTests
     private static List<string> Errors(PageModel page) =>
         page.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
 
-    private static async Task<ApiException> ApiExceptionAsync(HttpStatusCode status, string message)
+    /// <summary>An ApiService rejection in its keyed wire shape (ADR 0017).</summary>
+    private static async Task<ApiException> ApiExceptionAsync(HttpStatusCode status, string key, string message)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "https://api.test/api/account-deletion");
         var response = new HttpResponseMessage(status)
         {
-            Content = new StringContent($$"""{"error":"{{message}}"}""", Encoding.UTF8, "application/json")
+            Content = new StringContent($$"""{"errors":[{"key":"{{key}}","message":"{{message}}"}]}""", Encoding.UTF8,
+                "application/json")
         };
         return await ApiException.Create(request, HttpMethod.Post, response, new RefitSettings());
     }
