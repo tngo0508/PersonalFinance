@@ -1404,9 +1404,13 @@
     .dash-figures {
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
+}
 
-    .dash-actions__list {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+/* Quick actions stand in for the sidebar on mobile only: past the bottom navigation's breakpoint
+   (max-width: 768px, css/sidebar.css) the sidebar already shows every one of their links. */
+@media (min-width: 768.02px) {
+    .dash-actions--mobile {
+        display: none;
     }
 }
 

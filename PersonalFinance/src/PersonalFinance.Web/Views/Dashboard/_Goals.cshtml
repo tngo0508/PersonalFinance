@@ -1,10 +1,14 @@
 @using Microsoft.AspNetCore.Mvc.Razor
 @model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
-@* Savings goals section (ticket 07): the five most recent goals, completed goals marked with a check badge. *@
+@* Savings goals section (ticket 07): the five most recent goals, completed goals marked with a check badge.
+   With no goals, the "Add a goal" setup card replaces the "View all" link. *@
 <section class="dash-card dash-goals" aria-labelledby="dash-goals-title">
     <div class="dash-card__header">
         <h2 id="dash-goals-title" class="dash-card__title">@L["Dashboard.Goals.Title"]</h2>
-        <a asp-controller="SavingsGoals" asp-action="Index" class="dash-link">@L["Dashboard.Goals.ViewAll"]<span class="visually-hidden"> @L["Dashboard.Goals.ViewAllHidden"]</span></a>
+        @if (Model.SavingsGoals.Count > 0)
+        {
+            <a asp-controller="SavingsGoals" asp-action="Index" class="dash-link">@L["Dashboard.Goals.ViewAll"]<span class="visually-hidden"> @L["Dashboard.Goals.ViewAllHidden"]</span></a>
+        }
     </div>
     @if (Model.SavingsGoals.Count > 0)
     {

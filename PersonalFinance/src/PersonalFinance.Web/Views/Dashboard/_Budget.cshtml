@@ -1,6 +1,7 @@
 @using Microsoft.AspNetCore.Mvc.Razor
 @model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
-@* Budget Planner breakdown section. Allocations, totals, and Unallocated come from the Budget Planner (UserBudgetAllocations). *@
+@* Budget Planner breakdown section. Allocations, totals, and Unallocated come from the Budget Planner (UserBudgetAllocations).
+   With no plan, the "Create budget" setup card is the one entry point, so neither the header nor the empty state links. *@
 @{
     var budget = Model.Budget;
     var periodLabel = DashboardBudgetFormat.PeriodLabel(budget?.Period);
@@ -14,9 +15,10 @@
 <section class="dash-card dash-budget" aria-labelledby="dash-budget-title">
     <div class="dash-card__header flex-wrap gap-2">
         <h2 id="dash-budget-title" class="dash-card__title mb-0">@L["Shell.Nav.BudgetPlanner"]</h2>
-        <a asp-controller="Budget" asp-action="Index" class="dash-link">
-            @(budget is null ? L["Dashboard.CreateBudget"] : L["Dashboard.Budget.Edit"])
-        </a>
+        @if (budget is not null)
+        {
+            <a asp-controller="Budget" asp-action="Index" class="dash-link">@L["Dashboard.Budget.Edit"]</a>
+        }
     </div>
     @if (budget is not null)
     {
@@ -69,8 +71,6 @@
     }
     else
     {
-        Func<object?, HelperResult> createLink =
-            @<a asp-controller="Budget" asp-action="Index">@L["Dashboard.Budget.CreatePlan"]</a>;
-        <p class="dash-empty">@L.NamedHtml("Dashboard.Budget.Empty", null, ("link", createLink(null)))</p>
+        <p class="dash-empty">@L["Dashboard.Budget.EmptySetup"]</p>
     }
 </section>
