@@ -48,6 +48,13 @@ public class SavingsGoalPaceDto
 public class CreateSavingsGoalRequestDto
 {
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The ISO 4217 currency of the target, the starting amount and every later Contribution, one of
+    /// <c>SupportedCurrencies</c>; null means US dollars. It is set once: an update keeps it.
+    /// </summary>
+    public string? CurrencyCode { get; set; }
+
     public decimal TargetAmount { get; set; }
     public decimal? CurrentAmount { get; set; }
     public string? Description { get; set; }

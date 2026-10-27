@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.NetWorth;
@@ -18,6 +19,12 @@ public static class NetWorthProjectionValidator
     [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: net worth projection rule table.")]
     public static ApiErrorEntryDto? Validate(NetWorthProjectionRequestDto request)
     {
+        if (request.CurrencyCode is not null && !SupportedCurrencies.IsSupported(request.CurrencyCode))
+        {
+            return Failure(ApiErrorKeys.NetWorth.CurrencyUnsupported, nameof(request.CurrencyCode),
+                CurrencyCodeRules.UnsupportedMessage);
+        }
+
         if (request.StartingBalance < 0 || request.StartingBalance > 1_000_000_000m)
         {
             return Failure(ApiErrorKeys.NetWorth.StartingBalanceRange, nameof(request.StartingBalance),

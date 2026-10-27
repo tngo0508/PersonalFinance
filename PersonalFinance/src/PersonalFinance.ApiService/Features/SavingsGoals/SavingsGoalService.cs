@@ -82,12 +82,15 @@ internal sealed class SavingsGoalService : ISavingsGoalService
         CancellationToken cancellationToken = default)
     {
         DateTime now = UtcNow();
-        decimal startingAmount = request.CurrentAmount ?? 0;
+        SupportedCurrency currency =
+            SupportedCurrencies.Find(CurrencyCodeRules.Resolve(request.CurrencyCode)) ?? SupportedCurrencies.Default;
+        decimal startingAmount = currency.Round(request.CurrentAmount ?? 0);
         var goal = new SavingsGoal
         {
             UserId = userId,
+            CurrencyCode = currency.Code,
             Name = request.Name,
-            TargetAmount = request.TargetAmount,
+            TargetAmount = currency.Round(request.TargetAmount),
             CurrentAmount = startingAmount,
             Description = request.Description,
             TargetDate = request.TargetDate,
@@ -128,7 +131,10 @@ internal sealed class SavingsGoalService : ISavingsGoalService
         if (goal is null) return false;
 
         if (!string.IsNullOrEmpty(request.Name)) goal.Name = request.Name;
-        if (request.TargetAmount.HasValue) goal.TargetAmount = request.TargetAmount.Value;
+        if (request.TargetAmount.HasValue)
+        {
+            goal.TargetAmount = SupportedCurrencies.Round(goal.CurrencyCode, request.TargetAmount.Value);
+        }
         if (request.Description != null) goal.Description = request.Description;
         if (request.TargetDate.HasValue) goal.TargetDate = request.TargetDate.Value;
 
@@ -178,14 +184,15 @@ internal sealed class SavingsGoalService : ISavingsGoalService
         SavingsGoal? goal = await FindGoalAsync(userId, goalId, cancellationToken);
         if (goal is null) return new ContributionResult(ContributionOutcome.NotFound);
 
-        decimal total = await LogTotalAsync(userId, goalId, cancellationToken) + request.Amount;
+        decimal amount = SupportedCurrencies.Round(goal.CurrencyCode, request.Amount);
+        decimal total = await LogTotalAsync(userId, goalId, cancellationToken) + amount;
         if (total < 0) return new ContributionResult(ContributionOutcome.BelowZero);
 
         var contribution = new Contribution
         {
             UserId = userId,
             SavingsGoalId = goalId,
-            Amount = request.Amount,
+            Amount = amount,
             Date = request.Date ?? ContributionRules.Today(_timeProvider),
             Note = NoteOrNull(request.Note),
             Kind = ContributionKind.Regular,
@@ -210,10 +217,11 @@ internal sealed class SavingsGoalService : ISavingsGoalService
             return new ContributionResult(ContributionOutcome.NotEditable);
         }
 
-        decimal total = await LogTotalAsync(userId, goalId, cancellationToken) - contribution.Amount + request.Amount;
+        decimal amount = SupportedCurrencies.Round(goal.CurrencyCode, request.Amount);
+        decimal total = await LogTotalAsync(userId, goalId, cancellationToken) - contribution.Amount + amount;
         if (total < 0) return new ContributionResult(ContributionOutcome.BelowZero);
 
-        contribution.Amount = request.Amount;
+        contribution.Amount = amount;
         contribution.Date = request.Date ?? contribution.Date;
         contribution.Note = NoteOrNull(request.Note);
         contribution.UpdatedAt = UtcNow();
@@ -246,7 +254,8 @@ internal sealed class SavingsGoalService : ISavingsGoalService
         SavingsGoal? goal = await FindGoalAsync(userId, goalId, cancellationToken);
         if (goal is null) return new ContributionResult(ContributionOutcome.NotFound);
 
-        decimal difference = request.Balance - await LogTotalAsync(userId, goalId, cancellationToken);
+        decimal balance = SupportedCurrencies.Round(goal.CurrencyCode, request.Balance);
+        decimal difference = balance - await LogTotalAsync(userId, goalId, cancellationToken);
         Contribution? adjustment = null;
         if (difference != 0)
         {
@@ -262,7 +271,7 @@ internal sealed class SavingsGoalService : ISavingsGoalService
             _dbContext.Contributions.Add(adjustment);
         }
 
-        await SaveWithTotalAsync(goal, request.Balance, cancellationToken);
+        await SaveWithTotalAsync(goal, balance, cancellationToken);
         return new ContributionResult(ContributionOutcome.Saved, adjustment?.Id);
     }
 

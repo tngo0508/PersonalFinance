@@ -297,6 +297,7 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
                         {
                             UserId = userId,
                             CategoryId = line.CategoryId,
+                            CurrencyCode = line.CurrencyCode,
                             PlannedAmount = line.PlannedAmount,
                             ActualOverride = null
                         });
@@ -360,7 +361,8 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
         MonthlyBudgetLine? line = plan.Lines.FirstOrDefault(l => l.CategoryId == categoryId);
         if (line != null)
         {
-            line.PlannedAmount = request.Amount;
+            line.CurrencyCode = CurrencyCodeRules.Resolve(request.CurrencyCode, line.CurrencyCode);
+            line.PlannedAmount = SupportedCurrencies.Round(line.CurrencyCode, request.Amount);
             line.UpdatedAt = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync(ct);
         }
@@ -371,7 +373,8 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
                 PlanId = plan.Id,
                 UserId = userId,
                 CategoryId = categoryId,
-                PlannedAmount = request.Amount,
+                CurrencyCode = CurrencyCodeRules.Resolve(request.CurrencyCode),
+                PlannedAmount = SupportedCurrencies.Round(CurrencyCodeRules.Resolve(request.CurrencyCode), request.Amount),
                 ActualOverride = null
             };
             plan.Lines.Add(newLine);
@@ -397,7 +400,8 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
                 if (existingLine != null)
                 {
-                    existingLine.PlannedAmount = request.Amount;
+                    existingLine.CurrencyCode = CurrencyCodeRules.Resolve(request.CurrencyCode, existingLine.CurrencyCode);
+                    existingLine.PlannedAmount = SupportedCurrencies.Round(existingLine.CurrencyCode, request.Amount);
                     existingLine.UpdatedAt = DateTime.UtcNow;
                     if (!plan.Lines.Contains(existingLine))
                     {
@@ -436,7 +440,10 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
         MonthlyBudgetLine? line = plan.Lines.FirstOrDefault(l => l.CategoryId == categoryId);
         if (line != null)
         {
-            line.ActualOverride = request.Amount;
+            line.CurrencyCode = CurrencyCodeRules.Resolve(request.CurrencyCode, line.CurrencyCode);
+            line.ActualOverride = request.Amount.HasValue
+                ? SupportedCurrencies.Round(line.CurrencyCode, request.Amount.Value)
+                : null;
             line.UpdatedAt = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync(ct);
         }
@@ -447,8 +454,11 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
                 PlanId = plan.Id,
                 UserId = userId,
                 CategoryId = categoryId,
+                CurrencyCode = CurrencyCodeRules.Resolve(request.CurrencyCode),
                 PlannedAmount = 0m,
-                ActualOverride = request.Amount
+                ActualOverride = request.Amount.HasValue
+                    ? SupportedCurrencies.Round(CurrencyCodeRules.Resolve(request.CurrencyCode), request.Amount.Value)
+                    : null
             };
             plan.Lines.Add(newLine);
             _dbContext.MonthlyBudgetLines.Add(newLine);
@@ -473,7 +483,10 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
                 if (existingLine != null)
                 {
-                    existingLine.ActualOverride = request.Amount;
+                    existingLine.CurrencyCode = CurrencyCodeRules.Resolve(request.CurrencyCode, existingLine.CurrencyCode);
+                    existingLine.ActualOverride = request.Amount.HasValue
+                        ? SupportedCurrencies.Round(existingLine.CurrencyCode, request.Amount.Value)
+                        : null;
                     existingLine.UpdatedAt = DateTime.UtcNow;
                     if (!plan.Lines.Contains(existingLine))
                     {
@@ -668,7 +681,8 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
             UserId = userId,
             CategoryId = request.CategoryId,
             Date = request.Date,
-            Amount = request.Amount,
+            CurrencyCode = CurrencyCodeRules.Resolve(request.CurrencyCode),
+            Amount = SupportedCurrencies.Round(CurrencyCodeRules.Resolve(request.CurrencyCode), request.Amount),
             Description = request.Description?.Trim() ?? string.Empty
         };
 
@@ -718,7 +732,8 @@ internal sealed class MonthlyBudgetService : IMonthlyBudgetService
 
         transaction.CategoryId = request.CategoryId;
         transaction.Date = request.Date;
-        transaction.Amount = request.Amount;
+        transaction.CurrencyCode = CurrencyCodeRules.Resolve(request.CurrencyCode, transaction.CurrencyCode);
+        transaction.Amount = SupportedCurrencies.Round(transaction.CurrencyCode, request.Amount);
         transaction.Description = request.Description?.Trim() ?? string.Empty;
         transaction.UpdatedAt = DateTime.UtcNow;
 

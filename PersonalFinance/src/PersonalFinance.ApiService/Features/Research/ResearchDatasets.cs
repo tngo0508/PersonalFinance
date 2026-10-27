@@ -70,4 +70,10 @@ internal static class ResearchDatasets
 
     /// <summary>The World snapshot.</summary>
     public const string World = "world";
+
+    /// <summary>
+    /// The exchange rates: not a snapshot but rows of the <c>ExchangeRates</c> table, named here so a refresh summary
+    /// lists them with the datasets.
+    /// </summary>
+    public const string FxRates = "fx-rates";
 }

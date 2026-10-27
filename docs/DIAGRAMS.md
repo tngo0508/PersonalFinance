@@ -65,6 +65,7 @@ flowchart LR
         sec["SEC EDGAR"]
         wb["World Bank API"]
         fed["Federal Reserve H.15<br/>BLS, U.S. Treasury"]
+        fx["Frankfurter<br/>currency-api (fallback)"]
         rss["RSS feeds<br/>(news)"]
     end
 
@@ -74,7 +75,7 @@ flowchart LR
     api -- "EF Core" --> db
     purge --> db
     refresh --> db
-    refresh --> sec & wb & fed
+    refresh --> sec & wb & fed & fx
     web --> goauth & brevo
     api --> gdrive & openai & rss
     api -- "company lookup<br/>(live, cached 24 h)" --> sec
@@ -208,7 +209,7 @@ JavaScript paths are under `Web/wwwroot/js/`.
 | Feedback | `FeedbackController` (`api/Feedback`) | `IFeedbackService` | `Feedback` | `IFeedbackApi` | `Feedback`; inbox in `Admin` | none | The canonical example ([2](#2-anatomy-of-a-feature)) |
 | GoogleDrive | `GoogleDriveController` (`api/GoogleDrive`) | `IDriveConnectionService`, `ISpreadsheetReader`, `IGoogleDriveFileSource` (internal) | `GoogleDriveConnection`, `GoogleDriveCachedFile` | `IGoogleDriveApi` | `GoogleDrive` | `google-drive/` | Typed `HttpClient`s to Google Drive; a 1,450-line static parser; see [13](#13-google-drive-and-spreadsheet-analysis) |
 | NetWorth | `NetWorthController` (`api/NetWorth`) | `INetWorthParametersService` | `NetWorthParameters` | `INetWorthApi` | `Networth` | `networth/` | `calculate` is pure: a static Validator and the static `NetWorthProjectionService`, no Service, no database |
-| Research | `ResearchController` (`api/Research`), `CompaniesController` (`api/Research/companies`) | `IResearchService`, `ICompanyProfileService`, nine `IResearchDatasetRefresher`, `ResearchSnapshotStore` | `ResearchSnapshot` (not user-owned) | `IResearchApi` | `Research` | `research/` (12 files) | The largest Feature: five external adapters, `Domain/` with 56 pure types, a refresh job; see [10](#10-research-pipeline) |
+| Research | `ResearchController` (`api/Research`), `CompaniesController` (`api/Research/companies`) | `IResearchService`, `ICompanyProfileService`, ten `IResearchDatasetRefresher` (one fills the exchange rates), `ResearchSnapshotStore` | `ResearchSnapshot`, `ExchangeRate` (not user-owned) | `IResearchApi` | `Research` | `research/` (12 files) | The largest Feature: five external adapters, `Domain/` with 56 pure types, a refresh job; see [10](#10-research-pipeline) |
 | SavingsGoals | `SavingsGoalsController` (`api/SavingsGoals`, Contributions under `{goalId}/contributions`) | `ISavingsGoalService` | `SavingsGoal`, `Contribution` | `ISavingsGoalsApi` | `SavingsGoals` | `savingsgoals/` | Validators for a new goal, a Contribution and a balance correction; the saved amount is the Contribution total, cached on the goal in the same save; each goal's Pace is worked out on read (`SavingsGoalPace`); raises each milestone Notification once |
 | Search | `SearchController` (`api/Search`) | `ISearchService` | none (reads `BudgetTransaction`, `BudgetCategory`, `SpreadsheetTransactionRecord`, `SavingsGoal`) | `ISearchApi` | `Search` (JSON only) | `core/search.js` | Read-only; picks the source through `IBudgetDataSourceService` |
 | Watchlist | `WatchlistController` (`api/Watchlist`), `NewsController` (`api/News`) | `IWatchlistService`, `INewsService`, `INewsFeedClient` (internal) | `SavedArticle` | `IWatchlistApi`, `INewsApi` | `Watchlist` (JSON only), `News` | `news/` | RSS adapter with `IMemoryCache` (5 minutes); `NewsService` has no database |
@@ -236,6 +237,9 @@ Reading key:
   `ResearchSnapshot` and `DeletionRequest` are not auditable and are hard-deleted (or kept) as noted.
 - Relationship labels give the FK column and the configured delete behaviour. Money columns are `decimal`; the
   precision is in the comment.
+- **One currency per money-bearing row** ([ADR 0016](adr/0016-per-amount-currency-with-reporting-currency.md)): its
+  `CurrencyCode` (`char(3)`, one of `SupportedCurrencies`, default `USD`) covers every amount on the row, never one
+  per field. A Contribution is in its goal's currency, and imported spreadsheet rows inherit their connection's.
 
 ### 4.1 Budget Tracker, planner and net worth
 
@@ -251,6 +255,7 @@ erDiagram
     BudgetTransaction {
         int Id PK
         string UserId "indexed with Date"
+        string CurrencyCode "char(3), ISO 4217, default USD"
         int CategoryId FK
         DateOnly Date
         decimal Amount "18,2"
@@ -265,6 +270,7 @@ erDiagram
     MonthlyBudgetLine {
         int Id PK
         string UserId
+        string CurrencyCode "char(3), ISO 4217, default USD"
         int PlanId FK "unique with CategoryId, live rows only"
         int CategoryId FK
         decimal PlannedAmount "18,2"
@@ -278,6 +284,7 @@ erDiagram
     UserBudgetAllocation {
         int Id PK
         string UserId "unique with Period"
+        string CurrencyCode "char(3), ISO 4217, default USD"
         string Period "yyyy-MM"
         decimal MonthlyIncome "18,2"
         decimal HousingAmount "18,2, plus 9 more category amounts"
@@ -286,6 +293,7 @@ erDiagram
     SavingsGoal {
         int Id PK
         string UserId
+        string CurrencyCode "char(3), ISO 4217, default USD"
         string Name
         decimal TargetAmount "18,2"
         decimal CurrentAmount "18,2, cached total of its Contributions"
@@ -306,6 +314,7 @@ erDiagram
     NetWorthParameters {
         int Id PK
         string UserId UK
+        string CurrencyCode "char(3), ISO 4217, default USD"
         decimal StartingBalance "18,4"
         decimal AnnualSavings "18,4"
         decimal AnnualIncome "18,4"
@@ -333,6 +342,7 @@ erDiagram
     GoogleDriveConnection {
         int Id PK
         string UserId "indexed with FolderId"
+        string CurrencyCode "char(3), ISO 4217, default USD"
         string Name
         string FolderId
         string FolderUrl
@@ -361,6 +371,7 @@ erDiagram
     SpreadsheetBudgetSnapshot {
         int Id PK
         string UserId "indexed with Year and MonthNumber"
+        string CurrencyCode "char(3), ISO 4217, default USD"
         int ConnectionId FK
         string FileId
         string FileName
@@ -379,6 +390,7 @@ erDiagram
     SpreadsheetTransactionRecord {
         int Id PK
         string UserId "indexed with Date, and with Category and Date"
+        string CurrencyCode "char(3), ISO 4217, default USD"
         int SnapshotId FK
         int ConnectionId FK
         DateTime Date
@@ -501,6 +513,7 @@ erDiagram
         int Id PK
         string UserId UK "among non-deleted rows"
         string Language "en or vi; the culture cookie mirrors it"
+        string ReportingCurrency "char(3), default USD; changing it rewrites no amount"
     }
     UserConsent {
         int Id PK
@@ -560,6 +573,14 @@ erDiagram
         DateOnly SourceAsOf
         DateTime BuiltAt
     }
+    ExchangeRate {
+        int Id PK
+        string BaseCurrency "char(3), always USD, unique with QuoteCurrency and Date"
+        string QuoteCurrency "char(3), e.g. VND"
+        DateOnly Date
+        decimal Rate "18,8, units of QuoteCurrency per USD"
+        string Source "frankfurter or currency-api"
+    }
 
     AspNetUsers ||..o| DeletionRequest : "UserId, logical"
     AspNetUsers ||..o| UserPreference : "UserId, logical"
@@ -571,7 +592,8 @@ erDiagram
 ```
 
 `ResearchSnapshot` belongs to no Account: one row per dataset, replaced wholesale by the refresh job
-([10](#10-research-pipeline)). `DeletionRequest` is the only row that outlives its Account.
+([10](#10-research-pipeline)). `ExchangeRate` belongs to no Account either: one row per currency pair and day, added by
+the same job and never rewritten. `DeletionRequest` is the only row that outlives its Account.
 
 ## 5. Request flow, end to end
 
@@ -865,7 +887,10 @@ with a `TitleKey`, `MessageKey` and named `Arguments` beside the English text ([
 The Research dashboard never calls a data source from a request. A daily job rebuilds one `ResearchSnapshot` row per
 dataset from official public sources ([ADR 0012](adr/0012-research-data-from-official-public-sources.md)); the pages
 read those rows. Security identifiers are used in memory during a refresh and never stored ([ADR
-0010](adr/0010-research-never-stores-security-identifiers.md)).
+0010](adr/0010-research-never-stores-security-identifiers.md)). The same job adds the day's exchange rates
+([ADR 0016](adr/0016-per-amount-currency-with-reporting-currency.md)): `FxRatesRefresher` reads Frankfurter from the day
+after its latest stored rate and, when Frankfurter fails, the currency-api's latest rate instead. It needs no SEC
+contact, so it runs even when the SEC datasets are skipped.
 
 ```mermaid
 flowchart LR
@@ -882,6 +907,7 @@ flowchart LR
         r7["FundFactsRefresher"]
         r8["MacroRefresher"]
         r9["WorldRefresher"]
+        r10["FxRatesRefresher"]
     end
 
     subgraph adapters["Adapters: official public sources"]
@@ -889,6 +915,7 @@ flowchart LR
         fed["IFedRatesClient<br/>Federal Reserve H.15"]
         us["IUsAgencyClient<br/>BLS CPI-U, Treasury bill rates"]
         wb["IWorldBankClient<br/>World Bank: GDP, market cap"]
+        fxa["IFrankfurterClient, then ICurrencyApiClient<br/>USD rates, no key"]
     end
 
     svc --> refreshers
@@ -898,7 +925,9 @@ flowchart LR
     r6 --> sec & fed
     r8 --> fed & us
     r9 --> wb
-    refreshers --> store["ResearchSnapshotStore.StoreAsync<br/>upsert one row per Dataset, only on success"]
+    r10 --> fxa
+    r10 --> rates[("ExchangeRate<br/>one row per pair and day, added only")]
+    r1 & r2 & r3 & r4 & r5 & r6 & r7 & r8 & r9 --> store["ResearchSnapshotStore.StoreAsync<br/>upsert one row per Dataset, only on success"]
     store --> snap[("ResearchSnapshot<br/>Dataset, Payload JSON, SourceAsOf, BuiltAt")]
 ```
 

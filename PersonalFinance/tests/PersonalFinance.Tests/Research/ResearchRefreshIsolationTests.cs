@@ -49,7 +49,7 @@ public class ResearchRefreshIsolationTests
 
         Assert.Equal([ResearchDatasets.Sectors, ResearchDatasets.Funds, ResearchDatasets.FundExposure,
                 ResearchDatasets.FundIndustries, ResearchDatasets.FundReturns,
-                ResearchDatasets.FundFacts, ResearchDatasets.Macro], summary.Skipped);
+                ResearchDatasets.FundFacts, ResearchDatasets.Macro, ResearchDatasets.FxRates], summary.Skipped);
         Assert.Equal([ResearchDatasets.World], summary.Built);
         Assert.Empty(summary.Failed);
         Assert.Equal(0, sec.Calls);

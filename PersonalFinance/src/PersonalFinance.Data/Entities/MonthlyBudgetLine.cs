@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Constants;
+
 namespace PersonalFinance.Data.Entities;
 
 /// <summary>
@@ -5,6 +7,12 @@ namespace PersonalFinance.Data.Entities;
 /// </summary>
 public class MonthlyBudgetLine : AuditableEntity
 {
+    /// <summary>
+    /// ISO 4217 code, one of <see cref="SupportedCurrencies"/> (ADR 0016). The planned amount and the Actual override
+    /// of this line are in this currency. Rows saved before amounts carried a currency are <c>USD</c>.
+    /// </summary>
+    public string CurrencyCode { get; set; } = SupportedCurrencies.DefaultCode;
+
     /// <summary>Foreign key to the monthly plan this line belongs to.</summary>
     public int PlanId { get; set; }
 

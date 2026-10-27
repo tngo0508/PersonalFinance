@@ -11,4 +11,11 @@ public class ConnectGoogleDriveRequestDto
     public string? ConnectionName { get; set; }
 
     public string? ApiKey { get; set; }
+
+    /// <summary>
+    /// The ISO 4217 currency of the amounts in the folder's spreadsheets, one of <c>SupportedCurrencies</c>; every
+    /// imported row inherits it. Null keeps a reconnected folder's currency, or gives a new one the Account's Reporting
+    /// Currency.
+    /// </summary>
+    public string? CurrencyCode { get; set; }
 }

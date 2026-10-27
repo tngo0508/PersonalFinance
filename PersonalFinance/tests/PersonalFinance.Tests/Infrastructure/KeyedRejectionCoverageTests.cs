@@ -194,6 +194,12 @@ public class KeyedRejectionCoverageTests
             await Caught(() => new DriveConnectionService(new HttpClient(), new ConfigurationBuilder().Build(), null!,
                 NullLogger<DriveConnectionService>.Instance).GetFolderFilesAsync(
                 new GoogleDriveRequestDto { FolderUrl = "invalid-link" })),
+            await Caught(() => new DriveConnectionService(new HttpClient(), new ConfigurationBuilder().Build(), null!,
+                NullLogger<DriveConnectionService>.Instance).ConnectDriveAsync("user-1",
+                new ConnectGoogleDriveRequestDto
+                {
+                    FolderUrl = "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUv", CurrencyCode = "EUR"
+                })),
             DriveConnectionService.ConnectionNotFound().ToDto().Errors[0]
         ],
         _ => Rejections(feature)
@@ -243,7 +249,8 @@ public class KeyedRejectionCoverageTests
                     Name = new string('n', 201), TargetAmount = 10_000_000_000_000_000m,
                     CurrentAmount = 10_000_000_000_000_000m, Description = new string('d', 1001)
                 },
-                new CreateSavingsGoalRequestDto { Name = "Trip", TargetAmount = 1m, CurrentAmount = 1.005m }),
+                new CreateSavingsGoalRequestDto { Name = "Trip", TargetAmount = 1m, CurrentAmount = 1.005m },
+                new CreateSavingsGoalRequestDto { Name = "Trip", TargetAmount = 1m, CurrencyCode = "EUR" }),
             .. Failures(new SaveContributionRequestValidator(new FixedTimeProvider(Now)),
                 new SaveContributionRequestDto { Amount = 0m, Date = new DateOnly(2026, 10, 26), Note = new string('n', 201) },
                 new SaveContributionRequestDto { Amount = -10_000_000_000_000_000m, Date = new DateOnly(1999, 12, 31) },
@@ -262,7 +269,7 @@ public class KeyedRejectionCoverageTests
             r => r.StartingBalance = -1m, r => r.AnnualSavings = -1m, r => r.AnnualIncome = -1m,
             r => r.AnnualSpending = -1m, r => r.AggressiveSavings = -1m, r => r.CurrentAge = 17,
             r => r.RetirementAge = 121, r => r.RetirementAge = 30, r => r.BaseRoi = 51m,
-            r => r.ConservativeRoi = 51m, r => r.AggressiveRoi = 51m
+            r => r.ConservativeRoi = 51m, r => r.AggressiveRoi = 51m, r => r.CurrencyCode = "EUR"
         ];
 
         return breaks.Select(breakIt =>

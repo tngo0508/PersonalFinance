@@ -14,4 +14,13 @@ public sealed record SupportedCurrency
 
     /// <summary>The symbol shown with the amount in every culture (<c>$</c>, <c>₫</c>).</summary>
     public required string Symbol { get; init; }
+
+    /// <summary>
+    /// <paramref name="amount"/> rounded to this currency's minor units, halves away from zero (localization spec §2.5):
+    /// how an amount is stored, so a VND amount is saved as whole đồng.
+    /// </summary>
+    public decimal Round(decimal amount) => decimal.Round(amount, MinorUnits, MidpointRounding.AwayFromZero);
+
+    /// <summary><paramref name="amount"/> rounded as <see cref="Round(decimal)"/> does; null stays null.</summary>
+    public decimal? Round(decimal? amount) => amount is { } value ? Round(value) : null;
 }

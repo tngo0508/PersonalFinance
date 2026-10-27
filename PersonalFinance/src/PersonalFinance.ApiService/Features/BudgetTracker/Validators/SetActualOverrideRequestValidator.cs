@@ -15,6 +15,8 @@ internal sealed class SetActualOverrideRequestValidator : AbstractValidator<SetA
 
     public SetActualOverrideRequestValidator()
     {
+        RuleFor(x => x.CurrencyCode).SupportedCurrency(ApiErrorKeys.BudgetTracker.CurrencyUnsupported);
+
         RuleFor(x => x.Amount)
             .Must(amount => !amount.HasValue || amount.Value >= 0)
                 .WithErrorCode(ApiErrorKeys.BudgetTracker.ActualOverrideRange)

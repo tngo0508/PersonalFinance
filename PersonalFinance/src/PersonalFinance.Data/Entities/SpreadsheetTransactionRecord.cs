@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Constants;
+
 namespace PersonalFinance.Data.Entities;
 
 /// <summary>
@@ -6,6 +8,12 @@ namespace PersonalFinance.Data.Entities;
 /// </summary>
 public class SpreadsheetTransactionRecord : AuditableEntity
 {
+    /// <summary>
+    /// ISO 4217 code, one of <see cref="SupportedCurrencies"/> (ADR 0016). The amount is in this currency, inherited
+    /// from its connection. Rows saved before amounts carried a currency are <c>USD</c>.
+    /// </summary>
+    public string CurrencyCode { get; set; } = SupportedCurrencies.DefaultCode;
+
     /// <summary>
     ///     Foreign key to the budget snapshot this transaction belongs to.
     /// </summary>

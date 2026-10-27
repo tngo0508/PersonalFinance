@@ -1,4 +1,5 @@
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.NetWorth;
 
 namespace PersonalFinance.ApiService.Infrastructure;
@@ -14,6 +15,7 @@ public static class NetWorthParametersMapping
     {
         return new NetWorthProjectionRequestDto
         {
+            CurrencyCode = parameters.CurrencyCode,
             StartingBalance = parameters.StartingBalance,
             AnnualSavings = parameters.AnnualSavings,
             AnnualIncome = parameters.AnnualIncome,
@@ -32,6 +34,7 @@ public static class NetWorthParametersMapping
     {
         return new NetWorthParametersDto
         {
+            CurrencyCode = parameters.CurrencyCode,
             StartingBalance = parameters.StartingBalance,
             AnnualSavings = parameters.AnnualSavings,
             AnnualIncome = parameters.AnnualIncome,
@@ -46,18 +49,23 @@ public static class NetWorthParametersMapping
         };
     }
 
-    /// <summary>Copies the submitted values onto the saved parameters.</summary>
+    /// <summary>
+    /// Copies the submitted values onto the saved parameters, in the requested currency (or the saved one) and with each
+    /// amount rounded to that currency's minor units.
+    /// </summary>
     public static void Apply(this NetWorthParameters parameters, NetWorthProjectionRequestDto values)
     {
-        parameters.StartingBalance = values.StartingBalance;
-        parameters.AnnualSavings = values.AnnualSavings;
-        parameters.AnnualIncome = values.AnnualIncome;
-        parameters.AnnualSpending = values.AnnualSpending;
+        parameters.CurrencyCode = CurrencyCodeRules.Resolve(values.CurrencyCode, parameters.CurrencyCode);
+        SupportedCurrency currency = SupportedCurrencies.Find(parameters.CurrencyCode) ?? SupportedCurrencies.Default;
+        parameters.StartingBalance = currency.Round(values.StartingBalance);
+        parameters.AnnualSavings = currency.Round(values.AnnualSavings);
+        parameters.AnnualIncome = currency.Round(values.AnnualIncome);
+        parameters.AnnualSpending = currency.Round(values.AnnualSpending);
         parameters.CurrentAge = values.CurrentAge;
         parameters.RetirementAge = values.RetirementAge;
         parameters.BaseRoi = values.BaseRoi;
         parameters.ConservativeRoi = values.ConservativeRoi;
         parameters.AggressiveRoi = values.AggressiveRoi;
-        parameters.AggressiveSavings = values.AggressiveSavings;
+        parameters.AggressiveSavings = currency.Round(values.AggressiveSavings);
     }
 }
