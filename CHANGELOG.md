@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Admin Feedback inbox status filter**: the ApiService now checks the `status` filter of `GET /api/feedback` with a validator in the Feedback Feature's `Validators/`, like its other two actions, instead of inline in the controller (#121). An unknown status still returns 400 with the same key, message and field; no status still lists New and Reviewed Feedback.
+- **Admin Feedback inbox status filter**: the ApiService now checks the `status` filter of `GET /api/feedback` with a validator in the Feedback Feature's `Validators/`, like its other two actions, instead of inline in the controller (#121).
+  - An unknown status still returns 400 with the same key, message and field; no status still lists New and Reviewed Feedback.
 
 ## [12.2.0] - 2026-10-27
 
