@@ -1,12 +1,14 @@
 name: Claude Ticket Agent
 
 # Picks one ready-for-agent issue, implements it with /implement (tdd + code-review), and opens a PR for a human to
-# review and merge. Runs nightly and at weekday midday, US Pacific. The rules live in docs/agents/issue-tracker.md under
-# "Scheduled ticket agent".
+# review and merge. Works back to back from 00:00 to 19:00 US Pacific every day and stays off 19:00-24:00, when the
+# owner reviews PRs and works locally. The rules live in docs/agents/issue-tracker.md under "Scheduled ticket agent".
 on:
   schedule:
-    - cron: '17 10 * * *'   # nightly: 03:17 PDT / 02:17 PST
-    - cron: '17 19 * * 1-5' # weekdays: 12:17 PDT / 11:17 PST
+    # Every 30 minutes across the UTC hours that cover 00:00-19:00 Pacific in both PDT and PST. The pick job applies
+    # the exact Pacific window, so DST needs no cron change. With the concurrency group below, a tick that lands
+    # during a run waits and starts as soon as that run ends.
+    - cron: '17,47 0-3,7-23 * * *'
   workflow_dispatch:
     inputs:
       issue:
@@ -27,7 +29,11 @@ concurrency:
 env:
   # Agent branches use their own prefix so the open-PR cap never counts PRs from human claude/* sessions.
   BRANCH_PREFIX: agent/issue-
-  MAX_OPEN_AGENT_PRS: 2
+  MAX_OPEN_AGENT_PRS: 5
+  # Scheduled runs work only between midnight and QUIET_FROM (Pacific), and must end by QUIET_FROM.
+  QUIET_FROM: '19:00'
+  MIN_MINUTES_TO_START: 45
+  MAX_RUN_MINUTES: 90
 
 jobs:
   pick:
@@ -37,6 +43,7 @@ jobs:
     outputs:
       issue: ${{ steps.pick.outputs.issue }}
       branch: ${{ steps.pick.outputs.branch }}
+      minutes: ${{ steps.pick.outputs.minutes }}
     steps:
       - name: Choose and claim an issue
         id: pick
@@ -45,8 +52,24 @@ jobs:
           GH_REPO: ${{ github.repository }}
           REQUESTED: ${{ inputs.issue }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EVENT: ${{ github.event_name }}
         run: |
           set -euo pipefail
+
+          # Working window. Manual runs ignore it and get the full run time.
+          minutes="$MAX_RUN_MINUTES"
+          if [ "$EVENT" = "schedule" ]; then
+            now=$(( 10#$(TZ=America/Los_Angeles date +%H) * 60 + 10#$(TZ=America/Los_Angeles date +%M) ))
+            quiet=$(( 10#${QUIET_FROM%%:*} * 60 + 10#${QUIET_FROM##*:} ))
+            left=$(( quiet - now ))
+            if [ "$left" -lt "$MIN_MINUTES_TO_START" ]; then
+              echo "::notice::Quiet window (Pacific $(TZ=America/Los_Angeles date +%H:%M)): the agent works 00:00-$QUIET_FROM only."
+              echo "issue=" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            [ "$left" -lt "$minutes" ] && minutes="$left"
+          fi
+          echo "minutes=$minutes" >> "$GITHUB_OUTPUT"
 
           # Drafts count toward the cap: a stuck draft is still work waiting on a human.
           open_agent_prs=$(gh pr list --state open --limit 100 --json headRefName \
@@ -113,7 +136,8 @@ jobs:
     needs: pick
     if: needs.pick.outputs.issue != ''
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # Shortened near QUIET_FROM so a late scheduled run still ends before the quiet window.
+    timeout-minutes: ${{ fromJSON(needs.pick.outputs.minutes) }}
     env:
       ISSUE: ${{ needs.pick.outputs.issue }}
       BRANCH: ${{ needs.pick.outputs.branch }}
@@ -167,6 +191,9 @@ jobs:
 
             You are the unattended scheduled ticket agent for ${{ github.repository }}. No human is watching this run.
             Work on issue #${{ env.ISSUE }} only, on the already checked-out branch `${{ env.BRANCH }}`.
+            This job is killed ${{ needs.pick.outputs.minutes }} minutes after it starts (about 5 go on setup). If
+            the work will not fit, commit what you have, push it, and open a --draft PR that says what is left, rather
+            than being cut off with nothing pushed.
 
             Before you start:
             - Read AGENTS.md and docs/CODING_STANDARDS.md, then `gh issue view ${{ env.ISSUE }} --comments`.
