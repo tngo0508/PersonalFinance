@@ -8,8 +8,8 @@ using PersonalFinance.Shared.Constants;
 namespace PersonalFinance.ApiService.Features.Research;
 
 /// <summary>
-/// Fills the <see cref="ExchangeRate"/> table (ADR 0016, localization spec §2.6): for each supported currency but the
-/// US dollar, the USD rate of every day from the day after the latest Frankfurter rate (or <see cref="FirstDate"/>) to
+/// Fills the <see cref="ExchangeRate"/> table (ADR 0016, localization spec §2.6): for each
+/// <see cref="ConvertibleCurrencies">convertible currency</see> but the US dollar, the USD rate of every day from the day after the latest Frankfurter rate (or <see cref="FirstDate"/>) to
 /// today. It runs with the Research datasets in the daily refresh job. When Frankfurter cannot be read, the latest rate
 /// comes from the currency-api instead, so the table still gains a recent day; the next Frankfurter read fills the days
 /// in between. No source needs a secret. Rows are only added, never rewritten. After writing, it evicts the quote's
@@ -26,7 +26,9 @@ internal sealed class FxRatesRefresher : IResearchDatasetRefresher
     /// <summary>The <see cref="ExchangeRate.Source"/> of a currency-api rate.</summary>
     public const string CurrencyApiSource = "currency-api";
 
-    /// <summary>The first day an empty table is filled from, so older Budget Tracker and spreadsheet rows have a rate.</summary>
+    /// <summary>
+    /// The first day a quote with no rates yet is filled from, so older Budget Tracker and spreadsheet rows have a rate.
+    /// </summary>
     internal static readonly DateOnly FirstDate = new(2015, 1, 1);
 
     private readonly AppDbContext _db;
@@ -63,7 +65,7 @@ internal sealed class FxRatesRefresher : IResearchDatasetRefresher
     public async Task RefreshAsync(CancellationToken cancellationToken)
     {
         DateOnly today = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
-        foreach (SupportedCurrency quote in SupportedCurrencies.All.Where(c => c.Code != BaseCurrency))
+        foreach (ConvertibleCurrency quote in ConvertibleCurrencies.All.Where(c => c.Code != BaseCurrency))
         {
             DateOnly? latest = await _db.ExchangeRates
                 .Where(r => r.BaseCurrency == BaseCurrency && r.QuoteCurrency == quote.Code

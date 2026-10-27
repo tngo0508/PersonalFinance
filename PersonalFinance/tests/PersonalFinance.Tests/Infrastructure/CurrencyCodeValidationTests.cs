@@ -33,6 +33,7 @@ public class CurrencyCodeValidationTests
         { "USD", true },
         { "VND", true },
         { "EUR", false },
+        { "JPY", false },
         { "usd", false },
         { "", false },
         { "US", false },
@@ -113,6 +114,7 @@ public class CurrencyCodeValidationTests
 
     [Theory]
     [InlineData("EUR")]
+    [InlineData("JPY")]
     [InlineData("vnd")]
     [InlineData("")]
     public async Task GoogleDrive_Connect_RejectsAnUnsupportedCode_BeforeTouchingTheDatabase(string code)

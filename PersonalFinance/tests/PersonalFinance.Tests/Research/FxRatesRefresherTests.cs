@@ -12,54 +12,61 @@ using PersonalFinance.Tests.TestSupport;
 namespace PersonalFinance.Tests.Research;
 
 /// <summary>
-/// The daily exchange-rate refresh (ADR 0016, localization spec §2.6): Frankfurter first, from the day after its latest
-/// stored rate (or the first date) to today; the currency-api's latest rate when Frankfurter fails; rows only added.
+/// The daily exchange-rate refresh (ADR 0016, localization spec §2.6): for every Convertible Currency but the US dollar,
+/// Frankfurter first, from the day after its latest stored rate (or the first date) to today; the currency-api's latest
+/// rate when Frankfurter fails; rows only added.
 /// </summary>
 public class FxRatesRefresherTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 26, 3, 0, 0, TimeSpan.Zero);
     private static readonly DateOnly Today = new(2026, 10, 26);
 
+    /// <summary>Every Convertible Currency but the US dollar, in the order they are refreshed.</summary>
+    private static readonly string[] Quotes = ["VND", "JPY", "EUR", "GBP", "CNY", "KRW", "THB", "SGD", "AUD", "CAD"];
+
     [Fact]
-    public async Task AnEmptyTable_IsFilledFromTheFirstDate_ToToday_FromFrankfurter()
+    public async Task AnEmptyTable_FillsEveryQuoteFromTheFirstDate_ToToday_FromFrankfurter()
     {
         await using AppDbContext db = CreateContext();
         var frankfurter = new FakeFrankfurter();
 
         await Refresher(db, frankfurter, new FakeCurrencyApi()).RefreshAsync(CancellationToken.None);
 
-        (string Quote, DateOnly From, DateOnly To) asked = Assert.Single(frankfurter.Requests);
-        Assert.Equal(("VND", FxRatesRefresher.FirstDate, Today), asked);
-        List<ExchangeRate> rows = await db.ExchangeRates.OrderBy(r => r.Date).ToListAsync();
-        Assert.Equal(Today.DayNumber - FxRatesRefresher.FirstDate.DayNumber + 1, rows.Count);
+        Assert.Equal(Quotes.Select(quote => (quote, FxRatesRefresher.FirstDate, Today)), frankfurter.Requests);
+        List<ExchangeRate> rows = await db.ExchangeRates.ToListAsync();
+        int days = Today.DayNumber - FxRatesRefresher.FirstDate.DayNumber + 1;
+        Assert.Equal(Quotes.Order().Select(quote => (quote, days)),
+            rows.GroupBy(r => r.QuoteCurrency).OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => (g.Key, g.Count())));
         Assert.All(rows, row =>
         {
             Assert.Equal("USD", row.BaseCurrency);
-            Assert.Equal("VND", row.QuoteCurrency);
             Assert.Equal(FxRatesRefresher.FrankfurterSource, row.Source);
         });
     }
 
     [Fact]
-    public async Task StoredRates_AreContinuedFromTheDayAfterTheLatest()
+    public async Task AStoredQuote_ContinuesFromTheDayAfterItsLatest_AndANewQuote_BackfillsFromTheFirstDate()
     {
         await using AppDbContext db = CreateContext();
-        db.ExchangeRates.Add(Rate(new DateOnly(2026, 10, 23), 25_800m, FxRatesRefresher.FrankfurterSource));
+        db.ExchangeRates.Add(Rate("VND", new DateOnly(2026, 10, 23), 25_800m, FxRatesRefresher.FrankfurterSource));
         await db.SaveChangesAsync();
         var frankfurter = new FakeFrankfurter();
 
         await Refresher(db, frankfurter, new FakeCurrencyApi()).RefreshAsync(CancellationToken.None);
 
-        Assert.Equal(("VND", new DateOnly(2026, 10, 24), Today), Assert.Single(frankfurter.Requests));
-        Assert.Equal(4, await db.ExchangeRates.CountAsync());
-        Assert.Equal(25_800m, (await db.ExchangeRates.SingleAsync(r => r.Date == new DateOnly(2026, 10, 23))).Rate);
+        Assert.Equal(("VND", new DateOnly(2026, 10, 24), Today), frankfurter.Requests.Single(r => r.Quote == "VND"));
+        Assert.Equal(("JPY", FxRatesRefresher.FirstDate, Today), frankfurter.Requests.Single(r => r.Quote == "JPY"));
+        Assert.Equal(4, await db.ExchangeRates.CountAsync(r => r.QuoteCurrency == "VND"));
+        Assert.Equal(25_800m, (await db.ExchangeRates.SingleAsync(r => r.QuoteCurrency == "VND"
+                                                                      && r.Date == new DateOnly(2026, 10, 23))).Rate);
+        Assert.Equal(FxRatesRefresher.FirstDate, await db.ExchangeRates.Where(r => r.QuoteCurrency == "JPY").MinAsync(r => r.Date));
     }
 
     [Fact]
     public async Task UpToDateRates_AskNoSource()
     {
         await using AppDbContext db = CreateContext();
-        db.ExchangeRates.Add(Rate(Today, 25_818m, FxRatesRefresher.FrankfurterSource));
+        db.ExchangeRates.AddRange(Quotes.Select(quote => Rate(quote, Today, 100m, FxRatesRefresher.FrankfurterSource)));
         await db.SaveChangesAsync();
         var frankfurter = new FakeFrankfurter();
         var currencyApi = new FakeCurrencyApi();
@@ -67,13 +74,14 @@ public class FxRatesRefresherTests
         await Refresher(db, frankfurter, currencyApi).RefreshAsync(CancellationToken.None);
 
         Assert.Empty(frankfurter.Requests);
-        Assert.Equal(0, currencyApi.Requests);
+        Assert.Empty(currencyApi.Quotes);
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task WhenFrankfurterFailsOrHasNone_TheCurrencyApisLatestRateIsStored(bool frankfurterAnswersNothing)
+    public async Task WhenFrankfurterFailsOrHasNone_TheCurrencyApisLatestRateIsStored_ForEveryQuote(
+        bool frankfurterAnswersNothing)
     {
         await using AppDbContext db = CreateContext();
         var frankfurter = new FakeFrankfurter
@@ -81,12 +89,14 @@ public class FxRatesRefresherTests
             Failure = frankfurterAnswersNothing ? null : new HttpRequestException("down"),
             AnswersNothing = frankfurterAnswersNothing
         };
+        var currencyApi = new FakeCurrencyApi { Latest = new DailyRate(Today, 156.8596076m) };
 
-        await Refresher(db, frankfurter, new FakeCurrencyApi { Latest = new DailyRate(Today, 25_831.81m) })
-            .RefreshAsync(CancellationToken.None);
+        await Refresher(db, frankfurter, currencyApi).RefreshAsync(CancellationToken.None);
 
-        ExchangeRate stored = await db.ExchangeRates.SingleAsync();
-        Assert.Equal((Today, 25_831.81m, FxRatesRefresher.CurrencyApiSource), (stored.Date, stored.Rate, stored.Source));
+        Assert.Equal(Quotes, currencyApi.Quotes);
+        ExchangeRate yen = await db.ExchangeRates.SingleAsync(r => r.QuoteCurrency == "JPY");
+        Assert.Equal((Today, 156.8596076m, FxRatesRefresher.CurrencyApiSource), (yen.Date, yen.Rate, yen.Source));
+        Assert.Equal(Quotes.Length, await db.ExchangeRates.CountAsync(r => r.Source == FxRatesRefresher.CurrencyApiSource));
     }
 
     [Fact]
@@ -94,14 +104,14 @@ public class FxRatesRefresherTests
     {
         await using AppDbContext db = CreateContext();
         db.ExchangeRates.AddRange(
-            Rate(new DateOnly(2026, 10, 22), 25_800m, FxRatesRefresher.FrankfurterSource),
-            Rate(new DateOnly(2026, 10, 25), 25_831.81m, FxRatesRefresher.CurrencyApiSource));
+            Rate("VND", new DateOnly(2026, 10, 22), 25_800m, FxRatesRefresher.FrankfurterSource),
+            Rate("VND", new DateOnly(2026, 10, 25), 25_831.81m, FxRatesRefresher.CurrencyApiSource));
         await db.SaveChangesAsync();
         var frankfurter = new FakeFrankfurter();
 
         await Refresher(db, frankfurter, new FakeCurrencyApi()).RefreshAsync(CancellationToken.None);
 
-        Assert.Equal(("VND", new DateOnly(2026, 10, 23), Today), Assert.Single(frankfurter.Requests));
+        Assert.Equal(("VND", new DateOnly(2026, 10, 23), Today), frankfurter.Requests.Single(r => r.Quote == "VND"));
         Assert.Equal(
             [
                 (new DateOnly(2026, 10, 22), FxRatesRefresher.FrankfurterSource),
@@ -110,14 +120,15 @@ public class FxRatesRefresherTests
                 (new DateOnly(2026, 10, 25), FxRatesRefresher.CurrencyApiSource),
                 (Today, FxRatesRefresher.FrankfurterSource)
             ],
-            (await db.ExchangeRates.OrderBy(r => r.Date).ToListAsync()).Select(r => (r.Date, r.Source)));
+            (await db.ExchangeRates.Where(r => r.QuoteCurrency == "VND").OrderBy(r => r.Date).ToListAsync())
+                .Select(r => (r.Date, r.Source)));
     }
 
     [Fact]
     public async Task ARefresh_EvictsTheCachedRates_SoAConversionSeesTheNewDay()
     {
         await using AppDbContext db = CreateContext();
-        db.ExchangeRates.Add(Rate(new DateOnly(2026, 10, 23), 25_500m, FxRatesRefresher.FrankfurterSource));
+        db.ExchangeRates.Add(Rate("VND", new DateOnly(2026, 10, 23), 25_500m, FxRatesRefresher.FrankfurterSource));
         await db.SaveChangesAsync();
         ExchangeRateCache cache = TestCurrencyConverter.NewCache();
         ICurrencyConverter converter = TestCurrencyConverter.Create(db, cache, new FixedTimeProvider(Now));
@@ -125,8 +136,20 @@ public class FxRatesRefresherTests
 
         await Refresher(db, new FakeFrankfurter(), new FakeCurrencyApi(), cache).RefreshAsync(CancellationToken.None);
 
-        decimal todaysRate = (await db.ExchangeRates.SingleAsync(r => r.Date == Today)).Rate;
+        decimal todaysRate = (await db.ExchangeRates.SingleAsync(r => r.QuoteCurrency == "VND" && r.Date == Today)).Rate;
         Assert.Equal(todaysRate, (await converter.PrepareAsync("VND", [new MoneyAt("USD", null)])).Convert(1m, "USD", null));
+    }
+
+    [Fact]
+    public async Task ARefresh_EvictsTheCachedRatesOfANewQuote()
+    {
+        await using AppDbContext db = CreateContext();
+        ExchangeRateCache cache = TestCurrencyConverter.NewCache();
+        cache.Set(new RateKey("JPY", null), null);
+
+        await Refresher(db, new FakeFrankfurter(), new FakeCurrencyApi(), cache).RefreshAsync(CancellationToken.None);
+
+        Assert.False(cache.TryGet(new RateKey("JPY", null), out _));
     }
 
     [Fact]
@@ -211,8 +234,8 @@ public class FxRatesRefresherTests
         new(db, frankfurter, currencyApi, cache ?? TestCurrencyConverter.NewCache(), new FixedTimeProvider(Now),
             NullLogger<FxRatesRefresher>.Instance);
 
-    private static ExchangeRate Rate(DateOnly date, decimal rate, string source) =>
-        new() { BaseCurrency = "USD", QuoteCurrency = "VND", Date = date, Rate = rate, Source = source };
+    private static ExchangeRate Rate(string quote, DateOnly date, decimal rate, string source) =>
+        new() { BaseCurrency = "USD", QuoteCurrency = quote, Date = date, Rate = rate, Source = source };
 
     private static HttpResponseMessage Json(string body) =>
         new(HttpStatusCode.OK) { Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json") };
@@ -250,13 +273,13 @@ public class FxRatesRefresherTests
 
     private sealed class FakeCurrencyApi : ICurrencyApiClient
     {
-        public int Requests { get; private set; }
+        public List<string> Quotes { get; } = [];
         public DailyRate Latest { get; init; } = new(Today, 25_831.81m);
         public Exception? Failure { get; init; }
 
         public Task<DailyRate> GetLatestUsdRateAsync(string quoteCurrency, CancellationToken cancellationToken)
         {
-            Requests++;
+            Quotes.Add(quoteCurrency);
             return Failure is null ? Task.FromResult(Latest) : Task.FromException<DailyRate>(Failure);
         }
     }
