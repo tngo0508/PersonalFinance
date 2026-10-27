@@ -1,0 +1,146 @@
+/* PROTOTYPE (#420) - throwaway styles for the Guild Hall variants. Do not merge to main. */
+
+.gh-root {
+    --gh-paper: #FBF6EC;
+    --gh-linen: #F3EAD8;
+    --gh-cork: #E8D9BC;
+    --gh-ink: #2B2420;
+    --gh-ink-soft: #5A4C42;
+    --gh-clay: #A4532F;
+    --gh-clay-wash: #F6E3D6;
+    --gh-brass: #8A6A1E;
+    --gh-moss: #3F6145;
+    --gh-moss-wash: #E3ECDF;
+    --gh-rule: #DCCDB2;
+    --gh-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    color: var(--gh-ink);
+    background: var(--gh-paper);
+    border-radius: 12px;
+    padding: clamp(16px, 3vw, 32px);
+    margin-bottom: 72px;
+}
+
+.gh-root h1, .gh-root h2, .gh-root h3 { font-family: var(--gh-serif); color: var(--gh-ink); }
+.gh-root h1 { font-size: clamp(1.6rem, 3.2vw, 2.3rem); line-height: 1.2; }
+.gh-root h2 { font-size: 1.25rem; }
+.gh-muted { color: var(--gh-ink-soft); font-size: 0.88rem; }
+.gh-eyebrow { text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.72rem; color: var(--gh-brass); margin: 0 0 4px; font-weight: 600; }
+.gh-tag { display: inline-block; font-size: 0.75rem; color: var(--gh-moss); background: var(--gh-moss-wash); border-radius: 999px; padding: 2px 10px; margin: 0 0 6px; }
+.gh-private { font-size: 0.82rem; color: var(--gh-ink-soft); margin: 8px 0 0; }
+.gh-link { background: none; border: 0; padding: 0; color: var(--gh-clay); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font: inherit; }
+
+.gh-btn { background: var(--gh-clay); color: #fff; border: 0; border-radius: 999px; padding: 8px 18px; font-weight: 600; cursor: pointer; }
+.gh-btn:hover { background: #8A4325; }
+.gh-btn.is-on { background: var(--gh-moss); }
+
+.gh-reactions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.gh-react { border: 1px solid var(--gh-rule); background: #fff; border-radius: 999px; padding: 3px 12px; font-size: 0.82rem; color: var(--gh-ink); cursor: pointer; }
+.gh-react[aria-pressed="true"] { background: var(--gh-clay-wash); border-color: var(--gh-clay); }
+.gh-react-count { color: var(--gh-ink-soft); margin-left: 2px; }
+.gh-react--quiet { border-color: transparent; background: transparent; padding-left: 0; }
+
+.gh-comments { list-style: none; padding: 0; margin: 10px 0 0; }
+.gh-comment { border-left: 3px solid var(--gh-rule); padding: 4px 0 4px 12px; margin-bottom: 10px; }
+.gh-comment p { margin: 2px 0; }
+.gh-comment-author { font-weight: 600; }
+
+.gh-poll-options { display: grid; gap: 8px; }
+.gh-poll-option { text-align: left; border: 1px solid var(--gh-rule); background: #fff; border-radius: 10px; padding: 8px 12px; cursor: pointer; color: var(--gh-ink); }
+.gh-poll-option:hover { border-color: var(--gh-clay); }
+.gh-poll-results { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.gh-poll-results li { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; }
+.gh-poll-label { grid-column: 1 / -1; font-size: 0.88rem; }
+.gh-poll-bar { height: 10px; background: var(--gh-linen); border-radius: 999px; overflow: hidden; }
+.gh-poll-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--gh-brass), var(--gh-clay)); border-radius: 999px; }
+.gh-poll-pct { font-size: 0.8rem; color: var(--gh-ink-soft); }
+.gh-poll-results[hidden], .gh-poll-note[hidden], .gh-nudge[hidden], .gh-c-panel[hidden] { display: none; }
+
+.gh-form { display: grid; gap: 10px; }
+.gh-form label { display: grid; gap: 4px; font-size: 0.85rem; font-weight: 600; }
+.gh-form input, .gh-form textarea { font: inherit; font-weight: 400; border: 1px solid var(--gh-rule); border-radius: 8px; padding: 8px 10px; background: #fff; }
+.gh-nudge { background: var(--gh-clay-wash); border-left: 3px solid var(--gh-clay); padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; margin: 0; }
+
+.gh-lanterns { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0; }
+.gh-lantern { width: 12px; height: 16px; border-radius: 6px 6px 4px 4px; background: var(--gh-linen); border: 1px solid var(--gh-rule); }
+.gh-lantern.is-lit { background: radial-gradient(circle at 50% 60%, #FFD98A, #E39A3B); border-color: #C7802C; box-shadow: 0 0 6px rgba(227, 154, 59, 0.55); }
+
+.gh-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.gh-chip { border: 1px solid var(--gh-rule); background: transparent; border-radius: 999px; padding: 3px 12px; font-size: 0.82rem; color: var(--gh-ink); }
+.gh-chip.is-active { background: var(--gh-ink); color: var(--gh-paper); border-color: var(--gh-ink); }
+
+/* ===== A: Corkboard workbench ===== */
+.gh-a-plaque { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: flex-end; padding-bottom: 20px; border-bottom: 2px dashed var(--gh-rule); margin-bottom: 24px; }
+.gh-a-plaque > div:first-child { max-width: 36rem; }
+.gh-a-badge { display: grid; gap: 2px; background: var(--gh-linen); border: 1px solid var(--gh-rule); border-radius: 10px; padding: 12px 16px; font-family: var(--gh-serif); }
+.gh-a-badge strong { font-size: 1.2rem; }
+.gh-a-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem); gap: 24px; }
+.gh-a-section-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
+.gh-a-board { columns: 2 16rem; column-gap: 16px; background: var(--gh-cork); border-radius: 12px; padding: 16px; }
+.gh-a-note { break-inside: avoid; position: relative; background: #FFFDF7; border-radius: 4px; padding: 18px 16px 14px; margin-bottom: 16px; box-shadow: 0 2px 0 rgba(43, 36, 32, 0.08), 0 6px 14px rgba(43, 36, 32, 0.08); }
+.gh-a-note:nth-child(odd) { transform: rotate(-0.6deg); }
+.gh-a-note:nth-child(even) { transform: rotate(0.5deg); }
+.gh-a-note--pending { background: repeating-linear-gradient(-45deg, #FFFDF7, #FFFDF7 10px, #F7EFDF 10px, #F7EFDF 20px); }
+.gh-pin { position: absolute; top: 6px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--gh-clay); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
+.gh-a-note dl { margin: 8px 0; font-size: 0.9rem; }
+.gh-a-note dt { font-family: var(--gh-serif); font-style: italic; color: var(--gh-brass); }
+.gh-a-note dd { margin: 0 0 6px; }
+.gh-a-thread summary { cursor: pointer; color: var(--gh-clay); font-size: 0.85rem; margin-top: 8px; }
+.gh-a-rail { display: grid; gap: 16px; align-content: start; }
+.gh-a-rail-card { background: #fff; border: 1px solid var(--gh-rule); border-radius: 12px; padding: 16px; }
+
+/* ===== B: Hearth journal ===== */
+.gh-b { background: linear-gradient(180deg, #F7EEDD 0, var(--gh-paper) 260px); }
+.gh-b-column { max-width: 40rem; margin: 0 auto; font-size: 1.02rem; line-height: 1.65; }
+.gh-b-header { text-align: center; padding: 8px 0 20px; }
+.gh-b-ritual { text-align: center; background: #fff; border: 1px solid var(--gh-rule); border-radius: 18px; padding: 24px; box-shadow: 0 10px 30px rgba(164, 83, 47, 0.08); }
+.gh-b-ritual h2 { font-size: 1.6rem; margin: 0 0 4px; }
+.gh-b-seal { width: 112px; height: 112px; border-radius: 50%; border: 3px double var(--gh-clay); background: var(--gh-clay-wash); color: var(--gh-clay); font-family: var(--gh-serif); font-size: 1.05rem; font-weight: 700; cursor: pointer; margin: 8px 0; }
+.gh-b-seal.is-on { background: var(--gh-clay); color: #fff; }
+.gh-b-hearth { font-family: var(--gh-serif); font-size: 1.1rem; margin: 8px 0 0; }
+.gh-b-rule { border: 0; height: 18px; margin: 32px 0; background: radial-gradient(circle, var(--gh-brass) 2px, transparent 3px) center / 24px 18px repeat-x; opacity: 0.5; }
+.gh-b-entry { padding-bottom: 28px; margin-bottom: 28px; border-bottom: 1px solid var(--gh-rule); }
+.gh-b-entry h2 { font-size: 1.55rem; margin: 2px 0 8px; }
+.gh-b-meta { font-size: 0.8rem; color: var(--gh-ink-soft); letter-spacing: 0.04em; margin: 0; }
+.gh-b-dropcap::first-letter { float: left; font-family: var(--gh-serif); font-size: 3.1rem; line-height: 0.9; padding: 4px 8px 0 0; color: var(--gh-clay); }
+.gh-b-entry blockquote { font-family: var(--gh-serif); font-style: italic; border-left: 3px solid var(--gh-brass); padding-left: 14px; margin: 12px 0; color: var(--gh-ink-soft); }
+.gh-b-replies { margin-top: 12px; padding: 4px 16px; background: var(--gh-linen); border-radius: 10px; }
+.gh-b-question { background: var(--gh-moss-wash); border-radius: 16px; padding: 20px; margin: 0 0 28px; }
+.gh-b-write { background: #fff; border: 1px dashed var(--gh-rule); border-radius: 14px; padding: 20px; }
+
+/* ===== C: Guild rooms ===== */
+.gh-c { padding: 0; overflow: hidden; }
+.gh-c-gate { background: linear-gradient(135deg, #3B2E25, #5A3E2B); color: var(--gh-paper); padding: 24px clamp(16px, 3vw, 32px) 0; }
+.gh-c-gate h1 { color: var(--gh-paper); margin: 0; }
+.gh-c-who { color: #E9DCC6; margin: 4px 0 16px; }
+.gh-c-gate .gh-link { color: #FFD98A; }
+.gh-c-rooms { display: flex; gap: 4px; overflow-x: auto; }
+.gh-c-room { display: grid; text-align: left; background: rgba(255, 255, 255, 0.08); color: var(--gh-paper); border: 0; border-radius: 12px 12px 0 0; padding: 10px 18px; font-family: var(--gh-serif); font-size: 1.05rem; cursor: pointer; white-space: nowrap; }
+.gh-c-room small { font-family: inherit; font-size: 0.72rem; opacity: 0.75; color: inherit; }
+.gh-c-room.is-active { background: var(--gh-paper); color: var(--gh-ink); }
+.gh-c-panel { padding: clamp(16px, 3vw, 32px); }
+.gh-c-hearth { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 20px; }
+.gh-c-challenge { background: #2F2520; color: #F3E7D3; border-radius: 16px; padding: 22px; }
+.gh-c-challenge h2 { color: #FFF4E0; }
+.gh-c-challenge .gh-eyebrow { color: #E7C27A; }
+.gh-c-challenge .gh-private { color: #D8C6AA; }
+.gh-c-challenge .gh-lantern { background: #45382F; border-color: #5A4A3E; }
+.gh-c-challenge .gh-lantern.is-lit { background: radial-gradient(circle at 50% 60%, #FFE3A3, #E39A3B); border-color: #E39A3B; }
+.gh-c-workshop { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem); gap: 24px; }
+.gh-c-ledger { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--gh-rule); }
+.gh-c-ledger > li { border-bottom: 1px solid var(--gh-rule); padding: 12px 0; }
+.gh-c-ledger summary { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; cursor: pointer; }
+.gh-c-title { font-family: var(--gh-serif); font-size: 1.15rem; flex: 1 1 14rem; }
+.gh-c-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 12px; margin-top: 12px; }
+.gh-c-steps h3 { font-size: 0.85rem; font-style: italic; color: var(--gh-brass); margin: 0; }
+.gh-c-steps p { margin: 4px 0 0; font-size: 0.92rem; }
+.gh-c-bench { background: var(--gh-linen); border-radius: 14px; padding: 18px; align-self: start; }
+.gh-c-square { max-width: 36rem; }
+
+@media (max-width: 900px) {
+    .gh-a-layout, .gh-c-workshop { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ===== Prototype switcher (not part of the design) ===== */
+.gh-switcher { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 2000; display: flex; align-items: center; gap: 10px; background: #111; color: #fff; padding: 6px 10px; border-radius: 999px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); font: 600 0.82rem system-ui, sans-serif; max-width: calc(100vw - 32px); }
+.gh-switcher button { background: #333; color: #fff; border: 0; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; }
+.gh-switcher span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

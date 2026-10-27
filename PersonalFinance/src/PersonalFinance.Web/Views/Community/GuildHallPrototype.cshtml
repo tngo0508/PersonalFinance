@@ -1,0 +1,358 @@
+@* PROTOTYPE (#420) - throwaway. Three structurally different Guild Hall variants on /Community?variant=A|B|C.
+   Stub data only, nothing persists, Development only. Do not merge to main. *@
+@model string
+
+@{
+    ViewData["Title"] = "Guild Hall (prototype)";
+    string variant = Model is "A" or "B" or "C" ? Model : "A";
+    string self = "Amber Wren";
+    var strategies = new[]
+    {
+        new Strategy("Quiet Kestrel", "Groceries", "The Sunday pantry audit",
+            "Every Sunday I check what's already in the cupboard before writing the shopping list.",
+            "Far fewer duplicate buys. Our grocery spend dropped by about a third over two months.",
+            "The audit itself: ten minutes, coffee in hand, before the week starts.", 18, 9, "4 days ago"),
+        new Strategy("Patient Willow", "Spending", "A 48-hour pause on wish-list buys",
+            "Anything I want that isn't a need goes on a list. I can buy it after two days if I still want it.",
+            "Roughly half the list I no longer wanted. The pause stopped feeling like a sacrifice by week three.",
+            "The list. Seeing old wants I'd forgotten is oddly freeing.", 31, 14, "1 week ago"),
+        new Strategy("Kind Otter", "Saving", "Moving savings the day after payday",
+            "I set an automatic transfer for the morning after each payday, before I'd looked at my balance.",
+            "I stopped 'saving what's left', which was usually nothing. Six months in, I've never missed it.",
+            "The timing. The day after, not the end of the month.", 24, 22, "2 weeks ago"),
+        new Strategy("Steady Heron", "Debt", "Highest-rate card first, and patience",
+            "Minimum payments everywhere, everything extra to the card with the highest rate.",
+            "Fourteen months to clear three cards. The first four months felt like nothing was happening.",
+            "A paper chart on the fridge. Colouring a square per payment kept me going.", 42, 37, "3 weeks ago"),
+    };
+    var comments = new[]
+    {
+        new Comment("Patient Willow", "Doing this tonight. The coffee part sold me.", "2 days ago"),
+        new Comment("Kind Otter", "We do it Saturday mornings with the kids. Same effect, and they find snacks we forgot.", "1 day ago"),
+    };
+    var poll = new[] { ("Writing down every purchase", 34), ("Planning meals for the week", 27), ("A waiting rule before buying", 22), ("Automatic transfers", 17) };
+}
+
+@functions {
+    private sealed record Strategy(string Author, string Category, string Title, string Tried, string Happened, string Keep,
+        int Helpful, int Cheers, string When);
+
+    private sealed record Comment(string Author, string Text, string When);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/guild-hall-prototype.css" asp-append-version="true"/>
+}
+
+@* ---------- shared fragments (only tiny bits are shared; layouts differ per variant) ---------- *@
+@{
+    void Reactions(int helpful, int cheers)
+    {
+        <div class="gh-reactions" role="group" aria-label="Reactions">
+            <button type="button" class="gh-react" data-gh-react aria-pressed="false">
+                <span aria-hidden="true">🕯️</span> Helpful <span class="gh-react-count" data-gh-count>@helpful</span>
+            </button>
+            <button type="button" class="gh-react" data-gh-react aria-pressed="false">
+                <span aria-hidden="true">🙌</span> Cheering you on <span class="gh-react-count" data-gh-count>@cheers</span>
+            </button>
+        </div>
+    }
+
+    void CommentList()
+    {
+        <ul class="gh-comments">
+            @foreach (Comment c in comments)
+            {
+                <li class="gh-comment">
+                    <span class="gh-comment-author">@c.Author</span> <span class="gh-muted">· @c.When</span>
+                    <p>@c.Text</p>
+                    <button type="button" class="gh-react gh-react--quiet" data-gh-react aria-pressed="false">
+                        <span aria-hidden="true">🙌</span> Cheer
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+
+    void PollBody()
+    {
+        <div class="gh-poll" data-gh-poll>
+            <div class="gh-poll-options">
+                @foreach ((string text, int _) in poll)
+                {
+                    <button type="button" class="gh-poll-option" data-gh-vote>@text</button>
+                }
+            </div>
+            <ol class="gh-poll-results" hidden>
+                @foreach ((string text, int pct) in poll)
+                {
+                    <li>
+                        <span class="gh-poll-label">@text</span>
+                        <span class="gh-poll-bar"><span style="width: @(pct)%"></span></span>
+                        <span class="gh-poll-pct">about @pct%</span>
+                    </li>
+                }
+            </ol>
+            <p class="gh-muted gh-poll-note" hidden>Thanks. Results show rounded shares only, never totals.</p>
+        </div>
+    }
+
+    void StrategyForm()
+    {
+        <div class="gh-form">
+            <label>Title<input type="text" placeholder="Name your practice"/></label>
+            <label>What I tried<textarea rows="2" data-gh-amount-watch></textarea></label>
+            <label>What happened<textarea rows="2" data-gh-amount-watch placeholder="e.g. cut grocery spend by about a third"></textarea></label>
+            <label>What I'd keep doing<textarea rows="2" data-gh-amount-watch></textarea></label>
+            <p class="gh-nudge" data-gh-nudge hidden>
+                Looks like a money amount. Could you describe the change instead, like "about a third less"?
+                Exact figures stay off the Guild Hall.
+            </p>
+            <p class="gh-muted">Please leave out your employer, exact location and account details. An Admin reads every Strategy before others see it.</p>
+            <button type="button" class="gh-btn">Send for review</button>
+        </div>
+    }
+
+    void Lanterns(int lit, int total)
+    {
+        <div class="gh-lanterns" aria-hidden="true">
+            @for (int i = 0; i < total; i++)
+            {
+                <span class="gh-lantern @(i < lit ? "is-lit" : "")"></span>
+            }
+        </div>
+    }
+}
+
+<div class="gh-root gh-@variant.ToLowerInvariant()">
+
+@if (variant == "A")
+{
+    @* ===== A: Corkboard workbench - a header plaque, a wall of pinned notes, a side rail ===== *@
+    <header class="gh-a-plaque">
+        <div>
+            <p class="gh-eyebrow">The Guild Hall</p>
+            <h1>Trade what works. Keep what helps.</h1>
+            <p class="gh-muted">No amounts, no rankings. Just practices people have tried, and the habits we keep together.</p>
+        </div>
+        <div class="gh-a-badge">
+            <span class="gh-muted">You appear as</span>
+            <strong data-gh-self>@self</strong>
+            <button type="button" class="gh-link" data-gh-reroll>Re-roll name</button>
+        </div>
+    </header>
+
+    <div class="gh-a-layout">
+        <section aria-labelledby="gh-a-strategies">
+            <div class="gh-a-section-head">
+                <h2 id="gh-a-strategies">Strategies on the board</h2>
+                <div class="gh-chips">
+                    <button type="button" class="gh-chip is-active">All</button>
+                    <button type="button" class="gh-chip">Groceries</button>
+                    <button type="button" class="gh-chip">Saving</button>
+                    <button type="button" class="gh-chip">Debt</button>
+                </div>
+            </div>
+            <div class="gh-a-board">
+                <article class="gh-a-note gh-a-note--pending">
+                    <span class="gh-pin" aria-hidden="true"></span>
+                    <p class="gh-tag">Waiting for review · only you see this</p>
+                    <h3>Packing lunch four days a week</h3>
+                    <p class="gh-muted">by <span data-gh-self>@self</span></p>
+                </article>
+                @foreach (Strategy s in strategies)
+                {
+                    <article class="gh-a-note">
+                        <span class="gh-pin" aria-hidden="true"></span>
+                        <p class="gh-tag">@s.Category</p>
+                        <h3>@s.Title</h3>
+                        <dl>
+                            <dt>Tried</dt><dd>@s.Tried</dd>
+                            <dt>Happened</dt><dd>@s.Happened</dd>
+                            <dt>Keeping</dt><dd>@s.Keep</dd>
+                        </dl>
+                        <p class="gh-muted">@s.Author · @s.When</p>
+                        @{ Reactions(s.Helpful, s.Cheers); }
+                        @if (s == strategies[0])
+                        {
+                            <details class="gh-a-thread">
+                                <summary>2 replies</summary>
+                                @{ CommentList(); }
+                            </details>
+                        }
+                    </article>
+                }
+            </div>
+        </section>
+
+        <aside class="gh-a-rail">
+            <section class="gh-a-rail-card" data-gh-challenge>
+                <p class="gh-eyebrow">This week's challenge</p>
+                <h2>Cook at home five nights</h2>
+                <p><span data-gh-group-count>38</span> people kept it this week.</p>
+                @{ Lanterns(38, 48); }
+                <button type="button" class="gh-btn" data-gh-checkin data-on="Kept it this week ✓" data-off="I kept it this week">I kept it this week</button>
+                <p class="gh-private">🔒 Only you see your streak: <strong data-gh-streak>3</strong> weeks</p>
+            </section>
+            <section class="gh-a-rail-card">
+                <p class="gh-eyebrow">Question of the week</p>
+                <h2>Which habit has stuck longest for you?</h2>
+                @{ PollBody(); }
+            </section>
+            <section class="gh-a-rail-card">
+                <p class="gh-eyebrow">Pin a strategy</p>
+                @{ StrategyForm(); }
+            </section>
+        </aside>
+    </div>
+}
+else if (variant == "B")
+{
+    @* ===== B: Hearth journal - one quiet column, today's practice first, entries read like journal pages ===== *@
+    <div class="gh-b-column">
+        <header class="gh-b-header">
+            <p class="gh-eyebrow">The Guild Hall</p>
+            <h1>Evening, <span data-gh-self>@self</span>.</h1>
+            <p class="gh-muted">
+                That's your guild name. <button type="button" class="gh-link" data-gh-reroll>Choose another</button>
+            </p>
+        </header>
+
+        <section class="gh-b-ritual" data-gh-challenge aria-labelledby="gh-b-today">
+            <p class="gh-eyebrow">Today's practice</p>
+            <h2 id="gh-b-today">One no-spend day</h2>
+            <p>Did you keep it today?</p>
+            <button type="button" class="gh-b-seal" data-gh-checkin data-on="Kept ✓" data-off="I kept it">I kept it</button>
+            <p class="gh-b-hearth">
+                <span class="gh-b-flame" aria-hidden="true">🔥</span>
+                <span data-gh-group-count>21</span> people kept it today.
+            </p>
+            <p class="gh-private">🔒 Your streak, for your eyes: <strong data-gh-streak>3</strong> days</p>
+        </section>
+
+        <hr class="gh-b-rule"/>
+
+        @for (int i = 0; i < strategies.Length; i++)
+        {
+            Strategy s = strategies[i];
+            <article class="gh-b-entry">
+                <p class="gh-b-meta">@s.Category · @s.Author · @s.When</p>
+                <h2>@s.Title</h2>
+                <p class="gh-b-dropcap">@s.Tried</p>
+                <p>@s.Happened</p>
+                <blockquote>What I'd keep: @s.Keep</blockquote>
+                @{ Reactions(s.Helpful, s.Cheers); }
+                @if (i == 0)
+                {
+                    <div class="gh-b-replies">@{ CommentList(); }</div>
+                }
+            </article>
+
+            @if (i == 1)
+            {
+                <aside class="gh-b-question" aria-labelledby="gh-b-q">
+                    <p class="gh-eyebrow">A question for the hall</p>
+                    <h2 id="gh-b-q">Which habit has stuck longest for you?</h2>
+                    @{ PollBody(); }
+                </aside>
+            }
+        }
+
+        <section class="gh-b-write" aria-labelledby="gh-b-write">
+            <h2 id="gh-b-write">Write a page for the journal</h2>
+            @{ StrategyForm(); }
+        </section>
+    </div>
+}
+else
+{
+    @* ===== C: Guild rooms - tabbed rooms, each a full-width scene with its own rhythm ===== *@
+    <header class="gh-c-gate">
+        <h1>The Guild Hall</h1>
+        <p class="gh-c-who">Signed in as <strong data-gh-self>@self</strong> <button type="button" class="gh-link" data-gh-reroll>re-roll</button></p>
+        <nav class="gh-c-rooms" role="tablist" aria-label="Rooms">
+            <button type="button" role="tab" class="gh-c-room is-active" aria-selected="true" data-gh-room="hearth">🔥 The Hearth<small>Challenges</small></button>
+            <button type="button" role="tab" class="gh-c-room" aria-selected="false" data-gh-room="workshop">🛠️ The Workshop<small>Strategies</small></button>
+            <button type="button" role="tab" class="gh-c-room" aria-selected="false" data-gh-room="square">🗳️ The Square<small>Polls</small></button>
+        </nav>
+    </header>
+
+    <section class="gh-c-panel" data-gh-panel="hearth">
+        <div class="gh-c-hearth">
+            <div class="gh-c-challenge" data-gh-challenge>
+                <p class="gh-eyebrow">Weekly · ends Sunday</p>
+                <h2>Cook at home five nights</h2>
+                @{ Lanterns(38, 60); }
+                <p><span data-gh-group-count>38</span> lanterns lit this week</p>
+                <button type="button" class="gh-btn" data-gh-checkin data-on="Your lantern is lit ✓" data-off="Light my lantern">Light my lantern</button>
+                <p class="gh-private">🔒 Your streak: <strong data-gh-streak>3</strong> weeks. Nobody else sees it.</p>
+            </div>
+            <div class="gh-c-challenge" data-gh-challenge>
+                <p class="gh-eyebrow">Daily · 30 days</p>
+                <h2>One no-spend day</h2>
+                @{ Lanterns(21, 60); }
+                <p><span data-gh-group-count>21</span> lanterns lit today</p>
+                <button type="button" class="gh-btn" data-gh-checkin data-on="Your lantern is lit ✓" data-off="Light my lantern">Light my lantern</button>
+                <p class="gh-private">🔒 Your streak: <strong data-gh-streak>0</strong> days.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="gh-c-panel" data-gh-panel="workshop" hidden>
+        <div class="gh-c-workshop">
+            <ul class="gh-c-ledger">
+                @foreach (Strategy s in strategies)
+                {
+                    <li>
+                        <details>
+                            <summary>
+                                <span class="gh-tag">@s.Category</span>
+                                <span class="gh-c-title">@s.Title</span>
+                                <span class="gh-muted">@s.Author</span>
+                            </summary>
+                            <div class="gh-c-steps">
+                                <div><h3>Tried</h3><p>@s.Tried</p></div>
+                                <div><h3>Happened</h3><p>@s.Happened</p></div>
+                                <div><h3>Keeping</h3><p>@s.Keep</p></div>
+                            </div>
+                            @{ Reactions(s.Helpful, s.Cheers); }
+                            @if (s == strategies[0])
+                            {
+                                CommentList();
+                            }
+                        </details>
+                    </li>
+                }
+            </ul>
+            <aside class="gh-c-bench">
+                <h2>At your bench</h2>
+                <p class="gh-tag">Waiting for review</p>
+                <p>Packing lunch four days a week</p>
+                <hr/>
+                @{ StrategyForm(); }
+            </aside>
+        </div>
+    </section>
+
+    <section class="gh-c-panel" data-gh-panel="square" hidden>
+        <div class="gh-c-square">
+            <h2>Which habit has stuck longest for you?</h2>
+            <p class="gh-muted">Opened by the Guild · closes Friday</p>
+            @{ PollBody(); }
+            <h3>Talk in the square</h3>
+            @{ CommentList(); }
+        </div>
+    </section>
+}
+
+</div>
+
+<nav class="gh-switcher" aria-label="Prototype variant switcher">
+    <button type="button" data-gh-variant-step="-1" aria-label="Previous variant">←</button>
+    <span>Variant @variant · @(variant == "A" ? "Corkboard workbench" : variant == "B" ? "Hearth journal" : "Guild rooms")</span>
+    <button type="button" data-gh-variant-step="1" aria-label="Next variant">→</button>
+</nav>
+
+@section Scripts {
+    <script src="~/js/community/guild-hall-prototype.js" asp-append-version="true"></script>
+}

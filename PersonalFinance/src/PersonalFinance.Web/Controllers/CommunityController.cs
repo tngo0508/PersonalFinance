@@ -39,8 +39,14 @@ public sealed class CommunityController : Controller
     /// When the ApiService is unavailable, shows the Unavailable State instead of an empty page.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Index([FromQuery] string? variant = null, CancellationToken cancellationToken = default)
     {
+        // PROTOTYPE (#420): throwaway Guild Hall visual variants with stub data, Development only.
+        if (variant is not null && HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment())
+        {
+            return View("GuildHallPrototype", (object)variant.ToUpperInvariant());
+        }
+
         string userId = User.GetUserId();
         try
         {
