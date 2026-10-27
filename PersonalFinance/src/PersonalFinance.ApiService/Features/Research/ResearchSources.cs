@@ -21,6 +21,9 @@ public enum ResearchSources
     /// </summary>
     UsAgencies = 4,
 
+    /// <summary>The exchange-rate sources (Frankfurter, then the currency-api): the exchange rates. No contact needed.</summary>
+    CurrencyRates = 8,
+
     /// <summary>Every source.</summary>
-    All = SecEdgar | WorldBank | UsAgencies,
+    All = SecEdgar | WorldBank | UsAgencies | CurrencyRates,
 }

@@ -57,12 +57,13 @@ internal static class PriorityWalkMapping
     };
 
     /// <summary>
-    /// Whether two Walks hold exactly the same answers, Purpose, tree version and limits year, so a new submit would
-    /// show the same result. The answers compare by <see cref="PriorityAnswers"/> record equality, so a new answer
-    /// field takes part without a change here.
+    /// Whether two Walks hold exactly the same answers, currency, Purpose, tree version and limits year, so a new
+    /// submit would show the same result. The answers compare by <see cref="PriorityAnswers"/> record equality, so a
+    /// new answer field takes part without a change here.
     /// </summary>
     public static bool SameAnswers(PriorityWalk a, PriorityWalk b) =>
         ToAnswers(a) == ToAnswers(b)
+        && string.Equals(a.CurrencyCode, b.CurrencyCode, StringComparison.Ordinal)
         && string.Equals(a.Purpose, b.Purpose, StringComparison.Ordinal)
         && a.TreeVersion == b.TreeVersion
         && a.LimitsTaxYear == b.LimitsTaxYear;

@@ -333,6 +333,9 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
             if (connection == null)
                 return SyncSpreadsheetBudgetResult.Failed(ConnectionNotFound);
 
+            // Imported rows inherit the connection's currency (ADR 0016), each amount rounded to its minor units.
+            SupportedCurrency currency = SupportedCurrencies.Find(connection.CurrencyCode) ?? SupportedCurrencies.Default;
+
             MonthlyBudgetReportDto budgetReport;
             try
             {
@@ -429,12 +432,13 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                     MonthNumber = month.MonthNumber,
                     MonthName = month.MonthName,
                     Year = budgetReport.Year,
-                    BudgetedIncome = month.BudgetedIncome,
-                    ActualIncome = month.ActualIncome,
-                    BudgetedExpenses = month.BudgetedExpenses,
-                    ActualExpenses = month.ActualExpenses,
-                    StartingBalance = month.StartingBalance,
-                    EndingBalance = month.EndingBalance,
+                    CurrencyCode = currency.Code,
+                    BudgetedIncome = currency.Round(month.BudgetedIncome),
+                    ActualIncome = currency.Round(month.ActualIncome),
+                    BudgetedExpenses = currency.Round(month.BudgetedExpenses),
+                    ActualExpenses = currency.Round(month.ActualExpenses),
+                    StartingBalance = currency.Round(month.StartingBalance),
+                    EndingBalance = currency.Round(month.EndingBalance),
                     CategoryBreakdownJson = categoryJson,
                     SyncedAtUtc = DateTime.UtcNow
                 };
@@ -484,7 +488,8 @@ internal sealed class SpreadsheetAnalysisService : ISpreadsheetAnalysisService
                     ConnectionId = connectionId,
                     UserId = userId,
                     Date = date,
-                    Amount = transaction.Amount,
+                    CurrencyCode = currency.Code,
+                    Amount = currency.Round(transaction.Amount),
                     Description = transaction.Description,
                     Category = transaction.Category,
                     Type = transaction.Type

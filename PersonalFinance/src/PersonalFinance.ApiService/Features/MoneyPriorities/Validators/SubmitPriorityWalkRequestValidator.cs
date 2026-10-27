@@ -27,6 +27,8 @@ internal sealed class SubmitPriorityWalkRequestValidator : AbstractValidator<Sub
 
     public SubmitPriorityWalkRequestValidator()
     {
+        RuleFor(x => x.CurrencyCode).SupportedCurrency(ApiErrorKeys.MoneyPriorities.CurrencyUnsupported);
+
         RuleFor(x => x.MonthlyAmount)
             .NotNull()
                 .WithErrorCode(ApiErrorKeys.MoneyPriorities.MonthlyAmountRequired)

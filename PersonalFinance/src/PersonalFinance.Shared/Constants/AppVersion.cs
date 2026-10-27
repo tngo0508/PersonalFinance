@@ -10,7 +10,7 @@ public static class AppVersion
     /// <summary>
     /// Current semantic version string (e.g. "1.0.0").
     /// </summary>
-    public const string Current = "9.0.0";
+    public const string Current = "10.0.0";
 
     /// <summary>
     /// Application canonical name used in logging, OpenAPI titles, and UI banners.
@@ -18,7 +18,7 @@ public static class AppVersion
     public const string ApplicationName = "PersonalFinance";
 
     // --- Semantic Version Components (SemVer 2.0.0) ---
-    public const int Major = 9; // Breaking changes
+    public const int Major = 10; // Breaking changes
     public const int Minor = 0; // New features (backwards-compatible)
     public const int Patch = 0; // Bug fixes (backwards-compatible)
     public const string? Suffix = null; // Optional: "preview.1", "alpha", "beta", "rc.1"

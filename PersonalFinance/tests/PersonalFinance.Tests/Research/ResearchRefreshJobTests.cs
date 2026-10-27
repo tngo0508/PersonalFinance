@@ -105,16 +105,16 @@ public class ResearchRefreshJobTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("PersonalFinance research contact@example.com")] // the committed placeholder
-    public async Task RefreshAsync_WithoutAConfiguredUserAgent_StillRefreshesTheWorldBankDatasets_AndFails(
+    public async Task RefreshAsync_WithoutAConfiguredUserAgent_StillRefreshesTheWorldBankDatasetsAndTheRates_AndFails(
         string userAgent)
     {
         var service = new FakeResearchService();
         await using ServiceProvider services = Services(service, userAgent);
 
-        // SEC's datasets are skipped (SEC's fair-access rules need a real contact), World is still refreshed, and
-        // the run fails so the missing setting shows in the job's history.
+        // SEC's datasets are skipped (SEC's fair-access rules need a real contact), World and the exchange rates (which
+        // need no contact) are still refreshed, and the run fails so the missing setting shows in the job's history.
         Assert.Equal(StartupExit.Failure, await ResearchRefreshJob.RefreshAsync(services));
         Assert.Equal(1, service.Refreshes);
-        Assert.Equal(ResearchSources.WorldBank, service.Sources);
+        Assert.Equal(ResearchSources.WorldBank | ResearchSources.CurrencyRates, service.Sources);
     }
 }

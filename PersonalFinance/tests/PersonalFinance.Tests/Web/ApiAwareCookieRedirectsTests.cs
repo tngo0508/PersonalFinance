@@ -27,16 +27,20 @@ public class ApiAwareCookieRedirectsTests
     }
 
     [Fact]
-    public async Task PageNavigation_IsRedirectedToLogin()
+    public async Task PageNavigation_IsRedirected_ForBothLoginAndAccessDenied()
     {
         var events = new CookieAuthenticationEvents();
         ApiAwareCookieRedirects.Apply(events);
 
-        RedirectContext<CookieAuthenticationOptions> context = CreateContext("/Dashboard", "text/html", null);
-        await events.OnRedirectToLogin(context);
+        RedirectContext<CookieAuthenticationOptions> login = CreateContext("/Dashboard", "text/html", null);
+        await events.OnRedirectToLogin(login);
+        RedirectContext<CookieAuthenticationOptions> denied = CreateContext("/Dashboard", "text/html", null);
+        await events.OnRedirectToAccessDenied(denied);
 
-        Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);
-        Assert.Equal("/Identity/Account/Login?ReturnUrl=%2FDashboard", context.Response.Headers.Location.ToString());
+        Assert.Equal(StatusCodes.Status302Found, login.Response.StatusCode);
+        Assert.Equal("/Identity/Account/Login?ReturnUrl=%2FDashboard", login.Response.Headers.Location.ToString());
+        Assert.Equal(StatusCodes.Status302Found, denied.Response.StatusCode);
+        Assert.Equal("/Identity/Account/Login?ReturnUrl=%2FDashboard", denied.Response.Headers.Location.ToString());
     }
 
     private static RedirectContext<CookieAuthenticationOptions> CreateContext(string path, string? accept,

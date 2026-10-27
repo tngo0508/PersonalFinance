@@ -366,6 +366,15 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .HasDefaultValue("USD")
+                        .IsFixedLength();
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -836,6 +845,48 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.ToTable("DeletionRequests");
                 });
 
+            modelBuilder.Entity("PersonalFinance.Data.Entities.ExchangeRate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BaseCurrency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .IsFixedLength();
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("QuoteCurrency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .IsFixedLength();
+
+                    b.Property<decimal>("Rate")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BaseCurrency", "QuoteCurrency", "Date")
+                        .IsUnique();
+
+                    b.ToTable("ExchangeRates");
+                });
+
             modelBuilder.Entity("PersonalFinance.Data.Entities.Feedback", b =>
                 {
                     b.Property<int>("Id")
@@ -979,6 +1030,15 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .HasDefaultValue("USD")
+                        .IsFixedLength();
+
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime2");
 
@@ -1057,6 +1117,15 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .HasDefaultValue("USD")
+                        .IsFixedLength();
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime2");
@@ -1168,6 +1237,15 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .HasDefaultValue("USD")
+                        .IsFixedLength();
 
                     b.Property<int>("CurrentAge")
                         .HasColumnType("int");
@@ -1290,6 +1368,15 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .HasDefaultValue("USD")
+                        .IsFixedLength();
 
                     b.Property<decimal>("DebtApr")
                         .HasPrecision(5, 2)
@@ -1484,6 +1571,15 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .HasDefaultValue("USD")
+                        .IsFixedLength();
+
                     b.Property<decimal>("CurrentAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -1565,6 +1661,15 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .HasDefaultValue("USD")
+                        .IsFixedLength();
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime2");
@@ -1651,6 +1756,15 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .HasDefaultValue("USD")
+                        .IsFixedLength();
+
                     b.Property<DateTime>("Date")
                         .HasColumnType("datetime2");
 
@@ -1711,6 +1825,15 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .HasDefaultValue("USD")
+                        .IsFixedLength();
 
                     b.Property<decimal>("DebtRepaymentAmount")
                         .HasPrecision(18, 2)
@@ -1891,6 +2014,15 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("ReportingCurrency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .HasDefaultValue("USD")
+                        .IsFixedLength();
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");

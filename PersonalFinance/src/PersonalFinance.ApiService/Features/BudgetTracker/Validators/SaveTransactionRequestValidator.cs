@@ -19,6 +19,8 @@ internal sealed class SaveTransactionRequestValidator : AbstractValidator<SaveTr
 
     public SaveTransactionRequestValidator()
     {
+        RuleFor(x => x.CurrencyCode).SupportedCurrency(ApiErrorKeys.BudgetTracker.CurrencyUnsupported);
+
         RuleFor(x => x.Date)
             .NotEmpty()
                 .WithErrorCode(ApiErrorKeys.BudgetTracker.TransactionDateRequired)

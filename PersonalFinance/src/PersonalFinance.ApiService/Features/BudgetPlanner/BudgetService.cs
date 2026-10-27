@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.BudgetPlanner;
 using CreateNotificationRequestDto = PersonalFinance.ApiService.Infrastructure.CreateNotificationRequestDto;
@@ -68,17 +69,19 @@ internal sealed class BudgetService : IBudgetService
             _dbContext.UserBudgetAllocations.Add(budget);
         }
 
-        budget.MonthlyIncome = request.MonthlyIncome;
-        budget.HousingAmount = request.Allocations.Housing;
-        budget.FoodAmount = request.Allocations.Food;
-        budget.TransportationAmount = request.Allocations.Transportation;
-        budget.UtilitiesAmount = request.Allocations.Utilities;
-        budget.InsuranceAmount = request.Allocations.Insurance;
-        budget.HealthcareAmount = request.Allocations.Healthcare;
-        budget.SavingsAmount = request.Allocations.Savings;
-        budget.DebtRepaymentAmount = request.Allocations.DebtRepayment;
-        budget.EntertainmentAmount = request.Allocations.Entertainment;
-        budget.MiscellaneousAmount = request.Allocations.Miscellaneous;
+        budget.CurrencyCode = CurrencyCodeRules.Resolve(request.CurrencyCode, budget.CurrencyCode);
+        SupportedCurrency currency = SupportedCurrencies.Find(budget.CurrencyCode) ?? SupportedCurrencies.Default;
+        budget.MonthlyIncome = currency.Round(request.MonthlyIncome);
+        budget.HousingAmount = currency.Round(request.Allocations.Housing);
+        budget.FoodAmount = currency.Round(request.Allocations.Food);
+        budget.TransportationAmount = currency.Round(request.Allocations.Transportation);
+        budget.UtilitiesAmount = currency.Round(request.Allocations.Utilities);
+        budget.InsuranceAmount = currency.Round(request.Allocations.Insurance);
+        budget.HealthcareAmount = currency.Round(request.Allocations.Healthcare);
+        budget.SavingsAmount = currency.Round(request.Allocations.Savings);
+        budget.DebtRepaymentAmount = currency.Round(request.Allocations.DebtRepayment);
+        budget.EntertainmentAmount = currency.Round(request.Allocations.Entertainment);
+        budget.MiscellaneousAmount = currency.Round(request.Allocations.Miscellaneous);
         budget.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);

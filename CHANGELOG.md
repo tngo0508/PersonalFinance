@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [9.0.0] - 2026-10-27
+## [10.0.0] - 2026-10-27
 
 ### Removed
 
@@ -24,6 +24,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Guild Hall vocabulary and ADR 0018**: the glossary defines Guild Hall, Pseudonym, Strategy, Poll, Comment, Reaction, Challenge and Check-in, and ADR 0018 records that the Guild Hall is pseudonymous and never shows money amounts.
+
+## [9.0.0] - 2026-10-27
+
+### Added
+
+- **Every amount carries its currency**: the eight money-bearing Entities gain a `CurrencyCode` (`char(3)`, ISO 4217, default `USD`), one per row and never per field (slice C1 of the localization and multi-currency spec, #410, ADR 0016).
+  - Document-level on `NetWorthParameters`, `UserBudgetAllocation` and `PriorityWalk`; row-level on `BudgetTransaction`, `MonthlyBudgetLine`, `SavingsGoal`, `SpreadsheetBudgetSnapshot` and `SpreadsheetTransactionRecord`. Every row saved before this release is US dollars.
+  - Each amount is rounded to its currency's minor units on write, halves away from zero, so VND is stored in whole đồng. Columns stay `decimal`.
+  - Stored amounts still show in US dollars exactly as before: conversion and the currency selector come in slice C2.
+- **Reporting Currency**: the user preference Entity gains `ReportingCurrency`, default `USD`. Changing it never rewrites a stored amount.
+- **Google Drive connections have a currency**: chosen when the user connects, the Account's Reporting Currency by default; every imported spreadsheet row inherits it.
+- **Exchange rates**: a new `ExchangeRate` table (system data, USD base only, unique per pair and day, rate `decimal(18,8)`) filled by `FxRatesRefresher` in the daily Research refresh job.
+  - Frankfurter's blended rate is the primary source, read from the day after its latest stored rate (back to 2015 on the first run); the fawazahmed0 currency-api (jsDelivr, then its Cloudflare mirror) gives the latest rate when Frankfurter fails. Neither needs a key.
+  - It runs even when the SEC contact is not configured, and rows are only added, never rewritten.
+
+### Changed
+
+- **Money requests accept a currency**: the Budget Tracker transaction and line requests, the Budget Planner save, the Money Priorities submit, the new Savings Goal, the Net Worth parameters and the Google Drive connect take an optional `CurrencyCode`.
+  - A code that is not in `SupportedCurrencies` is rejected under the Feature's new `CurrencyUnsupported` key; no code keeps the row's currency, or makes a new row US dollars.
+  - A Savings Goal's currency is set when it is created; its Contributions and later edits use it.
+  - A Priority Walk in another currency is a new Walk, and a Purpose Note is reused only between Walks in the same currency.
+
+## [8.9.0] - 2026-10-26
+
+### Added
+
+- **Clock and calendar on the Dashboard**: the header shows the time and the current month in your own time zone and language, so you can see at a glance how much of the budget month is left (#412).
+  - Days already behind you this month are shaded, today is set in ink, and days with recent activity carry a dot; a line under the clock says how many days are left in the month.
+  - The week starts on the culture's first weekday (Sunday in English, Monday in Vietnamese). The clock updates on the minute and the month redraws when the day changes.
 
 ## [8.8.0] - 2026-10-26
 

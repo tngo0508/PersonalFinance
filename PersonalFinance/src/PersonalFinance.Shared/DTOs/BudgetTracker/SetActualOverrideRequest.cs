@@ -8,4 +8,10 @@ public class SetActualOverrideRequest
 {
     /// <summary>Manual override amount, or null to revert to sum of transactions.</summary>
     public decimal? Amount { get; set; }
+
+    /// <summary>
+    /// The ISO 4217 currency of the amount, one of <c>SupportedCurrencies</c>; null keeps the stored line's currency
+    /// (US dollars for a new one).
+    /// </summary>
+    public string? CurrencyCode { get; set; }
 }

@@ -1,3 +1,5 @@
+using PersonalFinance.Shared.Constants;
+
 namespace PersonalFinance.Data.Entities;
 
 /// <summary>
@@ -6,6 +8,12 @@ namespace PersonalFinance.Data.Entities;
 /// </summary>
 public class SpreadsheetBudgetSnapshot : AuditableEntity
 {
+    /// <summary>
+    /// ISO 4217 code, one of <see cref="SupportedCurrencies"/> (ADR 0016). Every amount of this snapshot is in this
+    /// currency, inherited from its connection. Rows saved before amounts carried a currency are <c>USD</c>.
+    /// </summary>
+    public string CurrencyCode { get; set; } = SupportedCurrencies.DefaultCode;
+
     /// <summary>
     ///     Foreign key to the Google Drive connection this snapshot was parsed from.
     /// </summary>

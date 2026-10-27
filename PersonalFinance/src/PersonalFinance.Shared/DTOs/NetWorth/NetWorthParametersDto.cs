@@ -5,6 +5,9 @@ namespace PersonalFinance.Shared.DTOs.NetWorth;
 /// </summary>
 public sealed class NetWorthParametersDto
 {
+    /// <summary>The ISO 4217 currency of the saved amounts.</summary>
+    public string CurrencyCode { get; set; } = string.Empty;
+
     /// <summary>Initial net worth balance.</summary>
     public decimal StartingBalance { get; set; }
 

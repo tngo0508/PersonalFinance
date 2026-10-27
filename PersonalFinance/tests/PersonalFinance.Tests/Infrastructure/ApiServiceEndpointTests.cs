@@ -1,69 +1,68 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using PersonalFinance.ApiService.Infrastructure;
+using System.Net;
+using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using PersonalFinance.ApiService.Features.Admin;
 using PersonalFinance.Shared.Constants;
-using Scalar.AspNetCore;
-using Xunit;
 
 namespace PersonalFinance.Tests.Infrastructure;
 
+/// <summary>
+/// The anonymous endpoints the real ApiService <c>Program.cs</c> maps, called over HTTP. This used to rebuild the
+/// mapping inside the test and assert the routes it had just added, so it could not fail when <c>Program.cs</c>
+/// changed, and it never saw the <c>ApiDocs:Enabled</c> switch the Bicep templates set (#350). /health and /alive
+/// belong to <see cref="ServiceDefaultsTests"/>.
+/// </summary>
+[Collection("ApiServiceHost")]
 public class ApiServiceEndpointTests
 {
-    [Fact]
-    public void ApiService_DevelopmentEnvironment_RegistersOpenApiAndHealthEndpoints()
+    [Theory]
+    [InlineData(null, HttpStatusCode.NotFound)]
+    [InlineData("false", HttpStatusCode.NotFound)]
+    [InlineData("true", HttpStatusCode.OK)]
+    public async Task ApiDocs_OutsideDevelopment_AreServedOnlyWhenApiDocsIsEnabled(string? apiDocsEnabled,
+        HttpStatusCode expected)
     {
-        // Arrange
-        WebApplicationBuilder builder = WebApplication.CreateBuilder(new WebApplicationOptions
-        {
-            EnvironmentName = "Development"
-        });
+        await using var host = new ApiServiceHost(apiDocsEnabled);
+        using HttpClient client = host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
-        builder.AddServiceDefaults();
-        builder.Services.AddOpenApi(options =>
+        using HttpResponseMessage openApi = await client.GetAsync(new Uri("/openapi/v1.json", UriKind.Relative));
+        using HttpResponseMessage scalar = await client.GetAsync(new Uri("/scalar/v1", UriKind.Relative));
+
+        Assert.Equal(expected, openApi.StatusCode);
+        Assert.Equal(expected, scalar.StatusCode);
+    }
+
+    [Fact]
+    public async Task VersionBanner_AtTheRoot_NamesTheApplicationAndItsVersion()
+    {
+        await using var host = new ApiServiceHost(apiDocsEnabled: null);
+        using HttpClient client = host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        using HttpResponseMessage response = await client.GetAsync(new Uri("/", UriKind.Relative));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(AppVersion.ApplicationName, body.RootElement.GetProperty("application").GetString());
+        Assert.Equal(AppVersion.Current, body.RootElement.GetProperty("version").GetString());
+        Assert.Equal("Online", body.RootElement.GetProperty("status").GetString());
+    }
+
+    /// <summary>
+    /// The ApiService entry point outside Development, on an InMemory database, with <c>ApiDocs:Enabled</c> set to
+    /// <paramref name="apiDocsEnabled"/> (left unset when null).
+    /// </summary>
+    private sealed class ApiServiceHost(string? apiDocsEnabled) : WebApplicationFactory<AdminController>
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            options.AddDocumentTransformer((document, context, cancellationToken) =>
+            builder.UseEnvironment("Testing");
+            builder.UseSetting("Database:Provider", "InMemory");
+            builder.UseSetting("ConnectionStrings:DefaultConnection", $"InMemory:ApiServiceEndpoints_{Guid.NewGuid():N}");
+            if (apiDocsEnabled is not null)
             {
-                document.Info.Title = $"{AppVersion.ApplicationName} API Service";
-                document.Info.Version = AppVersion.Current;
-                return Task.CompletedTask;
-            });
-        });
-
-        WebApplication app = builder.Build();
-
-        // Act - register the standard endpoints mapped by ApiService Program.cs
-        app.MapDefaultEndpoints();
-        app.MapGet("/", () => Results.Ok(new
-        {
-            Application = AppVersion.ApplicationName,
-            Version = AppVersion.Current,
-            Status = "Online"
-        }));
-
-        if (app.Environment.IsDevelopment())
-        {
-            app.MapOpenApi();
-            app.MapScalarApiReference();
+                builder.UseSetting("ApiDocs:Enabled", apiDocsEnabled);
+            }
         }
-
-        // Assert - endpoints inspection
-        ICollection<EndpointDataSource> endpointDataSources = ((IEndpointRouteBuilder)app).DataSources;
-        var endpoints = endpointDataSources.SelectMany(ds => ds.Endpoints).ToList();
-
-        // 1. Verify health & liveness endpoints
-        Assert.Contains(endpoints, e => e is RouteEndpoint route && route.RoutePattern.RawText == "/health");
-        Assert.Contains(endpoints, e => e is RouteEndpoint route && route.RoutePattern.RawText == "/alive");
-
-        // 2. Verify root status endpoint
-        Assert.Contains(endpoints, e => e is RouteEndpoint route && route.RoutePattern.RawText == "/");
-
-        // 3. Verify OpenAPI spec endpoint
-        Assert.Contains(endpoints, e => e is RouteEndpoint route && route.RoutePattern.RawText != null && route.RoutePattern.RawText.Contains("openapi"));
-
-        // 4. Verify Scalar API documentation endpoint
-        Assert.Contains(endpoints, e => e is RouteEndpoint route && route.RoutePattern.RawText != null && route.RoutePattern.RawText.Contains("scalar"));
     }
 }

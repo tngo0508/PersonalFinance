@@ -13,6 +13,8 @@ internal sealed class CreateSavingsGoalRequestValidator : AbstractValidator<Crea
 {
     public CreateSavingsGoalRequestValidator()
     {
+        RuleFor(x => x.CurrencyCode).SupportedCurrency(ApiErrorKeys.SavingsGoals.CurrencyUnsupported);
+
         RuleFor(x => x.Name)
             .NotEmpty()
                 .WithErrorCode(ApiErrorKeys.SavingsGoals.NameRequired)

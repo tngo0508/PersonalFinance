@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
 
@@ -159,6 +160,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     /// Research snapshots — one row per public market dataset, replaced wholesale by the Research refresh job.
     /// </summary>
     public DbSet<ResearchSnapshot> ResearchSnapshots => Set<ResearchSnapshot>();
+    public DbSet<ExchangeRate> ExchangeRates => Set<ExchangeRate>();
 
     /// <summary>
     /// Priority Walks — an Account's saved passes through the Money Priorities Priority Tree.
@@ -262,6 +264,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.MaskedApiKey).HasMaxLength(100);
             entity.Property(e => e.SyncStatus).IsRequired().HasMaxLength(50);
             entity.Property(e => e.ErrorMessage).HasMaxLength(1000);
+            ConfigureCurrencyCode(entity);
 
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => new { e.UserId, e.FolderId });
@@ -308,6 +311,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.ConservativeRoi).HasPrecision(decimalPrecision, decimalScale);
             entity.Property(e => e.AggressiveRoi).HasPrecision(decimalPrecision, decimalScale);
             entity.Property(e => e.AggressiveSavings).HasPrecision(decimalPrecision, decimalScale);
+            ConfigureCurrencyCode(entity);
         });
 
         ConfigureCommunity(builder);
@@ -334,6 +338,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.DebtRepaymentAmount).HasPrecision(decPrec, decScale);
             entity.Property(e => e.EntertainmentAmount).HasPrecision(decPrec, decScale);
             entity.Property(e => e.MiscellaneousAmount).HasPrecision(decPrec, decScale);
+            ConfigureCurrencyCode(entity);
         });
 
         // Configure SavingsGoal entity
@@ -348,6 +353,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             const int decScale2 = 2;
             entity.Property(e => e.TargetAmount).HasPrecision(decPrec2, decScale2);
             entity.Property(e => e.CurrentAmount).HasPrecision(decPrec2, decScale2);
+            ConfigureCurrencyCode(entity);
         });
 
         // Configure Contribution entity — a Savings Goal's dated deposits and withdrawals
@@ -401,6 +407,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.StartingBalance).HasPrecision(decPrec, decScale);
             entity.Property(e => e.EndingBalance).HasPrecision(decPrec, decScale);
             entity.Property(e => e.CategoryBreakdownJson).HasMaxLength(10000);
+            ConfigureCurrencyCode(entity);
 
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.ConnectionId);
@@ -428,6 +435,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             const int decPrec = 18;
             const int decScale = 4;
             entity.Property(e => e.Amount).HasPrecision(decPrec, decScale);
+            ConfigureCurrencyCode(entity);
 
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.SnapshotId);
@@ -499,6 +507,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
             entity.Property(e => e.PlannedAmount).HasPrecision(18, 2);
             entity.Property(e => e.ActualOverride).HasPrecision(18, 2);
+            ConfigureCurrencyCode(entity);
             entity.HasIndex(e => new { e.PlanId, e.CategoryId })
                 .IsUnique()
                 .HasFilter("[IsDeleted] = 0");
@@ -517,6 +526,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.Date).IsRequired();
             entity.Property(e => e.Amount).HasPrecision(18, 2);
             entity.Property(e => e.Description).IsRequired().HasMaxLength(200);
+            ConfigureCurrencyCode(entity);
             entity.HasIndex(e => new { e.UserId, e.Date });
 
             entity.HasOne(e => e.Category)
@@ -575,7 +585,23 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         });
 
         ConfigureResearchSnapshot(builder);
+        ConfigureExchangeRate(builder);
         ConfigurePriorityWalk(builder);
+    }
+
+    /// <summary>
+    /// A money-bearing row's <c>CurrencyCode</c> (ADR 0016): <c>char(3)</c>, required, <c>USD</c> by default so
+    /// every row saved before the column existed is US dollars.
+    /// </summary>
+    private static void ConfigureCurrencyCode<TEntity>(EntityTypeBuilder<TEntity> entity)
+        where TEntity : class
+    {
+        entity.Property<string>("CurrencyCode")
+            .IsRequired()
+            .HasMaxLength(SupportedCurrencies.CodeLength)
+            .IsUnicode(false)
+            .IsFixedLength()
+            .HasDefaultValue(SupportedCurrencies.DefaultCode);
     }
 
     /// <summary>
@@ -695,7 +721,8 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     }
 
     /// <summary>
-    /// An Account's display preferences (its Language): one row per Account among non-deleted rows.
+    /// An Account's display preferences (its Language and Reporting Currency): one row per Account among non-deleted
+    /// rows.
     /// </summary>
     private static void ConfigureUserPreference(ModelBuilder builder)
     {
@@ -704,6 +731,12 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
             entity.Property(e => e.Language).IsRequired().HasMaxLength(10);
+            entity.Property(e => e.ReportingCurrency)
+                .IsRequired()
+                .HasMaxLength(SupportedCurrencies.CodeLength)
+                .IsUnicode(false)
+                .IsFixedLength()
+                .HasDefaultValue(SupportedCurrencies.DefaultCode);
             entity.HasIndex(e => e.UserId)
                 .IsUnique()
                 .HasFilter("[IsDeleted] = 0");
@@ -730,6 +763,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.Path).IsRequired().HasMaxLength(200);
             entity.Property(e => e.LeafId).IsRequired().HasMaxLength(8);
             entity.Property(e => e.PurposeNote).HasMaxLength(2000);
+            ConfigureCurrencyCode(entity);
             entity.HasIndex(e => new { e.UserId, e.CreatedAt });
         });
     }
@@ -747,6 +781,31 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.LastPeriod).IsRequired().HasMaxLength(16);
             entity.Property(e => e.Payload).IsRequired();
             entity.HasIndex(e => e.Dataset).IsUnique();
+        });
+    }
+
+    /// <summary>
+    /// ExchangeRate: system data written by the daily rate refresh, one row per base, quote and day.
+    /// </summary>
+    private static void ConfigureExchangeRate(ModelBuilder builder)
+    {
+        builder.Entity<ExchangeRate>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BaseCurrency)
+                .IsRequired()
+                .HasMaxLength(SupportedCurrencies.CodeLength)
+                .IsUnicode(false)
+                .IsFixedLength();
+            entity.Property(e => e.QuoteCurrency)
+                .IsRequired()
+                .HasMaxLength(SupportedCurrencies.CodeLength)
+                .IsUnicode(false)
+                .IsFixedLength();
+            entity.Property(e => e.Date).IsRequired();
+            entity.Property(e => e.Rate).HasPrecision(18, 8);
+            entity.Property(e => e.Source).IsRequired().HasMaxLength(32);
+            entity.HasIndex(e => new { e.BaseCurrency, e.QuoteCurrency, e.Date }).IsUnique();
         });
     }
 }

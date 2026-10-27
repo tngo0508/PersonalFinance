@@ -14,6 +14,12 @@ public class SubmitPriorityWalkRequest
     /// <summary>The extra amount each month: over 0, at most 1,000,000. Required.</summary>
     public decimal? MonthlyAmount { get; set; }
 
+    /// <summary>
+    /// The ISO 4217 currency of the monthly amount, the debt balance and the monthly expenses, one of
+    /// <c>SupportedCurrencies</c>; null means US dollars.
+    /// </summary>
+    public string? CurrencyCode { get; set; }
+
     /// <summary>What the user wants the money to do, in their own words; optional, at most 300 characters.</summary>
     public string? Purpose { get; set; }
 

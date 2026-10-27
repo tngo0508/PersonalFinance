@@ -17,11 +17,14 @@
 @* Section order is agreed in the spec; each section lives in its own partial so it can evolve independently. *@
 <div class="dash">
     <header class="dash-header">
-        <p class="dash-header__eyebrow">@L["Shell.Nav.Dashboard"]</p>
-        <h1 class="dash-header__title">
-            @(string.IsNullOrWhiteSpace(displayName) ? L["Dashboard.Header.Welcome"] : L.Named("Dashboard.Header.WelcomeNamed", ("name", displayName)))
-        </h1>
-        <p class="dash-header__lede">@L["Dashboard.Header.Lede"]</p>
+        <div class="dash-header__intro">
+            <p class="dash-header__eyebrow">@L["Shell.Nav.Dashboard"]</p>
+            <h1 class="dash-header__title">
+                @(string.IsNullOrWhiteSpace(displayName) ? L["Dashboard.Header.Welcome"] : L.Named("Dashboard.Header.WelcomeNamed", ("name", displayName)))
+            </h1>
+            <p class="dash-header__lede">@L["Dashboard.Header.Lede"]</p>
+        </div>
+        <partial name="_Today"/>
     </header>
 
     <partial name="_Summary" model="summary"/>
@@ -55,4 +58,5 @@
     <script src="~/js/dashboard/dashboard-core.js" asp-append-version="true"></script>
     <script src="~/js/dashboard/dashboard-budget-chart.js" asp-append-version="true"></script>
     <script src="~/js/dashboard/dashboard-projection-chart.js" asp-append-version="true"></script>
+    <script src="~/js/dashboard/dashboard-today.js" asp-append-version="true"></script>
 }
