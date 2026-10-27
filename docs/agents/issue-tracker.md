@@ -79,9 +79,11 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 
 `.github/workflows/claude-ticket-agent.yml` works the `ready-for-agent` queue unattended, one issue per run, back to
 back from 00:00 to 19:00 Pacific every day. It stays off 19:00-24:00, when the owner reviews PRs and works locally.
-A cron tick every 30 minutes starts the next run, or queues it behind the current one. The last start is about 18:15,
-and a late run's timeout is cut so that it ends by 19:00. Trigger it by hand at any time with
-`gh workflow run claude-ticket-agent.yml -f issue=<n>`.
+A run that succeeds starts the next one itself (`-f chained=true`) while at least 45 minutes of the window are left.
+The chain stops when a run fails, finds no eligible ticket or hits the open-PR cap. A cron tick every 30 minutes
+restarts it, but GitHub delays or drops many ticks, so do not rely on cron alone. The last start is about 18:15, and a
+late run's timeout is cut so that it ends by 19:00. Trigger it by hand at any time with
+`gh workflow run claude-ticket-agent.yml` (it then chains), or `-f issue=<n>` for one issue only (no chain).
 
 - **Picks** the oldest open `ready-for-agent` issue with no assignee, no `agent:in-progress` or `wayfinder:map` label,
   no sub-issues, no open blockers and no open PR that closes it. It pauses while 5 PRs from `agent/issue-*` branches

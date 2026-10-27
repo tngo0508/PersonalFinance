@@ -14,6 +14,10 @@ on:
       issue:
         description: 'Issue number to work on (optional; default: oldest eligible ready-for-agent issue)'
         required: false
+      chained:
+        description: 'Set by the chain job: this run keeps the working window, like a scheduled one'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -54,12 +58,13 @@ jobs:
           REQUESTED: ${{ inputs.issue }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           EVENT: ${{ github.event_name }}
+          CHAINED: ${{ inputs.chained }}
         run: |
           set -euo pipefail
 
-          # Working window. Manual runs ignore it and get the full run time.
+          # Working window. Manual runs ignore it and get the full run time; chained runs keep it.
           minutes="$MAX_RUN_MINUTES"
-          if [ "$EVENT" = "schedule" ]; then
+          if [ "$EVENT" = "schedule" ] || [ "$CHAINED" = "true" ]; then
             now=$(( 10#$(TZ=America/Los_Angeles date +%H) * 60 + 10#$(TZ=America/Los_Angeles date +%M) ))
             quiet=$(( 10#${QUIET_FROM%%:*} * 60 + 10#${QUIET_FROM##*:} ))
             left=$(( quiet - now ))
@@ -356,3 +361,35 @@ jobs:
           gh pr edit "$PR" --add-label "agent:rebase-failed" || true
           gh pr comment "$PR" --body "🤖 The scheduled Claude agent could not rebase this PR onto main ($JOB_STATUS). It needs a human; remove the agent:rebase-failed label to let the agent try again. Run: $RUN_URL" || true
           exit 1
+
+  # GitHub drops or delays many cron ticks, so a run that did work starts the next one itself. The next run's pick
+  # job decides whether there is eligible work; when it finds none, or the cap is full, the chain stops and the
+  # cron starts it again later. A failed run never chains, so a broken token cannot sweep the whole queue to
+  # ready-for-human. A run for one requested issue does not chain either.
+  chain:
+    name: Start the next run
+    needs: [pick, implement, rebase]
+    if: >-
+      always() && !inputs.issue && needs.pick.result == 'success'
+      && (needs.implement.result == 'success' || needs.rebase.result == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch the next run if the working window has time left
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          now=$(( 10#$(TZ=America/Los_Angeles date +%H) * 60 + 10#$(TZ=America/Los_Angeles date +%M) ))
+          quiet=$(( 10#${QUIET_FROM%%:*} * 60 + 10#${QUIET_FROM##*:} ))
+          if [ $(( quiet - now )) -lt "$MIN_MINUTES_TO_START" ]; then
+            echo "::notice::Quiet window is near (Pacific $(TZ=America/Los_Angeles date +%H:%M)): not chaining."
+            exit 0
+          fi
+          # The new run waits in the concurrency group until this one ends.
+          gh workflow run claude-ticket-agent.yml --ref "$DEFAULT_BRANCH" -f chained=true
+          echo "::notice::Dispatched the next ticket agent run."
