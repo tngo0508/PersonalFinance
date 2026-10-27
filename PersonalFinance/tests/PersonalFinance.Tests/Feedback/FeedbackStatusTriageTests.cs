@@ -4,6 +4,7 @@ using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Tests.TestSupport;
 using FeedbackEntity = PersonalFinance.Data.Entities.Feedback;
 
 namespace PersonalFinance.Tests.Feedback;
@@ -24,8 +25,10 @@ public class FeedbackStatusTriageTests
         return new AppDbContext(options);
     }
 
+    private static readonly DateTime Tuesday = new(2026, 10, 20, 14, 30, 0, DateTimeKind.Utc);
+
     private static FeedbackService CreateService(AppDbContext db) =>
-        new(db, new RateLimiterService(5, TimeSpan.FromHours(1)));
+        new(db, new RateLimiterService(5, TimeSpan.FromHours(1)), new FixedTimeProvider(Tuesday));
 
     private static FeedbackEntity Feedback(string message, FeedbackStatus status = FeedbackStatus.New) => new()
     {
@@ -79,19 +82,16 @@ public class FeedbackStatusTriageTests
             id = feedback.Id;
         }
 
-        DateTime before = DateTime.UtcNow;
         await using (AppDbContext db = CreateContext(dbName))
         {
             Assert.True(await CreateService(db).ChangeStatusAsync(id, FeedbackStatus.Reviewed));
         }
-        DateTime after = DateTime.UtcNow;
 
         await using (AppDbContext db = CreateContext(dbName))
         {
             FeedbackEntity stored = await db.Feedback.SingleAsync(f => f.Id == id);
-            Assert.NotNull(stored.UpdatedAt);
-            Assert.InRange(stored.UpdatedAt.Value, before, after);
-            Assert.Equal(DateTimeKind.Utc, stored.UpdatedAt.Value.Kind);
+            Assert.Equal(Tuesday, stored.UpdatedAt);
+            Assert.Equal(DateTimeKind.Utc, stored.UpdatedAt!.Value.Kind);
         }
     }
 
@@ -131,15 +131,27 @@ public class FeedbackStatusTriageTests
     [Fact]
     public async Task ChangeStatus_UnknownFeedback_IsNotFound_AndLeavesOtherFeedbackUnchanged()
     {
-        await using AppDbContext db = CreateContext();
-        FeedbackEntity other = Feedback("other");
-        db.Feedback.Add(other);
-        await db.SaveChangesAsync();
+        string dbName = $"FeedbackTriage_{Guid.NewGuid():N}";
+        int otherId;
+        await using (AppDbContext db = CreateContext(dbName))
+        {
+            FeedbackEntity other = Feedback("other");
+            db.Feedback.Add(other);
+            await db.SaveChangesAsync();
+            otherId = other.Id;
+        }
 
-        Assert.False(await CreateService(db).ChangeStatusAsync(other.Id + 1, FeedbackStatus.Reviewed));
+        await using (AppDbContext db = CreateContext(dbName))
+        {
+            Assert.False(await CreateService(db).ChangeStatusAsync(otherId + 1, FeedbackStatus.Reviewed));
+        }
 
-        Assert.Equal(FeedbackStatus.New, other.Status);
-        Assert.Null(other.UpdatedAt);
+        await using (AppDbContext db = CreateContext(dbName))
+        {
+            FeedbackEntity stored = await db.Feedback.SingleAsync(f => f.Id == otherId);
+            Assert.Equal(FeedbackStatus.New, stored.Status);
+            Assert.Null(stored.UpdatedAt);
+        }
     }
 
     [Fact]

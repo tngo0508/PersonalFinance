@@ -14,11 +14,14 @@ internal sealed class FeedbackService : IFeedbackService
 {
     private readonly AppDbContext _db;
     private readonly IRateLimiterService _rateLimiter;
+    private readonly TimeProvider _timeProvider;
 
-    public FeedbackService(AppDbContext db, [FromKeyedServices(FeedbackRateLimit.Key)] IRateLimiterService rateLimiter)
+    public FeedbackService(AppDbContext db, [FromKeyedServices(FeedbackRateLimit.Key)] IRateLimiterService rateLimiter,
+        TimeProvider timeProvider)
     {
         _db = db;
         _rateLimiter = rateLimiter;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc />
@@ -57,7 +60,7 @@ internal sealed class FeedbackService : IFeedbackService
         }
 
         feedback.Status = status;
-        feedback.UpdatedAt = DateTime.UtcNow;
+        feedback.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
         await _db.SaveChangesAsync(cancellationToken);
         return true;
     }

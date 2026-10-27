@@ -25,7 +25,7 @@ public class FeedbackInboxServiceTests
     }
 
     private static FeedbackService CreateService(AppDbContext db) =>
-        new(db, new RateLimiterService(5, TimeSpan.FromHours(1)));
+        new(db, new RateLimiterService(5, TimeSpan.FromHours(1)), TimeProvider.System);
 
     private static FeedbackEntity Feedback(string message, DateTime createdAt, string userId = "user-1") => new()
     {

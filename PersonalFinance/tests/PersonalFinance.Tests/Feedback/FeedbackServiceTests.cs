@@ -27,7 +27,7 @@ public class FeedbackServiceTests
         CreateService(db, new RateLimiterService(FeedbackRateLimit.MaxSubmissionsPerWindow, FeedbackRateLimit.Window));
 
     private static FeedbackService CreateService(AppDbContext db, IRateLimiterService rateLimiter) =>
-        new FeedbackService(db, rateLimiter);
+        new FeedbackService(db, rateLimiter, TimeProvider.System);
 
     private static SubmitFeedbackRequest ValidRequest() =>
         new() { Category = FeedbackCategory.Idea, Message = "Add CSV export." };
