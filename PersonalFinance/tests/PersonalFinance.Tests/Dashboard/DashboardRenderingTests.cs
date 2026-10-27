@@ -40,7 +40,7 @@ public sealed partial class DashboardRenderingTests : IAsyncLifetime
     // Visible English of a Dashboard with data in every section.
     private static readonly string[] FilledEnglish =
     [
-        "Welcome back, Linh", "Here is where your finances stand today.", "Edit settings", "From your Net Worth settings.",
+        "Welcome back, Linh", "Here is where your finances stand today.", ">Today<", "Edit settings", "From your Net Worth settings.",
         "Progress to FI", "annual spending × 25", "On the Base scenario you reach your FI target at age",
         "Key figures", "Budgeted income", "Goals funded", "Savings Rate", "Of annual income saved", "1 of 2 complete",
         "Per month · October 2026 (Budget Planner)",
