@@ -21,7 +21,7 @@ public partial class WebApiRouteTests
     [Fact]
     public void EveryApiPathCalledFromJavaScript_HasAnAuthorizedWebController()
     {
-        string jsRoot = Path.Combine(FindRepositoryRoot(), "PersonalFinance", "src", "PersonalFinance.Web", "wwwroot", "js");
+        string jsRoot = Path.Combine(RepositoryRoot.Find(), "PersonalFinance", "src", "PersonalFinance.Web", "wwwroot", "js");
         var calledControllers = Directory.EnumerateFiles(jsRoot, "*.js", SearchOption.AllDirectories)
             .SelectMany(file => ApiPathPattern().Matches(File.ReadAllText(file)).Select(m => m.Groups[1].Value))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -60,15 +60,4 @@ public partial class WebApiRouteTests
 
     [GeneratedRegex(@"['""`]/api/([A-Za-z]+)")]
     private static partial Regex ApiPathPattern();
-
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory != null && !File.Exists(Path.Combine(directory.FullName, "PersonalFinance.sln")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new InvalidOperationException("Repository root not found.");
-    }
 }

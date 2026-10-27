@@ -6,6 +6,7 @@ using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.SavingsGoals;
 
@@ -234,11 +235,6 @@ public sealed class SavingsGoalPaceTests : IDisposable
     private SavingsGoalService Service() =>
         new(_db, NullLogger<SavingsGoalService>.Instance, new NoNotifications(),
             new FixedTimeProvider(new DateTimeOffset(Today.ToDateTime(new TimeOnly(15, 0)), TimeSpan.Zero)));
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
 
     private sealed class NoNotifications : INotificationService
     {

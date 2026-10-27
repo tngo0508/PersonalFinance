@@ -6,6 +6,7 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.BudgetTracker;
 using PersonalFinance.Shared.DTOs.Search;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Tests.TestSupport;
 using Xunit;
 
 namespace PersonalFinance.Tests.Search;
@@ -49,11 +50,6 @@ public class SearchServiceTests
 
     /// <summary>"Now" for every test: 21 October 2026, UTC.</summary>
     private static readonly TimeProvider Today = new FixedTimeProvider(new DateTimeOffset(2026, 10, 21, 9, 0, 0, TimeSpan.Zero));
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
 
     private static SearchService CreateService(AppDbContext db) =>
         new(db, new BudgetDataSourceService(db), Today);

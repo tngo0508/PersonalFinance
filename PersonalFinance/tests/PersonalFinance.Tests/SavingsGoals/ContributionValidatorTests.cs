@@ -1,6 +1,7 @@
 using FluentValidation.Results;
 using PersonalFinance.ApiService.Features.SavingsGoals.Validators;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.SavingsGoals;
 
@@ -109,10 +110,5 @@ public class ContributionValidatorTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.ErrorMessage == message);
-    }
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
     }
 }

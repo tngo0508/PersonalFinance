@@ -2,31 +2,16 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using PersonalFinance.ApiService.Features.GoogleDrive.Adapters;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.Infrastructure;
 
 public class BicepInfrastructureTests
 {
-    private static string FindProjectRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current != null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "PersonalFinance.sln")))
-            {
-                return current.FullName;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate repository root directory.");
-    }
-
     [Fact]
     public void MainBicep_DeclaresExpectedModulesAndZeroCostDefaults()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string mainBicep = File.ReadAllText(Path.Combine(root, "infra", "main.bicep"));
 
         Assert.Contains("targetScope = 'resourceGroup'", mainBicep);
@@ -52,7 +37,7 @@ public class BicepInfrastructureTests
     [Fact]
     public void PurgeJobBicep_RunsTheApiImageDaily_WithPurgeOnly_AndTheConnectionStringAsASecret()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string jobBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "purge-job.bicep"));
         string mainBicep = File.ReadAllText(Path.Combine(root, "infra", "main.bicep"));
 
@@ -77,7 +62,7 @@ public class BicepInfrastructureTests
     [Fact]
     public void ResearchRefreshJobBicep_RunsTheApiImageDaily_WithRefreshResearch_TheSecContact_AndTheConnectionStringAsASecret()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string jobBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "research-refresh-job.bicep"));
         string mainBicep = File.ReadAllText(Path.Combine(root, "infra", "main.bicep"));
 
@@ -106,7 +91,7 @@ public class BicepInfrastructureTests
     [Fact]
     public void ApiServiceBicep_ConfiguresInternalIngress_ScaleToZero_AndHealthProbes()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string apiBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "api-service.bicep"));
 
         // Scale-to-zero for zero cost
@@ -135,7 +120,7 @@ public class BicepInfrastructureTests
     [Fact]
     public void WebServiceBicep_ConfiguresExternalIngress_ScaleToZero_ForwardedHeaders_AndSecrets()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string webBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "web-service.bicep"));
 
         // Scale-to-zero for zero cost
@@ -171,7 +156,7 @@ public class BicepInfrastructureTests
     [Fact]
     public void LogAnalyticsBicep_ConfiguresPerGB2018Sku_AndRetention()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string laBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "log-analytics.bicep"));
 
         Assert.Contains("Microsoft.OperationalInsights/workspaces", laBicep);
@@ -184,7 +169,7 @@ public class BicepInfrastructureTests
     [Fact]
     public void ContainerEnvBicep_ConfiguresConsumptionWorkloadProfile()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string caeBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "container-env.bicep"));
 
         Assert.Contains("Microsoft.App/managedEnvironments", caeBicep);
@@ -195,7 +180,7 @@ public class BicepInfrastructureTests
     [Fact]
     public void SqlDatabaseBicep_ConfiguresBasicTier()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string sqlBicep = File.ReadAllText(Path.Combine(root, "infra", "modules", "sql-database.bicep"));
 
         Assert.Contains("Microsoft.Sql/servers", sqlBicep);
@@ -208,7 +193,7 @@ public class BicepInfrastructureTests
     [Fact]
     public void MainParametersJson_IsValidJson_AndContainsCoreKeys()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string jsonContent = File.ReadAllText(Path.Combine(root, "infra", "main.parameters.json"));
 
         using var doc = JsonDocument.Parse(jsonContent);
@@ -226,7 +211,7 @@ public class BicepInfrastructureTests
     [Fact]
     public void DeployScript_ContainsCoreAzureCliCommands_AndSwitches()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string scriptContent = File.ReadAllText(Path.Combine(root, "infra", "deploy.ps1"));
 
         Assert.Contains("[switch]$ValidateOnly", scriptContent);
@@ -241,7 +226,7 @@ public class BicepInfrastructureTests
     [Fact]
     public void ProgramCs_Web_ConfiguresForwardedHeaders_ForReverseProxy()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string programCs =
             File.ReadAllText(Path.Combine(root, "PersonalFinance", "src", "PersonalFinance.Web", "Program.cs"));
 

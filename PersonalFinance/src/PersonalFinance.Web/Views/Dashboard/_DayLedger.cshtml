@@ -1,0 +1,27 @@
+@* Your plan, per day: the Net Worth settings' yearly income, spending and saving averaged over 365 days, with the
+   estimated investment growth, and what a day's saving buys in future time. These are plan figures, not transactions:
+   the app has no bank connection. Filled by js/dashboard/dashboard-today.js; each row only when its figure is
+   there, and the whole block stays hidden when none is. *@
+<section class="dash-ledger" aria-labelledby="dash-ledger-title" data-dash-ledger hidden>
+    <h2 id="dash-ledger-title" class="dash-ledger__title">@L["Dashboard.DayLedger.Title"]</h2>
+    <dl class="dash-ledger__rows">
+        <div class="dash-ledger__row" data-dash-ledger-row="earned" hidden>
+            <dt>@L["Dashboard.DayLedger.Earned"]</dt>
+            <dd data-dash-ledger-value></dd>
+        </div>
+        <div class="dash-ledger__row" data-dash-ledger-row="spent" hidden>
+            <dt>@L["Dashboard.DayLedger.Spent"]</dt>
+            <dd data-dash-ledger-value></dd>
+        </div>
+        <div class="dash-ledger__row" data-dash-ledger-row="saved" hidden>
+            <dt>@L["Dashboard.DayLedger.Saved"]</dt>
+            <dd data-dash-ledger-value></dd>
+        </div>
+        <div class="dash-ledger__row" data-dash-ledger-row="compounding" hidden>
+            <dt>@L["Dashboard.DayLedger.Compounding"]</dt>
+            <dd data-dash-ledger-value></dd>
+        </div>
+    </dl>
+    <p class="dash-ledger__freedom" data-dash-ledger-freedom hidden></p>
+    <p class="dash-ledger__basis">@L["Dashboard.DayLedger.Basis"]</p>
+</section>

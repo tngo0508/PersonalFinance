@@ -1,29 +1,14 @@
 using System.Text.RegularExpressions;
+using PersonalFinance.Tests.TestSupport;
 using Xunit;
 
 namespace PersonalFinance.Tests.Infrastructure;
 
 public class GitHubActionsDeploymentWorkflowTests
 {
-    private static string FindProjectRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current != null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "PersonalFinance.sln")))
-            {
-                return current.FullName;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new InvalidOperationException("Could not locate repository root directory.");
-    }
-
     // The deploy steps and the smoke-test script are composite actions shared by deploy-azure.yml and rollback.yml
     private static string ReadRepoFile(params string[] relativePath) =>
-        File.ReadAllText(Path.Combine([FindProjectRoot(), .. relativePath]));
+        File.ReadAllText(Path.Combine([RepositoryRoot.Find(), .. relativePath]));
 
     private static string DeployAction() => ReadRepoFile(".github", "actions", "deploy-azure", "action.yml");
 
@@ -32,7 +17,7 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_ConfiguresRequiredTriggers()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // Push to main
@@ -53,7 +38,7 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_ConfiguresZeroCostRegistry_GHCR()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // GHCR configuration
@@ -69,7 +54,7 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_ConfiguresPasswordlessAzureOidcAuthentication()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // OIDC permission token
@@ -101,7 +86,7 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_BuildAndTestStage_CoversDotNet10AndBicepValidation()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         Assert.Contains("build-and-test:", workflow);
@@ -115,7 +100,7 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_SetupDotNetSteps_UseTheSdkPinnedInGlobalJson()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // The repo-root global.json pins the SDK, so CI and local builds run the same analyzers (#125)
@@ -136,7 +121,7 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_FullSolutionBuilds_FailOnAnyWarning()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // Every full-solution build turns on the warnings-as-errors switch in Directory.Build.props (#132)
@@ -151,7 +136,7 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_DeployStage_MapsAllExpectedBicepParameters()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // The workflow maps its values onto the shared deploy action's inputs...
@@ -189,7 +174,7 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_AllJobAndOutputReferences_AreValidAndDeclared()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // 1. Discover all defined job IDs and declared outputs using structural line analysis
@@ -259,7 +244,7 @@ public class GitHubActionsDeploymentWorkflowTests
     {
         // Every run: step is bash, where a PowerShell escape such as `n is a literal backtick. The smoke test's script
         // moved into .github/actions/smoke-test, so every workflow and action is scanned, not one job of one file.
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string[] files = Directory.GetFiles(Path.Combine(root, ".github"), "*.yml", SearchOption.AllDirectories);
 
         List<string> offenders = files
@@ -275,7 +260,7 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_SmokeTestStage_VerifiesCoreEndpoints()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         Assert.Contains("smoke-test:", workflow);
@@ -292,7 +277,7 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_AllJobs_DefineExplicitTimeouts()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // Every job (2-space indented key under `jobs:`) must declare its own timeout
@@ -316,7 +301,7 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_PullRequests_AreOptimizedForSpeed()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         // Superseded PR runs are cancelled, but main deployments are never interrupted
@@ -345,7 +330,7 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_SqlServerMigrationsJob_AppliesMigrationsTwiceWithTheDeveloperScripts()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         Match jobMatch = Regex.Match(workflow, @"\n  sql-server-migrations:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)");
@@ -378,7 +363,7 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void DeploymentWorkflow_SmokeTestJob_ConfiguresCurlTimeoutsAndFallback()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "deploy-azure.yml"));
 
         Match smokeTestJobMatch = Regex.Match(workflow, @"\n  smoke-test:[\s\S]*?(?=\n  [a-zA-Z0-9_-]+:|$)",
@@ -470,7 +455,7 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void SmokeTestScript_ExistsAndDefinesExpectedEndpointsAndOptions()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string scriptPath = Path.Combine(root, "infra", "smoke-test.ps1");
 
         Assert.True(File.Exists(scriptPath), $"Expected smoke test script '{scriptPath}' does not exist.");
@@ -487,7 +472,7 @@ public class GitHubActionsDeploymentWorkflowTests
     [Fact]
     public void Readme_ContainsDeploymentStatusBadgeIndicator()
     {
-        string root = FindProjectRoot();
+        string root = RepositoryRoot.Find();
         string readmePath = Path.Combine(root, "README.md");
 
         Assert.True(File.Exists(readmePath), "README.md must exist in the repository root.");

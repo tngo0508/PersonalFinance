@@ -26,6 +26,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`AuthorName` columns** on `CommunityStories` and `CommunityComments`, in a schema migration (hence the major bump): the Guild Hall has been empty since #422, so no data is lost.
 
+## [10.2.0] - 2026-10-27
+
+### Added
+
+- **Dark theme (#296)**: a Light / Dark / System choice in the account menu, and a sun/moon toggle in the top bar for signed-out pages.
+  - System, the default, follows the device's light or dark setting and changes with it.
+  - The choice is kept per browser in local storage and applied before the page paints, so there is no flash of the other theme.
+  - Bootstrap's own dark mode is turned on with it, so cards, forms, tables, dropdowns and modals follow.
+
+### Changed
+
+- **Theme tokens instead of fixed whites**: the top bar, dropdowns, the AI chat panel, Budget Planner, Budget Tracker, Net Worth and Google Drive surfaces read the Ledger paper and ink tokens instead of hard-coded white and Bootstrap greys. The sidebar and the Landing Page's closing band use a new `--lp-navy` token that stays navy in both themes.
+- **Landing Page skyline in dark mode**: the wash behind the hero copy is drawn from the paper token, and dark mode dims the whole city, whose colours are fixed, so the headline stays readable.
+- **Investment Calculator chart follows the theme**: the hand-drawn canvas reads its background, grid, labels and tooltip colours from the theme tokens and redraws when the theme changes.
+
+## [10.1.0] - 2026-10-27
+
+### Added
+
+- **"Your plan, per day" fills the Dashboard header**: under the welcome, your Net Worth settings are averaged over a day as a short statement: income, living costs, saving and estimated investment growth, each with a dotted leader to its amount.
+  - It says plainly that these are averages from your settings (a year's figures over 365 days), not your actual transactions, and shows no +/− signs. Each row appears only when its setting has a positive value, and the whole block stays out when none does.
+  - It closes with how much future living a day's saving pays for, in hours and minutes or in days.
+  - When the welcome has the whole row, the statement runs across it as a strip of figures, label over amount.
+
+### Changed
+
+- **The Today panel keeps its clock and calendar side by side**: it now asks for the width that fits both halves next to the welcome, and wraps under the welcome when the header cannot give it that, so the header no longer leaves a tall empty gap.
+
 ## [10.0.0] - 2026-10-27
 
 ### Removed

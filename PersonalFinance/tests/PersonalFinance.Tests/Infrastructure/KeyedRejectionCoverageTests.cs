@@ -371,11 +371,6 @@ public class KeyedRejectionCoverageTests
     private static GoogleDriveController DriveController() =>
         new(null!, null!, NullLogger<GoogleDriveController>.Instance);
 
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
-
     private sealed class DenyAllRateLimiter : IRateLimiterService
     {
         public bool TryAllow(string userId) => false;

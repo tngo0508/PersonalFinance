@@ -11,6 +11,7 @@ using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 using PersonalFinance.Shared.DTOs.News;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Infrastructure.Localization;
 
 namespace PersonalFinance.Tests.AiAssistant;
@@ -631,40 +632,6 @@ public class AiAssistantServiceTests
         {
             Usage = usage ?? new UsageDetails { InputTokenCount = 100, OutputTokenCount = 20 }
         };
-    }
-
-    private sealed class FakeChatClient(Func<IList<ChatMessage>, ChatOptions?, Task<ChatResponse>> handler) : IChatClient
-    {
-        public IList<ChatMessage> LastMessages { get; private set; } = [];
-        public ChatOptions? LastOptions { get; private set; }
-
-        public FakeChatClient(Func<IList<ChatMessage>, ChatOptions?, ChatResponse> handler)
-            : this((messages, options) => Task.FromResult(handler(messages, options)))
-        {
-        }
-
-        public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
-            CancellationToken cancellationToken = default)
-        {
-            LastMessages = messages.ToList();
-            LastOptions = options;
-            return handler(LastMessages, options);
-        }
-
-        public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages,
-            ChatOptions? options = null, CancellationToken cancellationToken = default)
-        {
-            throw new NotSupportedException();
-        }
-
-        public object? GetService(Type serviceType, object? serviceKey = null)
-        {
-            return null;
-        }
-
-        public void Dispose()
-        {
-        }
     }
 
     /// <summary>Budget data provider whose transactions honour the requested date range, like the real readers.</summary>

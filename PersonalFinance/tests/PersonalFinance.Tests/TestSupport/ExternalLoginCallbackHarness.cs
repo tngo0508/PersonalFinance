@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -8,12 +7,9 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Web.Areas.Identity.Pages.Account;
 
@@ -33,14 +29,12 @@ public sealed class ExternalLoginCallbackHarness : IAsyncDisposable
     /// <summary>The Google login the callback carries.</summary>
     public const string ProviderKey = "google-key";
 
-    private readonly ServiceProvider _provider;
-    private readonly AsyncServiceScope _scope;
+    private readonly IdentityHarness _identity;
 
-    private ExternalLoginCallbackHarness(ServiceProvider provider, AsyncServiceScope scope, IdentityUser? user,
+    private ExternalLoginCallbackHarness(IdentityHarness identity, IdentityUser? user,
         UserManager<IdentityUser> userManager, CallbackSignInManager signInManager, ExternalLoginModel page)
     {
-        _provider = provider;
-        _scope = scope;
+        _identity = identity;
         User = user;
         UserManager = userManager;
         SignInManager = signInManager;
@@ -78,17 +72,8 @@ public sealed class ExternalLoginCallbackHarness : IAsyncDisposable
 
     public static async Task<ExternalLoginCallbackHarness> CreateAsync(Options options)
     {
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddSingleton<IWebHostEnvironment, TestWebHostEnvironment>();
-        services.AddDbContext<AppDbContext>(db =>
-            db.UseInMemoryDatabase($"ExternalLoginCallback_{Guid.NewGuid():N}"));
-        services.AddDefaultIdentity<IdentityUser>()
-            .AddRoles<IdentityRole>()
-            .AddEntityFrameworkStores<AppDbContext>();
-        ServiceProvider provider = services.BuildServiceProvider();
-        AsyncServiceScope scope = provider.CreateAsyncScope();
-        IServiceProvider sp = scope.ServiceProvider;
+        var identity = IdentityHarness.Create("ExternalLoginCallback", withRoles: true);
+        IServiceProvider sp = identity.Services;
 
         Assert.True((await sp.GetRequiredService<RoleManager<IdentityRole>>()
             .CreateAsync(new IdentityRole(AppRoles.User))).Succeeded);
@@ -131,14 +116,10 @@ public sealed class ExternalLoginCallbackHarness : IAsyncDisposable
             PageContext = new PageContext { HttpContext = httpContext },
             Url = new ContentUrlHelper(new ActionContext(httpContext, new RouteData(), new ActionDescriptor()))
         };
-        return new ExternalLoginCallbackHarness(provider, scope, user, userManager, signInManager, page);
+        return new ExternalLoginCallbackHarness(identity, user, userManager, signInManager, page);
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        await _scope.DisposeAsync();
-        await _provider.DisposeAsync();
-    }
+    public ValueTask DisposeAsync() => _identity.DisposeAsync();
 
     /// <summary>
     /// Returns the fixed Google sign-in from the callback, and records sign-ins instead of writing a cookie.
@@ -187,20 +168,5 @@ public sealed class ExternalLoginCallbackHarness : IAsyncDisposable
         public string? Link(string? routeName, object? values) => throw new NotSupportedException();
 
         public string? RouteUrl(UrlRouteContext routeContext) => "/";
-    }
-
-    private sealed class TestWebHostEnvironment : IWebHostEnvironment
-    {
-        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
-
-        public string WebRootPath { get; set; } = AppContext.BaseDirectory;
-
-        public string ApplicationName { get; set; } = "PersonalFinance.Web";
-
-        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
-
-        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
-
-        public string EnvironmentName { get; set; } = "Development";
     }
 }

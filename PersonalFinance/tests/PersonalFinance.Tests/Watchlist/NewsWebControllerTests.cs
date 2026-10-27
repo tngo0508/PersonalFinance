@@ -189,9 +189,4 @@ public class NewsWebControllerTests
         Assert.Equal(StatusCodes.Status500InternalServerError, objectResult.StatusCode);
         Assert.DoesNotContain("secret", JsonSerializer.Serialize(objectResult.Value));
     }
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
 }

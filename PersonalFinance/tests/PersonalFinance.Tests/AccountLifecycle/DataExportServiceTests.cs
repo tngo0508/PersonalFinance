@@ -6,6 +6,7 @@ using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.DTOs.DataExport;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Tests.TestSupport;
 using FeedbackEntity = PersonalFinance.Data.Entities.Feedback;
 
 namespace PersonalFinance.Tests.AccountLifecycle;
@@ -313,10 +314,5 @@ public class DataExportServiceTests
         AzureSqlTranslation.AssertTranslates(service.StoryLikesQuery(UserId));
         AzureSqlTranslation.AssertTranslates(service.PollVotesQuery(UserId));
         AzureSqlTranslation.AssertTranslates(service.AccountRolesQuery(UserId));
-    }
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
     }
 }

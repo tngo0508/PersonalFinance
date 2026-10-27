@@ -69,8 +69,144 @@
 }
 
 .dash-header__intro {
+    container: dash-intro / inline-size;
     flex: 1 1 18rem;
     min-width: 0;
+}
+
+/* ==========================================================================
+   Your plan, per day — under the welcome, the Net Worth settings averaged
+   over a day: label, dotted leader, amount in the money mono. Not a card; it reads as
+   part of the welcome. The closing line turns a day's saving back into time.
+   ========================================================================== */
+
+.dash-ledger {
+    max-width: 24rem;
+    margin-top: var(--app-spacing-xl);
+}
+
+.dash-ledger[hidden],
+.dash-ledger__row[hidden],
+.dash-ledger__freedom[hidden] {
+    display: none;
+}
+
+.dash-ledger__title {
+    margin: 0 0 var(--app-spacing-s);
+    font-size: 0.7rem;
+    font-weight: var(--app-font-weight-semibold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--app-accent-target);
+}
+
+.dash-ledger__rows {
+    margin: 0;
+    border-top: 1px solid var(--app-border-hover);
+    border-bottom: 1px solid var(--app-border-hover);
+}
+
+.dash-ledger__row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--app-spacing-s);
+    padding: var(--app-spacing-s) 0;
+}
+
+.dash-ledger__row + .dash-ledger__row {
+    border-top: 1px solid var(--app-border);
+}
+
+.dash-ledger__row dt {
+    font-weight: var(--app-font-weight-regular);
+    color: var(--app-text-soft);
+}
+
+/* The dotted leader from label to amount, as on a printed statement. */
+.dash-ledger__row::after {
+    order: 1;
+    flex: 1 1 auto;
+    min-width: var(--app-spacing-m);
+    content: "";
+    border-bottom: 1px dotted var(--app-border-hover);
+    transform: translateY(-0.3em);
+}
+
+.dash-ledger__row dd {
+    order: 2;
+    margin: 0;
+    font-family: var(--app-font-mono);
+    font-weight: var(--app-font-weight-medium);
+    font-variant-numeric: tabular-nums;
+    color: var(--app-text);
+    white-space: nowrap;
+}
+
+.dash-ledger__row[data-dash-ledger-row="spent"] dd {
+    color: var(--app-text-soft);
+}
+
+.dash-ledger__row[data-dash-ledger-row="saved"] dd {
+    font-weight: var(--app-font-weight-bold);
+}
+
+.dash-ledger__row[data-dash-ledger-row="compounding"] dd {
+    color: var(--app-accent-positive);
+}
+
+.dash-ledger__freedom {
+    margin: var(--app-spacing-m) 0 0;
+    padding: var(--app-spacing-s) var(--app-spacing-m);
+    font-weight: var(--app-font-weight-medium);
+    line-height: 1.45;
+    color: var(--app-text);
+    background: color-mix(in srgb, var(--app-accent-target) 9%, transparent);
+    border-left: 2px solid var(--app-accent-target);
+    border-radius: 0 var(--app-radius-s) var(--app-radius-s) 0;
+}
+
+.dash-ledger__basis {
+    margin: var(--app-spacing-s) 0 0;
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-faint);
+}
+
+/* When the welcome has the whole row (Today wrapped under it), the statement runs across as a strip of figures, label
+   over amount, so it fills the row instead of leaving it empty on the right. */
+@container dash-intro (min-width: 40rem) {
+    .dash-ledger {
+        max-width: none;
+        margin-top: var(--app-spacing-l);
+    }
+
+    .dash-ledger__rows {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    }
+
+    .dash-ledger__row {
+        flex-direction: column;
+        gap: var(--app-spacing-xs);
+        padding: var(--app-spacing-s) var(--app-spacing-m) var(--app-spacing-s) 0;
+    }
+
+    .dash-ledger__row + .dash-ledger__row {
+        padding-left: var(--app-spacing-m);
+        border-top: 0;
+        border-left: 1px solid var(--app-border);
+    }
+
+    .dash-ledger__row::after {
+        content: none;
+    }
+
+    .dash-ledger__row dt {
+        font-size: var(--app-font-size-small);
+    }
+
+    .dash-ledger__row dd {
+        font-size: var(--app-font-size-large);
+    }
 }
 
 /* ==========================================================================
@@ -82,10 +218,12 @@
    in the money mono; brass marks the pace the user is measured against.
    ========================================================================== */
 
+/* Its basis is the width at which its two halves sit side by side (the container query below), so beside the welcome
+   it is never stacked and tall; when the header cannot give it that much it wraps under the welcome instead. */
 .dash-today {
     container: dash-today / inline-size;
-    flex: 1 1 30rem;
-    max-width: 46rem;
+    flex: 1 1 44rem;
+    max-width: 52rem;
     padding: var(--app-spacing-l);
     background: var(--app-surface);
     border: 1px solid var(--app-border);
