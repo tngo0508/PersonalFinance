@@ -241,6 +241,27 @@ public class AiAssistantPurposeNoteTests
         Assert.Empty(await db.AiUsageRecords.ToListAsync());
     }
 
+    [Theory]
+    [InlineData("vi", "Vietnamese")]
+    [InlineData(null, "English")]
+    public async Task WritePurposeNote_IsWrittenInTheUsersLanguage(string? storedLanguage, string languageName)
+    {
+        await using AppDbContext db = CreateContext();
+        if (storedLanguage is not null)
+        {
+            db.UserPreferences.Add(new UserPreference { UserId = UserId, Language = storedLanguage });
+            await db.SaveChangesAsync();
+        }
+
+        FakeChatClient fake = FakeChatClient.Replying("A note.");
+
+        await CreateService(db, fake).WritePurposeNoteAsync(UserId, Request());
+
+        string system = fake.Calls.Single().Messages.Single(m => m.Role == ChatRole.System).Text;
+        Assert.EndsWith($"Write the note in {languageName}, whatever language the purpose is written in.", system,
+            StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task WritePurposeNote_WhenTheModelReturnsNothing_IsNotAvailableRightNow()
     {
