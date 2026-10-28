@@ -338,7 +338,7 @@ Until a job has logged its success line, the alert fires for it within the hour.
 
 1. Start both jobs by hand: `az containerapp job start --name <purge job> --resource-group <rg>`, then the same for the Research refresh job. This also proves the success path works.
 2. In the Azure Portal, open Monitor → Alerts → Action groups, select the job alert's Action Group and use **Test** to confirm the email arrives.
-3. Once both runs have finished, check that the alert rule shows both `Job` series as healthy.
+3. Once both runs have finished, check that the alert rule shows both `Job` series as healthy. If a job succeeded but its series stays fired, run `ContainerAppConsoleLogs_CL | take 5` in the workspace and check that the columns are still `ContainerName_s` and `Log_s` and that `Log_s` holds the plain line, without ANSI colour codes. Fix the query in `infra/modules/job-alerts.bicep` if they differ.
 
 ### 1.8 Environments at a Glance
 

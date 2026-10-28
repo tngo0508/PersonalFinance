@@ -12,10 +12,14 @@ namespace PersonalFinance.Tests.AccountLifecycle;
 /// </summary>
 public class AccountPurgeJobTests
 {
-    private sealed class FakePurgeService(Func<AccountPurgeSummary> purge) : IAccountPurgeService
+    private sealed class FakePurgeService : IAccountPurgeService
     {
+        private readonly Func<AccountPurgeSummary> _purge;
+
+        public FakePurgeService(Func<AccountPurgeSummary> purge) => _purge = purge;
+
         public Task<AccountPurgeSummary> PurgeDueAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(purge());
+            Task.FromResult(_purge());
     }
 
     private static ServiceProvider Services(Func<AccountPurgeSummary> purge, RecordingLoggerProvider logs) =>
