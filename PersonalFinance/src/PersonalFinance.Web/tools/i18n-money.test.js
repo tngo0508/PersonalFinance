@@ -92,11 +92,11 @@ test('formatAmount is the number without the symbol, as a money input shows it',
 test('formatConvertible matches the C# formatter: a supported currency with its symbol, another with its ISO code', () => {
     assert.strictEqual(en.formatConvertible(1234.565, 'USD'), '$1,234.57');
     assert.strictEqual(en.formatConvertible(170000000, 'VND'), '₫170,000,000');
-    assert.strictEqual(en.formatConvertible(1000000, 'JPY'), '1,000,000 JPY');
-    assert.strictEqual(en.formatConvertible(1234.565, 'EUR'), '1,234.57 EUR');
-    assert.strictEqual(vi.formatConvertible(1234.5, 'EUR'), '1.234,50 EUR');
-    assert.strictEqual(vi.formatConvertible(1234567.5, 'KRW'), '1.234.568 KRW');
-    assert.strictEqual(en.formatConvertible(-0.004, 'GBP'), '0.00 GBP');
+    assert.strictEqual(en.formatConvertible(1000000, 'JPY'), `1,000,000${NBSP}JPY`);
+    assert.strictEqual(en.formatConvertible(1234.565, 'EUR'), `1,234.57${NBSP}EUR`);
+    assert.strictEqual(vi.formatConvertible(1234.5, 'EUR'), `1.234,50${NBSP}EUR`);
+    assert.strictEqual(vi.formatConvertible(1234567.5, 'KRW'), `1.234.568${NBSP}KRW`);
+    assert.strictEqual(en.formatConvertible(-0.004, 'GBP'), `0.00${NBSP}GBP`);
 });
 
 test('formatConvertible refuses a currency that is not convertible', () => {

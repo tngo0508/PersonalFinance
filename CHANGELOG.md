@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [13.3.0] - 2026-10-28
+
+### Changed
+
+- **The Currency Converter page: exchange rows that update live**: one card with a From row, a swap button and a tinted To row, the rate and its inverse under them, the same shape on a phone and on desktop (#490).
+  - Any change (either amount, either currency, the date) requests a new quote after a short pause; the previous result stays until the new one arrives, and the URL keeps the amount, currencies and date.
+  - The To amount is editable too: typing in it converts backwards into the From amount. Swap exchanges the currencies and the amounts.
+  - A "Latest" link clears the date. Without JavaScript the page still converts through the Convert button, as before.
+  - The amounts are plain numbers in each currency's minor units, in the page's language.
+
+### Added
+
+- **`GET /CurrencyConverter/Quote`**: the Web endpoint the page's live quote calls; it returns the ApiService's conversion as JSON, 400 with the field messages for a rejected input, and 502 when the conversion fails.
+- **`PFI18n.formatConvertible`**: the client mirror of `MoneyFormatter.FormatConvertible` (symbol for US dollars and đồng, the ISO code otherwise).
+
 ## [13.2.1] - 2026-10-28
 
 ### Changed

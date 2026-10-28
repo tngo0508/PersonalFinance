@@ -171,7 +171,7 @@
     /**
      * Format an amount in any convertible currency like the server's MoneyFormatter.FormatConvertible: a supported
      * currency exactly as formatMoney writes it ($1,234.57); another, which has no symbol here, grouped with its minor
-     * units and followed by its ISO code (1,000,000 JPY).
+     * units and followed by a non-breaking space and its ISO code (1,000,000 JPY).
      * @param {number} amount - The amount.
      * @param {string} currencyCode - ISO 4217 code of a convertible currency.
      * @returns {string} The formatted amount.
@@ -186,7 +186,8 @@
         }
         const number = new Intl.NumberFormat(culture, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
             .format(roundHalfAway(Number(amount) || 0, decimals));
-        return `${number} ${currencyCode}`;
+        // A non-breaking space, as the server writes it, so the code never wraps away from its number.
+        return [number, currencyCode].join(' ');
     }
 
     /**
