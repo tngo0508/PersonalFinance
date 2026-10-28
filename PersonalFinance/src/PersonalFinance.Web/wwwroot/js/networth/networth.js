@@ -30,7 +30,8 @@
             'nwBaseRoi',
             'nwConservativeRoi',
             'nwAggressiveRoi',
-            'nwAggressiveSavings'
+            'nwAggressiveSavings',
+            'nwInflation'
         ];
         cachedSavedValues = {};
         fields.forEach((fieldId) => {
@@ -95,16 +96,9 @@
         // Parameters are already loaded server-side via the Index action.
         // The sliders reflect saved values from the database on page render.
 
-        // Initialize tooltips for parameter hints
-        NW.initTooltips();
-
-        // Render charts
-        NW.renderGrowthChart(data);
-        NW.renderComparisonChart(data);
-
-        // Initialize scenario tabs and render the projection table for the selected scenario
-        NW.initScenarioTabs();
-        NW.updateTable(window.nwSelectedScenario || 'Base');
+        // The today's-money and table-density toggles, then the first render from the server's projection
+        NW.initViews();
+        NW.render(data);
 
         // Initialize live recalculation
         NW.initLiveRecalculation();

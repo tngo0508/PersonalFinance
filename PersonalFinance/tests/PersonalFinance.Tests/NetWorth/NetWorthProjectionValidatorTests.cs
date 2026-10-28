@@ -98,4 +98,15 @@ public class NetWorthProjectionValidatorTests
             CultureInfo.CurrentCulture = formatting;
         }
     }
+
+    [Theory]
+    [InlineData(-0.1)]
+    [InlineData(20.1)]
+    public void InflationOutsideZeroToTwentyPercent_IsRejected(double inflation)
+    {
+        NetWorthProjectionRequestDto request = Valid("USD");
+        request.InflationPercent = (decimal)inflation;
+
+        Assert.Equal(ApiErrorKeys.NetWorth.InflationRange, NetWorthProjectionValidator.Validate(request)?.Key);
+    }
 }

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [12.7.0] - 2026-10-27
+
+### Added
+
+- **Net Worth shows what moves your FI date**: next to your numbers, the page lists four Levers (save 5,000 more, spend 5,000 less, earn 1% more or less a year), each with how many years sooner or later it makes you financially independent; select one to apply it.
+  - `NetWorthProjectionService` re-runs the projection for each Lever and returns them as `NetWorthProjectionDto.Levers`. The money step scales with the currency's `BoundScale`.
+- **Today's money view**: a toggle shows every amount in today's prices, using a new Inflation assumption (3% by default, 0–20%) that is sent with each projection and never saved.
+  - Each projection year carries `TotalContributions`, `InflationFactor` and `RealEndingBalance`; each scenario carries `RealFinalNetWorth` and `RealFiReachedAge`. The ApiService rejects an out-of-range inflation with `NetWorth.Validation.InflationRange`.
+
+### Changed
+
+- **Net Worth page redesign**: the page now opens with one sentence that says when you could be financially independent, above a single chart of your net worth by age.
+  - The D3 chart draws the Base path, a band from the Conservative to the Aggressive scenario, the FI Target and the age you reach it. Point at it, or use the arrow keys, to read any age. It replaces the two Chart.js charts and the scenario cards.
+  - Your parameters read as an editable sentence ("I'm 33 years old with …"), each with its slider; return rates, currency and inflation sit under Assumptions.
+- **Year-by-year projection**: the table shows every five years plus milestone ages (or every year), all three scenarios side by side, a brass dot where each first reaches the FI Target, and a bar splitting the Base balance into what you put in and what growth added.
+  - Milestones above the table mark when your money first earns more than you save, when growth passes your contributions, halfway to FI, FI and retirement. Selecting an age or a milestone moves the chart's marker, and the age column stays in view when the table scrolls sideways.
+
 ## [12.6.1] - 2026-10-27
 
 ### Changed

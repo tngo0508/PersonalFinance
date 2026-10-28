@@ -15,9 +15,11 @@ namespace PersonalFinance.Tests.NetWorth;
 /// </summary>
 public class NetWorthMappingAndMetricsTests
 {
+    // Inflation only steers the page's today's-money view, so it is sent with each calculation but never saved.
     private static readonly string[] ParameterNames = typeof(NetWorthProjectionRequestDto)
         .GetProperties(BindingFlags.Public | BindingFlags.Instance)
         .Select(p => p.Name)
+        .Where(name => name != nameof(NetWorthProjectionRequestDto.InflationPercent))
         .ToArray();
 
     [Fact]
@@ -55,6 +57,13 @@ public class NetWorthMappingAndMetricsTests
     public void WebViewModel_StartsFromNetWorthDefaults()
     {
         AssertSameParameters(NetWorthDefaults.CreateRequest(), new NetWorthViewModel().ToProjectionRequest());
+    }
+
+    [Fact]
+    public void WebViewModel_SendsItsInflation_StartingFromTheDefault()
+    {
+        Assert.Equal(NetWorthDefaults.InflationPercent, new NetWorthViewModel().ToProjectionRequest().InflationPercent);
+        Assert.Equal(4.5m, new NetWorthViewModel { InflationPercent = 4.5m }.ToProjectionRequest().InflationPercent);
     }
 
     [Theory]

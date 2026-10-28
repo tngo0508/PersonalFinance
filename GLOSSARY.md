@@ -128,6 +128,17 @@ The panel on the Net Worth page showing how the Savings Rate, the FI Target, Pro
 user reaches FI are calculated from the values the user entered.
 _Avoid_: plan graph, Plan View, dependency map
 
+### Today's Money
+A Net Worth projection shown with each year's balance divided by the inflation since now, so future amounts read in
+today's prices and the FI Target keeps pace with them. The inflation rate is a projection input that is never saved.
+_Avoid_: real terms, inflation-adjusted (in UI text)
+
+### Lever
+One single-number change to the user's Net Worth parameters (save more, spend less, a higher or lower return) that the
+projection re-runs to show how it moves the age the user reaches the FI Target. Calculated in
+`NetWorthProjectionService`; selecting one on the Net Worth page applies it.
+_Avoid_: what-if, scenario (Base, Conservative and Aggressive are the scenarios)
+
 ### Landing Page
 The public page served at `/` to signed-out visitors. It explains the product and leads to registration or sign-in.
 _Avoid_: Home page (ambiguous with Dashboard)

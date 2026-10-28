@@ -15,6 +15,12 @@ public static class NetWorthProjectionService
     /// </summary>
     private const decimal FiRuleMultiplier = 25m;
 
+    /// <summary>The money levers' step in US dollars, scaled to the projection's currency (<see cref="MoneyBounds"/>).</summary>
+    private const long MoneyLeverStepDollars = 5_000;
+
+    /// <summary>The return levers' step in percentage points.</summary>
+    private const decimal ReturnLeverStep = 1m;
+
     /// <summary>
     /// Computes the complete net worth projection for all three scenarios.
     /// </summary>
@@ -30,6 +36,7 @@ public static class NetWorthProjectionService
             CurrentAge = request.CurrentAge,
             AnnualIncome = request.AnnualIncome,
             AnnualSpending = request.AnnualSpending,
+            InflationPercent = request.InflationPercent,
             FiTarget = fiTarget,
             StartingBalance = request.StartingBalance,
             AnnualSavings = request.AnnualSavings,
@@ -39,28 +46,31 @@ public static class NetWorthProjectionService
             ProgressToFiPercent = fiTarget != 0m ? request.StartingBalance / fiTarget * 100m : null
         };
 
-        // Base scenario
-        projection.Base = BuildScenario(
-            "Base", request.StartingBalance, request.AnnualSavings, request.CurrentAge,
-            request.RetirementAge, request.BaseRoi / 100m, currentYear);
-
-        // Conservative scenario
-        projection.Conservative = BuildScenario(
-            "Conservative", request.StartingBalance, request.AnnualSavings, request.CurrentAge,
-            request.RetirementAge, request.ConservativeRoi / 100m, currentYear);
-
-        // Aggressive scenario
-        projection.Aggressive = BuildScenario(
-            "Aggressive", request.StartingBalance, request.AggressiveSavings, request.CurrentAge,
-            request.RetirementAge, request.AggressiveRoi / 100m, currentYear);
-
         bool hasProjection = request.RetirementAge > request.CurrentAge;
-        foreach (NetWorthScenarioDto scenario in new[] { projection.Base, projection.Conservative, projection.Aggressive })
-        {
-            scenario.FiReachedAge = hasProjection && fiTarget > 0m
-                ? scenario.Years.FirstOrDefault(y => y.EndingBalance >= fiTarget)?.Age
-                : null;
-        }
+        decimal inflationRate = request.InflationPercent / 100m;
+        NetWorthScenarioDto Scenario(string name, decimal savings, decimal roiPercent, decimal target) =>
+            BuildScenario(name, request.StartingBalance, savings, request.CurrentAge, request.RetirementAge,
+                roiPercent / 100m, inflationRate, currentYear, hasProjection ? target : 0m);
+
+        projection.Base = Scenario("Base", request.AnnualSavings, request.BaseRoi, fiTarget);
+        projection.Conservative = Scenario("Conservative", request.AnnualSavings, request.ConservativeRoi, fiTarget);
+        projection.Aggressive = Scenario("Aggressive", request.AggressiveSavings, request.AggressiveRoi, fiTarget);
+
+        decimal moneyStep = MoneyBounds.Max(MoneyLeverStepDollars, projection.CurrencyCode);
+        decimal spendingCut = Math.Min(moneyStep, request.AnnualSpending);
+        decimal returnCut = Math.Min(ReturnLeverStep, request.BaseRoi);
+        projection.Levers =
+        [
+            Lever(NetWorthLevers.SaveMore, moneyStep,
+                Scenario("Base", request.AnnualSavings + moneyStep, request.BaseRoi, fiTarget)),
+            Lever(NetWorthLevers.SpendLess, spendingCut,
+                Scenario("Base", request.AnnualSavings, request.BaseRoi,
+                    (request.AnnualSpending - spendingCut) * FiRuleMultiplier)),
+            Lever(NetWorthLevers.ReturnUp, ReturnLeverStep,
+                Scenario("Base", request.AnnualSavings, request.BaseRoi + ReturnLeverStep, fiTarget)),
+            Lever(NetWorthLevers.ReturnDown, returnCut,
+                Scenario("Base", request.AnnualSavings, request.BaseRoi - returnCut, fiTarget))
+        ];
 
         return projection;
     }
@@ -102,15 +112,29 @@ public static class NetWorthProjectionService
                 BaseRoi = request.BaseRoi,
                 ConservativeRoi = request.ConservativeRoi,
                 AggressiveRoi = request.AggressiveRoi,
-                AggressiveSavings = aggressiveSavings!.Value
+                AggressiveSavings = aggressiveSavings!.Value,
+                InflationPercent = request.InflationPercent
             })
             : ComputeProjection(request);
         projection.Conversion = conversion.ToDto();
         return projection;
     }
 
+    /// <summary>A lever: the outcome of the Base scenario re-run with one input changed by <paramref name="change"/>.</summary>
+    private static NetWorthLeverDto Lever(string key, decimal change, NetWorthScenarioDto scenario) => new()
+    {
+        Key = key,
+        Change = change,
+        FiReachedAge = scenario.FiReachedAge,
+        RealFiReachedAge = scenario.RealFiReachedAge,
+        FinalNetWorth = scenario.FinalNetWorth,
+        RealFinalNetWorth = scenario.RealFinalNetWorth
+    };
+
     /// <summary>
-    /// Builds a single scenario by computing year-by-year compound interest growth.
+    /// Builds a single scenario by computing year-by-year compound interest growth, each year also in today's money at
+    /// <paramref name="inflationRate"/>. The FI ages are the first ages whose balance reaches <paramref name="fiTarget"/>;
+    /// a target of 0 leaves them unset.
     /// </summary>
     private static NetWorthScenarioDto BuildScenario(
         string name,
@@ -119,7 +143,9 @@ public static class NetWorthProjectionService
         int startAge,
         int retirementAge,
         decimal roiRate,
-        int startYear)
+        decimal inflationRate,
+        int startYear,
+        decimal fiTarget)
     {
         var scenario = new NetWorthScenarioDto
         {
@@ -132,6 +158,7 @@ public static class NetWorthProjectionService
 
         decimal balance = startingBalance;
         decimal totalContributions = startingBalance;
+        decimal inflationFactor = 1m;
         int year = startYear;
         int age = startAge;
 
@@ -139,6 +166,8 @@ public static class NetWorthProjectionService
         {
             decimal roi = balance * roiRate;
             decimal endingBalance = balance + annualSavings + roi;
+            totalContributions += annualSavings;
+            inflationFactor *= 1m + inflationRate;
 
             scenario.Years.Add(new NetWorthYearDto
             {
@@ -147,10 +176,12 @@ public static class NetWorthProjectionService
                 StartingBalance = balance,
                 Savings = annualSavings,
                 Roi = roi,
-                EndingBalance = endingBalance
+                EndingBalance = endingBalance,
+                TotalContributions = totalContributions,
+                InflationFactor = inflationFactor,
+                RealEndingBalance = endingBalance / inflationFactor
             });
 
-            totalContributions += annualSavings;
             balance = endingBalance;
             year++;
             age++;
@@ -159,6 +190,12 @@ public static class NetWorthProjectionService
         scenario.FinalNetWorth = balance;
         scenario.TotalContributions = totalContributions;
         scenario.TotalInterestEarned = balance - totalContributions;
+        scenario.RealFinalNetWorth = balance / inflationFactor;
+        if (fiTarget > 0m)
+        {
+            scenario.FiReachedAge = scenario.Years.FirstOrDefault(y => y.EndingBalance >= fiTarget)?.Age;
+            scenario.RealFiReachedAge = scenario.Years.FirstOrDefault(y => y.RealEndingBalance >= fiTarget)?.Age;
+        }
 
         return scenario;
     }

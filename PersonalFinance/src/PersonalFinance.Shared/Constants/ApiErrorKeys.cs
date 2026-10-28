@@ -385,6 +385,9 @@ public static class ApiErrorKeys
         /// <summary>The aggressive ROI was outside 0% to 50%.</summary>
         public const string AggressiveRoiRange = "NetWorth.Validation.AggressiveRoiRange";
 
+        /// <summary>The inflation was outside 0% to 20%.</summary>
+        public const string InflationRange = "NetWorth.Validation.InflationRange";
+
         /// <summary>The Net Worth parameters named a currency that is not supported.</summary>
         public const string CurrencyUnsupported = "NetWorth.Validation.CurrencyUnsupported";
     }

@@ -43,6 +43,7 @@
             conservativeRoi: NW.getSliderValue('nwConservativeRoi') || 6,
             aggressiveRoi: NW.getSliderValue('nwAggressiveRoi') || 10,
             aggressiveSavings: NW.getSliderValue('nwAggressiveSavings') || 45000,
+            inflationPercent: NW.getSliderValue('nwInflation'),
             currencyCode: NW.inputCurrency()
         };
 
@@ -64,17 +65,8 @@
             window.nwProjectionData = data;
             NW.setResultCurrency(data.currencyCode);
             NW.updateConversionCaption(data.conversion);
-            NW.renderGrowthChart(data);
-            NW.renderComparisonChart(data);
-            NW.updateMetrics(data);
             NW.updateBreakdown(data);
-            NW.updateScenarioCards(data);
-            NW.updateScenarioBadges(data);
-            // Re-render the active scenario table
-            const activeBtn = document.querySelector('.nw-tab-btn.active');
-            if (activeBtn) {
-                NW.updateTable(activeBtn.getAttribute('data-scenario'));
-            }
+            NW.render(data);
         } catch (err) {
             // eslint-disable-next-line no-console
             console.error('Failed to recalculate projection:', err);

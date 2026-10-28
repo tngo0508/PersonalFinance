@@ -40,4 +40,10 @@ public sealed class NetWorthProjectionRequestDto
 
     /// <summary>Aggressive scenario annual savings amount.</summary>
     public decimal AggressiveSavings { get; set; }
+
+    /// <summary>
+    /// Assumed yearly inflation in percent, for the today's-money figures; 0 leaves them equal to the projected ones.
+    /// Not saved with the parameters.
+    /// </summary>
+    public decimal InflationPercent { get; set; }
 }

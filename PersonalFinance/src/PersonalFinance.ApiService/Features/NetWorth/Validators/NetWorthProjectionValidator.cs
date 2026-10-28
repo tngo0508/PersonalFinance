@@ -97,6 +97,12 @@ public static class NetWorthProjectionValidator
                 "Aggressive ROI must be between 0% and 50%.");
         }
 
+        if (request.InflationPercent < 0 || request.InflationPercent > 20)
+        {
+            return Failure(ApiErrorKeys.NetWorth.InflationRange, nameof(request.InflationPercent),
+                "Inflation must be between 0% and 20%.");
+        }
+
         return null;
     }
 

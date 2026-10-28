@@ -269,7 +269,8 @@ public class KeyedRejectionCoverageTests
             r => r.StartingBalance = -1m, r => r.AnnualSavings = -1m, r => r.AnnualIncome = -1m,
             r => r.AnnualSpending = -1m, r => r.AggressiveSavings = -1m, r => r.CurrentAge = 17,
             r => r.RetirementAge = 121, r => r.RetirementAge = 30, r => r.BaseRoi = 51m,
-            r => r.ConservativeRoi = 51m, r => r.AggressiveRoi = 51m, r => r.CurrencyCode = "EUR"
+            r => r.ConservativeRoi = 51m, r => r.AggressiveRoi = 51m, r => r.InflationPercent = 21m,
+            r => r.CurrencyCode = "EUR"
         ];
 
         return breaks.Select(breakIt =>

@@ -22,6 +22,15 @@ public sealed class NetWorthYearDto
 
     /// <summary>Balance at the end of the year after savings and ROI.</summary>
     public decimal EndingBalance { get; init; }
+
+    /// <summary>Everything put in by the end of the year: the starting balance plus each year's savings so far.</summary>
+    public decimal TotalContributions { get; init; }
+
+    /// <summary>How much prices have risen by the end of the year at the assumed inflation: 1.03 after one year at 3%.</summary>
+    public decimal InflationFactor { get; init; }
+
+    /// <summary>The ending balance in today's money: <see cref="EndingBalance"/> over <see cref="InflationFactor"/>.</summary>
+    public decimal RealEndingBalance { get; init; }
 }
 
 /// <summary>
@@ -59,6 +68,15 @@ public sealed class NetWorthScenarioDto
     /// </summary>
     public int? FiReachedAge { get; set; }
 
+    /// <summary>Final net worth in today's money.</summary>
+    public decimal RealFinalNetWorth { get; set; }
+
+    /// <summary>
+    /// Like <see cref="FiReachedAge"/>, with each year's balance in today's money, so the FI Target keeps pace with
+    /// inflation.
+    /// </summary>
+    public int? RealFiReachedAge { get; set; }
+
     /// <summary>Year-by-year projection data.</summary>
     public List<NetWorthYearDto> Years { get; set; } = new();
 }
@@ -79,6 +97,9 @@ public sealed class NetWorthProjectionDto
 
     /// <summary>Annual spending amount (used to compute FI target).</summary>
     public decimal AnnualSpending { get; set; }
+
+    /// <summary>The assumed yearly inflation the today's-money figures take out, in percent.</summary>
+    public decimal InflationPercent { get; set; }
 
     /// <summary>Financial independence target (annual spending × 25, using the 4% rule).</summary>
     public decimal FiTarget { get; set; }
@@ -115,4 +136,47 @@ public sealed class NetWorthProjectionDto
 
     /// <summary>Aggressive scenario projection.</summary>
     public NetWorthScenarioDto Aggressive { get; set; } = new();
+
+    /// <summary>What one change to the Base inputs does to the outcome, in <see cref="NetWorthLevers"/> order.</summary>
+    public List<NetWorthLeverDto> Levers { get; set; } = new();
+}
+
+/// <summary>
+/// The Base scenario re-run with one input changed, for the page's "what moves your date" levers.
+/// </summary>
+public sealed class NetWorthLeverDto
+{
+    /// <summary>Which input changed: one of <see cref="NetWorthLevers"/>.</summary>
+    public string Key { get; set; } = string.Empty;
+
+    /// <summary>The size of the change: an amount in the projection's currency, or percentage points of return.</summary>
+    public decimal Change { get; set; }
+
+    /// <summary>The age the FI Target is reached with the change; null when it is not reached by retirement.</summary>
+    public int? FiReachedAge { get; set; }
+
+    /// <summary>Like <see cref="FiReachedAge"/>, in today's money.</summary>
+    public int? RealFiReachedAge { get; set; }
+
+    /// <summary>Final net worth with the change.</summary>
+    public decimal FinalNetWorth { get; set; }
+
+    /// <summary>Final net worth with the change, in today's money.</summary>
+    public decimal RealFinalNetWorth { get; set; }
+}
+
+/// <summary>The keys of <see cref="NetWorthLeverDto"/>.</summary>
+public static class NetWorthLevers
+{
+    /// <summary>Save a set amount more each year.</summary>
+    public const string SaveMore = "SaveMore";
+
+    /// <summary>Spend a set amount less each year, which lowers the FI Target.</summary>
+    public const string SpendLess = "SpendLess";
+
+    /// <summary>Earn one percentage point more return.</summary>
+    public const string ReturnUp = "ReturnUp";
+
+    /// <summary>Earn one percentage point less return.</summary>
+    public const string ReturnDown = "ReturnDown";
 }

@@ -19,6 +19,9 @@ public static class NetWorthDefaults
     public const decimal AggressiveRoi = 10.0m;
     public const decimal AggressiveSavings = 45_000m;
 
+    /// <summary>The inflation the today's-money view assumes until the user changes it; it is not saved.</summary>
+    public const decimal InflationPercent = 3.0m;
+
     /// <summary>A projection request filled with the default parameters.</summary>
     public static NetWorthProjectionRequestDto CreateRequest()
     {
@@ -33,7 +36,8 @@ public static class NetWorthDefaults
             BaseRoi = BaseRoi,
             ConservativeRoi = ConservativeRoi,
             AggressiveRoi = AggressiveRoi,
-            AggressiveSavings = AggressiveSavings
+            AggressiveSavings = AggressiveSavings,
+            InflationPercent = InflationPercent
         };
     }
 }

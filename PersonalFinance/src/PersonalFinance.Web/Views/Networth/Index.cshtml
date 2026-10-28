@@ -41,9 +41,9 @@
 </div>
 
 @section Scripts {
-    <script src="~/lib/chartjs/chart.umd.min.js"></script>
+    <script src="~/lib/d3/d3.min.js"></script>
     <script src="~/js/networth/networth-utils.js" asp-append-version="true"></script>
-    <script src="~/js/networth/networth-charts.js" asp-append-version="true"></script>
+    <script src="~/js/networth/networth-runway.js" asp-append-version="true"></script>
     <script src="~/js/networth/networth-sliders.js" asp-append-version="true"></script>
     <script src="~/js/networth/networth-breakdown.js" asp-append-version="true"></script>
     <script src="~/js/networth/networth-api.js" asp-append-version="true"></script>
@@ -57,7 +57,6 @@
     {
         <script>
             window.nwProjectionData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(projection, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
-            window.nwSelectedScenario = '@Model.SelectedScenario';
         </script>
     }
 }
