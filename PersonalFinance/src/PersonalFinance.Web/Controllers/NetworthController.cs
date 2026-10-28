@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Authorization;
@@ -49,8 +50,7 @@ public class NetworthController : Controller
         {
             NetWorthParametersDto? saved = await _netWorthApi.LoadParametersAsync(cancellationToken);
 
-            // Only apply saved values if they represent real data (not a blank DTO with all zeros)
-            if (saved != null && saved.CurrentAge > 0 && saved.RetirementAge > 0)
+            if (IsSaved(saved))
             {
                 model.ApplySaved(saved);
             }
@@ -97,7 +97,7 @@ public class NetworthController : Controller
 
         if (!ModelState.IsValid)
         {
-            return await IndexWithProjectionAsync(model, CancellationToken.None);
+            return await RedisplayAsync(model);
         }
 
         try
@@ -109,7 +109,7 @@ public class NetworthController : Controller
         {
             _logger.LogError(ex, "Saving Net Worth parameters failed.");
             ModelState.AddModelError("", ApiErrorMessages.ForUser(_localizer, ex, _localizer["NetWorth.Message.SaveFailed"]));
-            return await IndexWithProjectionAsync(model, CancellationToken.None);
+            return await RedisplayAsync(model);
         }
 
         return RedirectToAction(nameof(Index));
@@ -134,6 +134,28 @@ public class NetworthController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>Only real saved values count, not a blank DTO with all zeros.</summary>
+    private static bool IsSaved([NotNullWhen(true)] NetWorthParametersDto? saved) =>
+        saved != null && saved.CurrentAge > 0 && saved.RetirementAge > 0;
+
+    /// <summary>
+    /// Shows the posted input again after a failed save. Whether the Account has saved parameters still decides where
+    /// the presets go (inline or the More menu); if that can't be loaded, the page shows them inline.
+    /// </summary>
+    private async Task<IActionResult> RedisplayAsync(NetWorthViewModel model)
+    {
+        try
+        {
+            model.HasSavedParameters = IsSaved(await _netWorthApi.LoadParametersAsync(CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load Net Worth parameters after a failed save; showing the inline presets.");
+        }
+
+        return await IndexWithProjectionAsync(model, CancellationToken.None);
     }
 
     /// <summary>

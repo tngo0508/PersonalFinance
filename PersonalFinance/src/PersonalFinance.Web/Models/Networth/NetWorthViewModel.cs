@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.Helpers;
@@ -110,6 +111,13 @@ public class NetWorthViewModel
     public string? ErrorMessage { get; set; }
 
     /// <summary>
+    /// Whether the page shows the Account's saved parameters. Without them the preset cards show inline; with them
+    /// the presets move into the More menu. Set by <see cref="ApplySaved"/> or the controller, never by a posted form.
+    /// </summary>
+    [BindNever]
+    public bool HasSavedParameters { get; set; }
+
+    /// <summary>
     /// Savings Rate shown before JavaScript updates it live (see <see cref="FinanceMetrics.SavingsRatePercent"/>).
     /// </summary>
     public decimal SavingsRatePercent => FinanceMetrics.SavingsRatePercent(AnnualSavings, AnnualIncome) ?? 0m;
@@ -151,5 +159,6 @@ public class NetWorthViewModel
         ConservativeRoi = saved.ConservativeRoi;
         AggressiveRoi = saved.AggressiveRoi;
         AggressiveSavings = saved.AggressiveSavings;
+        HasSavedParameters = true;
     }
 }

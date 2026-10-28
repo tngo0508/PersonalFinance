@@ -52,6 +52,10 @@ The Clear action shows a browser `confirm()` dialog with a detailed warning: "Th
 **Negative:**
 - The JavaScript cache reflects the values at page load. If a user saves new parameters elsewhere (e.g., in another tab), the cache won't reflect the change until the page is reloaded.
 
+## Update — 2026-10-27: Randomize moved into the More menu
+
+Reduce Clutter (#407, slice #453) moved **Randomize** out of the action bar into a **More (⋯)** menu next to Reset, together with "Explore market research" and, once the user has saved parameters, the five presets. Save stays the only primary action. Randomize behaves exactly as described above: it is still frontend-only and never touches saved records. Reset and its dropdown are unchanged.
+
 ## Related Decisions
 
 - [0001 – Standardize ApiService on Direct Service Injection](0001-standardize-cqrs-feature-organization.md) — the Web layer calls Refit APIs; this change keeps the Web layer simple with no new API contracts.

@@ -43,7 +43,7 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
         "Net Worth &amp; FI Projection", "Net Worth & FI Projection", "Explore market research", "How it works",
         "Quick Presets", "Savings Rate", "Financial Overview", "Starting Balance",
         "Your current total investable assets", "Annual Spending", "Return Assumptions", "Conservative ROI",
-        "Randomize", "Reset to saved", "Clear saved parameters", "FI Target (4% Rule)", "Current Net Worth",
+        "More actions", "Randomize", "Reset to saved", "Clear saved parameters", "FI Target (4% Rule)", "Current Net Worth",
         "Base Final Net Worth", "/yr spending", "How this is calculated", ">from<", "Net Worth Growth Over Time",
         "Final Net Worth Comparison", "Base Scenario", "Total Contributions", "Interest Earned",
         "Year-by-Year Projection", "Scenario selection", "milestone", "ROI Earned", "Ending Balance",
@@ -59,12 +59,16 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
         "Investment growth chart", "Initial investment amount"
     ];
 
+    private static readonly string[] PresetKeys = ["fire", "coast", "traditional", "ultra", "conservative"];
+
     private WebApplication _app = null!;
     private HttpClient _client = null!;
+    private ApiProxy<INetWorthApi> _netWorthProxy = null!;
 
     public async Task InitializeAsync()
     {
         (INetWorthApi netWorthApi, ApiProxy<INetWorthApi> proxy) = ApiProxy.Create<INetWorthApi>();
+        _netWorthProxy = proxy;
         proxy.Returns(nameof(INetWorthApi.LoadParametersAsync), null);
         proxy.Returns(nameof(INetWorthApi.CalculateProjectionAsync),
             NetWorthProjectionService.ComputeProjection(new NetWorthViewModel().ToProjectionRequest()));
@@ -151,6 +155,53 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task NetWorth_WithoutSavedParameters_ShowsThePresetsInline_AndNotInTheMoreMenu()
+    {
+        string html = await GetAsync("/Networth", vietnamese: false);
+
+        Assert.Contains("id=\"nwPresetFire\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-preset", MoreMenu(html), StringComparison.Ordinal);
+        Assert.Single(FirePreset().Matches(html));
+    }
+
+    [Fact]
+    public async Task NetWorth_WithSavedParameters_ReachesThePresetsThroughTheMoreMenuOnly()
+    {
+        _netWorthProxy.Returns(nameof(INetWorthApi.LoadParametersAsync), SavedParameters());
+
+        string html = await GetAsync("/Networth", vietnamese: false);
+
+        string menu = MoreMenu(html);
+        Assert.DoesNotContain("nw-preset-card", html, StringComparison.Ordinal);
+        Assert.All(PresetKeys,
+            preset => Assert.Contains($"data-preset=\"{preset}\"", menu, StringComparison.Ordinal));
+        Assert.Single(FirePreset().Matches(html));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NetWorth_MoreMenu_HoldsRandomizeAndResearch_AndSaveIsTheOnlyPrimaryAction(bool saved)
+    {
+        if (saved)
+        {
+            _netWorthProxy.Returns(nameof(INetWorthApi.LoadParametersAsync), SavedParameters());
+        }
+
+        string html = await GetAsync("/Networth", vietnamese: false);
+
+        string menu = MoreMenu(html);
+        Assert.Matches(MoreToggle(), html);
+        Assert.Contains("id=\"nwRandomBtn\"", menu, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Research\"", menu, StringComparison.Ordinal);
+        Assert.Single(Regex.Matches(html, "id=\"nwRandomBtn\""));
+        // The sidebar navigation links to Research too; the page itself offers it only in the More menu.
+        Assert.Single(Regex.Matches(html, "Explore market research"));
+        Assert.Single(Regex.Matches(html, "nw-btn-save"));
+        Assert.Contains("data-bs-target=\"#nwHelpModal\"", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task InvestmentCalculator_InEnglish_ShowsItsText()
     {
         string html = await GetAsync("/InvestmentCalculator", vietnamese: false);
@@ -185,6 +236,29 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
         return WebUtility.HtmlDecode(html);
     }
 
+    private static NetWorthParametersDto SavedParameters() => new()
+    {
+        CurrencyCode = "USD",
+        StartingBalance = 120_000m,
+        AnnualSavings = 30_000m,
+        AnnualIncome = 110_000m,
+        AnnualSpending = 50_000m,
+        CurrentAge = 35,
+        RetirementAge = 60,
+        BaseRoi = 7m,
+        ConservativeRoi = 5m,
+        AggressiveRoi = 9m,
+        AggressiveSavings = 40_000m
+    };
+
+    /// <summary>The items of the More (⋯) menu.</summary>
+    private static string MoreMenu(string html)
+    {
+        Match match = MoreMenuPattern().Match(html);
+        Assert.True(match.Success, "The Net Worth page has no More menu.");
+        return match.Groups[1].Value;
+    }
+
     // What a visitor can see or hear: markup and attributes, without HTML comments or script bodies (the JSON island's
     // key names are English by design).
     private static void AssertHides(string html, IEnumerable<string> texts)
@@ -198,6 +272,17 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
         IslandPattern().Matches(html)
             .Select(m => JsonSerializer.Deserialize<Dictionary<string, string>>(m.Groups[1].Value)!)
             .Single(island => island.Count > 0 && island.Keys.All(key => key.StartsWith(prefix, StringComparison.Ordinal)));
+
+    [GeneratedRegex("""<ul class="dropdown-menu[^"]*" aria-labelledby="nwMoreBtn">(.*?)</ul>""", RegexOptions.Singleline)]
+    private static partial Regex MoreMenuPattern();
+
+    // A keyboard-reachable Bootstrap dropdown toggle: Bootstrap keeps aria-expanded current and closes on Escape.
+    [GeneratedRegex("""<button type="button"[^>]*id="nwMoreBtn"[^>]*data-bs-toggle="dropdown"[^>]*aria-expanded="false"[^>]*aria-label="More actions"[^>]*>""")]
+    private static partial Regex MoreToggle();
+
+    // One entry point per preset: FIRE renders once, inline or in the More menu.
+    [GeneratedRegex("data-preset=\"fire\"")]
+    private static partial Regex FirePreset();
 
     [GeneratedRegex("<!--.*?-->|<script[^>]*>.*?</script>", RegexOptions.Singleline)]
     private static partial Regex NotShown();

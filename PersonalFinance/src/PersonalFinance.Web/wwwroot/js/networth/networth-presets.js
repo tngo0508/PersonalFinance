@@ -78,7 +78,7 @@
 
     /**
      * Initialize preset scenario buttons.
-     * Wires up FIRE, Coast, Traditional, Ultra, and Conservative preset buttons.
+     * Wires up every [data-preset] button (FIRE, Coast, Traditional, Ultra, Conservative).
      */
     function initPresets () {
         const presets = {
@@ -144,11 +144,12 @@
             }
         };
 
-        Object.keys(presets).forEach((key) => {
-            const btn = document.getElementById(`nwPreset${ key.charAt(0).toUpperCase() }${key.slice(1)}`);
-            if (btn) {
+        // The inline preset cards (no saved parameters) or the More menu's preset items (saved parameters).
+        document.querySelectorAll('[data-preset]').forEach((btn) => {
+            const preset = presets[btn.dataset.preset];
+            if (preset) {
                 btn.addEventListener('click', () => {
-                    applyPreset(presets[key]);
+                    applyPreset(preset);
                 });
             }
         });
