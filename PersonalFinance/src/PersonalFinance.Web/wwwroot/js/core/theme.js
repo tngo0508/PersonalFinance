@@ -78,19 +78,19 @@
                 meta.setAttribute('content', CHROME_COLORS[theme]);
             }
 
-            syncSwitchers(THEMES.indexOf(choice) >= 0 ? choice : 'system');
+            syncControl(THEMES.indexOf(choice) >= 0 ? choice : 'system');
             if (changed) {
                 document.dispatchEvent(new CustomEvent('themechange', { detail: { theme: theme } }));
             }
         }
 
         /**
-         * Updates the top-bar control: the button's icon and name show the choice, and the popover checks it. Only the
-         * checked choice is in the Tab order, as in a radio group.
+         * Updates the top-bar control: the button's icon and name show the choice, and the popover checks it. The
+         * checked choice is the one focus lands on when the popover opens.
          * @param {string} choice - 'light', 'dark' or 'system'.
          * @returns {void}
          */
-        function syncSwitchers (choice) {
+        function syncControl (choice) {
             document.querySelectorAll('[data-theme-button]').forEach((button) => {
                 const label = button.getAttribute(`data-label-${choice}`);
                 if (label) {
@@ -154,15 +154,25 @@
         }
 
         /**
-         * Closes every open popover that does not hold the given element.
-         * @param {Element|null} keep - An element whose control stays as it is, or null to close them all.
+         * Can Tab reach this element? A click on such an element keeps the focus it gave it; elsewhere (plain content,
+         * or <main tabindex="-1">) focus goes back to the theme button.
+         * @param {Element|null} element - The focused element.
+         * @returns {boolean}
+         */
+        function isTabbable (element) {
+            return Boolean(element) && element !== document.body && element.tabIndex >= 0;
+        }
+
+        /**
+         * Closes every open popover except the one holding the given element.
+         * @param {Element|null} except - An element whose control stays as it is, or null to close them all.
          * @param {boolean} refocus - Return focus to each closed control's button.
          * @returns {void}
          */
-        function closeOthers (keep, refocus) {
+        function closePopoversExcept (except, refocus) {
             document.querySelectorAll('[data-theme-switcher]').forEach((root) => {
                 const control = controlOf(root);
-                if (control && !control.popover.hidden && !(keep && root.contains(keep))) {
+                if (control && !control.popover.hidden && !(except && root.contains(except))) {
                     close(control, refocus);
                 }
             });
@@ -178,12 +188,10 @@
             const target = event.target instanceof Element ? event.target : null;
             const control = controlOf(target);
             if (!control) {
-                // Focus returns to the button unless the click put it on something else.
-                const active = document.activeElement;
-                closeOthers(null, !active || active === document.body);
+                closePopoversExcept(null, !isTabbable(document.activeElement));
                 return;
             }
-            closeOthers(target, false);
+            closePopoversExcept(target, false);
 
             const choice = target.closest('[data-theme-choice]');
             if (choice) {
@@ -233,9 +241,13 @@
         function setup () {
             document.addEventListener('click', onClick);
             document.addEventListener('keydown', onKeydown);
-            // Tabbing away from the control closes its popover.
+            // Tabbing (or clicking) to another control closes the popover and leaves focus there. Other clicks outside
+            // are left to onClick, which returns focus to the button.
             document.addEventListener('focusin', (event) => {
-                closeOthers(event.target instanceof Element ? event.target : null, false);
+                const target = event.target instanceof Element ? event.target : null;
+                if (isTabbable(target)) {
+                    closePopoversExcept(target, false);
+                }
             });
 
             if (systemQuery) {

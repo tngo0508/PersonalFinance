@@ -70,6 +70,18 @@ async function themeState(page) {
 }
 
 /**
+ * Wait until the root carries a theme (the device-setting change is handled asynchronously). A timeout is not an
+ * error here: the check that follows reports what the page shows.
+ * @param {import('playwright').Page} page - The page.
+ * @param {string} theme - 'light' or 'dark'.
+ * @returns {Promise<void>}
+ */
+async function waitForTheme(page, theme) {
+    await page.waitForFunction((expected) => document.documentElement.getAttribute('data-theme') === expected, theme,
+        {timeout: TIMEOUT}).catch(() => {});
+}
+
+/**
  * Drive the control by mouse and keyboard and check what each step applies.
  * @param {import('playwright').Page} page - A page showing the top bar, with the device in light mode.
  * @param {string} who - "Signed out" or "Signed in", for the messages.
@@ -115,13 +127,16 @@ async function driveControl(page, who, report) {
     await button.click();
     await page.locator('#main-content').click({position: {x: 2, y: 2}});
     state = await themeState(page);
-    check(!state.open && state.stored === null, `${who}: a click outside closes without a choice`, JSON.stringify(state), report);
+    check(!state.open && state.stored === null && state.focusOnButton,
+        `${who}: a click outside closes without a choice and returns focus`, JSON.stringify(state), report);
 
     // System follows the device live.
     await page.emulateMedia({colorScheme: 'dark'});
+    await waitForTheme(page, 'dark');
     state = await themeState(page);
     check(state.theme === 'dark' && state.label === labelFor('system'), `${who}: System follows a dark device`, JSON.stringify(state), report);
     await page.emulateMedia({colorScheme: 'light'});
+    await waitForTheme(page, 'light');
     state = await themeState(page);
     check(state.theme === 'light', `${who}: System follows the device back to light`, JSON.stringify(state), report);
 }

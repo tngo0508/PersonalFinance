@@ -113,11 +113,13 @@ function load (options) {
         'data-label-dark': 'Theme: Dark',
         'data-label-system': 'Theme: System'
     }, icons);
-    const choices = CHOICES.map((choice) => fakeElement(document, { 'data-theme-choice': choice, role: 'radio' }));
+    const choices = CHOICES.map((choice) => fakeElement(document, { 'data-theme-choice': choice, role: 'menuitemradio' }));
     const popover = fakeElement(document, { 'data-theme-popover': '' }, choices);
     popover.hidden = true;
     const switcher = fakeElement(document, { 'data-theme-switcher': '' }, [button, popover]);
+    // Like <main tabindex="-1">: a click focuses it, but Tab never reaches it.
     const outside = fakeElement(document, { 'data-outside': '' });
+    outside.tabIndex = -1;
     const body = fakeElement(document, {}, [switcher, outside]);
     document.activeElement = body;
 
@@ -169,8 +171,12 @@ function load (options) {
         visibleIcons: () => icons.filter((icon) => !icon.hidden).map((icon) => icon.getAttribute('data-theme-icon')),
         checked: () => choices.map((choice) => choice.getAttribute('aria-checked')),
         isOpen: () => button.getAttribute('aria-expanded') === 'true' && !popover.hidden,
+        // As in a browser: the press focuses the element (firing focusin), then the click follows.
         click: (element) => {
             element.focus();
+            if (listeners.focusin) {
+                listeners.focusin({ target: element });
+            }
             listeners.click({ target: element });
         },
         press: (key) => {
@@ -277,14 +283,25 @@ test('Escape closes the popover without a choice and returns focus to the button
     assert.strictEqual(page.store.theme, 'light');
 });
 
-test('a click outside closes the popover without a choice', () => {
+test('a click outside closes the popover without a choice and returns focus to the button', () => {
     const page = load({ stored: 'light' });
     page.click(page.button);
     page.click(page.outside);
 
     assert.strictEqual(page.isOpen(), false);
+    assert.strictEqual(page.focused(), page.button);
     assert.strictEqual(page.store.theme, 'light');
     assert.strictEqual(page.root['data-theme'], 'light');
+});
+
+test('a click on another control outside closes the popover and leaves focus there', () => {
+    const page = load({ stored: 'light' });
+    page.outside.tabIndex = 0;
+    page.click(page.button);
+    page.click(page.outside);
+
+    assert.strictEqual(page.isOpen(), false);
+    assert.strictEqual(page.focused(), page.outside);
 });
 
 test('the arrow keys move between the choices and wrap around', () => {

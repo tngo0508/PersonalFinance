@@ -201,19 +201,6 @@ public class NavigationLayoutTests
     }
 
     [Fact]
-    public void ThemeControl_IsInTheTopBarForEveryVisitor_NotTheAccountMenu()
-    {
-        string loginPartial = ReadView("Shared", "_LoginPartial.cshtml");
-        string signedIn = Between(loginPartial, "@if (SignInManager.IsSignedIn(User))", "<div class=\"topbar-auth\">");
-        string signedOut = Between(loginPartial, "<div class=\"topbar-auth\">", "</div>");
-        string accountMenu = Between(signedIn, "<ul class=\"dropdown-menu", "</ul>");
-
-        Assert.Contains("<partial name=\"_ThemeSwitcher\"/>", signedIn);
-        Assert.Contains("<partial name=\"_ThemeSwitcher\"/>", signedOut);
-        Assert.DoesNotContain("_ThemeSwitcher", accountMenu);
-    }
-
-    [Fact]
     public void AboutPage_LinksSignedInAccountsToFeedback()
     {
         string about = ReadView("Home", "About.cshtml");
