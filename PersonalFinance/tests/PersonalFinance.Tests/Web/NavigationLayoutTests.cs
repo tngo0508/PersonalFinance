@@ -51,7 +51,8 @@ public class NavigationLayoutTests
     public void Sidebar_LinksToResearch_InTheResourcesGroup()
     {
         string sidebar = Between(ReadView("Shared", "_Layout.cshtml"), "<aside", "</aside>");
-        string resources = Between(sidebar, "@L[\"Shell.Nav.Resources\"]</div>", "<div class=\"sidebar-group\">");
+        // Resources is the last sidebar group, so it runs to the end of the nav.
+        string resources = Between(sidebar, "@L[\"Shell.Nav.Resources\"]</div>", "</nav>");
 
         Assert.Contains("asp-controller=\"Research\" asp-action=\"Index\"", resources);
         Assert.Contains("currentController == \"Research\" ? \"active\"", resources);
@@ -79,7 +80,7 @@ public class NavigationLayoutTests
     public void Sidebar_LinksToCurrencyConverter_RightAfterInvestmentCalculator()
     {
         string sidebar = Between(ReadView("Shared", "_Layout.cshtml"), "<aside", "</aside>");
-        string resources = Between(sidebar, "@L[\"Shell.Nav.Resources\"]</div>", "<div class=\"sidebar-group\">");
+        string resources = Between(sidebar, "@L[\"Shell.Nav.Resources\"]</div>", "</nav>");
 
         int calculator = resources.IndexOf("asp-controller=\"InvestmentCalculator\"", StringComparison.Ordinal);
         int converter = resources.IndexOf("asp-controller=\"CurrencyConverter\" asp-action=\"Index\"", StringComparison.Ordinal);
@@ -98,6 +99,23 @@ public class NavigationLayoutTests
         string tools = bottomNav[..bottomNav.IndexOf("<span>@L[\"Shell.BottomNav.Tools\"]</span>", StringComparison.Ordinal)];
         tools = tools[tools.LastIndexOf("<a ", StringComparison.Ordinal)..];
         Assert.Contains("currentController == \"CurrencyConverter\"", tools);
+    }
+
+    [Fact]
+    public void SidebarLinkLabels_AreShellNavResources()
+    {
+        // Only English is required: a missing translation falls back to English and never fails a build (ADR 0015).
+        string sidebar = Between(ReadView("Shared", "_Layout.cshtml"), "<aside", "</aside>");
+        MatchCollection labels = Regex.Matches(sidebar, "<span class=\"sidebar-link-text\">(.*?)</span>");
+        Assert.NotEmpty(labels);
+
+        foreach (Match label in labels)
+        {
+            Match key = Regex.Match(label.Groups[1].Value, "^@L\\[\"(Shell\\.Nav\\.[A-Za-z0-9]+)\"\\]$");
+            Assert.True(key.Success, $"Sidebar label {label.Groups[1].Value} should be a Shell.Nav.* resource.");
+            Assert.True(TestLocalization.Catalog.TryGet("en", key.Groups[1].Value, out _),
+                $"en.json has no {key.Groups[1].Value}.");
+        }
     }
 
     [Fact]
@@ -155,18 +173,31 @@ public class NavigationLayoutTests
     }
 
     [Fact]
-    public void LayoutView_LinksSignedInAccountsToFeedback_FromTheSidebarAndTheFooter()
+    public void LayoutView_LinksSignedInAccountsToFeedback_FromTheFooterOnly()
     {
         string content = ReadView("Shared", "_Layout.cshtml");
 
         string sidebar = content[content.IndexOf("<aside", StringComparison.Ordinal)..content.IndexOf("</aside>", StringComparison.Ordinal)];
-        Assert.Contains("asp-controller=\"Feedback\"", sidebar);
+        Assert.DoesNotContain("asp-controller=\"Feedback\"", sidebar);
 
         string footer = content[content.IndexOf("<footer", StringComparison.Ordinal)..content.IndexOf("</footer>", StringComparison.Ordinal)];
         int footerLink = footer.IndexOf("asp-controller=\"Feedback\"", StringComparison.Ordinal);
         Assert.True(footerLink >= 0, "The footer should link to Feedback.");
         Assert.True(footer.LastIndexOf("@if (isSignedIn)", footerLink, StringComparison.Ordinal) >= 0,
             "The footer Feedback link should only be shown to signed-in Accounts.");
+    }
+
+    [Fact]
+    public void AdminDashboard_IsLinkedFromTheAccountMenuForAdmins_NotTheSidebar()
+    {
+        string sidebar = Between(ReadView("Shared", "_Layout.cshtml"), "<aside", "</aside>");
+        Assert.DoesNotContain("asp-controller=\"Admin\"", sidebar);
+
+        string accountMenu = ReadView("Shared", "_LoginPartial.cshtml");
+        int adminLink = accountMenu.IndexOf("asp-controller=\"Admin\" asp-action=\"Index\"", StringComparison.Ordinal);
+        Assert.True(adminLink >= 0, "The account menu should link to the Admin dashboard.");
+        Assert.True(accountMenu.LastIndexOf("@if (isAdmin)", adminLink, StringComparison.Ordinal) >= 0,
+            "The account menu Admin link should only be shown to admins.");
     }
 
     [Fact]

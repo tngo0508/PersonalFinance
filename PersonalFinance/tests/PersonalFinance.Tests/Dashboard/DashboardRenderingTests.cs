@@ -44,7 +44,7 @@ public sealed partial class DashboardRenderingTests : IAsyncLifetime
         "Progress to FI", "annual spending × 25", "On the Base scenario you reach your FI target at age",
         "Key figures", "Budgeted income", "Goals funded", "Savings Rate", "Of annual income saved", "1 of 2 complete",
         "Per month · October 2026 (Budget Planner)",
-        "Net worth projection", "View details", "using your Net Worth settings", "Base at 65", "Base scenario reaches",
+        "Net worth projection", "using your Net Worth settings", "Base at 65", "Base scenario reaches",
         "Monthly budget", "Planned income", "Actual income", "Planned expenses", "Actual expenses", "Open Budget Tracker",
         "Planned versus actual income and expenses", "Source: Budget Tracker",
         "Edit budget", "monthly income", "Planned split of monthly income", "Housing", "Debt Repayment",
@@ -61,8 +61,8 @@ public sealed partial class DashboardRenderingTests : IAsyncLifetime
     [
         "Add your Net Worth settings to see your headline figure", "Add your Net Worth settings to see where your plan leads",
         "Not set up", "Add your Net Worth settings", "Create a budget", "Add a savings goal",
-        "No data in Google Sheet.", "Sync your spreadsheet", "or switch to Budget Tracker above.",
-        "No budget plan set up yet.", "Create a budget plan", "to plan your income allocation.",
+        "No data in Google Sheet.", "Connect Google Drive below", "to see your tracked transactions","or switch to Budget Tracker above.",
+        "No budget plan set up yet.", "Create one below", "to plan your income allocation.",
         "Add a savings goal to track your progress here.", "No recent activity from Google Sheet.",
         "Set up net worth", "Enter your balance, income, and spending", "Plan how your monthly income is split",
         "Add a goal", "Track progress toward something you are saving for."
@@ -252,6 +252,84 @@ public sealed partial class DashboardRenderingTests : IAsyncLifetime
         Assert.Equal(TestLocalization.Vietnamese("Dashboard.Js.PercentOfIncome"), strings["Dashboard.Js.PercentOfIncome"]);
         Assert.All(strings.Keys, key => Assert.StartsWith("Dashboard.Js.", key));
     }
+
+    [Fact]
+    public async Task EmptyDashboard_OffersEachSetupStepOnce_OnItsSetupCard()
+    {
+        _api.Summary = new DashboardSummaryDto();
+
+        string html = await GetAsync(vietnamese: false);
+
+        Assert.Equal(["/Budget", "/GoogleDrive", "/Networth", "/SavingsGoals"], CardLinks(html).Order());
+        Assert.Equal(4, CardLinks(Section(html, "dash-setup")).Count);
+    }
+
+    [Fact]
+    public async Task ConnectedSheetWithNoData_OffersSyncOnce_OnTheMonthlyBudgetCard()
+    {
+        _api.Summary = new DashboardSummaryDto { HasGoogleDriveConnection = true };
+
+        string html = await GetAsync(vietnamese: false);
+
+        Assert.Single(CardLinks(html), "/GoogleDrive");
+        Assert.Equal(["/GoogleDrive"], CardLinks(Section(html, "dash-monthly-budget")));
+        Assert.Empty(CardLinks(Section(html, "dash-activity")));
+    }
+
+    [Fact]
+    public async Task FilledDashboard_LinksEachDestinationOnce()
+    {
+        _api.Summary = Filled;
+
+        string html = await GetAsync(vietnamese: false);
+
+        Assert.Equal(["/Budget", "/BudgetTracker", "/GoogleDrive", "/Networth", "/SavingsGoals"], CardLinks(html).Order());
+        Assert.DoesNotContain("View details", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task NetWorthWithoutSpending_SummaryOffersOnlyTheSpendingPrompt()
+    {
+        _api.Summary = new DashboardSummaryDto { NetWorth = new NetWorthSummaryDto { CurrentNetWorth = 10_000m } };
+
+        string html = await GetAsync(vietnamese: false);
+
+        Assert.Equal(["/Networth"], CardLinks(Section(html, "dash-summary")));
+        Assert.DoesNotContain("Edit settings", Section(html, "dash-summary"), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task QuickActions_AreMarkedMobileOnly()
+    {
+        _api.Summary = Filled;
+
+        string html = await GetAsync(vietnamese: false);
+
+        Assert.Contains("class=\"dash-card dash-actions dash-actions--mobile\" aria-labelledby=", html, StringComparison.Ordinal);
+    }
+
+    // The hrefs of the Dashboard's action links: the sidebar, key-figure tiles (content, not buttons) and the
+    // mobile-only quick actions (they stand in for the sidebar) are left out.
+    private static List<string> CardLinks(string html)
+    {
+        int start = html.IndexOf("<div class=\"dash\">", StringComparison.Ordinal);
+        int end = html.IndexOf("id=\"dashboard-data\"", StringComparison.Ordinal);
+        string dash = NotACardLink().Replace(html[Math.Max(start, 0)..(end < 0 ? html.Length : end)], string.Empty);
+        return LinkHref().Matches(dash).Select(m => m.Groups[1].Value).ToList();
+    }
+
+    private static string Section(string html, string className)
+    {
+        Match match = Regex.Match(html, $"<section class=\"[^\"]*\\b{className}\\b[^\"]*\".*?</section>", RegexOptions.Singleline);
+        Assert.True(match.Success, $"No section .{className}");
+        return match.Value;
+    }
+
+    [GeneratedRegex("""<a\b[^>]*class="dash-tile"[^>]*>.*?</a>|<section class="dash-card dash-actions[^"]*".*?</section>|<script\b.*?</script>""", RegexOptions.Singleline)]
+    private static partial Regex NotACardLink();
+
+    [GeneratedRegex("<a\\b[^>]*\\bhref=\"([^\"]*)\"")]
+    private static partial Regex LinkHref();
 
     private async Task<string> GetAsync(bool vietnamese)
     {

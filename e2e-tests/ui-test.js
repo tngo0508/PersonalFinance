@@ -3,6 +3,7 @@ const {runResearchWalkthrough} = require('./research-walkthrough');
 const {runMoneyPrioritiesWalkthrough} = require('./money-priorities-walkthrough');
 const {runLanguageSwitchSmoke} = require('./language-switch-smoke');
 const {runReportingCurrencySmoke} = require('./reporting-currency-smoke');
+const {runIdleSignOutSmoke} = require('./idle-sign-out-smoke');
 const {runCurrencyConverterSmoke} = require('./currency-converter-smoke');
 
 (async () => {
@@ -23,7 +24,7 @@ const {runCurrencyConverterSmoke} = require('./currency-converter-smoke');
 
     /**
      * Verify the signed-in Dashboard at one viewport: greeting h1, heading order, summary card,
-     * key figure tiles, quick actions, and the mobile bottom navigation clearing the last section.
+     * key figure tiles, quick actions (mobile only), and the mobile bottom navigation clearing the last section.
      * @param {import('playwright').Page} dashPage - A page already showing /Dashboard.
      * @param {{name: string, width: number, mobile: boolean}} vp - The viewport under test.
      */
@@ -73,9 +74,17 @@ const {runCurrencyConverterSmoke} = require('./currency-converter-smoke');
             fail(`${label}: expected 4 visible key figure tiles, found ${tileCount}`);
         }
 
+        // Quick actions stand in for the sidebar on mobile only (#451).
         const actions = dashPage.locator('section.dash-actions a.dash-action');
         const actionCount = await actions.count().catch(() => 0);
-        if (actionCount === 5 && await actions.first().isVisible({timeout: 3000}).catch(() => false)) {
+        const actionsVisible = actionCount > 0 && await actions.first().isVisible({timeout: 3000}).catch(() => false);
+        if (!vp.mobile) {
+            if (!actionsVisible) {
+                pass(`${label}: quick actions are hidden on desktop`);
+            } else {
+                fail(`${label}: quick actions should be hidden on desktop`);
+            }
+        } else if (actionCount === 5 && actionsVisible) {
             pass(`${label}: 5 quick actions are visible`);
         } else {
             fail(`${label}: expected 5 visible quick actions, found ${actionCount}`);
@@ -931,9 +940,19 @@ const {runCurrencyConverterSmoke} = require('./currency-converter-smoke');
         }
 
         // =========================================================
-        // Test 9g: Currency Converter smoke (#446): 1,000,000 JPY to VND at the latest rate
+        // Test 9g: Idle Sign-out smoke (#332): the warning, "Stay signed in", expiry to Login, and a second tab
         // =========================================================
-        console.log('\n--- Test 9g: Currency Converter Smoke ---');
+        console.log('\n--- Test 9g: Idle Sign-out Smoke ---');
+        try {
+            await runIdleSignOutSmoke({browser, base, pass, fail});
+        } catch (error) {
+            fail(`Idle Sign-out smoke failed: ${error.message}`);
+        }
+
+        // =========================================================
+        // Test 9h: Currency Converter smoke (#446): 1,000,000 JPY to VND at the latest rate
+        // =========================================================
+        console.log('\n--- Test 9h: Currency Converter Smoke ---');
         try {
             await runCurrencyConverterSmoke({browser, base, pass, fail});
         } catch (error) {

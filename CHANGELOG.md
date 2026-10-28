@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [12.3.0] - 2026-10-27
+## [12.4.0] - 2026-10-27
 
 ### Added
 
@@ -22,6 +22,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Shared currency converter**: `ICurrencyConverter.PrepareAsync` now accepts any Convertible Currency as the target and rounds by its ISO minor units; Features still pass only the Reporting Currency, so their results do not change.
   - Cached rate rows now carry their source, and `ReportingConversion.Quote` gives one conversion's effective cross rate, its older leg's date, its sources and whether it is stale.
   - `MoneyFormatter.FormatConvertible` formats an amount in a Convertible Currency that has no symbol here as the number followed by its ISO code (`1,000,000 JPY`).
+
+## [12.3.5] - 2026-10-27
+
+### Changed
+
+- **Budget Tracker actions verified**: the Budget Tracker keeps its one month navigator, at the top, and one Add Category button per section (expense, income), and a rendering test now guards both (#454).
+  - Reading the view and script, and rendering the page in a test, showed no second month navigator and no inline Add Category duplicates. The inventory in the issue came from grep matches in the script and the Add Category modal's submit button, so no control was removed.
+
+## [12.3.3] - 2026-10-27
+
+### Changed
+
+- **Sidebar duplicates removed**: the sidebar no longer repeats the Admin Dashboard and Send feedback links, which stay in the account menu and the footer (#452).
+  - Admins open the Admin Dashboard from the account menu; signed-in Accounts send feedback from the footer link. The unused `Shell.Nav.Admin` and `Shell.Nav.AdminDashboard` resources are removed.
+  - On phones the footer now clears the fixed bottom navigation, so its last links, Send feedback among them, are no longer hidden behind it.
+
+## [12.3.2] - 2026-10-27
+
+### Changed
+
+- **Dashboard actions**: the Dashboard offers each action once, so a new user sees 6 actions on desktop instead of 18 (Reduce Clutter 3/7, #451).
+  - Quick actions show on mobile only. The bottom navigation can't reach Budget, Savings goals or Analysis in two taps; from 769px up the sidebar has every one of their links.
+  - While a setup step is open, its setup card is the only link to it: the Net Worth, Budget Planner and Savings goals card headers and the Budget Planner empty state drop theirs.
+  - The Net worth projection card drops "View details"; the Net Worth card's "Edit settings" opens the same page.
+  - "Sync your spreadsheet" lives only on the Monthly budget card, and only once Google Drive is connected; Recent activity's empty state no longer links it.
+
+## [12.3.1] - 2026-10-27
+
+### Fixed
+
+- **Google Drive sidebar label**: the sidebar's Google Drive link reads its label from the new `Shell.Nav.GoogleDrive` resource like the other sidebar links, instead of hard-coded English (#457).
+  - Vietnamese keeps the product name "Google Drive". A new test fails when any sidebar link label is not a `Shell.Nav.*` resource in `en.json`.
+
+## [12.3.0] - 2026-10-27
+
+### Added
+
+- **Idle Sign-out**: The app signs an Account out after 30 minutes with no keyboard, mouse, scroll or touch input in any of its open tabs, after a two-minute warning (#332).
+  - The sign-in cookie now lasts `IdleSignOut:TimeoutMinutes` (30) with sliding expiration, instead of 14 days. While the user is active, `js/core/idle-sign-out.js` posts to `POST /idle-sign-out/check-in` (signed in, antiforgery, 204) at most once every 5 minutes, which renews the cookie.
+  - At `IdleSignOut:WarningSeconds` (120) before the end, a dialog with a live countdown opens in every tab, with "Stay signed in" and "Sign out now". Tabs share the activity time through `localStorage`, so dismissing it in one tab dismisses it in all.
+  - On expiry the script signs out through the normal sign-out and every tab goes to Login with "You were signed out after 30 minutes of inactivity." and its own return address.
+  - The script loads only on signed-in pages; the Landing Page, the legal pages and the signed-out Identity pages don't load it.
+
+### Removed
+
+- **"Remember me" on sign-in**: Login and two-factor sign-in no longer offer "Remember me"; every sign-in uses a cookie that ends when the browser closes, as Google sign-in already did (#332).
 
 ## [12.2.3] - 2026-10-27
 

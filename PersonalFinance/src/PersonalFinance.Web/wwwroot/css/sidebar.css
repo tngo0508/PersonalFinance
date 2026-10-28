@@ -667,3 +667,10 @@ html.sidebar-collapsed .app-content {
     font-size: 12px;
     color: var(--app-text-muted);
 }
+
+/* Clear the fixed 56px bottom nav so the last footer links (Send feedback) stay tappable on phones. */
+@media (max-width: 768px) {
+    .app-footer {
+        padding-bottom: calc(56px + 16px);
+    }
+}
