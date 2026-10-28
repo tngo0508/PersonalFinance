@@ -102,6 +102,9 @@ param researchRefreshJobCron string = '0 10 * * *'
 @description('User-Agent the Research refresh job sends to SEC EDGAR: an application name and a contact email (SEC fair-access rules)')
 param secUserAgent string = ''
 
+@description('Email address alerted when a scheduled job (Purge, Research refresh) logs no success in 26 hours')
+param alertEmail string = 'tngo0508@gmail.com'
+
 // =============================================================================
 // BUDGET ESTIMATE (~$10/month total)
 // =============================================================================
@@ -112,6 +115,7 @@ param secUserAgent string = ''
 // Log Analytics:                         ~$0/month     (5 GB/month free ingestion, 30-day retention)
 // ACA Job (daily Purge):                 ~$0/month     (seconds a day, within the Consumption free grant)
 // ACA Job (daily Research refresh):      ~$0/month     (minutes a day, within the Consumption free grant)
+// Azure Monitor log alert (job success, 2 series): ~$0.55/month (email, log queries and ingestion within free tiers)
 // ---------------------------------------------------------------------------
 // Total estimated cost:                  ~$10-20/month (warm window rationale: docs/adr/0011)
 // =============================================================================
@@ -255,6 +259,18 @@ module researchRefreshJob 'modules/research-refresh-job.bicep' = {
     dbConnectionString: effectiveConnectionString
     secUserAgent: secUserAgent
     cronExpression: researchRefreshJobCron
+    tags: tags
+  }
+}
+
+// 8. Job alert: emails alertEmail when the Purge or the Research refresh logs no success line in 26 hours
+module jobAlerts 'modules/job-alerts.bicep' = {
+  name: 'jobAlertsDeployment'
+  params: {
+    name: '${environmentName}-${locationSuffix}'
+    location: location
+    logAnalyticsWorkspaceId: logAnalytics.outputs.id
+    alertEmail: alertEmail
     tags: tags
   }
 }

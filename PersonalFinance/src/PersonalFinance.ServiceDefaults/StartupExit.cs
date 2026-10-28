@@ -13,6 +13,14 @@ public static class StartupExit
     public const int Failure = 1;
 
     /// <summary>
+    /// Logged by a scheduled Container Apps Job (the Purge, the Research refresh) only on the path that returns
+    /// <see cref="Success"/>. The job alert (<c>infra/modules/job-alerts.bicep</c>) fires when a job logs no line
+    /// containing it for 26 hours. It must stay free of message-template properties: Serilog's console theme wraps
+    /// property values in ANSI codes, which would break the match.
+    /// </summary>
+    public const string JobSucceededMessage = "Scheduled job succeeded.";
+
+    /// <summary>
     /// True when the exception is a deliberate stop rather than a crash: <see cref="HostAbortedException"/>
     /// (EF design-time tooling such as <c>dotnet ef</c> aborts the host after it is built), or an
     /// <see cref="OperationCanceledException"/> once the host has started stopping. A cancellation before that,

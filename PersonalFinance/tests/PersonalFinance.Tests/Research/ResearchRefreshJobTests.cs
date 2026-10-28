@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using PersonalFinance.ApiService.Features.Research;
 using PersonalFinance.ApiService.Features.Research.Adapters;
 using PersonalFinance.Shared.DTOs.Research;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.Research;
 
@@ -63,9 +65,16 @@ public class ResearchRefreshJobTests
         }
     }
 
-    private static ServiceProvider Services(FakeResearchService service, string userAgent) =>
+    private static ServiceProvider Services(FakeResearchService service, string userAgent,
+        RecordingLoggerProvider? logs = null) =>
         new ServiceCollection()
-            .AddLogging()
+            .AddLogging(builder =>
+            {
+                if (logs is not null)
+                {
+                    builder.AddProvider(logs);
+                }
+            })
             .AddSingleton(new SecEdgarSettings { UserAgent = userAgent })
             .AddSingleton<IResearchService>(service)
             .BuildServiceProvider();
@@ -99,6 +108,30 @@ public class ResearchRefreshJobTests
         await using ServiceProvider services = Services(service, "PersonalFinance ops@example.org");
 
         Assert.Equal(StartupExit.Failure, await ResearchRefreshJob.RefreshAsync(services));
+    }
+
+    [Fact]
+    public async Task RefreshAsync_WhenItSucceeds_LogsTheJobSucceededLine()
+    {
+        var logs = new RecordingLoggerProvider();
+        await using ServiceProvider services = Services(new FakeResearchService(), "PersonalFinance ops@example.org", logs);
+
+        Assert.Equal(StartupExit.Success, await ResearchRefreshJob.RefreshAsync(services));
+
+        // The job alert looks for this exact line; it stays free of properties (Serilog colours them on the console).
+        Assert.Single(logs.Messages, m => m == StartupExit.JobSucceededMessage);
+    }
+
+    [Theory]
+    [InlineData(new[] { "sectors" }, "PersonalFinance ops@example.org")]
+    [InlineData(new string[0], "PersonalFinance research contact@example.com")] // SEC skipped
+    public async Task RefreshAsync_WhenItFails_DoesNotLogTheJobSucceededLine(string[] failed, string userAgent)
+    {
+        var logs = new RecordingLoggerProvider();
+        await using ServiceProvider services = Services(new FakeResearchService(failed), userAgent, logs);
+
+        Assert.Equal(StartupExit.Failure, await ResearchRefreshJob.RefreshAsync(services));
+        Assert.DoesNotContain(StartupExit.JobSucceededMessage, logs.Messages);
     }
 
     [Theory]

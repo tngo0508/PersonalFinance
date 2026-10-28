@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [12.9.0] - 2026-10-28
+
+### Added
+
+- **Job alert**: the owner gets an email when the daily Purge or Research refresh job has not succeeded in 26 hours, whether it failed, timed out, crashed or never started.
+  - Both jobs log the property-free line `Scheduled job succeeded.` (`StartupExit.JobSucceededMessage`) only when they exit with success; a test pins the text to the alert query.
+  - New `infra/modules/job-alerts.bicep`: an email Action Group and an hourly Azure Monitor log alert on `ContainerAppConsoleLogs_CL`, split by `Job`, wired in `main.bicep` with a new `alertEmail` parameter (~$0.55/month).
+  - `docs/deployment.md` has the "A job alert fired" runbook and the first-rollout steps: start both jobs by hand after the first deploy, then test the Action Group.
+
 ## [12.8.0] - 2026-10-27
 
 ### Added
