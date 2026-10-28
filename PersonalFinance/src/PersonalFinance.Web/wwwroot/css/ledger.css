@@ -20,6 +20,27 @@
     --lp-surface: #F3F6F5;
     --lp-rule: #D6DEDB;
     --lp-navy: #14283B;
+    /* Semantic tokens (#482). Raised: modals, popovers and dropdowns. Fill: the ledger green behind white labels
+       (buttons, badges, active items). Text: the ledger green as link text on any surface. */
+    --lp-raised: #FFFFFF;
+    --lp-ledger-fill: var(--lp-ledger);
+    --lp-ledger-fill-hover: var(--lp-ledger-deep);
+    --lp-ledger-text: var(--lp-ledger);
+    --lp-ledger-text-hover: var(--lp-ledger-deep);
+    --lp-ledger-on-wash: var(--lp-ledger-deep);
+    --lp-on-ledger: #FFFFFF;
+    --lp-brass-glow: rgba(138, 106, 30, 0.13);
+    --lp-shadow-float: 0 18px 40px -24px rgba(20, 40, 59, 0.45);
+    /* On the navy bands and sidebar, which are navy in both themes, so these have no dark value */
+    --lp-on-navy: #FFFFFF;
+    --lp-on-navy-soft: #D3DEE6;
+    --lp-on-navy-muted: #9DB0BF;
+    --lp-on-navy-accent: #8FD3B4;
+    --lp-on-navy-accent-wash: rgba(143, 211, 180, 0.14);
+    --lp-on-navy-rule: rgba(255, 255, 255, 0.1);
+    --lp-on-navy-hover: rgba(255, 255, 255, 0.08);
+    --lp-on-navy-outline: rgba(255, 255, 255, 0.6);
+    --lp-on-navy-wash: #E6F0EB;
     --lp-font: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
@@ -36,16 +57,28 @@
     --lp-paper: #0E1821;
     --lp-surface: #15222D;
     --lp-rule: #2A3A47;
+    /* White labels need a deeper fill than the lifted green (5.3:1); links on cards and modals a lighter one */
+    --lp-raised: #1A2833;
+    --lp-ledger-fill: #237A57;
+    --lp-ledger-fill-hover: #1B6B4C;
+    --lp-ledger-text: #3AA677;
+    --lp-ledger-text-hover: #5BBF92;
+    --lp-ledger-on-wash: #8FD3B4;
+    --lp-brass-glow: rgba(201, 165, 74, 0.12);
+    --lp-shadow-float: 0 18px 40px -24px rgba(0, 0, 0, 0.6);
 }
 
 /* Header buttons and brand follow the ledger palette */
 .topbar .btn-primary {
-    --bs-btn-bg: var(--lp-ledger);
-    --bs-btn-border-color: var(--lp-ledger);
-    --bs-btn-hover-bg: var(--lp-ledger-deep);
-    --bs-btn-hover-border-color: var(--lp-ledger-deep);
-    --bs-btn-active-bg: var(--lp-ledger-deep);
-    --bs-btn-active-border-color: var(--lp-ledger-deep);
+    --bs-btn-color: var(--lp-on-ledger);
+    --bs-btn-bg: var(--lp-ledger-fill);
+    --bs-btn-border-color: var(--lp-ledger-fill);
+    --bs-btn-hover-color: var(--lp-on-ledger);
+    --bs-btn-hover-bg: var(--lp-ledger-fill-hover);
+    --bs-btn-hover-border-color: var(--lp-ledger-fill-hover);
+    --bs-btn-active-color: var(--lp-on-ledger);
+    --bs-btn-active-bg: var(--lp-ledger-fill-hover);
+    --bs-btn-active-border-color: var(--lp-ledger-fill-hover);
 }
 
 .topbar .btn-outline-primary {
@@ -117,8 +150,8 @@
 }
 
 :is(.auth-page, .account-page) .form-check-input:checked {
-    border-color: var(--lp-ledger);
-    background-color: var(--lp-ledger);
+    border-color: var(--lp-ledger-fill);
+    background-color: var(--lp-ledger-fill);
 }
 
 :is(.auth-page, .account-page) .form-check-input:focus {
@@ -129,12 +162,12 @@
 }
 
 :is(.auth-page, .account-page) a:not(.btn):not(.auth-page__brand):not(.account-nav__link) {
-    color: var(--lp-ledger);
+    color: var(--lp-ledger-text);
     font-weight: 500;
 }
 
 :is(.auth-page, .account-page) a:not(.btn):not(.auth-page__brand):not(.account-nav__link):hover {
-    color: var(--lp-ledger-deep);
+    color: var(--lp-ledger-text-hover);
     text-decoration: underline;
 }
 
@@ -143,14 +176,18 @@
 }
 
 :is(.auth-page, .account-page) .btn-primary {
-    --bs-btn-bg: var(--lp-ledger);
-    --bs-btn-border-color: var(--lp-ledger);
-    --bs-btn-hover-bg: var(--lp-ledger-deep);
-    --bs-btn-hover-border-color: var(--lp-ledger-deep);
-    --bs-btn-active-bg: var(--lp-ledger-deep);
-    --bs-btn-active-border-color: var(--lp-ledger-deep);
-    --bs-btn-disabled-bg: var(--lp-ledger);
-    --bs-btn-disabled-border-color: var(--lp-ledger);
+    --bs-btn-color: var(--lp-on-ledger);
+    --bs-btn-bg: var(--lp-ledger-fill);
+    --bs-btn-border-color: var(--lp-ledger-fill);
+    --bs-btn-hover-color: var(--lp-on-ledger);
+    --bs-btn-hover-bg: var(--lp-ledger-fill-hover);
+    --bs-btn-hover-border-color: var(--lp-ledger-fill-hover);
+    --bs-btn-active-color: var(--lp-on-ledger);
+    --bs-btn-active-bg: var(--lp-ledger-fill-hover);
+    --bs-btn-active-border-color: var(--lp-ledger-fill-hover);
+    --bs-btn-disabled-color: var(--lp-on-ledger);
+    --bs-btn-disabled-bg: var(--lp-ledger-fill);
+    --bs-btn-disabled-border-color: var(--lp-ledger-fill);
     border-radius: 6px;
     font-weight: 600;
 }
@@ -184,7 +221,7 @@
 :is(.auth-page, .account-page) .alert-success {
     border-color: var(--lp-ledger);
     background: var(--lp-ledger-wash);
-    color: var(--lp-ledger-deep);
+    color: var(--lp-ledger-on-wash);
 }
 
 :is(.auth-page, .account-page) .alert-info {

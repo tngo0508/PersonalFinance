@@ -14,9 +14,9 @@
 .sidebar {
     /* Navy ink, like the Landing Page's dark band; light green marks the active page */
     --sidebar-bg: var(--lp-navy);
-    --sidebar-text: #D3DEE6;
-    --sidebar-label: #9DB0BF;
-    --sidebar-accent: #8FD3B4;
+    --sidebar-text: var(--lp-on-navy-soft);
+    --sidebar-label: var(--lp-on-navy-muted);
+    --sidebar-accent: var(--lp-on-navy-accent);
 
     width: 240px;
     background: var(--sidebar-bg);
@@ -42,7 +42,7 @@ html.sidebar-collapsed .sidebar,
     align-items: center;
     justify-content: space-between;
     padding: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--lp-on-navy-rule);
     min-height: 56px;
 }
 
@@ -94,7 +94,7 @@ html.sidebar-collapsed .sidebar .sidebar-brand-name,
 }
 
 .sidebar-toggle:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--lp-on-navy-rule);
 }
 
 html.sidebar-collapsed .sidebar .sidebar-toggle,
@@ -165,12 +165,12 @@ html.sidebar-collapsed .sidebar .sidebar-group-label,
 }
 
 .sidebar-link:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+    background: var(--lp-on-navy-hover);
+    color: var(--lp-on-navy);
 }
 
 .sidebar-link.active {
-    background: rgba(143, 211, 180, 0.14);
+    background: var(--lp-on-navy-accent-wash);
     box-shadow: inset 3px 0 0 var(--sidebar-accent);
     color: var(--sidebar-accent);
 }
@@ -338,7 +338,7 @@ body:not(:has(#sidebar)) .topbar {
     max-width: calc(100vw - 1rem);
     margin-top: 0.25rem;
     padding: 0.25rem;
-    background: var(--app-bg);
+    background: var(--app-surface-raised);
     border: 1px solid var(--app-border-hover);
     border-radius: 8px;
     box-shadow: var(--bs-box-shadow);
@@ -424,8 +424,8 @@ body:not(:has(#sidebar)) .topbar {
     right: 2px;
     width: 16px;
     height: 16px;
-    background: var(--app-accent-negative);
-    color: #fff;
+    background: var(--app-negative-fill);
+    color: var(--app-text-on-brand);
     font-size: 10px;
     font-weight: 600;
     border-radius: 50%;
@@ -459,10 +459,10 @@ body:not(:has(#sidebar)) .topbar {
     left: 0;
     right: 0;
     margin-top: 4px;
-    background: var(--app-bg);
+    background: var(--app-surface-raised);
     border: 1px solid var(--app-border-hover);
     border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(20, 40, 59, 0.12);
+    box-shadow: var(--app-shadow-popover);
     max-height: 400px;
     overflow-y: auto;
     z-index: 1040;
@@ -535,10 +535,10 @@ body:not(:has(#sidebar)) .topbar {
     right: 0;
     width: 360px;
     margin-top: 4px;
-    background: var(--app-bg);
+    background: var(--app-surface-raised);
     border: 1px solid var(--app-border-hover);
     border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(20, 40, 59, 0.12);
+    box-shadow: var(--app-shadow-popover);
     max-height: 400px;
     overflow-y: auto;
     z-index: 1040;
@@ -671,7 +671,7 @@ html.sidebar-collapsed .app-content {
 
 .bottom-nav-item:hover,
 .bottom-nav-item.active {
-    color: var(--app-brand);
+    color: var(--app-brand-text);
 }
 
 .bottom-nav-item svg {
@@ -713,7 +713,7 @@ html.sidebar-collapsed .app-content {
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.5);
+        background: var(--app-overlay-strong);
         z-index: 1025;
     }
 

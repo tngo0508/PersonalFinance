@@ -34,8 +34,8 @@
     width: 28px;
     height: 28px;
     border-radius: 6px;
-    background: var(--lp-ledger);
-    color: #fff;
+    background: var(--lp-ledger-fill);
+    color: var(--lp-on-ledger);
 }
 
 .auth-page__body {
