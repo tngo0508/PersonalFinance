@@ -172,7 +172,8 @@ public class DriveResultMessageTests
         GoogleDriveViewModel model = Assert.IsType<GoogleDriveViewModel>(Assert.IsType<ViewResult>(result).Model);
         string credentials = TestLocalization.Vietnamese(Keys.CredentialsInvalid);
         Assert.Equal(credentials, Assert.Single(model.Connections).ErrorMessage);
-        Assert.Equal(credentials, model.ErrorMessage);
+        // The error state shows the connection's error; no page-level banner repeats it (#476).
+        Assert.Null(model.ErrorMessage);
         Assert.Equal(TestLocalization.Vietnamese(Keys.Unreachable), model.Response!.WarningMessage);
     }
 

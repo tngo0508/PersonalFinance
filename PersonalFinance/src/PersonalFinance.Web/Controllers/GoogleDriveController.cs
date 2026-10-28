@@ -90,16 +90,11 @@ public class GoogleDriveController : Controller
 
                 model.SelectedConnectionId = selectedId;
 
-                // Load cached files from database (zero external API requests if fresh)
-                GoogleDriveFolderResponseDto cachedResponse = GoogleDriveText.Localize(_localizer,
+                // Load cached files from database (zero external API requests if fresh). When they cannot be loaded,
+                // the view's error state explains why; no page-level banner repeats it (#476).
+                model.Response = GoogleDriveText.Localize(_localizer,
                     await _googleDriveApi.GetConnectionFilesAsync(selectedId, forceRefresh: false, cancellationToken));
-                model.Response = cachedResponse;
                 model.HasQueried = true;
-
-                if (!cachedResponse.Success && !string.IsNullOrEmpty(cachedResponse.ErrorMessage))
-                {
-                    model.ErrorMessage = cachedResponse.ErrorMessage;
-                }
             }
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)

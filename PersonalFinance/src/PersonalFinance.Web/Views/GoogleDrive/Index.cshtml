@@ -23,7 +23,6 @@
     var spreadsheets = files.Where(IsSpreadsheet).OrderByDescending(f => f.ModifiedTime).ToList();
 
     var currentConn = Model.SelectedConnection;
-    var isNeedsReauth = currentConn != null && (!currentConn.IsValid || currentConn.SyncStatus == "NeedsReauth");
     var showConnectForm = Model.ShowConnectForm || !Model.Connections.Any();
 
     // Names the app matches or that Google shows untranslated stay as written (spec §1): the "Monthly budget" file
@@ -480,17 +479,7 @@
                         }
                     </div>
 
-                    @if (isNeedsReauth)
-                    {
-                        <div class="gd-notice gd-notice--warning mt-3" role="alert">
-                            <div>
-                                <strong>@L["GoogleDrive.Notice.NeedsKeyTitle"]</strong>
-                                <div class="small">@(currentConn?.ErrorMessage ?? L["GoogleDrive.Notice.NeedsKeyText"].Value)</div>
-                            </div>
-                            <button type="button" class="btn btn-sm btn-warning text-nowrap" data-bs-toggle="modal" data-bs-target="#reauthModal">@L["GoogleDrive.Notice.UpdateKey"]</button>
-                        </div>
-                    }
-                    else if (response.IsDemoData)
+                    @if (response.IsDemoData)
                     {
                         <div class="gd-notice mt-3" role="status">
                             <div>
@@ -754,12 +743,19 @@
                         </svg>
                     </div>
                     <h2 class="gd-empty-state__title">@L.Named("GoogleDrive.LoadError.Title", ("name", currentConn.Name))</h2>
-                    <p class="gd-empty-state__text">@L["GoogleDrive.LoadError.Text"]</p>
-                    <ul class="gd-empty-state__troubleshoot text-start mb-4">
-                        <li>@L.NamedHtml("GoogleDrive.LoadError.CheckSharing", null, ("share", shareLabel), ("anyone", anyoneLabel))</li>
-                        <li>@L["GoogleDrive.LoadError.CheckKey"]</li>
-                        <li>@L["GoogleDrive.LoadError.CheckExists"]</li>
-                    </ul>
+                    @if (!string.IsNullOrEmpty(currentConn.ErrorMessage))
+                    {
+                        <p class="gd-empty-state__text mb-4">@currentConn.ErrorMessage</p>
+                    }
+                    else
+                    {
+                        <p class="gd-empty-state__text">@L["GoogleDrive.LoadError.Text"]</p>
+                        <ul class="gd-empty-state__troubleshoot text-start mb-4">
+                            <li>@L.NamedHtml("GoogleDrive.LoadError.CheckSharing", null, ("share", shareLabel), ("anyone", anyoneLabel))</li>
+                            <li>@L["GoogleDrive.LoadError.CheckKey"]</li>
+                            <li>@L["GoogleDrive.LoadError.CheckExists"]</li>
+                        </ul>
+                    }
                     <div class="gd-empty-state__actions">
                         <form asp-action="Sync" method="post" id="syncFormFallback">
                             @Html.AntiForgeryToken()
@@ -770,7 +766,6 @@
                             </button>
                         </form>
                         <button type="button" class="btn btn-light border" data-bs-toggle="modal" data-bs-target="#reauthModal">@L["GoogleDrive.ApiKey.Update"]</button>
-                        <button type="button" class="btn btn-light border" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal">@L["GoogleDrive.Header.Help"]</button>
                     </div>
                 </div>
             }

@@ -1397,10 +1397,6 @@ hr {
   color: var(--gdrive-text-main);
   border: 1px solid var(--gdrive-primary);
 }
-.gd-notice--warning {
-  background: #fff4ce;
-  border-color: #d89b26;
-}
 
 /* --- Section Headers --- */
 .gd-section-header {
