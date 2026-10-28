@@ -17,6 +17,7 @@ using PersonalFinance.Shared.DTOs.BudgetPlanner;
 using PersonalFinance.Shared.DTOs.Dashboard;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Shared.DTOs.Search;
+using PersonalFinance.Tests.TestSupport;
 
 namespace PersonalFinance.Tests.Infrastructure;
 
@@ -327,21 +328,6 @@ public sealed class ApiServiceCultureTests : IDisposable
         public object? GetService(Type serviceType, object? serviceKey = null) => null;
 
         public void Dispose()
-        {
-        }
-    }
-
-    private sealed class AllowAllRateLimiter : IRateLimiterService
-    {
-        public bool TryAllow(string userId) => true;
-
-        public bool TryReserve(string userId, out DateTime slot)
-        {
-            slot = default;
-            return true;
-        }
-
-        public void Release(string userId, DateTime slot)
         {
         }
     }
