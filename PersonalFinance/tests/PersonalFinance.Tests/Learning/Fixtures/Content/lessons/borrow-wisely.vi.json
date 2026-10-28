@@ -1,0 +1,14 @@
+{
+  "slug": "borrow-wisely",
+  "title": "Vay tiền khôn ngoan",
+  "check": [
+    {
+      "prompt": "APR cao hơn nghĩa là khoản vay rẻ hơn.",
+      "options": ["Lầm tưởng", "Sự thật"]
+    },
+    {
+      "options": ["Tăng lên", "Giảm xuống"]
+    }
+  ],
+  "keepsake": { "name": "Sổ cái" }
+}

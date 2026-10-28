@@ -1,0 +1,25 @@
+{
+  "slug": "emergency-fund",
+  "term": "Emergency fund",
+  "vietnameseName": "quỹ khẩn cấp",
+  "alsoKnownAs": [],
+  "topic": "saving-banking",
+  "oneLine": "Money you keep aside only for surprises, like losing your job.",
+  "explanation": [
+    "An emergency fund is money you save for costs you did not plan. It is not for holidays or shopping.",
+    "Many people keep it in a savings account. They can take the money out quickly when they need it.",
+    "A common goal is three to six months of living costs."
+  ],
+  "whyItMatters": "Without an emergency fund, a surprise bill can push you into debt. Debt on a credit card often has a high APR. With a fund, you can pay the bill and keep your plans.",
+  "workedExample": "Your living costs are $2,000 a month. Three months of costs is $6,000. You save $250 each month. After 24 months, the fund holds $6,000.",
+  "relatedTerms": ["compound-interest", "credit-score"],
+  "sources": [
+    {
+      "name": "CFPB, An essential guide to building an emergency fund",
+      "url": "https://www.consumerfinance.gov/an-essential-guide-to-building-an-emergency-fund/",
+      "accessed": "2026-10-27"
+    }
+  ],
+  "furtherReading": [],
+  "lastReviewed": "2026-10-27"
+}

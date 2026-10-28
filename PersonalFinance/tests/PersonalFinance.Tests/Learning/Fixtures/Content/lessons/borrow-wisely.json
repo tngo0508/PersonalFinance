@@ -1,0 +1,32 @@
+{
+  "slug": "borrow-wisely",
+  "day": 2,
+  "title": "Borrow wisely",
+  "intro": "Borrowing has a price. This Lesson shows how to read that price. It also shows how lenders decide what to charge you.",
+  "terms": ["apr", "credit-score"],
+  "check": [
+    {
+      "format": "myth-or-fact",
+      "prompt": "A higher APR means a loan costs less.",
+      "options": ["Myth", "Fact"],
+      "correctOption": 0,
+      "explanation": "Myth. A higher APR means the loan costs more each year."
+    },
+    {
+      "format": "what-happens-next",
+      "prompt": "Nam pays his card bill late three months in a row. What happens to his credit score?",
+      "options": ["It goes up", "It goes down", "It stays the same"],
+      "correctOption": 1,
+      "explanation": "It goes down. Late payments are a common reason scores fall."
+    },
+    {
+      "format": "myth-or-fact",
+      "prompt": "Checking your own credit score lowers it.",
+      "options": ["Myth", "Fact"],
+      "correctOption": 0,
+      "explanation": "Myth. Checking your own score does not change it."
+    }
+  ],
+  "tryIt": { "label": "Budget", "url": "/Budget" },
+  "keepsake": { "symbol": "📒", "name": "Ledger" }
+}

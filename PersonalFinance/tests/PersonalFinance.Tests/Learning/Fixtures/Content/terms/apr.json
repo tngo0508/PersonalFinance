@@ -1,0 +1,47 @@
+{
+  "slug": "apr",
+  "term": "Annual percentage rate",
+  "vietnameseName": "lãi suất phần trăm hằng năm",
+  "alsoKnownAs": ["APR"],
+  "topic": "borrowing-credit",
+  "oneLine": "The yearly cost of borrowing money, shown as a percent.",
+  "explanation": [
+    "APR means annual percentage rate. It shows how much a loan or a credit card costs in one year.",
+    "It includes the interest and some fees. A lower APR means the loan costs less.",
+    "APR helps you compare two loans of the same type."
+  ],
+  "whyItMatters": "Two loans can have the same monthly payment but a different APR. The one with the higher APR costs more in total. Credit cards often have a high APR, so a balance you do not repay grows fast.",
+  "workedExample": "You owe $1,000 on a card with a 24% APR. You repay nothing for a year. You pay about $240 in interest, or more.",
+  "inTheUs": {
+    "text": "Lenders must show the APR before you sign. This comes from the Truth in Lending rules.",
+    "rulesAsOf": 2026,
+    "sources": [
+      {
+        "name": "CFPB, What is the difference between a loan interest rate and the APR?",
+        "url": "https://www.consumerfinance.gov/ask-cfpb/what-is-the-difference-between-a-mortgage-interest-rate-and-an-apr-en-135/",
+        "accessed": "2026-10-27"
+      }
+    ]
+  },
+  "inVietnam": {
+    "text": "Banks show a yearly interest rate. The rate may not include every fee.",
+    "rulesAsOf": 2026,
+    "sources": [
+      {
+        "name": "Law on Credit Institutions 2024",
+        "url": "https://vbpl.vn/van-ban/chi-tiet/fixture-law-on-credit-institutions",
+        "accessed": "2026-10-27"
+      }
+    ]
+  },
+  "relatedTerms": ["credit-score", "compound-interest"],
+  "sources": [
+    {
+      "name": "CFPB, What is APR?",
+      "url": "https://www.consumerfinance.gov/ask-cfpb/what-is-a-credit-card-interest-rate-what-does-apr-mean-en-44/",
+      "accessed": "2026-10-27"
+    }
+  ],
+  "furtherReading": [],
+  "lastReviewed": "2026-10-27"
+}
