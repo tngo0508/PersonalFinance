@@ -64,6 +64,18 @@ test('the token blocks of a token sheet are skipped, its other rules are not', (
     assert.strictEqual(countRawColours(css, true), 2);
 });
 
+test('only the first :root and dark :root blocks of a token sheet are token blocks', () => {
+    const css = ':root { --lp-ink: #14283B; }\n:root[data-theme="dark"] { --lp-ink: #E6ECEF; }\n' +
+        ':root { --gdrive-secondary: #5c2d91; }\n:root[data-theme="dark"] { --gdrive-secondary: #7a4fb0; }\n' +
+        '@media (min-width: 1px) { :root { --x: #000; } }';
+    assert.strictEqual(countRawColours(css, true), 3);
+});
+
+test('braces and comment markers inside strings do not shift the rules', () => {
+    const css = '.a::before { content: "/* {"; color: #fff; }\n.b::after { content: \'}\'; color: rgb(0 0 0); }';
+    assert.strictEqual(countRawColours(css, false), 2);
+});
+
 test('a :root block outside a token sheet is counted', () => {
     assert.strictEqual(countRawColours(':root { --budget-bar: #1D6A50; }', false), 1);
 });
@@ -91,8 +103,14 @@ test('stylesheets are listed across the project, without vendored, built or buil
     ]);
 });
 
-test('counts at or below the allow-list pass', () => {
-    assert.deepStrictEqual(checkRawColours({ 'a.css': 3, 'b.css': 1, 'c.css': 0 }, { 'a.css': 3, 'b.css': 2 }), []);
+test('counts that match the allow-list pass, and clean unlisted files pass', () => {
+    assert.deepStrictEqual(checkRawColours({ 'a.css': 3, 'b.css': 1, 'c.css': 0 }, { 'a.css': 3, 'b.css': 1 }), []);
+});
+
+test('a listed file whose count falls fails until its entry is lowered', () => {
+    assert.deepStrictEqual(checkRawColours({ 'a.css': 2 }, { 'a.css': 3 }), [
+        'a.css has 2 raw colour literal(s), down from 3: lower its allow-list entry to 2'
+    ]);
 });
 
 test('a listed file whose count rises fails', () => {

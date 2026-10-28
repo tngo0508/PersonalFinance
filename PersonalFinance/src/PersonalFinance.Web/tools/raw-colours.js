@@ -4,10 +4,10 @@
 
 /**
  * The raw-colour guard (issue #480): colours in the Web project's stylesheets come from tokens. A hex, rgb()/rgba()
- * or hsl()/hsla() literal is allowed only in the token blocks (:root and :root[data-theme="dark"]) of the Ledger
- * (ledger.css) and app (site.css) token sheets. raw-colours.allowlist.json records each not-yet-clean file with its
- * current literal count; raw-colours.test.js fails when a count rises, an unlisted file has a literal, or a listed
- * file is clean (or gone) but still listed.
+ * or hsl()/hsla() literal is allowed only in the token blocks (the first :root and :root[data-theme="dark"]) of the
+ * Ledger (ledger.css) and app (site.css) token sheets. raw-colours.allowlist.json records each not-yet-clean file with
+ * its current literal count; raw-colours.test.js fails when a count rises or falls without the list following it, an
+ * unlisted file has a literal, or a listed file is clean (or gone) but still listed.
  *
  * Usage: node PersonalFinance/src/PersonalFinance.Web/tools/raw-colours.js
  *   prints every stylesheet's current count, to update the allow-list after cleaning a file.
@@ -40,20 +40,33 @@ function countInDeclarations (declarations) {
 }
 
 /**
+ * Drops comments, and blanks the braces, colour characters and comment markers inside strings, so neither can be
+ * read as a rule or a literal. A string keeps its quotes and letters, so [data-theme="dark"] still reads as such.
+ * @param {string} css The stylesheet.
+ * @returns {string} The stylesheet, safe to scan character by character.
+ */
+function maskCommentsAndStrings (css) {
+    return css.replace(/\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,
+        token => (token.startsWith('/*') ? ' ' : token.replace(/[{}#()/*]/g, '_')));
+}
+
+/**
  * Counts the raw colour literals in a stylesheet. Only declarations count, so id selectors are not colours.
  * @param {string} css The stylesheet.
- * @param {boolean} isTokenSheet Whether its :root token blocks may hold literals.
+ * @param {boolean} isTokenSheet Whether its token blocks may hold literals: its first top-level :root block and
+ *   its first top-level :root[data-theme="dark"] block. A later :root block (a feature's palette) counts.
  * @returns {number} The number of literals.
  */
 function countRawColours (css, isTokenSheet) {
-    const text = css.replace(/\/\*[\s\S]*?\*\//g, ' ');
+    const text = maskCommentsAndStrings(css);
     const selectors = [];
+    const tokenBlocksSeen = new Set();
+    let inTokenBlock = false;
     let chunk = '';
     let count = 0;
 
     const add = (declarations) => {
-        const selector = selectors[selectors.length - 1];
-        if (selector !== undefined && !(isTokenSheet && TOKEN_SELECTOR.test(selector))) {
+        if (selectors.length > 0 && !inTokenBlock) {
             count += countInDeclarations(declarations);
         }
     };
@@ -63,11 +76,17 @@ function countRawColours (css, isTokenSheet) {
             // Declarations before a nested rule end at their last semicolon; the rest is the rule's selector.
             const cut = chunk.lastIndexOf(';') + 1;
             add(chunk.slice(0, cut));
-            selectors.push(chunk.slice(cut).trim().replace(/\s+/g, ' '));
+            const selector = chunk.slice(cut).trim().replace(/\s+/g, ' ');
+            inTokenBlock = isTokenSheet && selectors.length === 0 && TOKEN_SELECTOR.test(selector) && !tokenBlocksSeen.has(selector);
+            if (inTokenBlock) {
+                tokenBlocksSeen.add(selector);
+            }
+            selectors.push(selector);
             chunk = '';
         } else if (character === '}') {
             add(chunk);
             selectors.pop();
+            inTokenBlock = false;
             chunk = '';
         } else {
             chunk += character;
@@ -83,6 +102,7 @@ function countRawColours (css, isTokenSheet) {
  * @returns {string[]} Paths relative to the root with forward slashes, sorted.
  */
 function listStylesheets (root) {
+    // Not list-files.js: this walk prunes bin, obj and node_modules instead of reading them first.
     const found = [];
     const walk = (relative) => {
         for (const entry of fs.readdirSync(path.join(root, relative), { withFileTypes: true })) {
@@ -138,6 +158,9 @@ function checkRawColours (counts, allowList) {
             problems.push(`${file} has no raw colour literals left: remove it from the allow-list`);
         } else if (count > allowed) {
             problems.push(`${file} has ${count} raw colour literal(s), up from ${allowed} on the allow-list: use a token instead`);
+        } else if (count < allowed) {
+            // Lowering the entry keeps the cleaned literals from coming back unnoticed.
+            problems.push(`${file} has ${count} raw colour literal(s), down from ${allowed}: lower its allow-list entry to ${count}`);
         }
     }
     for (const file of Object.keys(allowList)) {
