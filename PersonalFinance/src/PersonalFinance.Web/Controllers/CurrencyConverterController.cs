@@ -41,7 +41,7 @@ public class CurrencyConverterController : Controller
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Index(decimal? amount, string? from, string? to, DateOnly? date,
-        CancellationToken cancellationToken = default)
+        string? variant = null, CancellationToken cancellationToken = default)
     {
         string? userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         string reporting = userId is null
@@ -60,7 +60,7 @@ public class CurrencyConverterController : Controller
 
         if (!submitted || !ModelState.IsValid)
         {
-            return View(model);
+            return View(ViewName(variant, reporting), model);
         }
 
         try
@@ -78,7 +78,21 @@ public class CurrencyConverterController : Controller
                 ApiErrorMessages.ForUser(_localizer, ex, _localizer["CurrencyConverter.Error.Failed"]));
         }
 
-        return View(model);
+        return View(ViewName(variant, reporting), model);
+    }
+
+    // PROTOTYPE (#437): throwaway page variants on ?variant=A|B|C|D with stub rates, Development only. Do not merge
+    // to main. Variant A renders the shipped page unchanged inside the switcher.
+    private string ViewName(string? variant, string reporting)
+    {
+        if (variant is null || !HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment())
+        {
+            return "Index";
+        }
+
+        ViewData["Variant"] = variant.ToUpperInvariant();
+        ViewData["ReportingCurrency"] = reporting;
+        return "CurrencyConverterPrototype";
     }
 
     /// <summary>The From default: US dollars, or đồng when the Reporting Currency is US dollars.</summary>

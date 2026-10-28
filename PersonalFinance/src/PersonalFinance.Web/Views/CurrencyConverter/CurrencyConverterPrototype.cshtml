@@ -1,0 +1,227 @@
+@* PROTOTYPE (#437) - throwaway. Four structurally different Currency Converter layouts on
+   /CurrencyConverter?variant=A|B|C|D. A is the shipped page unchanged; B, C and D update live from STUB rates in
+   js/currency-converter/converter-prototype.js (nothing is fetched). Development only. Do not merge to main. *@
+@using System.Globalization
+@model CurrencyConverterViewModel
+@{
+    ViewData["Title"] = L["CurrencyConverter.Title"].Value;
+    string requested = ViewData["Variant"] as string ?? "A";
+    string variant = requested is "A" or "B" or "C" or "D" ? requested : "A";
+    string reporting = ViewData["ReportingCurrency"] as string ?? Model.To;
+    var names = new Dictionary<string, string>
+    {
+        ["A"] = "Shipped: form card, result card, Convert button",
+        ["B"] = "Sentence: one live line, result first",
+        ["C"] = "Exchange rows: edit either side, phone-first",
+        ["D"] = "Rate sheet: one amount, every currency at once"
+    };
+    const string isoDate = "yyyy-MM-dd";
+    var culture = CultureInfo.CurrentCulture;
+    ConvertibleCurrency fromCurrency = ConvertibleCurrencies.Find(Model.From) ?? ConvertibleCurrencies.All[0];
+    decimal amount = Model.Amount ?? (fromCurrency.MinorUnits == 0 ? 1_000_000m : 100m);
+    string Name(string code) => L[ConvertibleCurrencies.Find(code)!.NameKey].Value;
+    string today = Model.MaxDate.ToString(isoDate, CultureInfo.InvariantCulture);
+    string minDate = CurrencyConverterViewModel.MinDate.ToString(isoDate, CultureInfo.InvariantCulture);
+    string dateValue = Model.Date?.ToString(isoDate, CultureInfo.InvariantCulture) ?? string.Empty;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/currency-converter-prototype.css" asp-append-version="true"/>
+}
+
+@* ---------- tiny shared fragments; each variant owns its own layout ---------- *@
+@{
+    async Task CurrencyOptions(string selected)
+    {
+        foreach (var currency in Model.Currencies)
+        {
+            <option value="@currency.Code" data-minor="@currency.MinorUnits" selected="@(currency.Code == selected)">@currency.Code · @Name(currency.Code)</option>
+        }
+    }
+
+    void SwapIcon()
+    {
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+    }
+
+    void StateLines()
+    {
+        <p class="ccp-stale text-warning-emphasis mb-1" data-cc-stale hidden></p>
+        <p class="ccp-unavailable mb-1" data-cc-unavailable hidden>@L["CurrencyConverter.Result.Unavailable"]</p>
+    }
+}
+
+<div class="py-3" data-cc-proto data-variant="@variant" data-from="@Model.From" data-to="@Model.To" data-reporting="@reporting"
+     data-amount="@amount.ToString(CultureInfo.InvariantCulture)" data-date="@dateValue" data-today="@today">
+
+@if (variant == "A")
+{
+    <partial name="Index" model="Model"/>
+}
+else if (variant == "B")
+{
+    @* ===== B: the sentence. The result is the headline; the inputs sit inside the sentence; date and source are footnotes. ===== *@
+    <section class="ccp-b">
+        <header class="mb-4">
+            <h1 class="h3 mb-1">@L["CurrencyConverter.Title"]</h1>
+            <p class="text-muted mb-0">@L["CurrencyConverter.Intro"]</p>
+        </header>
+
+        <div class="ccp-b__sentence" aria-live="polite">
+            <div class="ccp-b__side">
+                <input class="ccp-b__amount" data-cc-amount inputmode="decimal" autocomplete="off"
+                       value="@amount.ToString("#,##0.##", culture)" aria-label="@L["CurrencyConverter.Form.Amount"]"/>
+                <select class="ccp-b__select" data-cc-from aria-label="@L["CurrencyConverter.Form.From"]">
+                    @{ await CurrencyOptions(Model.From); }
+                </select>
+            </div>
+            <button type="button" class="ccp-swap ccp-b__swap" data-cc-swap aria-label="Swap currencies" title="Swap currencies">
+                @{ SwapIcon(); }
+            </button>
+            <div class="ccp-b__side ccp-b__side--result">
+                <output class="ccp-b__result" data-cc-result>…</output>
+                <select class="ccp-b__select" data-cc-to aria-label="@L["CurrencyConverter.Form.To"]">
+                    @{ await CurrencyOptions(Model.To); }
+                </select>
+            </div>
+        </div>
+
+        <p class="ccp-b__rates" data-cc-rate-line></p>
+        <p class="ccp-b__rates ccp-b__rates--inverse text-muted" data-cc-inverse-line></p>
+
+        <div class="ccp-b__meta">
+            <button type="button" class="ccp-chip" data-cc-date-toggle aria-expanded="false" aria-controls="ccp-b-date">
+                <span data-cc-date-label></span>
+            </button>
+            <div id="ccp-b-date" class="ccp-b__date" hidden>
+                <input type="date" class="form-control form-control-sm" data-cc-date min="@minDate" max="@today" value="@dateValue"
+                       aria-label="@L["CurrencyConverter.Form.Date"]"/>
+                <button type="button" class="btn btn-link btn-sm p-0" data-cc-date-clear>Back to latest</button>
+            </div>
+            <span class="ccp-b__source text-muted small" data-cc-source></span>
+        </div>
+        @{ StateLines(); }
+    </section>
+}
+else if (variant == "C")
+{
+    @* ===== C: exchange-app rows. Two money rows, either editable; a swap button straddles them; the rate is the footer. ===== *@
+    <section class="ccp-c">
+        <header class="mb-3 text-center text-sm-start">
+            <h1 class="h4 mb-1">@L["CurrencyConverter.Title"]</h1>
+            <p class="text-muted small mb-0">@L["CurrencyConverter.Intro"]</p>
+        </header>
+
+        <div class="ccp-c__card">
+            <div class="ccp-c__row">
+                <div class="ccp-c__row-head">
+                    <label class="ccp-c__label" for="ccp-c-from-amount">@L["CurrencyConverter.Form.From"]</label>
+                    <span class="ccp-c__name text-muted" data-cc-from-name></span>
+                </div>
+                <div class="ccp-c__line">
+                    <select class="ccp-c__cur" data-cc-from aria-label="@L["CurrencyConverter.Form.From"]">
+                        @{ await CurrencyOptions(Model.From); }
+                    </select>
+                    <input id="ccp-c-from-amount" class="ccp-c__amt" data-cc-amount inputmode="decimal" autocomplete="off"
+                           value="@amount.ToString("#,##0.##", culture)" aria-label="@L["CurrencyConverter.Form.Amount"]"/>
+                </div>
+            </div>
+
+            <div class="ccp-c__divider">
+                <button type="button" class="ccp-swap ccp-c__swap" data-cc-swap aria-label="Swap currencies" title="Swap currencies">
+                    @{ SwapIcon(); }
+                </button>
+            </div>
+
+            <div class="ccp-c__row ccp-c__row--to">
+                <div class="ccp-c__row-head">
+                    <label class="ccp-c__label" for="ccp-c-to-amount">@L["CurrencyConverter.Form.To"]</label>
+                    <span class="ccp-c__name text-muted" data-cc-to-name></span>
+                </div>
+                <div class="ccp-c__line">
+                    <select class="ccp-c__cur" data-cc-to aria-label="@L["CurrencyConverter.Form.To"]">
+                        @{ await CurrencyOptions(Model.To); }
+                    </select>
+                    <input id="ccp-c-to-amount" class="ccp-c__amt" data-cc-amount-to inputmode="decimal" autocomplete="off"
+                           aria-label="@L["CurrencyConverter.Result.Title"]"/>
+                </div>
+            </div>
+
+            <div class="ccp-c__foot">
+                <div class="ccp-c__rate" data-cc-rate-line></div>
+                <div class="ccp-c__date">
+                    <label class="form-label small mb-0" for="ccp-c-date">@L["CurrencyConverter.Form.Date"]</label>
+                    <input id="ccp-c-date" type="date" class="form-control form-control-sm" data-cc-date min="@minDate" max="@today" value="@dateValue"/>
+                    <button type="button" class="btn btn-link btn-sm" data-cc-date-clear>Latest</button>
+                </div>
+                <div class="small text-muted" data-cc-source></div>
+                @{ StateLines(); }
+            </div>
+        </div>
+    </section>
+}
+else
+{
+    @* ===== D: the rate sheet. One amount in one currency; every other Convertible Currency listed; tap a row to convert from it. ===== *@
+    <section class="ccp-d">
+        <header class="mb-3">
+            <h1 class="h3 mb-1">@L["CurrencyConverter.Title"]</h1>
+            <p class="text-muted mb-0">@L["CurrencyConverter.Intro"]</p>
+        </header>
+
+        <div class="ccp-d__controls">
+            <div class="ccp-d__amount-group">
+                <label class="form-label small mb-1" for="ccp-d-amount">@L["CurrencyConverter.Form.Amount"]</label>
+                <div class="input-group input-group-lg">
+                    <input id="ccp-d-amount" class="form-control ccp-d__amount" data-cc-amount inputmode="decimal" autocomplete="off"
+                           value="@amount.ToString("#,##0.##", culture)"/>
+                    <select class="form-select ccp-d__from" data-cc-from aria-label="@L["CurrencyConverter.Form.From"]">
+                        @{ await CurrencyOptions(Model.From); }
+                    </select>
+                </div>
+            </div>
+            <div class="ccp-d__date">
+                <label class="form-label small mb-1" for="ccp-d-date">@L["CurrencyConverter.Form.Date"]</label>
+                <div class="d-flex align-items-center gap-2">
+                    <input id="ccp-d-date" type="date" class="form-control" data-cc-date min="@minDate" max="@today" value="@dateValue"/>
+                    <button type="button" class="btn btn-outline-secondary" data-cc-date-clear>Latest</button>
+                </div>
+            </div>
+        </div>
+
+        @{ StateLines(); }
+
+        <div class="table-responsive">
+            <table class="table ccp-d__table align-middle">
+                <thead>
+                <tr>
+                    <th scope="col">Currency</th>
+                    <th scope="col" class="text-end">@L["CurrencyConverter.Result.Title"]</th>
+                    <th scope="col" class="text-end d-none d-sm-table-cell" data-cc-rate-header>Rate</th>
+                </tr>
+                </thead>
+                <tbody data-cc-sheet></tbody>
+            </table>
+        </div>
+        <p class="small text-muted" data-cc-source></p>
+    </section>
+}
+</div>
+
+@* ===== Prototype switcher (not part of the design being evaluated) ===== *@
+<div class="ccp-switcher" role="group" aria-label="Prototype variant">
+    <button type="button" data-cc-variant-step="-1" aria-label="Previous variant">&lsaquo;</button>
+    <span><strong>@variant</strong> · @names[variant]</span>
+    <select class="ccp-switcher__demo" data-cc-demo aria-label="Demo state">
+        <option value="normal">Normal</option>
+        <option value="stale">Stale rate</option>
+        <option value="unavailable">Unavailable</option>
+    </select>
+    <button type="button" data-cc-variant-step="1" aria-label="Next variant">&rsaquo;</button>
+</div>
+
+@section Scripts {
+    <js-strings prefix="CurrencyConverter.,Common.Conversion.,Common.Currency.Name." />
+    <script src="~/js/currency-converter/converter-prototype.js" asp-append-version="true"></script>
+}
