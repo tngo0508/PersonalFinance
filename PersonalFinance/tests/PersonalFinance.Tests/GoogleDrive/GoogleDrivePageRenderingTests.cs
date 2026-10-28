@@ -138,6 +138,20 @@ public sealed partial class GoogleDrivePageRenderingTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task EverySpreadsheet_HasACard_AndShowAllRevealsTheCardsPastTheSixth()
+    {
+        GoogleDriveFileDto[] sheets = Enumerable.Range(1, 8)
+            .Select(i => Sheet($"sheet-{i}", $"Sheet {i}.xlsx", isBudget: false, hoursAgo: i)).ToArray();
+        GivenTheDrive(hasApiKey: false, isDemoData: true, sheets);
+
+        string html = await GetPageAsync();
+
+        Assert.All(sheets, sheet => Assert.Contains($"data-sheet-card=\"{sheet.Id}\"", html, StringComparison.Ordinal));
+        Assert.Equal(2, Regex.Matches(html, "class=\"col-sm-6 col-xl-4 gd-sheet-extra d-none\"").Count);
+        Assert.Matches(ShowAllSheetsButton(), html);
+    }
+
+    [Fact]
     public async Task SheetActions_AppearOnlyOnTheSpreadsheetsCards()
     {
         string html = await GetPageAsync();
@@ -206,8 +220,9 @@ public sealed partial class GoogleDrivePageRenderingTests : IAsyncLifetime
         Assert.DoesNotContain("Add API key", Page(html), StringComparison.Ordinal);
     }
 
-    private void GivenTheDrive(bool hasApiKey, bool isDemoData)
+    private void GivenTheDrive(bool hasApiKey, bool isDemoData, GoogleDriveFileDto[]? files = null)
     {
+        files ??= SampleFiles;
         _driveProxy.Returns(nameof(IGoogleDriveApi.GetUserConnectionsAsync), new List<GoogleDriveConnectionDto>
         {
             new()
@@ -215,12 +230,12 @@ public sealed partial class GoogleDrivePageRenderingTests : IAsyncLifetime
                 Id = ConnectionId, Name = "Household", FolderId = "folder-abc",
                 FolderUrl = "https://drive.google.com/drive/folders/folder-abc",
                 MaskedApiKey = hasApiKey ? "AIza…1234" : null, SyncStatus = "Synced",
-                LastSyncedAtUtc = DateTime.UtcNow.AddMinutes(-5), CachedFilesCount = SampleFiles.Length
+                LastSyncedAtUtc = DateTime.UtcNow.AddMinutes(-5), CachedFilesCount = files.Length
             }
         });
         _driveProxy.Returns(nameof(IGoogleDriveApi.GetConnectionFilesAsync), new GoogleDriveFolderResponseDto
         {
-            Success = true, FolderId = "folder-abc", FolderName = "Household", Files = [.. SampleFiles],
+            Success = true, FolderId = "folder-abc", FolderName = "Household", Files = [.. files],
             TotalSizeFormatted = "6 MB", IsDemoData = isDemoData
         });
     }
@@ -274,6 +289,9 @@ public sealed partial class GoogleDrivePageRenderingTests : IAsyncLifetime
     // A keyboard-reachable Bootstrap dropdown toggle: Bootstrap keeps aria-expanded current and closes on Escape.
     private static Regex SheetMoreToggle(string fileId) => new(
         $"""<button type="button"[^>]*id="gdSheetMore_{Regex.Escape(fileId)}"[^>]*data-bs-toggle="dropdown"[^>]*aria-expanded="false"[^>]*aria-label="[^"]+"[^>]*>""");
+
+    [GeneratedRegex("""<button type="button" class="gd-show-all-btn mt-2 js-show-all-sheets" aria-expanded="false" aria-controls="sheetCards">\s*Show all 8 spreadsheets""")]
+    private static partial Regex ShowAllSheetsButton();
 
     [GeneratedRegex("""<button type="button"[^>]*id="gdDriveMoreBtn"[^>]*data-bs-toggle="dropdown"[^>]*aria-expanded="false"[^>]*aria-label="[^"]+"[^>]*>""")]
     private static partial Regex DriveMoreToggle();

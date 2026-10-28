@@ -173,10 +173,12 @@
             applyFilters();
         });
 
-        // "Show all spreadsheets" link in the featured section
-        $('.js-show-filter').on('click', function () {
-            setFilter($(this).data('filter'));
-            document.getElementById('allFilesSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // "Show all N spreadsheets" reveals the cards past the first six: the cards hold each sheet's actions
+        $('.js-show-all-sheets').on('click', function () {
+            const $extra = $('.gd-sheet-extra');
+            $extra.removeClass('d-none');
+            $(this).attr('aria-expanded', 'true').addClass('d-none');
+            $extra.first().find('button').first().trigger('focus');
         });
 
         // List / grid switcher

@@ -518,10 +518,11 @@
                             </div>
                             <span class="gd-section-header__subtitle">@L["GoogleDrive.Sheets.Subtitle"]</span>
                         </div>
-                        <div class="row g-3">
-                            @foreach (var sheet in spreadsheets.Take(featuredSheetLimit))
+                        @* Every spreadsheet gets a card; past the first six they wait behind Show all. *@
+                        <div class="row g-3" id="sheetCards">
+                            @foreach (var (sheet, index) in spreadsheets.Select((s, i) => (s, i)))
                             {
-                                <div class="col-sm-6 col-xl-4">
+                                <div class="@(index < featuredSheetLimit ? "col-sm-6 col-xl-4" : "col-sm-6 col-xl-4 gd-sheet-extra d-none")">
                                     <article class="gd-sheet-card h-100" data-sheet-card="@sheet.Id">
                                         <div class="gd-sheet-card__header">
                                             @{ RenderFileIcon(sheet, 22); }
@@ -550,7 +551,7 @@
                         </div>
                         @if (spreadsheets.Count > featuredSheetLimit)
                         {
-                            <button type="button" class="gd-show-all-btn mt-2 js-show-filter" data-filter="Spreadsheet">
+                            <button type="button" class="gd-show-all-btn mt-2 js-show-all-sheets" aria-expanded="false" aria-controls="sheetCards">
                                 @L.Named("GoogleDrive.Sheets.ShowAll", ("count", spreadsheets.Count))
                                 <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                     <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
