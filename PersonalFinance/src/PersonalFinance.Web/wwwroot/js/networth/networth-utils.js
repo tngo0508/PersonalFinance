@@ -41,13 +41,14 @@
         Aggressive: 'aggressive'
     };
 
-    // Validation rules for input fields
+    // Validation rules for input fields. A money field's max is null: it is read from the field's data-max, which the
+    // view writes in the page's currency and the currency selector rescales (#444, NetWorthLimits in Shared).
     const VALIDATORS = [
-        { id: 'nwStartingBalance', min: 0, max: 1000000000 },
-        { id: 'nwAnnualSavings', min: 0, max: 10000000 },
-        { id: 'nwAnnualIncome', min: 0, max: 100000000 },
-        { id: 'nwAnnualSpending', min: 0, max: 10000000 },
-        { id: 'nwAggressiveSavings', min: 0, max: 10000000 },
+        { id: 'nwStartingBalance', min: 0, max: null },
+        { id: 'nwAnnualSavings', min: 0, max: null },
+        { id: 'nwAnnualIncome', min: 0, max: null },
+        { id: 'nwAnnualSpending', min: 0, max: null },
+        { id: 'nwAggressiveSavings', min: 0, max: null },
         { id: 'nwCurrentAge', min: 18, max: 100 },
         { id: 'nwRetirementAge', min: 18, max: 120 },
         { id: 'nwBaseRoi', min: 0, max: 50 },
@@ -151,6 +152,18 @@
     }
 
     /**
+     * The upper bound of a money field in the currency chosen on the page: its data-max. Infinity when the field
+     * carries none; the server checks the same bound.
+     * @param {string} id - The text input ID.
+     * @returns {number} The bound in whole units.
+     */
+    function boundOf (id) {
+        const el = document.getElementById(id);
+        const max = el && el.dataset ? Number(el.dataset.max) : NaN;
+        return Number.isFinite(max) && max > 0 ? max : Infinity;
+    }
+
+    /**
      * Toggle the invalid class on an input and its paired range slider.
      * @param {string} id - The input element ID (range ID is derived by appending 'Range').
      * @param {boolean} invalid - Whether to add (true) or remove (false) the invalid class.
@@ -173,7 +186,8 @@
         // Clear and validate in a single pass
         VALIDATORS.forEach((v) => {
             const num = getSliderValue(v.id);
-            const outOfRange = num < v.min || num > v.max;
+            const max = v.max === null ? boundOf(v.id) : v.max;
+            const outOfRange = num < v.min || num > max;
             setInvalid(v.id, outOfRange);
             if (outOfRange) { isValid = false; }
         });
@@ -242,6 +256,7 @@
         hexToRgba: hexToRgba,
         parseTyped: parseTyped,
         getSliderValue: getSliderValue,
+        boundOf: boundOf,
         setInvalid: setInvalid,
         validateInputs: validateInputs,
         showValidationMessage: showValidationMessage,

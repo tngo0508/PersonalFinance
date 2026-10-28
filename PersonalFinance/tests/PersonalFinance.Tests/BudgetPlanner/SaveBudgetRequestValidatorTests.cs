@@ -135,6 +135,50 @@ public class SaveBudgetRequestValidatorTests
     }
 
     [Fact]
+    public void Validate_ADongIncomeOverTheDollarBound_IsValid_AndTheSameFigureInDollarsIsNot()
+    {
+        var request = new SaveBudgetRequestDto
+        {
+            CurrencyCode = "VND", MonthlyIncome = 30_000_000m, Allocations = new BudgetAllocationsDto { Housing = 20_000_000m }
+        };
+
+        Assert.True(_validator.Validate(request).IsValid);
+
+        request.CurrencyCode = "USD";
+        List<ValidationFailure> failures = _validator.Validate(request).Errors;
+
+        Assert.Equal(2, failures.Count);
+        Assert.Contains(failures, f => f.ErrorCode == ApiErrorKeys.BudgetPlanner.MonthlyIncomeRange);
+        Assert.Contains(failures, f => f.ErrorCode == ApiErrorKeys.BudgetPlanner.AllocationRange);
+        Assert.All(failures, f => Assert.Contains("$10,000,000", f.ErrorMessage));
+    }
+
+    [Fact]
+    public void Validate_ADongAmountOverTheDongBound_FailsWithTheDongBoundAsArgument()
+    {
+        var request = new SaveBudgetRequestDto
+        {
+            CurrencyCode = "VND",
+            MonthlyIncome = 250_000_000_000.01m,
+            Allocations = new BudgetAllocationsDto { Housing = 250_000_000_001m }
+        };
+
+        List<ValidationFailure> failures = _validator.Validate(request).Errors;
+
+        Assert.Equal(2, failures.Count);
+        Assert.All(failures, failure =>
+        {
+            IReadOnlyDictionary<string, ApiErrorArgDto> args =
+                Assert.IsAssignableFrom<IReadOnlyDictionary<string, ApiErrorArgDto>>(failure.CustomState);
+            Assert.Equal("250000000000", args["max"].Value);
+            Assert.Equal(ApiErrorArgKind.Money, args["max"].Kind);
+            Assert.Equal("VND", args["max"].Currency);
+            Assert.Equal("VND", args["min"].Currency);
+            Assert.Contains("₫250,000,000,000", failure.ErrorMessage);
+        });
+    }
+
+    [Fact]
     public void Validate_WhenAnAllocationHasFractionsOfACent_FailsWithTheWholeCentsKey()
     {
         var request = new SaveBudgetRequestDto

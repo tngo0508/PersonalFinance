@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [12.6.0] - 2026-10-27
+
+### Fixed
+
+- **Money range limits follow the currency**: the Budget Planner, Net Worth and Money Priorities amount bounds were sized for US dollars and rejected ordinary đồng figures; they now scale to the currency the amounts are entered in, so a đồng user can save a 30,000,000 ₫ monthly income, project 300,000,000 ₫ of annual savings and walk Money Priorities with 30,000,000 ₫ a month (#444).
+  - One table in `PersonalFinance.Shared`: each bound is written once in whole US dollars (`BudgetPlannerLimits`, `NetWorthLimits`, `MoneyPrioritiesLimits`) and `MoneyBounds` multiplies it by the currency's `BoundScale` on `SupportedCurrency` (1 for USD, 25,000 for VND). A US dollar user keeps the existing bounds.
+  - The Web forms check each amount with a `[MoneyRange]` attribute that reads the row's `CurrencyCode`; the ApiService validators read the request's; the pages' scripts read the `data-max` the views write, which the currency selector rescales, so the Net Worth sliders, the Money Priorities inputs' `max` and the Budget Planner's inline check follow the selected currency and the three layers agree.
+  - The range messages name the bound formatted in that currency (`{min}` and `{max}`) instead of a hard-coded dollar figure, in the forms and in the API's keyed rejections. No schema change.
+  - A Playwright smoke test saves a 30,000,000 ₫ Budget Planner income.
+
 ## [12.5.0] - 2026-10-27
 
 ### Added

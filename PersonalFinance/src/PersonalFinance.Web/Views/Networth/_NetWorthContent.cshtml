@@ -7,7 +7,8 @@
 @{
     var projection = Model.Projection;
     // The inputs are in the chosen currency; the results in the projection's: the Reporting Currency, or the inputs'
-    // own when no rate exists (ADR 0016).
+    // own when no rate exists (ADR 0016). Each amount input carries its bound (data-max) and each slider its range,
+    // scaled to that currency; the selector rescales them from the option's data-bound-scale (#444).
     var inputCurrency = SupportedCurrencies.CodeOrDefault(Model.CurrencyCode);
     var inputSymbol = SupportedCurrencies.Find(inputCurrency)!.Symbol;
 }
@@ -164,10 +165,10 @@
                             <i class="nw-tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="right" title="@L["NetWorth.Field.CurrencyHint"]"></i>
                         </label>
                         <select class="form-select form-select-sm" id="nwCurrency" name="CurrencyCode" data-currency-selector
-                                data-currency-symbols="[data-nw-currency-symbol]">
+                                data-currency-symbols="[data-nw-currency-symbol]" data-currency-bounds="[data-max-usd]">
                             @foreach (var currency in SupportedCurrencies.All)
                             {
-                                <option value="@currency.Code" selected="@(currency.Code == inputCurrency)">@currency.Code · @currency.DisplayName</option>
+                                <option value="@currency.Code" data-bound-scale="@currency.BoundScale" selected="@(currency.Code == inputCurrency)">@currency.Code · @currency.DisplayName</option>
                             }
                         </select>
                     </div>
@@ -179,9 +180,10 @@
                         <div class="nw-slider-field__display">
                             <span class="nw-slider-field__prefix" data-nw-currency-symbol>@inputSymbol</span>
                             <input asp-for="StartingBalance" type="text" inputmode="numeric" required
-                                   class="form-control nw-slider-field__input" id="nwStartingBalance" />
+                                   class="form-control nw-slider-field__input" id="nwStartingBalance"
+                                   data-max-usd="@NetWorthLimits.StartingBalanceMax" data-max="@MoneyBounds.MaxInvariant(NetWorthLimits.StartingBalanceMax, inputCurrency)" />
                         </div>
-                        <input type="range" class="nw-range" id="nwStartingBalanceRange" min="0" max="1000000" step="1000" value="@Model.StartingBalance.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                        <input type="range" class="nw-range" id="nwStartingBalanceRange" min="0" max="@MoneyBounds.MaxInvariant(1000000, inputCurrency)" step="@MoneyBounds.MaxInvariant(1000, inputCurrency)" data-max-usd="1000000" data-step-usd="1000" value="@Model.StartingBalance.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
@@ -191,9 +193,10 @@
                         <div class="nw-slider-field__display">
                             <span class="nw-slider-field__prefix" data-nw-currency-symbol>@inputSymbol</span>
                             <input asp-for="AnnualSavings" type="text" inputmode="numeric" required
-                                   class="form-control nw-slider-field__input" id="nwAnnualSavings" />
+                                   class="form-control nw-slider-field__input" id="nwAnnualSavings"
+                                   data-max-usd="@NetWorthLimits.AnnualSavingsMax" data-max="@MoneyBounds.MaxInvariant(NetWorthLimits.AnnualSavingsMax, inputCurrency)" />
                         </div>
-                        <input type="range" class="nw-range" id="nwAnnualSavingsRange" min="0" max="200000" step="1000" value="@Model.AnnualSavings.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                        <input type="range" class="nw-range" id="nwAnnualSavingsRange" min="0" max="@MoneyBounds.MaxInvariant(200000, inputCurrency)" step="@MoneyBounds.MaxInvariant(1000, inputCurrency)" data-max-usd="200000" data-step-usd="1000" value="@Model.AnnualSavings.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
@@ -203,9 +206,10 @@
                         <div class="nw-slider-field__display">
                             <span class="nw-slider-field__prefix" data-nw-currency-symbol>@inputSymbol</span>
                             <input asp-for="AnnualIncome" type="text" inputmode="numeric" required
-                                   class="form-control nw-slider-field__input" id="nwAnnualIncome" />
+                                   class="form-control nw-slider-field__input" id="nwAnnualIncome"
+                                   data-max-usd="@NetWorthLimits.AnnualIncomeMax" data-max="@MoneyBounds.MaxInvariant(NetWorthLimits.AnnualIncomeMax, inputCurrency)" />
                         </div>
-                        <input type="range" class="nw-range" id="nwAnnualIncomeRange" min="0" max="500000" step="1000" value="@Model.AnnualIncome.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                        <input type="range" class="nw-range" id="nwAnnualIncomeRange" min="0" max="@MoneyBounds.MaxInvariant(500000, inputCurrency)" step="@MoneyBounds.MaxInvariant(1000, inputCurrency)" data-max-usd="500000" data-step-usd="1000" value="@Model.AnnualIncome.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                     <div class="nw-slider-field">
                         <label class="nw-label">
@@ -215,9 +219,10 @@
                         <div class="nw-slider-field__display">
                             <span class="nw-slider-field__prefix" data-nw-currency-symbol>@inputSymbol</span>
                             <input asp-for="AnnualSpending" type="text" inputmode="numeric" required
-                                   class="form-control nw-slider-field__input" id="nwAnnualSpending" />
+                                   class="form-control nw-slider-field__input" id="nwAnnualSpending"
+                                   data-max-usd="@NetWorthLimits.AnnualSpendingMax" data-max="@MoneyBounds.MaxInvariant(NetWorthLimits.AnnualSpendingMax, inputCurrency)" />
                         </div>
-                        <input type="range" class="nw-range" id="nwAnnualSpendingRange" min="0" max="200000" step="1000" value="@Model.AnnualSpending.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                        <input type="range" class="nw-range" id="nwAnnualSpendingRange" min="0" max="@MoneyBounds.MaxInvariant(200000, inputCurrency)" step="@MoneyBounds.MaxInvariant(1000, inputCurrency)" data-max-usd="200000" data-step-usd="1000" value="@Model.AnnualSpending.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                 </div>
             </div>
@@ -311,9 +316,10 @@
                         <div class="nw-slider-field__display">
                             <span class="nw-slider-field__prefix" data-nw-currency-symbol>@inputSymbol</span>
                             <input asp-for="AggressiveSavings" type="text" inputmode="numeric" required
-                                   class="form-control nw-slider-field__input" id="nwAggressiveSavings" />
+                                   class="form-control nw-slider-field__input" id="nwAggressiveSavings"
+                                   data-max-usd="@NetWorthLimits.AggressiveSavingsMax" data-max="@MoneyBounds.MaxInvariant(NetWorthLimits.AggressiveSavingsMax, inputCurrency)" />
                         </div>
-                        <input type="range" class="nw-range" id="nwAggressiveSavingsRange" min="0" max="200000" step="1000" value="@Model.AggressiveSavings.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                        <input type="range" class="nw-range" id="nwAggressiveSavingsRange" min="0" max="@MoneyBounds.MaxInvariant(200000, inputCurrency)" step="@MoneyBounds.MaxInvariant(1000, inputCurrency)" data-max-usd="200000" data-step-usd="1000" value="@Model.AggressiveSavings.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                 </div>
             </div>

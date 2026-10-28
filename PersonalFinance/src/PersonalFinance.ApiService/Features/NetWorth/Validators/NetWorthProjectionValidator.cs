@@ -1,14 +1,16 @@
-using System.Diagnostics.CodeAnalysis;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.NetWorth;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Features.NetWorth.Validators;
 
 /// <summary>
 /// Validates net worth projection request parameters. A failure carries its <see cref="ApiErrorKeys.NetWorth"/> key
-/// (ADR 0017); the range keys are the Web form's own messages, so the bounds are written into the text.
+/// (ADR 0017). The amounts are checked against <see cref="NetWorthLimits"/> scaled to the request's currency
+/// (<see cref="MoneyBounds"/>, #444), and their failures carry the bounds as money arguments; the age and rate keys
+/// are the Web form's own messages, so those bounds are written into the text.
 /// </summary>
 public static class NetWorthProjectionValidator
 {
@@ -16,7 +18,6 @@ public static class NetWorthProjectionValidator
     /// Validates the net worth projection request parameters.
     /// Returns the first broken rule as an API error entry, or null if valid.
     /// </summary>
-    [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "Over the ADR 0007 complexity ceiling before it was set; follow-up: net worth projection rule table.")]
     public static ApiErrorEntryDto? Validate(NetWorthProjectionRequestDto request)
     {
         if (request.CurrencyCode is not null && !SupportedCurrencies.IsSupported(request.CurrencyCode))
@@ -25,36 +26,41 @@ public static class NetWorthProjectionValidator
                 CurrencyCodeRules.UnsupportedMessage);
         }
 
-        if (request.StartingBalance < 0 || request.StartingBalance > 1_000_000_000m)
+        string currency = SupportedCurrencies.CodeOrDefault(request.CurrencyCode);
+        return AmountFailure(request.StartingBalance, NetWorthLimits.StartingBalanceMax, currency,
+                   ApiErrorKeys.NetWorth.StartingBalanceRange, nameof(request.StartingBalance), "Starting balance")
+               ?? AmountFailure(request.AnnualSavings, NetWorthLimits.AnnualSavingsMax, currency,
+                   ApiErrorKeys.NetWorth.AnnualSavingsRange, nameof(request.AnnualSavings), "Annual savings")
+               ?? AmountFailure(request.AnnualIncome, NetWorthLimits.AnnualIncomeMax, currency,
+                   ApiErrorKeys.NetWorth.AnnualIncomeRange, nameof(request.AnnualIncome), "Annual income")
+               ?? AmountFailure(request.AnnualSpending, NetWorthLimits.AnnualSpendingMax, currency,
+                   ApiErrorKeys.NetWorth.AnnualSpendingRange, nameof(request.AnnualSpending), "Annual spending")
+               ?? AmountFailure(request.AggressiveSavings, NetWorthLimits.AggressiveSavingsMax, currency,
+                   ApiErrorKeys.NetWorth.AggressiveSavingsRange, nameof(request.AggressiveSavings), "Aggressive savings")
+               ?? AgeOrRateFailure(request);
+    }
+
+    /// <summary>
+    /// Null when <paramref name="amount"/> is from 0 to <paramref name="dollarMax"/> in <paramref name="currency"/>;
+    /// otherwise the failure, with <c>{min}</c> and <c>{max}</c> as money arguments in that currency.
+    /// </summary>
+    private static ApiErrorEntryDto? AmountFailure(decimal amount, long dollarMax, string currency, string key,
+        string field, string label)
+    {
+        decimal max = MoneyBounds.Max(dollarMax, currency);
+        if (amount >= 0 && amount <= max)
         {
-            return Failure(ApiErrorKeys.NetWorth.StartingBalanceRange, nameof(request.StartingBalance),
-                "Starting balance must be between 0 and 1 billion.");
+            return null;
         }
 
-        if (request.AnnualSavings < 0 || request.AnnualSavings > 10_000_000m)
-        {
-            return Failure(ApiErrorKeys.NetWorth.AnnualSavingsRange, nameof(request.AnnualSavings),
-                "Annual savings must be between 0 and 10 million.");
-        }
+        ApiErrorEntryDto failure = Failure(key, field,
+            MoneyBounds.Describe(label + " must be between {min} and {max}.", dollarMax, currency));
+        failure.Args = new Dictionary<string, ApiErrorArgDto>(ErrorArgs.MoneyRange(0m, max, currency));
+        return failure;
+    }
 
-        if (request.AnnualIncome < 0 || request.AnnualIncome > 100_000_000m)
-        {
-            return Failure(ApiErrorKeys.NetWorth.AnnualIncomeRange, nameof(request.AnnualIncome),
-                "Annual income must be between 0 and 100 million.");
-        }
-
-        if (request.AnnualSpending < 0 || request.AnnualSpending > 10_000_000m)
-        {
-            return Failure(ApiErrorKeys.NetWorth.AnnualSpendingRange, nameof(request.AnnualSpending),
-                "Annual spending must be between 0 and 10 million.");
-        }
-
-        if (request.AggressiveSavings < 0 || request.AggressiveSavings > 10_000_000m)
-        {
-            return Failure(ApiErrorKeys.NetWorth.AggressiveSavingsRange, nameof(request.AggressiveSavings),
-                "Aggressive savings must be between 0 and 10 million.");
-        }
-
+    private static ApiErrorEntryDto? AgeOrRateFailure(NetWorthProjectionRequestDto request)
+    {
         if (request.CurrentAge < 18 || request.CurrentAge > 100)
         {
             return Failure(ApiErrorKeys.NetWorth.CurrentAgeRange, nameof(request.CurrentAge),

@@ -4,7 +4,10 @@
  * inputs it governs in data-currency-targets (a CSS selector) and the symbol spans beside them in
  * data-currency-symbols. Choosing a currency re-formats each input's amount in that currency's minor units and swaps
  * the symbols; the input's data-currency then tells PFI18n's as-you-type formatting which currency the amount is in,
- * and the select's own value travels with the form post. Nothing here converts: conversion is the server's job.
+ * and the select's own value travels with the form post. The elements in data-currency-bounds carry their range in US
+ * dollars (data-max-usd, data-step-usd); choosing a currency multiplies it by the option's data-bound-scale (#444), so a
+ * money input's data-max, a number input's max and a slider's max and step follow the currency. Nothing here converts:
+ * conversion is the server's job.
  */
 (function () {
     'use strict';
@@ -32,6 +35,32 @@
             document.querySelectorAll(select.dataset.currencySymbols).forEach((element) => {
                 element.textContent = PFI18n.currencySymbol(code);
             });
+        }
+        const option = select.options[select.selectedIndex];
+        const scale = option ? Number(option.dataset.boundScale) : NaN;
+        if (select.dataset.currencyBounds && Number.isFinite(scale) && scale > 0) {
+            document.querySelectorAll(select.dataset.currencyBounds).forEach((element) => applyBounds(element, scale));
+        }
+    }
+
+    /**
+     * Scale an element's dollar range to the chosen currency: data-max from data-max-usd (also the max of a number or
+     * range input), and the step of a range input from data-step-usd.
+     * @param {HTMLElement} element - An input carrying data-max-usd and, for a slider, data-step-usd.
+     * @param {number} scale - The currency's bound scale (1 for USD, 25,000 for VND).
+     * @returns {void}
+     */
+    function applyBounds (element, scale) {
+        const max = Number(element.dataset.maxUsd) * scale;
+        if (Number.isFinite(max) && max > 0) {
+            element.dataset.max = String(max);
+            if (element.type === 'number' || element.type === 'range') {
+                element.max = String(max);
+            }
+        }
+        const step = Number(element.dataset.stepUsd) * scale;
+        if (Number.isFinite(step) && step > 0) {
+            element.step = String(step);
         }
     }
 

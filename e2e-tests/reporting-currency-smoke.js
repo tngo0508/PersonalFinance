@@ -176,4 +176,4 @@ async function runReportingCurrencySmoke({browser, base, pass, fail}) {
     }
 }
 
-module.exports = {runReportingCurrencySmoke};
+module.exports = {runReportingCurrencySmoke, registerFreshAccount};

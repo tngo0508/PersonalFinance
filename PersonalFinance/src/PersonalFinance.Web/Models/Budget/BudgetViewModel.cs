@@ -1,11 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Web.Models.Budget;
 
 /// <summary>
 /// View model for the Budget Planner page.
-/// Represents monthly income and amount allocations across 10 spending categories, all in one currency.
+/// Represents monthly income and amount allocations across 10 spending categories, all in one currency. Each amount is
+/// checked against <see cref="BudgetPlannerLimits.MaxAmount"/> scaled to that currency (#444).
 /// </summary>
 public class BudgetViewModel
 {
@@ -20,77 +22,77 @@ public class BudgetViewModel
     /// Total monthly income before allocations.
     /// </summary>
     [Display(Name = "BudgetPlanner.Field.MonthlyIncome")]
-    [Range(0, 10_000_000, ErrorMessage = "BudgetPlanner.Validation.IncomeRange")]
+    [MoneyRange(BudgetPlannerLimits.MaxAmount, ErrorMessage = "BudgetPlanner.Validation.IncomeRange")]
     public decimal MonthlyIncome { get; set; }
 
     /// <summary>
     /// Dollar amount allocated to Housing (rent, mortgage, property tax).
     /// </summary>
     [Display(Name = "BudgetPlanner.Category.Housing")]
-    [Range(0, 10_000_000, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
+    [MoneyRange(BudgetPlannerLimits.MaxAmount, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
     public decimal Housing { get; set; }
 
     /// <summary>
     /// Dollar amount allocated to Food (groceries and dining).
     /// </summary>
     [Display(Name = "BudgetPlanner.Category.Food")]
-    [Range(0, 10_000_000, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
+    [MoneyRange(BudgetPlannerLimits.MaxAmount, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
     public decimal Food { get; set; }
 
     /// <summary>
     /// Dollar amount allocated to Transportation (fuel, transit, vehicle costs).
     /// </summary>
     [Display(Name = "BudgetPlanner.Category.Transportation")]
-    [Range(0, 10_000_000, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
+    [MoneyRange(BudgetPlannerLimits.MaxAmount, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
     public decimal Transportation { get; set; }
 
     /// <summary>
     /// Dollar amount allocated to Utilities (electricity, water, internet, phone).
     /// </summary>
     [Display(Name = "BudgetPlanner.Category.Utilities")]
-    [Range(0, 10_000_000, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
+    [MoneyRange(BudgetPlannerLimits.MaxAmount, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
     public decimal Utilities { get; set; }
 
     /// <summary>
     /// Dollar amount allocated to Insurance (health, life, property, auto).
     /// </summary>
     [Display(Name = "BudgetPlanner.Category.Insurance")]
-    [Range(0, 10_000_000, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
+    [MoneyRange(BudgetPlannerLimits.MaxAmount, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
     public decimal Insurance { get; set; }
 
     /// <summary>
     /// Dollar amount allocated to Healthcare (medical expenses, prescriptions).
     /// </summary>
     [Display(Name = "BudgetPlanner.Category.Healthcare")]
-    [Range(0, 10_000_000, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
+    [MoneyRange(BudgetPlannerLimits.MaxAmount, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
     public decimal Healthcare { get; set; }
 
     /// <summary>
     /// Dollar amount allocated to Savings (emergency fund, investments).
     /// </summary>
     [Display(Name = "BudgetPlanner.Category.Savings")]
-    [Range(0, 10_000_000, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
+    [MoneyRange(BudgetPlannerLimits.MaxAmount, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
     public decimal Savings { get; set; }
 
     /// <summary>
     /// Dollar amount allocated to Debt Repayment (loans, credit cards).
     /// </summary>
     [Display(Name = "BudgetPlanner.Category.DebtRepayment")]
-    [Range(0, 10_000_000, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
+    [MoneyRange(BudgetPlannerLimits.MaxAmount, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
     public decimal DebtRepayment { get; set; }
 
     /// <summary>
     /// Dollar amount allocated to Entertainment (hobbies, subscriptions, leisure).
     /// </summary>
     [Display(Name = "BudgetPlanner.Category.Entertainment")]
-    [Range(0, 10_000_000, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
+    [MoneyRange(BudgetPlannerLimits.MaxAmount, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
     public decimal Entertainment { get; set; }
 
     /// <summary>
     /// Dollar amount allocated to Miscellaneous (other expenses).
     /// </summary>
     [Display(Name = "BudgetPlanner.Category.Miscellaneous")]
-    [Range(0, 10_000_000, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
+    [MoneyRange(BudgetPlannerLimits.MaxAmount, ErrorMessage = "BudgetPlanner.Validation.AmountRange")]
     public decimal Miscellaneous { get; set; }
 
     /// <summary>

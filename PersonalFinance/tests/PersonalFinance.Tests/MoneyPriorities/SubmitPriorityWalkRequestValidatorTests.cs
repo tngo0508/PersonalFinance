@@ -7,6 +7,7 @@ using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
 using PersonalFinance.Shared.Enums;
+using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Infrastructure;
 
@@ -39,6 +40,9 @@ public class SubmitPriorityWalkRequestValidatorTests
         AgeBand = RetirementAgeBand.Under50,
         AtContributionLimit = false
     };
+
+    /// <summary>A range message as the validator writes it for a Walk in US dollars (no currency given).</summary>
+    private static string InDollars(string template, long dollarMax) => MoneyBounds.Describe(template, dollarMax, null);
 
     private void AssertValid(SubmitPriorityWalkRequest request)
     {
@@ -81,7 +85,8 @@ public class SubmitPriorityWalkRequestValidatorTests
         SubmitPriorityWalkRequest request = DebtPath();
         request.MonthlyAmount = decimal.Parse(amount, System.Globalization.CultureInfo.InvariantCulture);
 
-        AssertInvalid(request, nameof(SubmitPriorityWalkRequest.MonthlyAmount), MoneyPrioritiesMessages.MonthlyAmountRange);
+        AssertInvalid(request, nameof(SubmitPriorityWalkRequest.MonthlyAmount),
+            InDollars(MoneyPrioritiesMessages.MonthlyAmountRange, MoneyPrioritiesLimits.MonthlyAmountMax));
     }
 
     [Theory]
@@ -172,7 +177,8 @@ public class SubmitPriorityWalkRequestValidatorTests
         SubmitPriorityWalkRequest request = DebtPath();
         request.DebtBalance = decimal.Parse(balance, System.Globalization.CultureInfo.InvariantCulture);
 
-        AssertInvalid(request, nameof(SubmitPriorityWalkRequest.DebtBalance), MoneyPrioritiesMessages.DebtBalanceRange);
+        AssertInvalid(request, nameof(SubmitPriorityWalkRequest.DebtBalance),
+            InDollars(MoneyPrioritiesMessages.DebtBalanceRange, MoneyPrioritiesLimits.DebtBalanceMax));
     }
 
     [Fact]
@@ -423,6 +429,52 @@ public class SubmitPriorityWalkRequestValidatorTests
 
         Assert.NotEmpty(failures);
         Assert.All(failures, failure => Assert.Contains(failure.ErrorCode, keys));
+    }
+
+    [Fact]
+    public void DongAmountsOverTheDollarBounds_Pass_OnEveryMoneyField()
+    {
+        SubmitPriorityWalkRequest debt = DebtPath();
+        debt.CurrencyCode = "VND";
+        debt.MonthlyAmount = 30_000_000m;
+        debt.DebtBalance = 2_000_000_000m;
+        AssertValid(debt);
+
+        AssertValid(new SubmitPriorityWalkRequest
+        {
+            CurrencyCode = "VND", MonthlyAmount = 30_000_000m, DebtApr = 0m, EmergencyFundMonths = 1m,
+            MonthlyExpenses = 30_000_000m
+        });
+    }
+
+    [Fact]
+    public void TheSameFigureInDollars_IsStillRejected()
+    {
+        SubmitPriorityWalkRequest request = DebtPath();
+        request.CurrencyCode = "USD";
+        request.MonthlyAmount = 30_000_000m;
+
+        AssertInvalid(request, nameof(SubmitPriorityWalkRequest.MonthlyAmount),
+            InDollars(MoneyPrioritiesMessages.MonthlyAmountRange, MoneyPrioritiesLimits.MonthlyAmountMax));
+    }
+
+    [Fact]
+    public void ADongAmountOverTheDongBound_IsRejected_WithTheDongBoundAsArgument()
+    {
+        SubmitPriorityWalkRequest request = DebtPath();
+        request.CurrencyCode = "VND";
+        request.MonthlyAmount = 25_000_000_000.01m;
+
+        ValidationFailure failure = Assert.Single(_validator.Validate(request).Errors);
+
+        Assert.Equal(ApiErrorKeys.MoneyPriorities.MonthlyAmountRange, failure.ErrorCode);
+        Assert.Equal("Enter a monthly amount over ₫0 and at most ₫25,000,000,000.", failure.ErrorMessage);
+        IReadOnlyDictionary<string, ApiErrorArgDto> args =
+            Assert.IsAssignableFrom<IReadOnlyDictionary<string, ApiErrorArgDto>>(failure.CustomState);
+        Assert.Equal("25000000000", args["max"].Value);
+        Assert.Equal(ApiErrorArgKind.Money, args["max"].Kind);
+        Assert.Equal("VND", args["max"].Currency);
+        Assert.Equal("VND", args["min"].Currency);
     }
 
     [Fact]

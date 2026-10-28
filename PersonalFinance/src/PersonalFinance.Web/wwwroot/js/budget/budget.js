@@ -121,6 +121,7 @@
         if (incomeInput) {
             incomeInput.addEventListener('input', function () {
                 incomeCents = Math.round(PFI18n.parseNumber(this.value) * 100) || 0;
+                markOverBound(this, incomeCents / 100);
                 updateAll();
             });
         }
@@ -164,6 +165,7 @@
             amountInput.addEventListener('input', function () {
                 const cat = this.getAttribute('data-category');
                 const cents = Math.round(PFI18n.parseNumber(this.value) * 100) || 0;
+                markOverBound(this, cents / 100);
                 const normalizedCat = normalizeCategory(cat);
                 setCategoryFromCents(normalizedCat, cents);
                 updateAll();
@@ -177,6 +179,17 @@
                 syncFormInputsFromData();
             });
         }
+    }
+
+    /**
+     * Mark a money input that is over the bound of the budget's currency: the data-max the view writes and the currency
+     * selector rescales (#444). The server rejects the same amount, so this only warns early.
+     * @param {HTMLInputElement} input - The income or a category amount input.
+     * @param {number} amount - What it holds, in whole units.
+     */
+    function markOverBound (input, amount) {
+        const max = Number(input.dataset.max);
+        input.classList.toggle('is-invalid', Number.isFinite(max) && max > 0 && amount > max);
     }
 
     /**

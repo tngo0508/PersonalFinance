@@ -20,7 +20,7 @@ const SOURCES = ['core/i18n.js', 'core/utils.js', 'networth/networth-utils.js']
 /**
  * Load the Net Worth utilities into a page in the given culture whose fields hold the given text.
  * @param {string} culture - The <html data-culture> value.
- * @param {Object<string, string>} fields - Field id → the text it shows.
+ * @param {Object<string, string|object>} fields - Field id → the text it shows, or a whole stub element.
  * @returns {object} The page's NW namespace.
  */
 function load (culture, fields) {
@@ -29,7 +29,10 @@ function load (culture, fields) {
     window.document = {
         readyState: 'complete',
         documentElement: { lang: culture.slice(0, 2), getAttribute: (name) => (name === 'data-culture' ? culture : null) },
-        getElementById: (id) => (id in fields ? { value: fields[id] } : null),
+        getElementById: (id) => {
+            if (!(id in fields)) { return null; }
+            return typeof fields[id] === 'object' ? fields[id] : { value: fields[id] };
+        },
         querySelectorAll: () => [],
         addEventListener: () => {}
     };
@@ -50,6 +53,17 @@ test('reads grouped amounts and decimal points in en-US', () => {
 
     assert.strictEqual(NW.getSliderValue('nwStartingBalance'), 180000);
     assert.strictEqual(NW.getSliderValue('nwBaseRoi'), 7.5);
+});
+
+test('a money field reads its bound from data-max; without one it is unbounded', () => {
+    const NW = load('vi-VN', {
+        nwStartingBalance: { value: '1', dataset: { max: '25000000000000' } },
+        nwAnnualIncome: { value: '1' }
+    });
+
+    assert.strictEqual(NW.boundOf('nwStartingBalance'), 25000000000000);
+    assert.strictEqual(NW.boundOf('nwAnnualIncome'), Infinity);
+    assert.strictEqual(NW.boundOf('nwNope'), Infinity);
 });
 
 test('a missing field or unreadable text reads as 0', () => {

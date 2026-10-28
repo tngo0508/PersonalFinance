@@ -1291,7 +1291,8 @@ Money, numbers and typed amounts, on the server and in the browser:
 
 ```mermaid
 flowchart LR
-    cur["SupportedCurrencies<br/>(Shared/Constants)<br/>code, minor units, symbol"] --> mf["MoneyFormatter<br/>(Shared/Helpers)<br/>Format, FormatWhole, FormatAmount"]
+    cur["SupportedCurrencies<br/>(Shared/Constants)<br/>code, minor units, symbol, bound scale"] --> mf["MoneyFormatter<br/>(Shared/Helpers)<br/>Format, FormatWhole, FormatAmount"]
+    cur --> mb["MoneyBounds<br/>(Shared/Helpers)<br/>dollar bound x bound scale:<br/>MoneyRange attributes, validators, data-max"]
     cul["CurrentCulture<br/>separators, symbol position"] --> mf
     mf --> views["Razor views, Web services,<br/>ApiService text"]
     ban["CurrencyFormatBanTests<br/>no 'C' format elsewhere"] -.-> views

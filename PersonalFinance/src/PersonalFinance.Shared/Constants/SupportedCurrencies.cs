@@ -1,9 +1,9 @@
 namespace PersonalFinance.Shared.Constants;
 
 /// <summary>
-/// The currencies an amount may be in (ADR 0016, localization spec §2.5). Adding one is an entry here plus, when it is
-/// not one already, an entry in <see cref="ConvertibleCurrencies"/>, whose currencies the rate refresher quotes; the
-/// schema does not change. No enum and no lookup table. Every money-bearing row stores one of
+/// The currencies an amount may be in (ADR 0016, localization spec §2.5). Adding one is an entry here (with its
+/// <see cref="SupportedCurrency.BoundScale"/> for the money range bounds) plus, when it is not one already, an entry in
+/// <see cref="ConvertibleCurrencies"/>, whose currencies the rate refresher quotes; the schema does not change. No enum and no lookup table. Every money-bearing row stores one of
 /// these codes in its <c>CurrencyCode</c> column (slice C1).
 /// </summary>
 public static class SupportedCurrencies
@@ -18,10 +18,12 @@ public static class SupportedCurrencies
     public const string DefaultCode = "USD";
 
     /// <summary>US dollar: two minor-unit decimals.</summary>
-    public static readonly SupportedCurrency Usd = new() { Code = "USD", DisplayName = "US dollar", MinorUnits = 2, Symbol = "$" };
+    public static readonly SupportedCurrency Usd = new()
+        { Code = "USD", DisplayName = "US dollar", MinorUnits = 2, Symbol = "$", BoundScale = 1 };
 
     /// <summary>Vietnamese đồng: no minor units in use.</summary>
-    public static readonly SupportedCurrency Vnd = new() { Code = "VND", DisplayName = "Vietnamese đồng", MinorUnits = 0, Symbol = "₫" };
+    public static readonly SupportedCurrency Vnd = new()
+        { Code = "VND", DisplayName = "Vietnamese đồng", MinorUnits = 0, Symbol = "₫", BoundScale = 25_000 };
 
     /// <summary>
     /// The currency of a new amount whose request names none, and of every row saved before amounts carried their own.

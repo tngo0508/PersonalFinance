@@ -3,6 +3,8 @@
 @{
     ViewData["Title"] = L["BudgetPlanner.Title"].Value;
     // The budget is one document in one currency (ADR 0016): the selector beside the income sets it for every amount.
+    // Each amount input carries its bound in that currency (data-max) and in dollars (data-max-usd), which the
+    // selector rescales from the option's data-bound-scale (#444).
     string budgetCurrency = SupportedCurrencies.CodeOrDefault(Model.CurrencyCode);
     string symbol = SupportedCurrencies.Find(budgetCurrency)!.Symbol;
 }
@@ -78,7 +80,7 @@
                         <label asp-for="MonthlyIncome" class="budget-income-hero__label"></label>
                         <div class="budget-income-hero__input-wrapper">
                             <span class="budget-income-hero__prefix" data-budget-currency-symbol>@symbol</span>
-                            <input asp-for="MonthlyIncome" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency"
+                            <input asp-for="MonthlyIncome" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)"
                                    class="form-control budget-income-input" aria-describedby="incomeHelp"/>
                             <span class="budget-income-hero__suffix" id="incomeHelp">@L["BudgetPlanner.Income.PerMonth"]</span>
                         </div>
@@ -87,10 +89,11 @@
                             <label asp-for="CurrencyCode" class="form-label small mb-1"></label>
                             <select asp-for="CurrencyCode" class="form-select form-select-sm" data-currency-selector
                                     data-currency-targets=".budget-income-input, .budget-amount-input"
-                                    data-currency-symbols="[data-budget-currency-symbol]">
+                                    data-currency-symbols="[data-budget-currency-symbol]"
+                                    data-currency-bounds=".budget-income-input, .budget-amount-input">
                                 @foreach (var currency in SupportedCurrencies.All)
                                 {
-                                    <option value="@currency.Code" selected="@(currency.Code == budgetCurrency)">@currency.Code · @currency.DisplayName</option>
+                                    <option value="@currency.Code" data-bound-scale="@currency.BoundScale" selected="@(currency.Code == budgetCurrency)">@currency.Code · @currency.DisplayName</option>
                                 }
                             </select>
                         </div>
@@ -152,7 +155,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Housing" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
+                                        <input asp-for="Housing" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
                                                data-category="Housing"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Housing"].Value))"/>
                                     </div>
@@ -187,7 +190,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Food" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
+                                        <input asp-for="Food" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
                                                data-category="Food"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Food"].Value))"/>
                                     </div>
@@ -223,7 +226,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Transportation" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
+                                        <input asp-for="Transportation" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
                                                data-category="Transportation"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Transportation"].Value))"/>
                                     </div>
@@ -259,7 +262,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Utilities" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
+                                        <input asp-for="Utilities" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
                                                data-category="Utilities"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Utilities"].Value))"/>
                                     </div>
@@ -295,7 +298,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Insurance" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
+                                        <input asp-for="Insurance" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
                                                data-category="Insurance"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Insurance"].Value))"/>
                                     </div>
@@ -331,7 +334,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Healthcare" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
+                                        <input asp-for="Healthcare" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
                                                data-category="Healthcare"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Healthcare"].Value))"/>
                                     </div>
@@ -366,7 +369,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Savings" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
+                                        <input asp-for="Savings" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
                                                data-category="Savings"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Savings"].Value))"/>
                                     </div>
@@ -402,7 +405,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="DebtRepayment" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
+                                        <input asp-for="DebtRepayment" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
                                                data-category="DebtRepayment"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.DebtRepayment"].Value))"/>
                                     </div>
@@ -438,7 +441,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Entertainment" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
+                                        <input asp-for="Entertainment" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
                                                data-category="Entertainment"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Entertainment"].Value))"/>
                                     </div>
@@ -474,7 +477,7 @@
                                     </div>
                                     <div class="budget-category__input-group budget-amount-input-group">
                                         <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Miscellaneous" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" class="form-control budget-amount-input"
+                                        <input asp-for="Miscellaneous" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
                                                data-category="Miscellaneous"
                                                aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Miscellaneous"].Value))"/>
                                     </div>
