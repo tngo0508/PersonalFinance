@@ -32,8 +32,7 @@
     var googleSheetsLink = Link("https://docs.google.com/spreadsheets/", "Google Sheets");
     var shareLabel = Strong(L["GoogleDrive.Ui.Share"]);
     var anyoneLabel = Strong(L["GoogleDrive.Ui.AnyoneWithLink"]);
-    var syncLabel = Strong(L["GoogleDrive.Drive.Sync"]);
-    var connectedFolderName = currentConn?.Name ?? L["GoogleDrive.NewSheet.YourFolder"].Value;
+    var refreshLabel = Strong(L["GoogleDrive.Drive.Refresh"]);
 }
 
 @functions {
@@ -42,12 +41,8 @@
 
     private static IHtmlContent Em(string text) => new HtmlString($"<em>{HtmlEncoder.Default.Encode(text)}</em>");
 
-    private static IHtmlContent Link(string href, string text, bool strong = false)
-    {
-        string inner = strong ? $"<strong>{HtmlEncoder.Default.Encode(text)}</strong>" : HtmlEncoder.Default.Encode(text);
-        return new HtmlString(
-            $"<a href=\"{HtmlEncoder.Default.Encode(href)}\" target=\"_blank\" rel=\"noopener noreferrer\">{inner}</a>");
-    }
+    private static IHtmlContent Link(string href, string text) => new HtmlString(
+        $"<a href=\"{HtmlEncoder.Default.Encode(href)}\" target=\"_blank\" rel=\"noopener noreferrer\">{HtmlEncoder.Default.Encode(text)}</a>");
 
     private static bool IsMonthlyBudget(GoogleDriveFileDto file) => file.IsMonthlyBudgetSpreadsheet;
 
@@ -92,10 +87,13 @@
         }
     }
 
-    // Visible buttons for a spreadsheet's finance views (used by the featured cards and grid cards)
-    private async Task RenderSheetButtons(GoogleDriveFileDto file, int? connectionId = null)
+    // A Spreadsheets card's actions: one primary action (Budget report for a Monthly budget sheet, Transactions for any
+    // other) and a ⋯ menu with the rest. These cards are the page's one home for spreadsheet actions.
+    private async Task RenderSheetCardActions(GoogleDriveFileDto file, int? connectionId)
     {
-        if (IsMonthlyBudget(file))
+        var isBudget = IsMonthlyBudget(file);
+        var menuId = $"gdSheetMore_{file.Id}";
+        if (isBudget)
         {
             <button type="button" class="btn btn-sm btn-success btn-budget-report"
                     data-file-id="@file.Id" data-file-name="@file.Name"
@@ -106,31 +104,51 @@
                 @L["GoogleDrive.Sheet.BudgetReport"]
             </button>
         }
-        <button type="button" class="btn btn-sm btn-outline-secondary btn-sheet-transactions"
-                data-file-id="@file.Id" data-file-name="@file.Name" data-is-budget="@(IsMonthlyBudget(file) ? "true" : "false")"
-                data-bs-toggle="modal" data-bs-target="#transactionsModal">
-            <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zm-5 3v-3H6v3h4zm-5 0v-3H1v2a1 1 0 0 0 1 1h3zm-4-4h4V8H1v3zm0-4h4V4H1v3zm5-3v3h4V4H6zm4 4H6v3h4V8z"/>
-            </svg>
-            @L["GoogleDrive.Sheet.Transactions"]
-        </button>
-        @if (connectionId.HasValue)
+        else
         {
-            <form asp-controller="Analysis" asp-action="Sync" method="post" class="d-inline"
-                  id="syncAnalysisForm_@file.Id">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="connectionId" value="@connectionId.Value"/>
-                <input type="hidden" name="fileId" value="@file.Id"/>
-                <input type="hidden" name="fileName" value="@file.Name"/>
-                <button type="submit" class="btn btn-sm btn-outline-primary" title="@L["GoogleDrive.Sheet.SyncForAnalysisTitle"]">
-                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
-                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
-                    </svg>
-                    @L["GoogleDrive.Sheet.SyncForAnalysis"]
-                </button>
-            </form>
+            <button type="button" class="btn btn-sm btn-outline-secondary btn-sheet-transactions"
+                    data-file-id="@file.Id" data-file-name="@file.Name" data-is-budget="false"
+                    data-bs-toggle="modal" data-bs-target="#transactionsModal">
+                <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zm-5 3v-3H6v3h4zm-5 0v-3H1v2a1 1 0 0 0 1 1h3zm-4-4h4V8H1v3zm0-4h4V4H1v3zm5-3v3h4V4H6zm4 4H6v3h4V8z"/>
+                </svg>
+                @L["GoogleDrive.Sheet.Transactions"]
+            </button>
         }
+        <div class="dropdown ms-auto">
+            <button type="button" class="btn btn-sm btn-light border gd-icon-btn" id="@menuId" data-bs-toggle="dropdown" aria-expanded="false"
+                    aria-label="@L.Named("GoogleDrive.Sheet.MoreActions", ("name", file.Name))">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+                </svg>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="@menuId">
+                @if (isBudget)
+                {
+                    <li>
+                        <button type="button" class="dropdown-item btn-sheet-transactions" data-file-id="@file.Id" data-file-name="@file.Name" data-is-budget="true"
+                                data-bs-toggle="modal" data-bs-target="#transactionsModal">@L["GoogleDrive.Sheet.Transactions"]</button>
+                    </li>
+                }
+                @if (connectionId.HasValue)
+                {
+                    <li>
+                        <form asp-controller="Analysis" asp-action="Sync" method="post" id="syncAnalysisForm_@file.Id">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="connectionId" value="@connectionId.Value"/>
+                            <input type="hidden" name="fileId" value="@file.Id"/>
+                            <input type="hidden" name="fileName" value="@file.Name"/>
+                            <button type="submit" class="dropdown-item">@L["GoogleDrive.Sheet.AddToAnalysis"]</button>
+                        </form>
+                    </li>
+                }
+                @if (!string.IsNullOrEmpty(file.WebViewLink))
+                {
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="@file.WebViewLink" target="_blank" rel="noopener noreferrer">@L["GoogleDrive.File.OpenInDrive"]</a></li>
+                }
+            </ul>
+        </div>
     }
 
     private void RenderOpenLink(GoogleDriveFileDto file)
@@ -417,16 +435,6 @@
                         @if (currentConn != null)
                         {
                             <div class="gd-drive-header__actions">
-                                <button type="button"
-                                        class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 text-nowrap"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#newBudgetSheetModal"
-                                        title="@L["GoogleDrive.Drive.NewBudgetTitle"]">
-                                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-                                        <path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z"/>
-                                    </svg>
-                                    <span>@L["GoogleDrive.Drive.NewBudget"]</span>
-                                </button>
                                 <form asp-action="Sync" method="post" id="syncForm">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@currentConn.Id" />
@@ -436,34 +444,32 @@
                                             <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
                                             <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
                                         </svg>
-                                        <span>@L["GoogleDrive.Drive.Sync"]</span>
+                                        <span>@L["GoogleDrive.Drive.Refresh"]</span>
                                     </button>
                                 </form>
-                                @if (!string.IsNullOrEmpty(response.FolderId))
-                                {
-                                    <a href="https://drive.google.com/drive/folders/@response.FolderId" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-light border text-nowrap">
-                                        @L["GoogleDrive.Drive.OpenInDrive"]
-                                        <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-                                            <path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/>
-                                            <path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/>
-                                        </svg>
-                                    </a>
-                                }
                                 <div class="dropdown">
-                                    <button type="button" class="btn btn-sm btn-light border gd-icon-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="@L["GoogleDrive.Drive.MoreOptions"]">
+                                    <button type="button" class="btn btn-sm btn-light border gd-icon-btn" id="gdDriveMoreBtn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="@L["GoogleDrive.Drive.MoreOptions"]">
                                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                             <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
                                         </svg>
                                     </button>
-                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="gdDriveMoreBtn">
+                                        @if (!string.IsNullOrEmpty(response.FolderId))
+                                        {
+                                            <li>
+                                                <a class="dropdown-item" href="https://drive.google.com/drive/folders/@response.FolderId" target="_blank" rel="noopener noreferrer">@L["GoogleDrive.Drive.OpenInDrive"]</a>
+                                            </li>
+                                        }
                                         <li>
                                             <button type="button" class="dropdown-item btn-copy-id" data-id="@response.FolderId">@L["GoogleDrive.Drive.CopyFolderId"]</button>
                                         </li>
-                                        <li>
-                                            <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#reauthModal">
-                                                @(currentConn.HasApiKey ? L["GoogleDrive.ApiKey.Change"] : L["GoogleDrive.ApiKey.Add"])
-                                            </button>
-                                        </li>
+                                        @* Without a key the sample-data notice's Add API key is the one entry point. *@
+                                        @if (currentConn.HasApiKey)
+                                        {
+                                            <li>
+                                                <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#reauthModal">@L["GoogleDrive.ApiKey.Change"]</button>
+                                            </li>
+                                        }
                                         <li><hr class="dropdown-divider"></li>
                                         <li>
                                             <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteDriveModal">@L["GoogleDrive.Drive.RemoveMenu"]</button>
@@ -512,11 +518,12 @@
                             </div>
                             <span class="gd-section-header__subtitle">@L["GoogleDrive.Sheets.Subtitle"]</span>
                         </div>
-                        <div class="row g-3">
-                            @foreach (var sheet in spreadsheets.Take(featuredSheetLimit))
+                        @* Every spreadsheet gets a card; past the first six they wait behind Show all. *@
+                        <div class="row g-3" id="sheetCards">
+                            @foreach (var (sheet, index) in spreadsheets.Select((s, i) => (s, i)))
                             {
-                                <div class="col-sm-6 col-xl-4">
-                                    <div class="gd-sheet-card h-100">
+                                <div class="@(index < featuredSheetLimit ? "col-sm-6 col-xl-4" : "col-sm-6 col-xl-4 gd-sheet-extra d-none")">
+                                    <article class="gd-sheet-card h-100" data-sheet-card="@sheet.Id">
                                         <div class="gd-sheet-card__header">
                                             @{ RenderFileIcon(sheet, 22); }
                                             <div class="gd-min-w-0">
@@ -536,16 +543,15 @@
                                             </div>
                                         </div>
                                         <div class="gd-sheet-card__actions">
-                                            @{ await RenderSheetButtons(sheet, currentConn?.Id); }
-                                            <span class="ms-auto">@{ RenderOpenLink(sheet); }</span>
+                                            @{ await RenderSheetCardActions(sheet, currentConn?.Id); }
                                         </div>
-                                    </div>
+                                    </article>
                                 </div>
                             }
                         </div>
                         @if (spreadsheets.Count > featuredSheetLimit)
                         {
-                            <button type="button" class="gd-show-all-btn mt-2 js-show-filter" data-filter="Spreadsheet">
+                            <button type="button" class="gd-show-all-btn mt-2 js-show-all-sheets" aria-expanded="false" aria-controls="sheetCards">
                                 @L.Named("GoogleDrive.Sheets.ShowAll", ("count", spreadsheets.Count))
                                 <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                     <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
@@ -679,7 +685,6 @@
                             <tbody>
                                 @foreach (var file in files)
                                 {
-                                    var isSheet = IsSpreadsheet(file);
                                     <tr>
                                         <td data-order="@(file.IsFolder ? "0" : "1")@file.Name">
                                             <div class="d-flex align-items-center gap-2">
@@ -699,37 +704,7 @@
                                             @(file.IsFolder || !file.Size.HasValue ? "—" : file.SizeFormatted)
                                         </td>
                                         <td class="text-end text-nowrap">
-                                            @if (isSheet)
-                                            {
-                                                <div class="dropdown d-inline-block">
-                                                    <button type="button" class="btn btn-sm btn-light border dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"
-                                                            data-bs-popper-config='{"strategy":"fixed"}'>
-                                                        @L["GoogleDrive.Files.View"]
-                                                    </button>
-                                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                                        @if (IsMonthlyBudget(file))
-                                                        {
-                                                            <li>
-                                                                <button type="button" class="dropdown-item btn-budget-report" data-file-id="@file.Id" data-file-name="@file.Name"
-                                                                        data-bs-toggle="modal" data-bs-target="#monthlyBudgetModal">@L["GoogleDrive.Sheet.BudgetReport"]</button>
-                                                            </li>
-                                                        }
-                                                        <li>
-                                                            <button type="button" class="dropdown-item btn-sheet-transactions" data-file-id="@file.Id" data-file-name="@file.Name" data-is-budget="@(IsMonthlyBudget(file) ? "true" : "false")"
-                                                                    data-bs-toggle="modal" data-bs-target="#transactionsModal">@L["GoogleDrive.Sheet.Transactions"]</button>
-                                                        </li>
-                                                        @if (!string.IsNullOrEmpty(file.WebViewLink))
-                                                        {
-                                                            <li><hr class="dropdown-divider"></li>
-                                                            <li><a class="dropdown-item" href="@file.WebViewLink" target="_blank" rel="noopener noreferrer">@L["GoogleDrive.File.OpenInDrive"]</a></li>
-                                                        }
-                                                    </ul>
-                                                </div>
-                                            }
-                                            else
-                                            {
-                                                RenderOpenLink(file);
-                                            }
+                                            @{ RenderOpenLink(file); }
                                         </td>
                                     </tr>
                                 }
@@ -758,11 +733,7 @@
                                         <div class="small text-muted mb-2">
                                             @GoogleDriveText.FileType(L, file.FileType) · @(file.ModifiedTime is { } gridModified ? GoogleDriveText.ShortDate(gridModified) : "—")
                                         </div>
-                                        <div class="d-flex flex-wrap align-items-center gap-2 mt-auto">
-                                            @if (IsSpreadsheet(file))
-                                            {
-                                                await RenderSheetButtons(file, currentConn?.Id);
-                                            }
+                                        <div class="d-flex align-items-center mt-auto">
                                             <span class="ms-auto">@{ RenderOpenLink(file); }</span>
                                         </div>
                                     </div>
@@ -1267,10 +1238,9 @@
                     </h6>
                     <div class="accordion-collapse collapse" id="helpNewBudget">
                         <p class="text-muted small mb-0">
-                            @L.NamedHtml("GoogleDrive.Help.NewBudgetText", null,
+                            @L.NamedHtml("GoogleDrive.Help.NewBudgetSteps", null,
                                 ("sheets", googleSheetsLink), ("gallery", Strong(L["GoogleDrive.Ui.TemplateGallery"])),
-                                ("name", Strong(monthlyBudget)), ("sync", syncLabel),
-                                ("guide", Strong(L["GoogleDrive.NewSheet.Title"])))
+                                ("name", Strong(monthlyBudget)), ("refresh", refreshLabel))
                         </p>
                     </div>
                 </div>
@@ -1305,68 +1275,13 @@
                     </h6>
                     <div class="accordion-collapse collapse" id="helpSync">
                         <p class="text-muted small mb-0">
-                            @L.NamedHtml("GoogleDrive.Help.SyncText", null, ("sync", syncLabel))
+                            @L.NamedHtml("GoogleDrive.Help.SyncText", null, ("sync", refreshLabel))
                         </p>
                     </div>
                 </div>
             </div>
             <div class="modal-footer border-top">
                 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">@L["GoogleDrive.Help.GotIt"]</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- New Monthly Budget Sheet Instructions Modal -->
-<div class="modal fade" id="newBudgetSheetModal" tabindex="-1" aria-labelledby="newBudgetSheetModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-bottom">
-                <h5 class="modal-title fw-bold" id="newBudgetSheetModalLabel">@L["GoogleDrive.NewSheet.Title"]</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
-            </div>
-            <div class="modal-body p-4">
-                <p class="text-muted small">@L.Named("GoogleDrive.NewSheet.Intro", ("name", monthlyBudget))</p>
-
-                <h6 class="fw-bold mb-1">@L["GoogleDrive.NewSheet.Step1Title"]</h6>
-                <p class="text-muted small">
-                    @L.NamedHtml("GoogleDrive.NewSheet.Step1Text", null,
-                        ("sheets", googleSheetsLink), ("folder", Strong(connectedFolderName)),
-                        ("gallery", Strong(L["GoogleDrive.Ui.TemplateGallery"])), ("name", Strong(monthlyBudget)))
-                </p>
-
-                <h6 class="fw-bold mb-1 mt-3">@L.Named("GoogleDrive.NewSheet.Step2Title", ("name", monthlyBudget))</h6>
-                <p class="text-muted small">
-                    @L.NamedHtml("GoogleDrive.NewSheet.Step2Text", null,
-                        ("name", Em(monthlyBudget)),
-                        ("example", Em($"{monthlyBudget} - {DateTime.UtcNow.ToString("Y", System.Globalization.CultureInfo.CurrentCulture)}")))
-                </p>
-
-                <h6 class="fw-bold mb-1 mt-3">@L["GoogleDrive.NewSheet.Step3Title"]</h6>
-                <p class="text-muted small">
-                    @L.NamedHtml("GoogleDrive.NewSheet.Step3Text", null,
-                        ("summary", Strong("Summary")), ("transactions", Strong("Transactions")))
-                </p>
-
-                <h6 class="fw-bold mb-1 mt-3">@L["GoogleDrive.NewSheet.Step4Title"]</h6>
-                <p class="text-muted small">
-                    @L.NamedHtml("GoogleDrive.NewSheet.Step4Text", null,
-                        ("move", Em(L["GoogleDrive.Ui.FileMove"])),
-                        ("folder", !string.IsNullOrWhiteSpace(currentConn?.FolderUrl)
-                            ? Link(currentConn.FolderUrl, currentConn.Name, strong: true)
-                            : Strong(connectedFolderName)))
-                </p>
-
-                <h6 class="fw-bold mb-1 mt-3">@L["GoogleDrive.NewSheet.Step5Title"]</h6>
-                <p class="text-muted small mb-0">
-                    @L.NamedHtml("GoogleDrive.NewSheet.Step5Text", null,
-                        ("sync", syncLabel), ("spreadsheets", Strong(L["GoogleDrive.Sheets.Title"])),
-                        ("name", Strong(monthlyBudget)), ("anyone", anyoneLabel))
-                </p>
-            </div>
-            <div class="modal-footer border-top">
-                <a href="https://docs.google.com/spreadsheets/" target="_blank" rel="noopener noreferrer" class="btn btn-success">@L["GoogleDrive.NewSheet.OpenSheets"]</a>
-                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">@L["Common.Close"]</button>
             </div>
         </div>
     </div>

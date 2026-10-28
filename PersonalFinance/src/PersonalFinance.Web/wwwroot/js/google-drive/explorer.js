@@ -62,12 +62,13 @@
             }
         });
 
-        // File table. Columns: 0 Name, 1 Type, 2 Modified, 3 Size, 4 Actions
+        // File table. Columns: 0 Name, 1 Type, 2 Modified, 3 Size, 4 Actions.
+        // Page size is fixed at 25: search and the type chips narrow the list, so there is no page-length select.
         let dataTable = null;
         if ($('#googleDriveDataTable').length > 0) {
             dataTable = $('#googleDriveDataTable').DataTable({
                 pageLength: 25,
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, PFI18n.t('GoogleDrive.Js.Table.All')]],
+                lengthChange: false,
                 order: [[2, 'desc']],
                 autoWidth: false,
                 columnDefs: [
@@ -76,18 +77,22 @@
                     { targets: 3, className: 'd-none d-md-table-cell' },
                     { targets: 4, orderable: false, searchable: false }
                 ],
-                // DataTables fills in its own _START_, _END_, _TOTAL_ and _MENU_ tokens
+                // DataTables fills in its own _START_, _END_ and _TOTAL_ tokens
                 language: {
                     emptyTable: PFI18n.t('GoogleDrive.Js.Files.Empty'),
                     zeroRecords: PFI18n.t('GoogleDrive.Js.Files.NoMatches'),
                     info: PFI18n.t('GoogleDrive.Js.Files.Info', { start: '_START_', end: '_END_', total: '_TOTAL_' }),
                     infoEmpty: PFI18n.t('GoogleDrive.Js.Files.InfoEmpty'),
-                    infoFiltered: '',
-                    lengthMenu: PFI18n.t('GoogleDrive.Js.Table.Show', { menu: '_MENU_' })
+                    infoFiltered: ''
                 },
-                // Search lives in the shared toolbar above, so only table, info, length and paging here
+                // Search lives in the shared toolbar above, so only table, info and paging here
                 dom: "<'row'<'col-12'tr>>" +
-                     "<'row dt-layout-row mt-3'<'col-sm-12 col-md-4 d-flex align-items-center gap-2'i><'col-sm-12 col-md-2 d-flex align-items-center'l><'col-sm-12 col-md-6 d-flex justify-content-md-end align-items-center'p>>"
+                     "<'row dt-layout-row mt-3'<'col-sm-12 col-md-6 d-flex align-items-center gap-2'i><'col-sm-12 col-md-6 d-flex justify-content-md-end align-items-center'p>>",
+                // A pager with one page offers nothing to click, so it shows only when the list spans pages
+                drawCallback () {
+                    const api = this.api();
+                    $(api.table().container()).find('.dt-paging').toggleClass('d-none', api.page.info().pages <= 1);
+                }
             });
         }
 
@@ -168,10 +173,12 @@
             applyFilters();
         });
 
-        // "Show all spreadsheets" link in the featured section
-        $('.js-show-filter').on('click', function () {
-            setFilter($(this).data('filter'));
-            document.getElementById('allFilesSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // "Show all N spreadsheets" reveals the cards past the first six: the cards hold each sheet's actions
+        $('.js-show-all-sheets').on('click', function () {
+            const $extra = $('.gd-sheet-extra');
+            $extra.removeClass('d-none');
+            $(this).attr('aria-expanded', 'true').addClass('d-none');
+            $extra.first().find('button').first().trigger('focus');
         });
 
         // List / grid switcher

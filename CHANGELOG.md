@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [13.0.1] - 2026-10-28
+
+### Changed
+
+- **Google Drive: the Spreadsheets cards are the one home for sheet actions**: each card shows one primary action (Budget report for a Monthly budget sheet, Transactions for any other) and a ⋯ menu with the rest (Transactions for budget sheets, Add to Analysis, Open in Drive).
+  - Every spreadsheet gets a card; Show all N spreadsheets now reveals the cards past the first six instead of filtering the file list.
+  - The All files list and grid carry only each file's ↗ open link; the list's View ▾ menu and the grid's sheet buttons are gone.
+  - The list hides its pager when it fits on one page and no longer has a page-length select (page size stays 25).
+  - The drive header shows Refresh (was "Sync") and a ⋯ menu holding Open in Drive, Copy folder ID, Change API key (only when the drive has a key) and Remove drive…. Without a key, the sample-data notice's Add API key is the one entry point.
+  - The per-sheet "Sync for analysis" is now "Add to Analysis", so the two actions no longer share the verb "Sync".
+- **Google Drive: New budget removed**: the header button and its modal duplicated Help section 3 ("Start a new monthly budget"), which now ends at Refresh instead of pointing to the deleted guide.
+
 ## [13.0.0] - 2026-10-28
 
 ### Fixed
