@@ -28,13 +28,16 @@ namespace PersonalFinance.Tests.GoogleDrive;
 /// The connected Google Drive page rendered through the real compiled Razor view (Reduce Clutter, #475): the
 /// Spreadsheets cards are the one home for sheet actions, the All files list and grid are content, and the drive
 /// header offers Refresh plus a ⋯ menu. Every modal has one close control, and the Budget report keeps its rare
-/// actions in a ⋯ menu (#477).
+/// actions in a ⋯ menu (#477). A drive whose files cannot be loaded explains why once, in its error state, with
+/// Try again and Update API key (#476).
 /// </summary>
 public sealed partial class GoogleDrivePageRenderingTests : IAsyncLifetime
 {
     private const int ConnectionId = 7;
     private const string BudgetSheetId = "sheet-budget";
     private const string PlainSheetId = "sheet-plain";
+    private const string StoredError = "Google credentials are invalid or expired. Please re-authenticate or update your API key.";
+    private const string SharingText = "This usually means the folder sharing settings changed. Try these steps:";
 
     private static readonly GoogleDriveFileDto[] SampleFiles =
     [
@@ -301,6 +304,62 @@ public sealed partial class GoogleDrivePageRenderingTests : IAsyncLifetime
 
         Assert.Single(HowDoIGetOneButton().Matches(Between(html, "id=\"advancedSettingsCollapse\"", "</form>")));
         Assert.Contains("id=\"helpApiKey\"", Modal(html, "apiKeyGuideModal"), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InvalidDrive_RendersTheErrorState_ExplainingItsStoredErrorOnce()
+    {
+        GivenAnInvalidDrive(StoredError);
+
+        string html = await GetPageAsync();
+
+        Assert.Contains("We couldn't load the files in Household", html, StringComparison.Ordinal);
+        Assert.Equal(1, Regex.Count(html, Regex.Escape(StoredError)));
+        Assert.DoesNotContain(SharingText, html, StringComparison.Ordinal);
+        Assert.DoesNotContain("gd-alert--danger", html, StringComparison.Ordinal);
+        // The loaded view's needs-reauth notice is gone with the branch that rendered it.
+        Assert.DoesNotContain("This drive needs a new API key.", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InvalidDrive_WithoutAStoredError_FallsBackToTheSharingSteps()
+    {
+        GivenAnInvalidDrive(storedError: null);
+
+        string html = await GetPageAsync();
+
+        Assert.Contains(SharingText, html, StringComparison.Ordinal);
+        Assert.Contains("Check that the folder still exists", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InvalidDrive_OffersTryAgainAndUpdateApiKey_ButNoSecondHelp()
+    {
+        GivenAnInvalidDrive(StoredError);
+
+        string html = await GetPageAsync();
+
+        string actions = Between(html, "class=\"gd-empty-state__actions\"", "<!-- Budget Report Modal -->");
+        Assert.Matches("""class="btn btn-primary[^"]*"[^>]*>\s*<span[^>]*></span>\s*Try again""", actions);
+        Assert.Contains("data-bs-target=\"#reauthModal\">Update API key<", actions, StringComparison.Ordinal);
+        Assert.DoesNotContain("#apiKeyGuideModal", actions, StringComparison.Ordinal);
+        Assert.Equal(2, Regex.Count(actions, "<button\\b"));
+    }
+
+    private void GivenAnInvalidDrive(string? storedError)
+    {
+        _driveProxy.Returns(nameof(IGoogleDriveApi.GetUserConnectionsAsync), new List<GoogleDriveConnectionDto>
+        {
+            new()
+            {
+                Id = ConnectionId, Name = "Household", FolderId = "folder-abc", MaskedApiKey = "AIza…1234",
+                IsValid = false, SyncStatus = storedError is null ? "Failed" : "NeedsReauth", ErrorMessage = storedError
+            }
+        });
+        _driveProxy.Returns(nameof(IGoogleDriveApi.GetConnectionFilesAsync), new GoogleDriveFolderResponseDto
+        {
+            Success = false, FolderId = "folder-abc", ErrorMessage = storedError
+        });
     }
 
     private void GivenTheDrive(bool hasApiKey, bool isDemoData, GoogleDriveFileDto[]? files = null)

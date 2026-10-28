@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [13.2.1] - 2026-10-28
+
+### Changed
+
+- **Google Drive: a drive whose files cannot be loaded explains why once**: the page no longer shows a red banner above the error state; the error state's text is the drive's stored error (for example, an invalid API key) and falls back to the sharing-settings steps only when there is none (#476).
+  - The error state offers Try again and Update API key; its own Help button is gone, since the page header's Help opens the same guide.
+  - The loaded view's "This drive needs a new API key" notice, which could never render, is removed with its strings.
+
 ## [13.2.0] - 2026-10-28
 
 ### Changed
