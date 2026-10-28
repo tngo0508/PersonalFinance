@@ -195,5 +195,19 @@
 
         $('#btnViewTable').on('click', () => { setView('table'); });
         $('#btnViewGrid').on('click', () => { setView('grid'); });
+
+        // "How do I get one?" opens Help at the section its data-help-section names, expanded and scrolled into view
+        const helpModal = document.getElementById('apiKeyGuideModal');
+        if (helpModal) {
+            let helpSection = null;
+            helpModal.addEventListener('show.bs.modal', (e) => {
+                const id = e.relatedTarget && e.relatedTarget.getAttribute('data-help-section');
+                helpSection = id ? document.getElementById(id) : null;
+                if (helpSection) { bootstrap.Collapse.getOrCreateInstance(helpSection, { toggle: false }).show(); }
+            });
+            helpModal.addEventListener('shown.bs.modal', () => {
+                if (helpSection) { helpSection.closest('.gd-help-section').scrollIntoView({ block: 'start' }); }
+            });
+        }
     });
 })(jQuery);

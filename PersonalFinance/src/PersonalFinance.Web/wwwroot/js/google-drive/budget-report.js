@@ -486,7 +486,7 @@
             $('#budgetCategorySubtitle').text(t('CategorySubtitleYear'));
             renderCategoryList(categories);
 
-            // Month-by-month table (also the keyboard-accessible way to drill into a month)
+            // Month-by-month table: content only, the period chips are the way to change period
             $('#tableSectionTitle').text(t('MonthByMonth'));
             let tableHtml = '<table class="table table-hover align-middle mb-0 bgt-table">' +
                 '<thead><tr>' +
@@ -497,10 +497,9 @@
                 `<th scope="col" class="text-end">${ escapeHtml(t('NetSaved')) }</th>` +
                 `<th scope="col" class="text-end">${ escapeHtml(t('ColSavingsRate')) }</th>` +
                 `<th scope="col">${ escapeHtml(t('ColStatus')) }</th>` +
-                `<th scope="col" class="text-end"><span class="visually-hidden">${ escapeHtml(t('Open')) }</span></th>` +
                 '</tr></thead><tbody>';
             months.forEach((m) => {
-                tableHtml += `<tr class="bgt-row-link btn-drill-month" data-month="${ m.monthNumber }">` +
+                tableHtml += '<tr>' +
                     `<td class="fw-semibold">${ escapeHtml(monthName(m.monthNumber)) }</td>` +
                     `<td class="text-end">${ formatCurrency(m.actualIncome) }</td>` +
                     `<td class="text-end text-muted">${ m.budgetedExpenses > 0 ? formatCurrency(m.budgetedExpenses) : '&mdash;' }</td>` +
@@ -508,7 +507,6 @@
                     `<td class="text-end fw-semibold">${ formatCurrency(m.netSavings) }</td>` +
                     `<td class="text-end">${ escapeHtml(formatPercent(m.savingsRate, 1)) }</td>` +
                     `<td>${ statusPill(monthStatusTone(m.status), monthStatusLabel(m.status)) }</td>` +
-                    `<td class="text-end"><button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-0 btn-drill-month" data-month="${ m.monthNumber }">${ escapeHtml(t('OpenMonth')) }</button></td>` +
                     '</tr>';
             });
             tableHtml += '</tbody></table>';
@@ -719,17 +717,23 @@
         $('#btnBudgetPrev').on('click', () => { stepBudgetPeriod(-1); });
         $('#btnBudgetNext').on('click', () => { stepBudgetPeriod(1); });
         $('#monthlyBudgetModal').on('keydown', (e) => {
-            if (!currentBudgetData || $(e.target).is('input, select, textarea')) { return; }
+            if (!currentBudgetData || $(e.target).is('input, select, textarea') || $(e.target).closest('.dropdown').length) { return; }
             if (e.key === 'ArrowLeft') { e.preventDefault(); stepBudgetPeriod(-1); }
             if (e.key === 'ArrowRight') { e.preventDefault(); stepBudgetPeriod(1); }
         });
 
-        // Table Month Drill-down Click Handler (whole row or its button)
-        $(document).on('click', '.btn-drill-month', function (e) {
-            e.stopPropagation();
-            renderBudgetMonth(parseInt($(this).data('month'), 10));
-            $('#monthlyBudgetModal .modal-body').scrollTop(0);
-        });
+        // Escape in the open ⋯ menu closes only the menu. The modal listens on its own element, before Bootstrap's
+        // dropdown handler on the document, so catch the key on the way down.
+        const budgetModalEl = document.getElementById('monthlyBudgetModal');
+        if (budgetModalEl) {
+            budgetModalEl.addEventListener('keydown', (e) => {
+                const toggle = document.getElementById('btnBudgetMore');
+                if (e.key !== 'Escape' || !toggle || toggle.getAttribute('aria-expanded') !== 'true') { return; }
+                e.stopPropagation();
+                bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
+                toggle.focus();
+            }, true);
+        }
 
         $('#budgetCategorySort, #budgetOverOnly').on('change', () => {
             renderCategoryList();

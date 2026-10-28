@@ -176,7 +176,8 @@
             });
         }
 
-        // Ranked list of spending categories; the tail folds into "Other" so the list stays scannable
+        // Ranked list of spending categories; the tail folds into "Other" so the list stays scannable. The rows are content:
+        // the All categories select is the one category filter.
         function renderCategoryRank (cats, totalExpenses) {
             const $list = $('#txCategoryBars');
             if (cats.length === 0 || !(totalExpenses > 0)) {
@@ -196,14 +197,11 @@
             const max = rows.reduce((m, c) => { return Math.max(m, c.total); }, 0) || 1;
             $list.html(rows.map((c) => {
                 const share = Math.round(c.total / totalExpenses * 100);
-                const inner = `<span class="bgt-rank-head"><span class="bgt-rank-name">${ escapeHtml(c.name) }</span>` +
+                return '<div class="bgt-rank-row">' +
+                    `<span class="bgt-rank-head"><span class="bgt-rank-name">${ escapeHtml(c.name) }</span>` +
                     `<span class="bgt-rank-value">${ formatMoney(c.total) } <small>${ formatPercent(share) }</small></span></span>` +
-                    `<span class="bgt-rank-track"><span class="bgt-rank-fill" style="width:${ (c.total / max * 100).toFixed(1) }%"></span></span>`;
-                // "Other" groups several categories, so it isn't a filter target
-                return c.isOther
-                    ? `<div class="bgt-rank-row bgt-rank-row--static">${ inner }</div>`
-                    : `<button type="button" class="bgt-rank-row" data-category="${ escapeHtml(c.key) }"` +
-                      ` aria-pressed="false" title="${ escapeHtml(PFI18n.t('GoogleDrive.Js.Tx.ShowOnly', { name: c.name })) }">${ inner }</button>`;
+                    `<span class="bgt-rank-track"><span class="bgt-rank-fill" style="width:${ (c.total / max * 100).toFixed(1) }%"></span></span>` +
+                    '</div>';
             }).join(''));
         }
 
@@ -313,10 +311,6 @@
                 $(this).toggleClass('active', active).attr('aria-pressed', String(active));
             });
             $('#txCategoryFilter').val(filters.category);
-            $('#txCategoryBars .bgt-rank-row[data-category]').each(function () {
-                const active = filters.category !== '' && $(this).attr('data-category') === filters.category;
-                $(this).toggleClass('active', active).attr('aria-pressed', String(active));
-            });
             $('#txClearFilters').toggleClass('d-none', !filters.type && !filters.category && !filters.search);
         }
 
@@ -342,7 +336,6 @@
             txTable = $('#txTable').DataTable({
                 data: transactions,
                 pageLength: 25,
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, PFI18n.t('GoogleDrive.Js.Table.All')]],
                 order: [[0, 'desc']],
                 autoWidth: false,
                 columns: [
@@ -383,19 +376,23 @@
                         }
                     }
                 ],
-                // DataTables fills in its own _START_, _END_, _TOTAL_ and _MENU_ tokens
+                // DataTables fills in its own _START_, _END_ and _TOTAL_ tokens
                 language: {
                     emptyTable: PFI18n.t('GoogleDrive.Js.Tx.TableEmpty'),
                     zeroRecords: PFI18n.t('GoogleDrive.Js.Tx.TableNoMatches'),
                     info: PFI18n.t('GoogleDrive.Js.Tx.TableInfo', { start: '_START_', end: '_END_', total: '_TOTAL_' }),
                     infoEmpty: '',
-                    infoFiltered: '',
-                    lengthMenu: PFI18n.t('GoogleDrive.Js.Table.Show', { menu: '_MENU_' })
+                    infoFiltered: ''
                 },
-                // Search and filters live in the toolbar above the table
+                // Search and filters live in the toolbar above the table, so only table, info and paging here
                 dom: "<'row'<'col-12'tr>>" +
-                     "<'row align-items-center mt-3 small text-muted'<'col-sm-12 col-md-4'i><'col-sm-12 col-md-3'l><'col-sm-12 col-md-5'p>>",
-                drawCallback: renderFilterSummary
+                     "<'row align-items-center mt-3 small text-muted'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-md-end'p>>",
+                drawCallback () {
+                    // A pager with one page offers nothing to click, so it shows only when the rows span pages
+                    const api = this.api();
+                    $(api.table().container()).find('.dt-paging').toggleClass('d-none', api.page.info().pages <= 1);
+                    renderFilterSummary();
+                }
             });
         }
 
@@ -487,13 +484,6 @@
 
         $('#txCategoryFilter').on('change', function () {
             filters.category = $(this).val();
-            applyFilters();
-        });
-
-        // Clicking a ranked category toggles it as the filter
-        $(document).on('click', '#txCategoryBars .bgt-rank-row[data-category]', function () {
-            const category = $(this).attr('data-category');
-            filters.category = filters.category === category ? '' : category;
             applyFilters();
         });
 
