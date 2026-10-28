@@ -233,6 +233,8 @@ body:not(:has(#sidebar)) .topbar {
 
 .topbar-search {
     flex: 1;
+    /* Shrink below the input's own width so the theme control, bell and avatar keep their room on phones */
+    min-width: 0;
     max-width: 400px;
     position: relative;
 }
@@ -302,15 +304,77 @@ body:not(:has(#sidebar)) .topbar {
     margin: 0;
 }
 
-/* Theme toggle (Views/Shared/_ThemeSwitcher.cshtml): one icon button; theme.js shows the sun or the moon */
-.theme-toggle {
+/* Theme control (Views/Shared/_ThemeSwitcher.cshtml): one icon button opening a Light / Dark / System popover.
+   theme.js shows the icon of the current choice and checks it. */
+.theme-switcher {
+    position: relative;
+    flex: none;
+}
+
+.theme-switcher__button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
 }
 
-.theme-toggle [hidden] {
+.theme-switcher__icon {
+    display: inline-flex;
+}
+
+.theme-switcher__icon[hidden],
+.theme-switcher__popover[hidden] {
     display: none;
+}
+
+/* Right-aligned under the button, which sits at the right end of the top bar, so it stays on screen */
+.theme-switcher__popover {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 1040;
+    display: flex;
+    flex-direction: column;
+    min-width: 10rem;
+    max-width: calc(100vw - 1rem);
+    margin-top: 0.25rem;
+    padding: 0.25rem;
+    background: var(--app-bg);
+    border: 1px solid var(--app-border-hover);
+    border-radius: 8px;
+    box-shadow: var(--bs-box-shadow);
+}
+
+.theme-switcher__choice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    background: none;
+    border: 0;
+    border-radius: 6px;
+    color: var(--app-text);
+    font-size: 0.875rem;
+    text-align: start;
+}
+
+.theme-switcher__choice:hover,
+.theme-switcher__choice:focus-visible {
+    background: var(--app-surface);
+}
+
+.theme-switcher__choice[aria-checked="true"] {
+    font-weight: 600;
+}
+
+.theme-switcher__check {
+    visibility: hidden;
+    color: var(--app-brand);
+}
+
+.theme-switcher__choice[aria-checked="true"] .theme-switcher__check {
+    visibility: visible;
 }
 
 @media (max-width: 479.98px) {

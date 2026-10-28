@@ -1,32 +1,34 @@
 @*
-    The theme switcher (issue #296), driven by js/core/theme.js. The choice is per device (localStorage), so these are
-    plain buttons, not a form. Model "menu" renders Light / Dark / System items for the account dropdown in
-    _LoginPartial; anything else renders the one-button sun/moon toggle anonymous pages show in the top bar (inline SVG: Lucide waits for cookie consent).
-    theme.js marks the current choice once the page loads.
+    The theme control (issues #296 and #481), driven by js/core/theme.js: one icon button in the top bar for every
+    visitor, opening a popover of Light / Dark / System. The popover follows the ARIA menu pattern with
+    menuitemradio choices: one of them is checked, the arrow keys move between them and Enter or Space picks. The choice is per device (localStorage), so these are plain
+    buttons, not a form. The icons are inline SVG because Lucide waits for cookie consent. theme.js shows the icon and
+    name of the current choice, checks it in the popover, and opens and closes the popover.
 *@
-@model string
-@if (Model == "menu")
-{
-    <li><h6 class="dropdown-header" id="themeMenuLabel">@L["Common.Theme"]</h6></li>
-    <li>
-        <div class="theme-switcher" role="group" aria-labelledby="themeMenuLabel">
-            @foreach (var (choice, key) in new[] { ("light", "Common.Theme.Light"), ("dark", "Common.Theme.Dark"), ("system", "Common.Theme.System") })
-            {
-                <button type="button" class="dropdown-item d-flex justify-content-between align-items-center"
-                        data-theme-choice="@choice" aria-current="false">
-                    @L[key]
-                    <span class="theme-switcher__check" aria-hidden="true" hidden>✓</span>
-                </button>
-            }
-        </div>
-    </li>
+@{
+    var choices = new[] { ("light", "Common.Theme.Light"), ("dark", "Common.Theme.Dark"), ("system", "Common.Theme.System") };
+    // The button's name for each choice, e.g. "Theme: Dark"; theme.js picks the current one.
+    string LabelFor(string key) => L.Named("Common.Theme.Current", ("mode", L[key].Value));
+    var systemLabel = LabelFor("Common.Theme.System");
 }
-else
-{
-    <button type="button" class="btn btn-sm btn-outline-secondary theme-toggle" data-theme-toggle
-            aria-pressed="false" aria-label="@L["Common.Theme.SwitchToDark"]" title="@L["Common.Theme.SwitchToDark"]"
-            data-label-to-dark="@L["Common.Theme.SwitchToDark"]" data-label-to-light="@L["Common.Theme.SwitchToLight"]">
-        <span class="theme-toggle__moon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>
-        <span class="theme-toggle__sun" aria-hidden="true" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-17.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></span>
+<div class="theme-switcher" data-theme-switcher>
+    <button type="button" class="btn btn-sm btn-outline-secondary theme-switcher__button" data-theme-button
+            aria-haspopup="menu" aria-expanded="false" aria-controls="themeSwitcherPopover" aria-label="@systemLabel" title="@systemLabel"
+            data-label-light="@LabelFor("Common.Theme.Light")" data-label-dark="@LabelFor("Common.Theme.Dark")"
+            data-label-system="@systemLabel">
+        <span class="theme-switcher__icon" data-theme-icon="light" aria-hidden="true" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-17.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></span>
+        <span class="theme-switcher__icon" data-theme-icon="dark" aria-hidden="true" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>
+        <span class="theme-switcher__icon" data-theme-icon="system" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>
     </button>
-}
+    <div class="theme-switcher__popover" id="themeSwitcherPopover" data-theme-popover role="menu"
+         aria-label="@L["Common.Theme"]" hidden>
+        @foreach (var (choice, key) in choices)
+        {
+            <button type="button" class="theme-switcher__choice" role="menuitemradio" aria-checked="false" tabindex="-1"
+                    data-theme-choice="@choice">
+                <span>@L[key]</span>
+                <span class="theme-switcher__check" aria-hidden="true">✓</span>
+            </button>
+        }
+    </div>
+</div>
