@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [13.0.0] - 2026-10-28
+
+### Fixed
+
+- **Unused Google Drive column on the spreadsheet tables**: the spreadsheet budget snapshot and transaction tables no longer carry an extra, always-empty `GoogleDriveConnectionId` column (#309).
+  - `GoogleDriveConnection` drops its unused `BudgetSnapshots` and `TransactionRecords` collections, which EF Core had mapped to a second, optional shadow foreign key next to the real `ConnectionId`. The `ConnectionId` relationships keep their `Cascade` (snapshots) and `Restrict` (transaction records) delete behaviours.
+  - Schema migration `RemoveSpreadsheetShadowConnectionFk` drops the two shadow columns with their indexes and foreign keys. A new test fails when any entity has a shadow foreign-key property.
+
 ## [12.9.0] - 2026-10-28
 
 ### Added

@@ -412,11 +412,6 @@ erDiagram
     SpreadsheetBudgetSnapshot ||--o{ SpreadsheetTransactionRecord : "SnapshotId, Cascade"
 ```
 
-Known quirk: `GoogleDriveConnection.BudgetSnapshots` and `.TransactionRecords` are navigation collections that
-`OnModelCreating` never ties to the `ConnectionId` relationships above, so EF Core also created a second, optional
-shadow FK column `GoogleDriveConnectionId` on both spreadsheet tables (visible in
-`AzureSqlAppDbContextModelSnapshot.cs`). The code never sets it.
-
 ### 4.3 Community
 
 ```mermaid

@@ -1662,9 +1662,6 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int?>("GoogleDriveConnectionId")
-                        .HasColumnType("int");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -1697,8 +1694,6 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.HasKey("Id");
 
                     b.HasIndex("ConnectionId");
-
-                    b.HasIndex("GoogleDriveConnectionId");
 
                     b.HasIndex("UserId");
 
@@ -1750,9 +1745,6 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int?>("GoogleDriveConnectionId")
-                        .HasColumnType("int");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -1775,8 +1767,6 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.HasKey("Id");
 
                     b.HasIndex("ConnectionId");
-
-                    b.HasIndex("GoogleDriveConnectionId");
 
                     b.HasIndex("SnapshotId");
 
@@ -2179,10 +2169,6 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PersonalFinance.Data.Entities.GoogleDriveConnection", null)
-                        .WithMany("BudgetSnapshots")
-                        .HasForeignKey("GoogleDriveConnectionId");
-
                     b.Navigation("Connection");
                 });
 
@@ -2193,10 +2179,6 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .HasForeignKey("ConnectionId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("PersonalFinance.Data.Entities.GoogleDriveConnection", null)
-                        .WithMany("TransactionRecords")
-                        .HasForeignKey("GoogleDriveConnectionId");
 
                     b.HasOne("PersonalFinance.Data.Entities.SpreadsheetBudgetSnapshot", "Snapshot")
                         .WithMany("Transactions")
@@ -2228,11 +2210,7 @@ namespace PersonalFinance.Data.Migrations.AzureSql
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.GoogleDriveConnection", b =>
                 {
-                    b.Navigation("BudgetSnapshots");
-
                     b.Navigation("CachedFiles");
-
-                    b.Navigation("TransactionRecords");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.MonthlyBudgetPlan", b =>
