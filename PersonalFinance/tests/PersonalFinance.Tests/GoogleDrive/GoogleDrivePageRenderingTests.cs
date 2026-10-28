@@ -151,7 +151,7 @@ public sealed partial class GoogleDrivePageRenderingTests : IAsyncLifetime
         string html = await GetPageAsync();
 
         Assert.All(sheets, sheet => Assert.Contains($"data-sheet-card=\"{sheet.Id}\"", html, StringComparison.Ordinal));
-        Assert.Equal(2, Regex.Matches(html, "class=\"col-sm-6 col-xl-4 gd-sheet-extra d-none\"").Count);
+        Assert.Equal(2, Regex.Count(html, "class=\"col-sm-6 col-xl-4 gd-sheet-extra d-none\""));
         Assert.Matches(ShowAllSheetsButton(), html);
     }
 
@@ -167,7 +167,7 @@ public sealed partial class GoogleDrivePageRenderingTests : IAsyncLifetime
         Assert.DoesNotContain("dropdown", files, StringComparison.Ordinal);
         Assert.DoesNotContain("Sync for analysis", html, StringComparison.Ordinal);
         // One Add to Analysis per featured card, and nowhere else.
-        Assert.Equal(3, Regex.Matches(Page(html), "action=\"/Analysis/Sync\"").Count);
+        Assert.Equal(3, Regex.Count(Page(html), "action=\"/Analysis/Sync\""));
     }
 
     [Fact]
@@ -177,9 +177,9 @@ public sealed partial class GoogleDrivePageRenderingTests : IAsyncLifetime
 
         string files = AllFiles(html);
         Assert.All(SampleFiles, file =>
-            Assert.Equal(2, Regex.Matches(files, $"href=\"{Regex.Escape(file.WebViewLink!)}\"").Count));
-        Assert.Equal(2 * SampleFiles.Length, Regex.Matches(files, "<a ").Count);
-        Assert.Equal(2, Regex.Matches(files, "id=\"btnView(Table|Grid)\"").Count);
+            Assert.Equal(2, Regex.Count(files, $"href=\"{Regex.Escape(file.WebViewLink!)}\"")));
+        Assert.Equal(2 * SampleFiles.Length, Regex.Count(files, "<a "));
+        Assert.Equal(2, Regex.Count(files, "id=\"btnView(Table|Grid)\""));
     }
 
     [Fact]
