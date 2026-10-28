@@ -90,6 +90,10 @@ late run's timeout is cut so that it ends by 19:00. Trigger it by hand at any ti
   are open (drafts included).
 - **Claims** it with `agent:in-progress`, then runs `/implement` (tdd, code-review), `dotnet test` and `npm run lint`,
   and opens a PR from `agent/issue-<n>` that requests the owner's review. The agent never merges.
+- **Checks the version before the PR**: right before pushing, the agent rebases onto `main` and runs
+  `.github/scripts/agent-version-check.sh`. It applies the release check's rules: AppVersion is above `main` and every
+  other open agent PR, and CHANGELOG.md's top section is that version and not empty. After the run, the workflow repeats
+  the check on the pushed PR. A PR that would fail it becomes a draft with a comment listing the problems.
 - **Auto-merges**: `.github/workflows/agent-auto-merge.yml` merges an `agent/issue-*` PR that is not a draft as soon
   as every check on its head commit has finished, none failed, and the release check and `claude-review` both passed.
   It also waits until every PR workflow run on that commit has finished and passed, because a run whose jobs have not
