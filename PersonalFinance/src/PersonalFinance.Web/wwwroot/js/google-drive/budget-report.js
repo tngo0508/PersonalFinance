@@ -636,7 +636,7 @@
             $('#budgetLoadingState').toggleClass('d-none', state !== 'loading');
             $('#budgetErrorState').toggleClass('d-none', state !== 'error');
             $('#budgetReportContent').toggleClass('d-none', state !== 'report');
-            $('#btnPrintBudgetReport, #btnExportBudget').prop('disabled', state !== 'report');
+            $('#btnBudgetMore, #btnPrintBudgetReport, #btnExportBudget').prop('disabled', state !== 'report');
             $('#btnBudgetToTransactions').prop('disabled', state === 'loading');
         }
 

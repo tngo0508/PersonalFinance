@@ -190,8 +190,7 @@
                 rows = rows.concat([{
                     name: PFI18n.t('GoogleDrive.Js.Tx.OtherCount', { count: PFI18n.formatNumber(rest.length) }),
                     total: rest.reduce((s, c) => { return s + c.total; }, 0),
-                    count: rest.reduce((s, c) => { return s + c.count; }, 0),
-                    isOther: true
+                    count: rest.reduce((s, c) => { return s + c.count; }, 0)
                 }]);
             }
             const max = rows.reduce((m, c) => { return Math.max(m, c.total); }, 0) || 1;

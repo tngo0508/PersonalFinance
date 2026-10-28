@@ -356,6 +356,7 @@ public sealed partial class GoogleDrivePageRenderingTests : IAsyncLifetime
         Assert.True(from >= 0, $"The page has no #{modalId}.");
         int next = html.IndexOf("class=\"modal fade\"", from + start.Length, StringComparison.Ordinal);
         int toast = html.IndexOf("<!-- Toast Feedback -->", from, StringComparison.Ordinal);
+        Assert.True(toast > from, $"The page has no toast after #{modalId}.");
         int to = next >= 0 && next < toast ? next : toast;
         return html[from..to];
     }
