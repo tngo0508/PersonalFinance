@@ -68,23 +68,29 @@ OpenAI:ApiKey = sk-proj-your-api-key-here
 
 ### Optional: Custom Model Configuration
 
-By default, the AI assistant uses `gpt-4o-mini`. You can customize the model and other settings in `appsettings.Development.json` of the `PersonalFinance.ApiService` project:
+By default, the AI assistant uses `gpt-4o-mini`. The defaults live in `appsettings.json` of the `PersonalFinance.ApiService` project; override any of them in `appsettings.Development.json`:
 
 ```json
 {
   "OpenAI": {
     "Model": "gpt-4o-mini",
-    "MaxTokens": 1000,
-    "Temperature": 0.7
+    "MaxTokens": 400,
+    "DailyMessageLimit": 30,
+    "MonthlyBudgetUsd": 10,
+    "BudgetWarningThreshold": 0.9
   }
 }
 ```
 
 | Setting | Default | Description |
 |---|---|---|
-| `OpenAI:Model` | `gpt-4o-mini` | The OpenAI model to use. Other options: `gpt-4o`, `gpt-3.5-turbo`. |
-| `OpenAI:MaxTokens` | `1000` | Maximum tokens in the AI response. |
-| `OpenAI:Temperature` | `0.7` | Creativity level (0.0 = deterministic, 1.0 = creative). |
+| `OpenAI:Model` | `gpt-4o-mini` | The OpenAI model to use. Other options: `gpt-4o`, `gpt-3.5-turbo`. The cost estimate always uses gpt-4o-mini prices (see section 4). |
+| `OpenAI:MaxTokens` | `400` | Maximum output tokens per model call, for chat and news summaries. Purpose Notes use a fixed 220. |
+| `OpenAI:DailyMessageLimit` | `30` | Requests per Account per day (chat, summaries and Purpose Notes together). |
+| `OpenAI:MonthlyBudgetUsd` | `10` | Estimated spend, in USD, across all Accounts per calendar month. Above it every request is refused until the next month. |
+| `OpenAI:BudgetWarningThreshold` | `0.9` | Fraction of the monthly budget at which replies carry a budget warning. |
+
+The temperature is not configurable: requests send none, so OpenAI's own default applies.
 
 ### Production Environment (Azure)
 
@@ -144,32 +150,39 @@ If you've already deployed and want to add the key without redeploying:
 
 ## 4. Cost Estimation
 
-The AI assistant uses **GPT-4o-mini** with the following pricing:
+The AI assistant uses **GPT-4o-mini** with the following pricing. `AiQuotaService` holds the same figures and uses them to estimate the cost of every request it records:
 
 | Operation | Price |
 |---|---|
 | Input tokens | $0.15 per 1M tokens |
+| Cached input tokens | $0.075 per 1M tokens |
 | Output tokens | $0.60 per 1M tokens |
 
 ### Typical Usage Costs
 
 Each chat request includes:
-- **System prompt** (~300–500 tokens): Contains the AI's role and your financial context.
-- **Conversation history** (up to 10 previous messages): Limited to control costs.
-- **User message**: Your question or request.
-- **AI response** (~100–500 tokens): The assistant's answer.
+- **System prompt** (~450 tokens): the AI's role, rules and tool list. It is the same for every user up to the reply Language line, so OpenAI can serve it as cached input.
+- **Financial snapshot** (~100–300 tokens): income, spending, net worth, budget allocations and savings goal totals.
+- **Conversation history**: the last 10 messages, each cut to 2,000 characters.
+- **User message**: your question or request.
+- **Tool results**: the model fetches budget, transaction (at most 50 rows), savings goal or net worth details on demand, in up to 3 tool rounds. Each round is another model call that resends the conversation so far.
+- **AI response**: at most 400 output tokens per model call (`OpenAI:MaxTokens`).
 
-**Estimated cost per conversation:** Approximately $0.001–$0.005 per exchange.
+**Estimated cost per exchange:** about $0.001 for a short question with one tool call (two model calls, ~4,000 input and ~400 output tokens). The worst case, with full history and three tool rounds, is about $0.006.
 
-**Monthly estimate for moderate use:** ~$1–$5 per user per month, depending on usage frequency.
+**Monthly estimate:** an Account that uses all 30 daily messages every day sends about 900 a month, which costs roughly $1–$5. All Accounts together stop at the $10 monthly budget.
 
 ### Cost Control Measures
 
 The implementation includes the following cost controls:
-- **Conversation history is limited** to the last 10 messages sent to OpenAI.
+- **Daily limit per Account:** 30 requests a day (`OpenAI:DailyMessageLimit`).
+- **Monthly budget for all Accounts:** $10 of estimated spend (`OpenAI:MonthlyBudgetUsd`), with a warning on replies from 90%.
+- **Output cap:** 400 tokens per model call (`OpenAI:MaxTokens`).
+- **Conversation history is limited** to the last 10 messages, each cut to 2,000 characters.
+- **Data on demand:** detailed data is fetched through at most 3 tool rounds, not sent with every request.
+- **Cache-friendly prompt:** the stable system prompt comes first, so repeated requests pay the cached input price.
+- **Off-topic questions are refused** by the scope filter before any model call.
 - **GPT-4o-mini** is used by default (cheapest GPT-4 class model).
-- **No streaming** — responses are sent as complete messages.
-- **Financial context is gathered once** per request, not cached.
 
 ---
 
