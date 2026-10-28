@@ -92,6 +92,13 @@ public class NetWorthViewModel
     public decimal AggressiveSavings { get; set; } = NetWorthDefaults.AggressiveSavings;
 
     /// <summary>
+    /// Assumed yearly inflation for the today's-money view. Not saved with the parameters.
+    /// </summary>
+    [Display(Name = "NetWorth.Field.Inflation")]
+    [Range(0, 20, ErrorMessage = "NetWorth.Validation.InflationRange")]
+    public decimal InflationPercent { get; set; } = NetWorthDefaults.InflationPercent;
+
+    /// <summary>
     /// Computed projection data for all scenarios.
     /// </summary>
     public NetWorthProjectionDto? Projection { get; set; }
@@ -141,7 +148,8 @@ public class NetWorthViewModel
             BaseRoi = BaseRoi,
             ConservativeRoi = ConservativeRoi,
             AggressiveRoi = AggressiveRoi,
-            AggressiveSavings = AggressiveSavings
+            AggressiveSavings = AggressiveSavings,
+            InflationPercent = InflationPercent
         };
     }
 

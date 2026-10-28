@@ -12,28 +12,6 @@
     // Debounce delay in milliseconds for live recalculation
     const DEBOUNCE_DELAY = 500;
 
-    // Canvas height for growth line chart gradient
-    const GROWTH_CHART_HEIGHT = 350;
-
-    // Canvas height for comparison bar chart gradient
-    const COMPARISON_CHART_HEIGHT = 280;
-
-    // Color palette — Ledger theme (css/networth.css --nw-* scenario tokens)
-    const colors = {
-        base: '#1D6A50',
-        conservative: '#5B6B78',
-        aggressive: '#2F6690',
-        fi: '#8A6A1E',
-        baseAlpha: 'rgba(29, 106, 80, 0.12)',
-        conservativeAlpha: 'rgba(91, 107, 120, 0.08)',
-        aggressiveAlpha: 'rgba(47, 102, 144, 0.12)',
-        gridColor: 'rgba(20, 40, 59, 0.06)',
-        gridColorStrong: 'rgba(20, 40, 59, 0.12)',
-        tickColor: '#5B6B78',
-        tooltipBg: 'rgba(255, 255, 255, 0.96)',
-        tooltipBorder: 'rgba(0, 0, 0, 0.1)'
-    };
-
     // Scenario name mapping for safe property access
     const scenarioMap = {
         Base: 'base',
@@ -53,7 +31,8 @@
         { id: 'nwRetirementAge', min: 18, max: 120 },
         { id: 'nwBaseRoi', min: 0, max: 50 },
         { id: 'nwConservativeRoi', min: 0, max: 50 },
-        { id: 'nwAggressiveRoi', min: 0, max: 50 }
+        { id: 'nwAggressiveRoi', min: 0, max: 50 },
+        { id: 'nwInflation', min: 0, max: 20 }
     ];
 
     // The results' currency: the projection's (the Reporting Currency, or the inputs' own when no rate exists).
@@ -112,19 +91,6 @@
      */
     function scenarioName (name) {
         return Object.prototype.hasOwnProperty.call(scenarioMap, name) ? PFI18n.t(`NetWorth.Js.Scenario.${name}`) : name;
-    }
-
-    /**
-     * Convert hex color to rgba string.
-     * @param {string} hex - Hex color (e.g. '#818cf8')
-     * @param {number} alpha - Alpha value 0-1
-     * @returns {string} RGBA string
-     */
-    function hexToRgba (hex, alpha) {
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        return `rgba(${ r }, ${ g }, ${ b }, ${ alpha })`;
     }
 
     /**
@@ -210,12 +176,12 @@
      */
     function showValidationMessage (message) {
         clearValidationMessage();
-        const container = document.querySelector('.nw-header');
+        const container = document.querySelector('.nw-hero');
         if (!container) { return; }
 
         const alert = document.createElement('div');
         alert.id = 'nwValidationAlert';
-        alert.className = 'alert alert-danger alert-dismissible fade show nw-alert mt-3';
+        alert.className = 'alert alert-danger alert-dismissible fade show nw-alert';
         alert.role = 'alert';
         alert.textContent = message;
 
@@ -242,9 +208,6 @@
     window.NW = Object.assign(window.NW || {}, {
         PF: PF,
         DEBOUNCE_DELAY: DEBOUNCE_DELAY,
-        GROWTH_CHART_HEIGHT: GROWTH_CHART_HEIGHT,
-        COMPARISON_CHART_HEIGHT: COMPARISON_CHART_HEIGHT,
-        colors: colors,
         scenarioMap: scenarioMap,
         VALIDATORS: VALIDATORS,
         formatCurrency: formatCurrency,
@@ -253,7 +216,6 @@
         inputCurrency: inputCurrency,
         formatRate: formatRate,
         scenarioName: scenarioName,
-        hexToRgba: hexToRgba,
         parseTyped: parseTyped,
         getSliderValue: getSliderValue,
         boundOf: boundOf,

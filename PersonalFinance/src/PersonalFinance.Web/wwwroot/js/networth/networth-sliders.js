@@ -152,6 +152,32 @@
     }
 
     /**
+     * The story sentence's numbers share one slider row: picking a number shows its slider and hides the others.
+     */
+    function initTuner () {
+        const rows = document.querySelectorAll('[data-nw-tune]');
+        const inputs = document.querySelectorAll('[data-nw-story]');
+
+        /**
+         * Show the slider of one story number and mark that number as the one being tuned.
+         * @param {string} id - The number's input id.
+         */
+        function tune (id) {
+            rows.forEach((row) => { row.hidden = row.getAttribute('data-nw-tune') !== id; });
+            inputs.forEach((input) => {
+                const field = input.closest('.nw-story__field');
+                if (field) { field.classList.toggle('is-tuning', input.id === id); }
+            });
+        }
+
+        inputs.forEach((input) => {
+            input.addEventListener('focus', () => tune(input.id));
+        });
+        const visible = Array.from(rows).find((row) => !row.hidden);
+        if (visible) { tune(visible.getAttribute('data-nw-tune')); }
+    }
+
+    /**
      * Initialize live recalculation on input change (debounced).
      * Sets up all slider-input pairs and the initial savings indicator.
      */
@@ -167,6 +193,8 @@
         syncSlider('nwConservativeRoiRange', 'nwConservativeRoi', 'percent');
         syncSlider('nwAggressiveRoiRange', 'nwAggressiveRoi', 'percent');
         syncSlider('nwAggressiveSavingsRange', 'nwAggressiveSavings', 'currency');
+        syncSlider('nwInflationRange', 'nwInflation', 'percent');
+        initTuner();
 
         // Initial savings indicator
         updateSavingsIndicator();

@@ -48,7 +48,8 @@
             { id: 'nwBaseRoi', type: 'percent' },
             { id: 'nwConservativeRoi', type: 'percent' },
             { id: 'nwAggressiveRoi', type: 'percent' },
-            { id: 'nwAggressiveSavings', type: 'currency' }
+            { id: 'nwAggressiveSavings', type: 'currency' },
+            { id: 'nwInflation', type: 'percent' }
         ];
 
         fields.forEach((field) => {
@@ -222,7 +223,8 @@
             nwBaseRoi: defaults.baseRoi,
             nwConservativeRoi: defaults.conservativeRoi,
             nwAggressiveRoi: defaults.aggressiveRoi,
-            nwAggressiveSavings: defaults.aggressiveSavings
+            nwAggressiveSavings: defaults.aggressiveSavings,
+            nwInflation: defaults.inflationPercent
         });
     }
 

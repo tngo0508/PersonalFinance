@@ -41,14 +41,12 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
     private static readonly string[] NetWorthEnglish =
     [
         "Net Worth &amp; FI Projection", "Net Worth & FI Projection", "Explore market research", "How it works",
-        "Quick Presets", "Savings Rate", "Financial Overview", "Starting Balance",
-        "Your current total investable assets", "Annual Spending", "Return Assumptions", "Conservative ROI",
-        "More actions", "Randomize", "Reset to saved", "Clear saved parameters", "FI Target (4% Rule)", "Current Net Worth",
-        "Base Final Net Worth", "/yr spending", "How this is calculated", ">from<", "Net Worth Growth Over Time",
-        "Final Net Worth Comparison", "Base Scenario", "Total Contributions", "Interest Earned",
-        "Year-by-Year Projection", "Scenario selection", "milestone", "ROI Earned", "Ending Balance",
-        "How Net Worth Projection Works", "What is the 4% Rule?", "Three Scenarios", "Reading the Charts",
-        "gold star", "Got it", ">Close<", "aria-label=\"Close\""
+        "Try a path", "Savings Rate", "Starting Balance", "Annual Spending", "Conservative ROI", "Assumptions",
+        "More actions", "Randomize", "Reset to saved", "Clear saved parameters", "As projected", "In today&#x27;s money",
+        "Your net worth by age", "Conservative to aggressive", "FI target", "Show the math", "How this is calculated",
+        ">from<", "Your numbers", "years old with", "What moves your date", "Year by year", "Every 5 years",
+        "What you put in", "What growth added", "Not saved.", "How Net Worth Projection Works", "What is the 4% Rule?",
+        "Three Scenarios", "Reading the chart", "Got it", ">Close<", "aria-label=\"Close\""
     ];
 
     private static readonly string[] CalculatorEnglish =
@@ -141,7 +139,7 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
         string html = await GetAsync("/Networth", vietnamese: true);
 
         // The defaults spend 50,000 a year: an FI Target of 1,250,000, symbol after the number in vi-VN.
-        Assert.Matches(new Regex($@"nw-metric-fi-value"">\s*1\.250\.000{Nbsp}\$\s*<"), html);
+        Assert.Matches(new Regex($@"nw-fi-target-value"">\s*1\.250\.000{Nbsp}\$\s*<"), html);
     }
 
     [Fact]
@@ -172,7 +170,7 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
         string html = await GetAsync("/Networth", vietnamese: false);
 
         string menu = MoreMenu(html);
-        Assert.DoesNotContain("nw-preset-card", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("class=\"nw-path\"", html, StringComparison.Ordinal);
         Assert.All(PresetKeys,
             preset => Assert.Contains($"data-preset=\"{preset}\"", menu, StringComparison.Ordinal));
         Assert.Single(FirePreset().Matches(html));
