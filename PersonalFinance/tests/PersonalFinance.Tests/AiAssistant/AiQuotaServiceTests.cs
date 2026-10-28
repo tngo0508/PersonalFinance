@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using PersonalFinance.ApiService.Features.AiAssistant;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.Constants;
 
 namespace PersonalFinance.Tests.AiAssistant;
 
@@ -43,6 +45,30 @@ public class AiQuotaServiceTests
         Assert.True((await quota.CheckQuotaAsync(OtherUserId, "chat")).BudgetWarning);
         await quota.RecordUsageAsync(OtherUserId, "summarize", 1, 1, 0, 1m);
         Assert.False((await quota.CheckQuotaAsync("third-user", "chat")).Allowed);
+    }
+
+    [Fact]
+    public async Task CheckQuotaAsync_AdminSkipsTheDailyLimitButNotTheMonthlyBudget()
+    {
+        await using AppDbContext db = CreateContext();
+        db.Roles.Add(new IdentityRole { Id = "role-admin", Name = AppRoles.Admin });
+        db.UserRoles.Add(new IdentityUserRole<string> { UserId = UserId, RoleId = "role-admin" });
+        await db.SaveChangesAsync();
+        IConfigurationRoot config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["OpenAI:DailyMessageLimit"] = "1",
+            ["OpenAI:MonthlyBudgetUsd"] = "2"
+        }).Build();
+        var quota = new AiQuotaService(db, config);
+
+        await quota.RecordUsageAsync(UserId, "chat", 1, 1, 0, 1m);
+        await quota.RecordUsageAsync(OtherUserId, "chat", 1, 1, 0, 0.5m);
+
+        Assert.True((await quota.CheckQuotaAsync(UserId, "chat")).Allowed);
+        Assert.False((await quota.CheckQuotaAsync(OtherUserId, "chat")).Allowed);
+
+        await quota.RecordUsageAsync(UserId, "chat", 1, 1, 0, 1m);
+        Assert.False((await quota.CheckQuotaAsync(UserId, "chat")).Allowed);
     }
 
     [Theory]
