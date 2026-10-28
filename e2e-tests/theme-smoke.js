@@ -3,9 +3,11 @@
  * by mouse and keyboard, checks that the root's theme attributes follow each choice, that System follows an emulated
  * device colour scheme, that the choice survives a reload and sign-in, and that the avatar menu holds no theme items.
  * In dark mode it checks key text against its effective background (4.5:1) on the Landing Page, a sign-in page,
- * Account settings and the Net Worth help modal (slice #482), Budget, Budget Tracker and Savings Goals (slice #487),
- * and the Dashboard and Money Priorities (slice #489), and that the Investment Calculator's and the Budget planner's
- * charts restyle on a theme switch without a reload (slices #483 and #487). Run from ui-test.js as Test 9j.
+ * Account settings and the Net Worth help modal (slice #482), the Google Drive sample-data notice and its Budget report
+ * and Transactions modals (slice #484), Budget, Budget Tracker and Savings Goals (slice #487), and the Dashboard and
+ * Money Priorities (slice #489), and that the Investment Calculator's, the Google Drive Transactions timeline's and the
+ * Budget planner's charts restyle on a theme switch without a reload (slices #483, #484 and #487). Run from ui-test.js
+ * as Test 9j.
  *
  * Expected labels are read from Resources/i18n/en.json, so a rewording does not break the test.
  */
@@ -38,8 +40,19 @@ const CONTRAST_PAGES = {
     savingsGoals: ['.savings-title', '.savings-subtitle', '.savings-empty__title', '.savings-empty__text'],
     // The Dashboard and Money Priorities (#489), as a fresh Account sees them
     dashboard: ['.dash-header__eyebrow', '.dash-header__title', '.dash-header__lede'],
-    moneyPriorities: ['.mp-title', '.mp-intro', '.mp-card__title']
+    moneyPriorities: ['.mp-title', '.mp-intro', '.mp-card__title'],
+    // Google Drive on sample data (#484): the sample-data notice, then the Budget report and Transactions modals. The
+    // sample spreadsheet holds one month, so the report shows its month view: one period chip, the active one.
+    googleDriveNotice: ['.gd-notice strong', '.gd-notice .small', '.gd-notice .btn', '.gd-section-header__title'],
+    googleDriveReport: ['#monthlyBudgetModal .bgt-modal-title', '#monthlyBudgetModal .bgt-period-btn.active',
+        '#budgetPeriodTitle', '#budgetInsight', '#monthlyBudgetModal .bgt-tile-label',
+        '#monthlyBudgetModal .bgt-tile-value', '#monthlyBudgetModal .bgt-card-title'],
+    googleDriveTransactions: ['#transactionsModal .bgt-modal-title', '#transactionsModal .bgt-tile-label',
+        '#transactionsModal .bgt-tile-value', '#transactionsModal .bgt-card-title', '#transactionsModal .bgt-card-sub']
 };
+
+// A folder link with no API key: the Google Drive page connects it on sample data
+const SAMPLE_FOLDER_URL = 'https://drive.google.com/drive/folders/e2e-theme-sample';
 
 const PASSWORD = 'TestPass1!';
 const BUTTON = '[data-theme-button]';
@@ -379,6 +392,85 @@ async function checkBudgetChartRestyles(page, report) {
 }
 
 /**
+ * The Google Drive Transactions timeline, next to the tokens it should show: its gridline colour and its spending
+ * bars (the palette's second series), read from the Chart.js chart.
+ * @param {import('playwright').Page} page - The Google Drive page with the Transactions modal open.
+ * @returns {Promise<{theme: string, marker: boolean, grid: string|null, gridToken: string, spend: string|null,
+ *     spendToken: string}>} marker: the page has not reloaded since the check set it.
+ */
+async function driveChartState(page) {
+    return page.evaluate(() => {
+        const root = document.documentElement;
+        const style = getComputedStyle(root);
+        const chart = window.Chart ? window.Chart.getChart('txTimelineChart') : null;
+        const grid = chart ? chart.options.scales.y.grid.color : null;
+        return {
+            theme: root.getAttribute('data-theme'),
+            marker: window.__chartThemeCheck === true,
+            grid: typeof grid === 'function' ? grid({tick: {value: 1}}) : grid,
+            gridToken: style.getPropertyValue('--app-chart-grid').trim(),
+            spend: chart ? chart.data.datasets[0].backgroundColor : null,
+            spendToken: style.getPropertyValue('--app-chart-2').trim()
+        };
+    });
+}
+
+/**
+ * Does the Transactions timeline carry the theme's gridline and spending colours?
+ * @param {object} state - From driveChartState.
+ * @returns {boolean}
+ */
+function driveChartMatchesTokens(state) {
+    const same = (a, b) => {
+        const x = a && parseColour(a);
+        const y = b && parseColour(b);
+        return Boolean(x && y) && x.r === y.r && x.g === y.g && x.b === y.b;
+    };
+    return same(state.grid, state.gridToken) && same(state.spend, state.spendToken);
+}
+
+/**
+ * Google Drive on sample data (#484): the sample-data notice, the Budget report modal and the Transactions modal are
+ * readable in dark mode, and the Transactions timeline restyles on a theme switch without a reload. The sample
+ * spreadsheet holds one month, so the report opens in its month view, which draws no chart; the chart check uses the
+ * timeline, which the sample transactions do draw, reached through the report's Transactions button. Leaves the page
+ * in dark mode.
+ * @param {import('playwright').Page} page - A signed-in page in dark mode.
+ * @param {string} base - The Web app's base URL.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+async function checkGoogleDrive(page, base, report) {
+    await page.goto(`${base}/GoogleDrive?folderUrl=${encodeURIComponent(SAMPLE_FOLDER_URL)}`,
+        {waitUntil: 'networkidle', timeout: TIMEOUT});
+    await checkDarkContrast(page, 'Google Drive sample data', CONTRAST_PAGES.googleDriveNotice, report);
+
+    await page.locator('.btn-budget-report').first().click();
+    await page.locator('#monthlyBudgetModal.show #budgetReportContent:not(.d-none) #budgetPeriodTitle')
+        .waitFor({state: 'visible', timeout: TIMEOUT});
+    await checkDarkContrast(page, 'Google Drive Budget report', CONTRAST_PAGES.googleDriveReport, report);
+
+    await page.locator('#btnBudgetToTransactions').click();
+    await page.locator('#transactionsModal.show #txContent:not(.d-none) #txTimelineChart')
+        .waitFor({state: 'visible', timeout: TIMEOUT});
+    await page.waitForFunction(() => Boolean(window.Chart && window.Chart.getChart('txTimelineChart')), null,
+        {timeout: TIMEOUT}).catch(() => {});
+    await checkDarkContrast(page, 'Google Drive Transactions', CONTRAST_PAGES.googleDriveTransactions, report);
+
+    await page.evaluate(() => { window.__chartThemeCheck = true; });
+    const dark = await driveChartState(page);
+    check(dark.theme === 'dark' && driveChartMatchesTokens(dark), 'Transactions timeline: the chart shows the dark palette',
+        JSON.stringify(dark), report);
+    // The theme control sits in the top bar, behind the open modal, so the switch goes through the theme module
+    await page.evaluate(() => window.ThemeMode.setChoice('light'));
+    await waitForTheme(page, 'light');
+    const light = await driveChartState(page);
+    check(light.theme === 'light' && light.marker && driveChartMatchesTokens(light) && light.grid !== dark.grid,
+        'Transactions timeline: switching to Light restyles the chart without a reload', JSON.stringify(light), report);
+    await page.evaluate(() => window.ThemeMode.setChoice('dark'));
+    await waitForTheme(page, 'dark');
+}
+
+/**
  * Register a fresh Account and make sure it is signed in.
  * @param {import('playwright').Page} page - A page in a signed-out context.
  * @param {string} base - The Web app's base URL.
@@ -451,6 +543,8 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         await page.click('.nw-help-btn');
         await page.locator('#nwHelpModal.show .modal-title').waitFor({state: 'visible', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Net Worth help modal', CONTRAST_PAGES.modal, report);
+        // Google Drive on sample data, with the Budget report and then the Transactions modal open (#484)
+        await checkGoogleDrive(page, base, report);
         // A chart restyles on a theme switch (#483); leaving the page also closes the modal before the avatar menu check
         await checkChartRestyles(page, base, report);
 

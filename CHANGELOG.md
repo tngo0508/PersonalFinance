@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [13.9.0] - 2026-10-28
+## [13.11.0] - 2026-10-28
 
 ### Added
 
@@ -22,6 +22,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - References: slugs match file names and resolve; Terms and aliases are unique; 2–5 related terms; each Term Entry in at most one Lesson; Lesson days run from 1 with no gap.
   - Plain English: no advice phrasing or listed idioms, from `plain-english.json`. Each check has a fixture it rejects.
 
+## [13.10.0] - 2026-10-28
+
+### Added
+
+- **Google Drive check in the theme smoke**: in dark mode the E2E theme smoke connects a folder on sample data, checks the sample-data notice and the open Budget report and Transactions modals at 4.5:1, and switches the theme to check the Transactions timeline restyles without a reload (#484).
+- **Theme tokens for the Google Drive pages**: `--app-info-bg` (the blue wash behind a notice or an active row), `--app-border-subtle` (a card's hairline on a modal), `--app-on-chart` (a label on a chart series' fill) and `--app-shadow-positive-hover`, each with a dark value; the token test checks their text pairs in both themes (#484).
+
+### Fixed
+
+- **Google Drive in dark mode**: the Budget report and Transactions modals, the period chips, the summary card and card headings, and the sample-data notice title are dark and readable in the dark theme, where they rendered light with light text (#484, the dark-theme items of #478).
+  - The page's and the modals' own palettes (`--gdrive-*`, `--bgt-*`) now point at the app tokens, so they swap with the theme. The light theme keeps its colours, except for a few that move to the nearest token: the sidebar's needs-attention dot and the error alert's icon, the pager's active page (brand green instead of Bootstrap blue) and the page-size select's border.
+  - The active period chip's label, the allocation bar's labels and the status icons use token colours that stay readable on their fills in both themes; the overspent segment's label is white on red in light mode too, where dark ink fell short of 4.5:1.
+  - The transactions table's page-size select and pager use the theme tokens instead of fixed white backgrounds.
+  - The "Other" filter chip's icon follows the chip's text colour; its fixed slate fill fell below 3:1 on the dark surface.
+  - A Budget report printed in dark mode keeps its dark surface, so its light text stays readable on paper.
+
+### Changed
+
+- **The Google Drive report charts follow the theme**: the Budget report's two charts and the Transactions timeline take their colours from the chart palette (`core/chart-palette.js`) and restyle on a theme switch without a reload (#484).
+  - Income is the palette's first series (green) and spending its second (blue), in the charts and in the legend swatches alike; before, the charts drew blue and orange while the swatches showed green and orange.
+  - The tooltip uses the chart tooltip surface (navy in light mode) instead of near-black.
+- **`site.css` is off the raw-colour allow-list**: its Google Drive section held its last colour literals (#484).
+
+### Removed
+
+- **Unused Google Drive styles**: the file-type badge classes (`.gdrive-badge-*`) and the `--gdrive-secondary` and file-type colour variables, which nothing used (#484).
 ## [13.8.0] - 2026-10-28
 
 ### Added

@@ -50,6 +50,10 @@ const PAIRS = [
     { fg: '--app-brand-on-soft', bg: '--app-brand-soft', minimum: AA_TEXT, themes: BOTH },
     { fg: '--lp-ledger-on-wash', bg: '--lp-ledger-wash', minimum: AA_TEXT, themes: BOTH },
     { fg: '--app-warning-fill', bg: '--app-bg', minimum: AA_UI, themes: DARK },
+    // The info wash behind the Google Drive sample-data notice, the active sidebar link and a hovered row (#484)
+    ...pairs(['--app-text', '--app-text-soft', '--app-brand-text'], ['--app-info-bg'], AA_TEXT, BOTH),
+    // Labels on a chart series' fill, e.g. the Google Drive report's allocation bar (#484)
+    ...pairs(['--app-on-chart'], ['--app-chart-1', '--app-chart-2'], AA_TEXT, BOTH),
     // Toasts
     { fg: '--app-text', bg: '--app-toast-bg', minimum: AA_TEXT, themes: BOTH },
     // The navy band and sidebar, navy in both themes
@@ -81,7 +85,8 @@ const NEW_TOKENS = [
     '--app-overlay-strong', '--app-shadow-popover', '--app-shadow-dialog', '--app-shadow-banner',
     '--app-chart-grid', '--app-chart-axis', '--app-chart-tooltip-bg', '--app-chart-tooltip-text',
     '--app-chart-tooltip-border', '--app-shadow-positive', '--lp-raised', '--lp-ledger-fill', '--lp-ledger-text',
-    '--lp-ledger-on-wash', '--lp-brass-glow', '--lp-shadow-float', ...CHART_SERIES, ...BUDGET_CATEGORIES
+    '--lp-ledger-on-wash', '--lp-brass-glow', '--lp-shadow-float', ...CHART_SERIES, ...BUDGET_CATEGORIES,
+    '--app-border-subtle', '--app-on-chart', '--app-shadow-positive-hover'
 ];
 // White and black labels, and what sits on the navy band, are the same in both themes on purpose
 const SAME_IN_BOTH = [
