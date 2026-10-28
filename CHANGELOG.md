@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [13.2.2] - 2026-10-28
+
+### Fixed
+
+- **Google sign-up asks for consent and records it**: a visitor new to the site who signs up with Google must now tick the same "I agree to the Terms of Service and Privacy Policy" box as on Register before the Account is created, and the Account gets a `UserConsent` record with the current policy version and the request's IP address (#503, #313).
+  - When Google shares the email, it is shown read-only and the Account is created confirmed and signed in after one click; the email is always taken from Google's sign-in, never from the form.
+  - When Google shares no email, the visitor types one and ticks the box on the same form; the Account stays unconfirmed until the confirmation email is used, as before.
+  - Leaving the page without accepting creates nothing. Signing in with Google to an existing Account, or linking Google to one, is unchanged.
+
 ## [13.2.1] - 2026-10-28
 
 ### Changed

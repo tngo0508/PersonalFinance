@@ -116,6 +116,7 @@
   "Account.ExternalLogin.Heading": "Associate your account",
   "Account.ExternalLogin.Subtitle": "Associate your {provider} account.",
   "Account.ExternalLogin.Authenticated": "You've successfully authenticated with {provider}. Please confirm your email address below to finish setting up your account.",
+  "Account.ExternalLogin.AuthenticatedAcceptTerms": "You've successfully authenticated with {provider}. Agree to the terms below to finish creating your account.",
   "Account.ExternalLogin.Submit": "Register",
   "Account.ExternalLogin.ProviderError": "Error from external provider: {remoteError}",
   "Account.ExternalLogin.LoadError": "Error loading external login information.",

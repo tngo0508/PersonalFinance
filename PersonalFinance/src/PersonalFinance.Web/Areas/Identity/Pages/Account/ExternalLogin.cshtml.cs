@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Localization;
 using PersonalFinance.Data;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Web.Infrastructure.Localization;
 using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Services;
@@ -28,6 +29,7 @@ public class ExternalLoginModel : PageModel
     private readonly ILogger<ExternalLoginModel> _logger;
     private readonly IAccountEmailService _accountEmails;
     private readonly IUserPreferenceService _preferences;
+    private readonly IUserConsentService _consentService;
     private readonly IStringLocalizer _localizer;
 
     public ExternalLoginModel(
@@ -37,10 +39,12 @@ public class ExternalLoginModel : PageModel
         ILogger<ExternalLoginModel> logger,
         IAccountEmailService accountEmails,
         IUserPreferenceService preferences,
+        IUserConsentService consentService,
         IStringLocalizer localizer)
     {
         _accountEmails = accountEmails;
         _preferences = preferences;
+        _consentService = consentService;
         _signInManager = signInManager;
         _userManager = userManager;
         _userStore = userStore;
@@ -54,6 +58,12 @@ public class ExternalLoginModel : PageModel
 
     public string? ProviderDisplayName { get; set; }
 
+    /// <summary>Whether the provider supplied the email, so the form shows it read-only and asks only for consent.</summary>
+    public bool EmailFromProvider { get; set; }
+
+    /// <summary>Whether an Account the callback could not link already holds the provider's email.</summary>
+    public bool ProviderEmailHasAccount { get; set; }
+
     public string? ReturnUrl { get; set; }
 
     [TempData]
@@ -65,6 +75,9 @@ public class ExternalLoginModel : PageModel
         [EmailAddress(ErrorMessage = "Validation.EmailAddress")]
         [Display(Name = "Identity.Field.Email")]
         public string Email { get; set; } = string.Empty;
+
+        [Display(Name = "Identity.Field.AcceptTerms")]
+        public bool AcceptTerms { get; set; }
     }
 
     public IActionResult OnGet() => RedirectToPage("./Login");
@@ -157,47 +170,15 @@ public class ExternalLoginModel : PageModel
                     ModelState.AddModelError(string.Empty, _localizer["Account.ExternalLogin.UnconfirmedAccountExists"]);
                 }
 
+                EmailFromProvider = true;
+                ProviderEmailHasAccount = true;
                 Input.Email = email;
                 return Page();
             }
 
-            // Create a new user automatically with confirmed email from OAuth provider
-            IdentityUser user = CreateUser();
-            await _userStore.SetUserNameAsync(user, email, CancellationToken.None);
-            await _emailStore.SetEmailAsync(user, email, CancellationToken.None);
-            user.EmailConfirmed = true;
-
-            IdentityResult createResult = await _userManager.CreateAsync(user);
-            if (createResult.Succeeded)
-            {
-                IdentityResult addLoginResult = await _userManager.AddLoginAsync(user, info);
-                if (addLoginResult.Succeeded)
-                {
-                    if (_logger.IsEnabled(LogLevel.Information))
-                    {
-                        _logger.LogInformation("User created an account using {LoginProvider} provider.", info.LoginProvider);
-                    }
-                    await _userManager.AssignDefaultRoleAsync(user, _logger);
-                    // The Language the visitor signed up in becomes the Account's (localization spec §2.3).
-                    await _preferences.SetLanguageAsync(user.Id, AppLanguages.Current().Code);
-                    await SynchronizeCustomClaimsAsync(user, info.Principal);
-                    await _signInManager.SignInAsync(user, isPersistent: false, info.LoginProvider);
-                    return LocalRedirect(returnUrl);
-                }
-
-                foreach (IdentityError error in addLoginResult.Errors)
-                {
-                    ModelState.AddModelError(string.Empty, error.Description);
-                }
-            }
-            else
-            {
-                foreach (IdentityError error in createResult.Errors)
-                {
-                    ModelState.AddModelError(string.Empty, error.Description);
-                }
-            }
-
+            // A new Google user must agree to the terms before the Account exists, so the confirmation page asks
+            // for that; the Account is created on its POST.
+            EmailFromProvider = true;
             Input.Email = email;
             return Page();
         }
@@ -220,21 +201,38 @@ public class ExternalLoginModel : PageModel
         ProviderDisplayName = info.ProviderDisplayName;
         ReturnUrl = returnUrl;
 
+        // The trusted email comes only from the provider's sign-in, never from the posted form, so editing the
+        // read-only field cannot confirm an address the visitor does not own.
+        string? providerEmail = info.Principal.FindFirstValue(ClaimTypes.Email);
+        EmailFromProvider = !string.IsNullOrEmpty(providerEmail);
+        if (EmailFromProvider)
+        {
+            ModelState.Remove($"{nameof(Input)}.{nameof(Input.Email)}");
+            Input.Email = providerEmail!;
+        }
+
+        // [Required] on a bool is always satisfied, so acceptance must be enforced explicitly.
+        if (!Input.AcceptTerms)
+        {
+            ModelState.AddModelError($"{nameof(Input)}.{nameof(Input.AcceptTerms)}", _localizer["Account.Register.AcceptTermsRequired"]);
+        }
+
         if (ModelState.IsValid)
         {
-            // The email was typed by the user, not supplied by the provider, so it is never trusted:
-            // never link it to an existing account and never mark it as confirmed.
+            // Linking happens only in the callback: an Account that appeared since then is refused, never linked.
             IdentityUser? existingUser = await _userManager.FindByEmailAsync(Input.Email);
             if (existingUser != null)
             {
+                ProviderEmailHasAccount = EmailFromProvider;
                 ModelState.AddModelError(string.Empty, _localizer["Account.ExternalLogin.AccountExists"]);
                 return Page();
             }
 
+            // A typed email is never trusted, so it stays unconfirmed until the visitor confirms it.
             IdentityUser user = CreateUser();
             await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
             await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
-            user.EmailConfirmed = false;
+            user.EmailConfirmed = EmailFromProvider;
 
             IdentityResult createResult = await _userManager.CreateAsync(user);
             if (createResult.Succeeded)
@@ -244,13 +242,26 @@ public class ExternalLoginModel : PageModel
                 {
                     if (_logger.IsEnabled(LogLevel.Information))
                     {
-                        _logger.LogInformation("User created an unconfirmed account using {LoginProvider} provider.", info.LoginProvider);
+                        _logger.LogInformation("User created an account using {LoginProvider} provider.", info.LoginProvider);
                     }
                     await _userManager.AssignDefaultRoleAsync(user, _logger);
-                    // The Language the visitor signed up in becomes the Account's (localization spec §2.3).
-                    await _preferences.SetLanguageAsync(user.Id, AppLanguages.Current().Code);
 
                     string userId = await _userManager.GetUserIdAsync(user);
+                    await _consentService.RecordConsentAsync(
+                        userId,
+                        AppVersion.Current,
+                        HttpContext.Connection.RemoteIpAddress?.ToString());
+
+                    // The Language the visitor signed up in becomes the Account's (localization spec §2.3).
+                    await _preferences.SetLanguageAsync(userId, AppLanguages.Current().Code);
+
+                    if (EmailFromProvider)
+                    {
+                        await SynchronizeCustomClaimsAsync(user, info.Principal);
+                        await _signInManager.SignInAsync(user, isPersistent: false, info.LoginProvider);
+                        return LocalRedirect(returnUrl);
+                    }
+
                     string code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
                     code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
                     string? callbackUrl = Url.Page(

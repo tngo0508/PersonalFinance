@@ -112,6 +112,7 @@
   "Account.ExternalLogin.Heading": "Liên kết tài khoản của bạn",
   "Account.ExternalLogin.Subtitle": "Liên kết tài khoản {provider} của bạn.",
   "Account.ExternalLogin.Authenticated": "Bạn đã xác thực thành công với {provider}. Vui lòng xác nhận địa chỉ email của bạn bên dưới để hoàn tất việc thiết lập tài khoản.",
+  "Account.ExternalLogin.AuthenticatedAcceptTerms": "Bạn đã xác thực thành công với {provider}. Hãy đồng ý với các điều khoản dưới đây để hoàn tất việc tạo tài khoản.",
   "Account.ExternalLogin.Submit": "Đăng ký",
   "Account.ExternalLogin.ProviderError": "Lỗi từ nhà cung cấp bên ngoài: {remoteError}",
   "Account.ExternalLogin.LoadError": "Lỗi khi tải thông tin đăng nhập bên ngoài.",
