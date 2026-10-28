@@ -92,7 +92,8 @@ late run's timeout is cut so that it ends by 19:00. Trigger it by hand at any ti
   and opens a PR from `agent/issue-<n>` that requests the owner's review. The agent never merges.
 - **Auto-merges**: `.github/workflows/agent-auto-merge.yml` merges an `agent/issue-*` PR that is not a draft as soon
   as every check on its head commit has finished, none failed, and the release check and `claude-review` both passed.
-  A failing check or a draft waits for a human. The merge deploys like any other. This needs the `AGENT_GH_TOKEN`
+  It also waits until every PR workflow run on that commit has finished and passed, because a run whose jobs have not
+  started yet shows no checks (#535, #537 and #539 merged red that way). A failing check or a draft waits for a human. The merge deploys like any other. This needs the `AGENT_GH_TOKEN`
   secret, because a merge made with `GITHUB_TOKEN` would not trigger the deploy or the Release.
 - **Translates**: `.github/workflows/i18n-translate.yml` runs on every PR from a branch of this repository, drafts the
   missing or stale Vietnamese with `npm run i18n:translate` and pushes it to the PR branch as `i18n: translate N keys
@@ -106,7 +107,8 @@ late run's timeout is cut so that it ends by 19:00. Trigger it by hand at any ti
   `CHANGELOG.md`. Rebasing it is the whole run, even when the open-PR cap is full. The agent re-bumps to the next
   free version, moves its CHANGELOG section to the top, re-runs the checks and force-pushes, and the new CI run lets
   Agent Auto-Merge merge it. A PR it cannot rebase gets `agent:rebase-failed` and waits for a human. Remove that label
-  to let the agent retry.
+  to let the agent retry. A rebase onto the `main` the run started from counts as done even if another PR merged
+  meanwhile; the next run rebases it again.
 - **Hands back** unclear tickets as `needs-info`, and ones needing a schema migration as `ready-for-human`, unless the
   issue carries `agent:migration-ok`. Unresolved review findings make the PR a draft. A failed or timed-out run moves
   the ticket to `ready-for-human`.

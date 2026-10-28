@@ -318,6 +318,13 @@ jobs:
       - name: Install npm packages
         run: npm ci
 
+      # The check below judges the rebase against main as it is now. Another agent PR can merge while Claude works;
+      # the next run rebases onto that, so it must not count as a failed rebase (#536 was labelled that way).
+      - name: Record main before the rebase
+        run: |
+          git fetch -q origin main
+          echo "START_MAIN=$(git rev-parse origin/main)" >> "$GITHUB_ENV"
+
       - name: Run Claude
         uses: anthropics/claude-code-action@v1
         with:
@@ -361,8 +368,13 @@ jobs:
         run: |
           set -uo pipefail
           git fetch -q origin main "$BRANCH"
-          if [ "$JOB_STATUS" = "success" ] && git merge-base --is-ancestor origin/main "origin/$BRANCH"; then
-            echo "::notice::PR #$PR is rebased onto main."
+          if [ "$JOB_STATUS" = "success" ] && [ -n "${START_MAIN:-}" ] \
+            && git merge-base --is-ancestor "$START_MAIN" "origin/$BRANCH"; then
+            if git merge-base --is-ancestor origin/main "origin/$BRANCH"; then
+              echo "::notice::PR #$PR is rebased onto main."
+            else
+              echo "::notice::PR #$PR is rebased onto main as of ${START_MAIN:0:8}; main has moved since, so a later run rebases it again."
+            fi
             exit 0
           fi
           # Not retried every 30 minutes: the label keeps the picker off this PR until a human removes it.
