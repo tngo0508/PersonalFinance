@@ -177,7 +177,9 @@
         }
         // A theme switch redraws the chart in the new colours without a reload (#489)
         window.ChartPalette.subscribe(() => {
-            chart.destroy();
+            if (chart) {
+                chart.destroy();
+            }
             chart = renderMoneyFlow(data.moneyFlow);
         });
     }

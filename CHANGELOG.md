@@ -25,7 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Money Flow and the Analysis page follow the theme**: the Sankey chart, the weekly, monthly and category charts, the summary and velocity cards, the progress bar and the tables take their colours from the tokens and the chart palette, and the charts redraw on a theme switch (#489).
   - The Sankey's node labels use the axis text colour instead of black, so they read on the dark card.
   - The page's styles move from an inline block to `css/analysis.css`, so the raw-colour guard covers them; the category charts and trend lines use the categorical series and the positive and negative colours instead of Bootstrap's.
-- **The Investment Calculator's icons follow the theme**: the title icon uses the fill and label tokens, and the blue result icon a new info tile token with a dark value (#489).
+  - The category doughnut takes the six series colours, then the same six lighter, so up to twelve categories never repeat a colour; the sync-conflict dialog's backdrop uses the overlay token.
+- **The Investment Calculator's icons follow the theme**: the title icon uses the fill and label tokens, and the blue result icon a new info tile token with a dark value; the chart tooltip's shadow comes from the chart palette (#489).
 - **Raw-colour allow-list**: `dashboard.css` and `investment-calculator.css` have no raw colours left and leave the allow-list (#489).
 
 ## [13.7.0] - 2026-10-28

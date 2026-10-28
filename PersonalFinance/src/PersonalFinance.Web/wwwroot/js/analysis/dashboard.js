@@ -239,6 +239,19 @@
     }
 
     /**
+     * A doughnut slice's colour: the categorical series in turn, then the same series lighter, so the seventh to
+     * twelfth categories never repeat an earlier slice's colour.
+     * @param {Object} palette - The chart palette.
+     * @param {number} index - The slice's position.
+     * @returns {string} The colour.
+     */
+    function sliceColour (palette, index) {
+        const count = palette.series.length;
+        const colour = palette.series[index % count];
+        return Math.floor(index / count) % 2 === 1 ? ChartPalette.withAlpha(colour, 0.55) : colour;
+    }
+
+    /**
      * Render the category pie chart. Slices take the categorical series in turn; the legend and table name each one.
      * @param {Array} categories - Array of category insight data.
      * @param {Object} palette - The chart palette.
@@ -262,7 +275,7 @@
                     data: categories.map((c) => {
                         return c.actualAmount;
                     }),
-                    backgroundColor: categories.map((_c, index) => palette.series[index % palette.series.length]),
+                    backgroundColor: categories.map((_c, index) => sliceColour(palette, index)),
                     // The gaps between slices in the card's colour
                     borderColor: palette.page
                 }]
