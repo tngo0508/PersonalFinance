@@ -59,8 +59,8 @@
     width: 36px;
     height: 36px;
     border-radius: var(--app-radius-m);
-    background: var(--app-brand);
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-text-on-brand);
     flex-shrink: 0;
 }
 
@@ -122,7 +122,7 @@
 
 .savings-goal-card--completed {
     border-color: var(--app-accent-positive);
-    background: var(--app-accent-positive-bg, #f0fdf4);
+    background: var(--app-accent-positive-bg);
 }
 
 .savings-goal-card .card-body {
@@ -161,7 +161,7 @@
     height: 32px;
     border-radius: var(--app-radius-s);
     background: var(--app-brand-bg);
-    color: var(--app-brand);
+    color: var(--app-brand-text);
     flex-shrink: 0;
     margin-top: 0.1rem;
 }
@@ -172,8 +172,8 @@
 }
 
 .savings-goal-header__icon--complete {
-    background: var(--app-accent-positive-bg, #f0fdf4);
-    color: var(--app-accent-positive);
+    background: var(--app-accent-positive-bg);
+    color: var(--app-brand-text);
 }
 
 .savings-goal-name {
@@ -218,7 +218,7 @@
 }
 
 .savings-goal-delete-btn:hover {
-    background: var(--budget-danger-light, #fee2e2);
+    background: var(--app-accent-negative-soft);
     color: var(--app-accent-negative);
     border-color: var(--app-accent-negative);
 }
@@ -242,7 +242,7 @@
 .savings-goal-current {
     font-weight: var(--app-font-weight-bold);
     font-size: 1.5rem;
-    color: var(--app-accent-positive);
+    color: var(--app-brand-text);
     font-family: var(--app-font-mono);
     line-height: 1.2;
 }
@@ -321,7 +321,7 @@
 }
 
 .savings-goal-remaining--complete {
-    color: var(--app-accent-positive);
+    color: var(--app-brand-text);
     font-weight: var(--app-font-weight-semibold);
 }
 
@@ -496,7 +496,7 @@
 .savings-goal-correct > summary,
 .savings-history-edit > summary {
     cursor: pointer;
-    color: var(--app-brand);
+    color: var(--app-brand-text);
     font-weight: var(--app-font-weight-semibold);
 }
 
@@ -600,7 +600,7 @@
     justify-content: center;
     padding: 4rem 1.5rem;
     text-align: center;
-    background: var(--app-surface, #fff);
+    background: var(--app-surface);
     border: 1px solid var(--app-border);
     border-radius: var(--app-radius-m);
     box-shadow: var(--app-shadow-2);
@@ -615,7 +615,7 @@
     height: 80px;
     border-radius: 50%;
     background: var(--app-surface-soft, var(--app-surface-secondary));
-    color: var(--app-text-disabled, #a0a0a0);
+    color: var(--app-text-disabled);
     margin-bottom: 1.25rem;
 }
 
@@ -683,7 +683,7 @@
     height: 32px;
     border-radius: var(--app-radius-s);
     background: var(--app-brand-bg);
-    color: var(--app-brand);
+    color: var(--app-brand-text);
     flex-shrink: 0;
 }
 
@@ -782,7 +782,7 @@
 .savings-goal-reporting {
     margin: -0.25rem 0 0.5rem;
     font-size: 0.8125rem;
-    color: var(--app-text-muted, #5b6b78);
+    color: var(--app-text-muted);
 }
 
 .savings-summary .conversion-caption {

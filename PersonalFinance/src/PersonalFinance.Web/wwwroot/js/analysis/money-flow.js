@@ -11,18 +11,20 @@
         return (page && page.dataset.currency) || 'USD';
     }
 
-    // Fallbacks if the card's CSS variables are missing; the view defines the real values (see Index.cshtml).
-    const FALLBACK_COLOR = '#9CA3AF';
-
     /**
-     * Read the Money Flow colours from the card's CSS custom properties.
+     * Read the Money Flow colours of the theme in effect from the card's CSS custom properties (css/analysis.css,
+     * tokens in site.css), and the label colour from the chart palette (core/chart-palette.js, #489).
      * @param {Element} card - The Money Flow section element.
-     * @returns {{slots: string[], kinds: Object<string, string>}} Category slot colours and colours by node kind.
+     * @returns {{slots: string[], kinds: Object<string, string>, label: string, fallback: string}} Category slot
+     *     colours, colours by node kind, the node label colour, and the colour for anything without a token.
      */
     function readColors (card) {
         const style = getComputedStyle(card);
-        const read = (name) => style.getPropertyValue(name).trim() || FALLBACK_COLOR;
+        const palette = window.ChartPalette.read();
+        const read = (name) => style.getPropertyValue(name).trim() || palette.axis;
         return {
+            label: palette.axis,
+            fallback: palette.axis,
             slots: [0, 1, 2, 3, 4].map((slot) => read(`--money-flow-slot-${slot}`)),
             kinds: {
                 income: read('--money-flow-income'),
@@ -71,12 +73,12 @@
     /**
      * Render the Money Flow Sankey chart from the server-built model.
      * @param {Object} flow - The Money Flow model (nodes, links, shareBase).
-     * @returns {void}
+     * @returns {Chart|null} The chart, or null when there is nothing to draw.
      */
     function renderMoneyFlow (flow) {
         const canvas = document.getElementById('moneyFlowChart');
         if (!canvas || !flow || !flow.links || flow.links.length === 0 || typeof Chart === 'undefined') {
-            return;
+            return null;
         }
 
         // On narrow charts the amounts don't fit beside the bands; the table above them carries the figures.
@@ -103,15 +105,15 @@
             const link = context.dataset.data[context.dataIndex];
             const node = link ? nodesByKey[link[end]] : null;
             if (!node) {
-                return FALLBACK_COLOR;
+                return colors.fallback;
             }
             if (node.kind === 'category') {
-                return colors.slots[node.colorSlot] || FALLBACK_COLOR;
+                return colors.slots[node.colorSlot] || colors.fallback;
             }
-            return colors.kinds[node.kind] || FALLBACK_COLOR;
+            return colors.kinds[node.kind] || colors.fallback;
         }
 
-        new Chart(canvas.getContext('2d'), {
+        return new Chart(canvas.getContext('2d'), {
             type: 'sankey',
             data: {
                 datasets: [{
@@ -126,6 +128,8 @@
                         return endColor(context, 'to');
                     },
                     colorMode: 'gradient',
+                    // Node labels: the plugin's default black is unreadable on the dark card
+                    color: colors.label,
                     size: 'max',
                     nodePadding: 14
                 }]
@@ -167,7 +171,17 @@
             return;
         }
 
-        renderMoneyFlow(data.moneyFlow);
+        let chart = renderMoneyFlow(data.moneyFlow);
+        if (!chart) {
+            return;
+        }
+        // A theme switch redraws the chart in the new colours without a reload (#489)
+        window.ChartPalette.subscribe(() => {
+            if (chart) {
+                chart.destroy();
+            }
+            chart = renderMoneyFlow(data.moneyFlow);
+        });
     }
 
     // DOM ready pattern

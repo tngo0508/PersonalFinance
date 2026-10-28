@@ -47,8 +47,8 @@
     width: 36px;
     height: 36px;
     border-radius: var(--app-radius-m);
-    background: var(--app-brand);
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-text-on-brand);
     flex-shrink: 0;
 }
 
@@ -224,8 +224,8 @@
 }
 
 .calculator-result-card__icon--blue {
-    background: #E4EEF5;
-    color: #2F6690;
+    background: var(--app-info-bg);
+    color: var(--app-info-text);
 }
 
 .calculator-result-card__icon--green {

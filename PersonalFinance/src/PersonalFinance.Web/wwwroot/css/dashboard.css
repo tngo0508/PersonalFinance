@@ -729,8 +729,8 @@
 }
 
 .dash-badge--positive {
-    /* Darkened positive token so small badge text meets WCAG AA on the soft background. */
-    color: color-mix(in srgb, var(--app-accent-positive) 75%, #000);
+    /* Darkened (light) or lifted (dark) positive token so small badge text meets WCAG AA on the soft background. */
+    color: var(--app-positive-on-soft);
     background: var(--app-accent-positive-soft);
 }
 
@@ -943,20 +943,21 @@
    in this order and cyclically (a donut's last slice touches its first): worst adjacent CVD dE 13.0,
    normal-vision dE 27.5. Food, Healthcare, Debt Repayment, and Miscellaneous sit under 3:1 against
    white, so every slice is also named with its percent and amount in the legend list (the text
-   alternative). Unallocated is a neutral grey on purpose: it is income with no category.
+   alternative). Unallocated is a neutral grey on purpose: it is income with no category. The colours are
+   tokens in site.css, with a dark set lifted to 3:1 on the dark page and card (#489).
    ========================================================================== */
 
 .dash-budget {
-    --dash-budget-housing: #C026D3;
-    --dash-budget-food: #EB6834;
-    --dash-budget-transportation: #6250D6;
-    --dash-budget-utilities: #E34948;
-    --dash-budget-insurance: #2A78D6;
-    --dash-budget-healthcare: #E87BA4;
-    --dash-budget-savings: #008300;
-    --dash-budget-debt-repayment: #EDA100;
-    --dash-budget-entertainment: #9B4DCA;
-    --dash-budget-miscellaneous: #1BAF7A;
+    --dash-budget-housing: var(--app-dash-budget-housing);
+    --dash-budget-food: var(--app-dash-budget-food);
+    --dash-budget-transportation: var(--app-dash-budget-transportation);
+    --dash-budget-utilities: var(--app-dash-budget-utilities);
+    --dash-budget-insurance: var(--app-dash-budget-insurance);
+    --dash-budget-healthcare: var(--app-dash-budget-healthcare);
+    --dash-budget-savings: var(--app-dash-budget-savings);
+    --dash-budget-debt-repayment: var(--app-dash-budget-debt-repayment);
+    --dash-budget-entertainment: var(--app-dash-budget-entertainment);
+    --dash-budget-miscellaneous: var(--app-dash-budget-miscellaneous);
     --dash-budget-unallocated: var(--app-border-hover);
 }
 
@@ -1105,8 +1106,8 @@
     padding: 1px var(--app-spacing-xs);
     font-size: var(--app-font-size-small);
     font-weight: var(--app-font-weight-medium);
-    /* Darkened positive token so small badge text meets WCAG AA on the soft background. */
-    color: color-mix(in srgb, var(--app-accent-positive) 75%, #000);
+    /* Darkened (light) or lifted (dark) positive token so small badge text meets WCAG AA on the soft background. */
+    color: var(--app-positive-on-soft);
     background: var(--app-accent-positive-soft);
     border-radius: var(--app-radius-s);
 }

@@ -52,6 +52,10 @@ public class MoneyPrioritiesWebControllerTests
         MoneyPrioritiesViewModel model = Assert.IsType<MoneyPrioritiesViewModel>(view.Model);
         Assert.StartsWith("flowchart TD", model.WholeTreeDiagram, StringComparison.Ordinal);
         Assert.Contains("  class L7 leaf", model.WholeTreeDiagram.Split('\n'));
+        // The same tree in the dark palette, for the page to draw in dark mode (#489)
+        Assert.Contains("  class L7 leaf", model.WholeTreeDiagramDark.Split('\n'));
+        Assert.Contains($"  classDef question fill:{PriorityDiagramPalette.Dark.QuestionFill},", model.WholeTreeDiagramDark,
+            StringComparison.Ordinal);
         Assert.Equal([9, 4], model.RecentWalks.Select(w => w.WalkId));
         Assert.NotNull(model.LatestAnswers);
         Assert.Equal(22.99m, model.LatestAnswers.DebtApr);
@@ -140,6 +144,11 @@ public class MoneyPrioritiesWebControllerTests
             view.PathSentences);
         Assert.Contains("  class L1 chosen", view.WholeTreeDiagram.Split('\n'));
         Assert.DoesNotContain("Q2", view.PathViewDiagram, StringComparison.Ordinal);
+        // Both views again in the dark palette (#489)
+        Assert.Contains("  class L1 chosen", view.WholeTreeDiagramDark.Split('\n'));
+        Assert.Contains($"fill:{PriorityDiagramPalette.Dark.ChosenFill},", view.WholeTreeDiagramDark, StringComparison.Ordinal);
+        Assert.DoesNotContain("Q2", view.PathViewDiagramDark, StringComparison.Ordinal);
+        Assert.Contains($"fill:{PriorityDiagramPalette.Dark.ChosenFill},", view.PathViewDiagramDark, StringComparison.Ordinal);
     }
 
     [Fact]

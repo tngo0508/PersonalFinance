@@ -7,11 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [13.6.0] - 2026-10-28
+## [13.10.0] - 2026-10-28
 
 ### Added
 
-- **Google Drive check in the theme smoke**: in dark mode the E2E theme smoke connects a folder on sample data, checks the sample-data notice and the open Budget report modal at 4.5:1, and switches the theme to check the report's chart restyles without a reload (#484).
+- **Google Drive check in the theme smoke**: in dark mode the E2E theme smoke connects a folder on sample data, checks the sample-data notice and the open Budget report and Transactions modals at 4.5:1, and switches the theme to check the Transactions timeline restyles without a reload (#484).
 - **Theme tokens for the Google Drive pages**: `--app-info-bg` (the blue wash behind a notice or an active row), `--app-border-subtle` (a card's hairline on a modal), `--app-on-chart` (a label on a chart series' fill) and `--app-shadow-positive-hover`, each with a dark value; the token test checks their text pairs in both themes (#484).
 
 ### Fixed
@@ -33,6 +33,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - **Unused Google Drive styles**: the file-type badge classes (`.gdrive-badge-*`) and the `--gdrive-secondary` and file-type colour variables, which nothing used (#484).
+## [13.8.0] - 2026-10-28
+
+### Added
+
+- **Dark Money Priorities diagram**: the Priority Tree has a dark palette, and the page draws the diagram in the palette of the theme in effect and redraws it on a theme switch (#489).
+  - Web generates each diagram text in both the light and the dark palette; every dark text colour meets 4.5:1 on what it sits on, and lines and borders 3:1 (an xUnit test checks it).
+  - Mermaid's own theme variables (the edge-label background and the arrowheads) come from the chart palette helper; an open whole tree stays open across the switch.
+- **Dashboard and Money Priorities in the theme smoke**: the E2E theme smoke checks key text on both pages against 4.5:1 in dark mode (#489).
+
+### Changed
+
+- **The Dashboard charts follow the theme**: the net worth projection and the budget donut take their colours from the chart palette and the theme tokens, and restyle on a theme switch without a reload (#489).
+  - The scenario lines, FI Target line, gridlines, axis text, legend and tooltip use the dark chart colours in dark mode; the light theme draws as before.
+  - The budget categories keep their hues in dark mode, lifted to 3:1 on the dark page and card, and the gaps between slices take the card's colour instead of white.
+  - The positive badges on the Dashboard read in the lighter green on the dark soft background.
+- **Money Flow and the Analysis page follow the theme**: the Sankey chart, the weekly, monthly and category charts, the summary and velocity cards, the progress bar and the tables take their colours from the tokens and the chart palette, and the charts redraw on a theme switch (#489).
+  - The Sankey's node labels use the axis text colour instead of black, so they read on the dark card.
+  - The page's styles move from an inline block to `css/analysis.css`, so the raw-colour guard covers them; the category charts and trend lines use the categorical series and the positive and negative colours instead of Bootstrap's.
+  - The category doughnut takes the six series colours, then the same six lighter, so up to twelve categories never repeat a colour; the sync-conflict dialog's backdrop uses the overlay token.
+- **The Investment Calculator's icons follow the theme**: the title icon uses the fill and label tokens, and the blue result icon a new info tile token with a dark value; the chart tooltip's shadow comes from the chart palette (#489).
+- **Raw-colour allow-list**: `dashboard.css` and `investment-calculator.css` have no raw colours left and leave the allow-list (#489).
+
+## [13.7.0] - 2026-10-28
+
+### Added
+
+- **Budget pages in the theme smoke**: in dark mode the E2E theme smoke checks key text on Budget, Budget Tracker and Savings Goals at 4.5:1, and switches the theme to check the Budget planner's chart recolours without a reload (#487).
+- **Budget category tokens**: `--app-budget-category-1` to `-10`, the Budget planner's ten category colours, each with a dark value that keeps its hue at 3:1 on the dark page; the token test checks them in both themes (#487).
+- **`ChartPalette.readTokens()` and `read().page`**: a chart reads a feature's own palette from its tokens, and the page colour behind it, through the chart palette (#487).
+
+### Changed
+
+- **The Budget planner's chart follows the theme**: the doughnut's slices, the gaps between them, its percentage labels and its tooltip take their colours from the chart palette and recolour on a theme switch without a reload; the category swatches and the summary list follow the same tokens (#487).
+- **Three stylesheets are off the raw-colour allow-list**: `budget.css`, `budget-tracker.css` and `savings-goals.css` hold no colour literals now (#487).
+
+### Fixed
+
+- **Budget, Budget Tracker and Savings Goals in dark mode**: the pages use the theme tokens instead of fixed colours, so their cards, bars, badges and notices are readable in the dark theme (#487).
+  - Green text for gains, on-target and completed states uses the brand text token, which stays at 4.5:1 on dark cards and table footers, where the fill green fell short.
+  - The title icons use the brand fill behind their white glyph.
+  - The Budget Tracker's Expenses and Income card titles use the negative and brand text tokens instead of Bootstrap's fixed red and green, which fell below 4.5:1 on the dark card header.
+  - The light theme keeps its colours, except where the Budget Tracker used Bootstrap's own: its active tab, hovers and focus rings are brand green instead of blue, its planned, spent and income bars use the chart series (blue, brass, green), its "manual" badge is a soft green chip instead of purple, and the archived badge uses the neutral fill. The Savings Goals delete button's hover wash is the app's negative wash.
 
 ## [13.5.0] - 2026-10-28
 

@@ -2,8 +2,8 @@ namespace PersonalFinance.Web.Models.MoneyPriorities;
 
 /// <summary>
 /// The colours of a Priority Tree diagram, as <c>#RRGGBB</c> hex values. Mermaid bakes colours into the SVG it renders,
-/// so a palette is a full set and a theme change means generating the text again with another palette. Light only for
-/// now (spec #315); a dark palette can be added beside <see cref="Light"/>.
+/// so a palette is a full set and a theme change means drawing the text generated with the other palette: the page
+/// gets both <see cref="Light"/> and <see cref="Dark"/> texts and draws the one for the theme in effect (#489).
 /// </summary>
 /// <param name="Background">The page background behind the start node.</param>
 /// <param name="Ink">Main text: questions, the start node and highlighted edge labels.</param>
@@ -63,6 +63,29 @@ internal sealed record PriorityDiagramPalette(
         ChosenStroke: "#134A38",
         DimFill: "#F8FAF9",
         DimStroke: "#E1E7E4");
+
+    /// <summary>
+    /// The dark palette (#489), from the dark Ledger and app tokens (ledger.css, site.css): the same roles on the dark
+    /// page, with text at 4.5:1 on each fill and the white leaf label on the deeper green fill buttons use.
+    /// </summary>
+    public static PriorityDiagramPalette Dark { get; } = new(
+        Background: "#0E1821",
+        Ink: "#E6ECEF",
+        SoftText: "#BAC6CE",
+        Line: "#94A4B0",
+        DimText: "#94A4B0",
+        DimLine: "#2A3A47",
+        QuestionFill: "#33290F",
+        QuestionStroke: "#C9A54A",
+        LeafFill: "#15222D",
+        LeafStroke: "#2A3A47",
+        OnPathFill: "#16302A",
+        OnPathStroke: "#3AA677",
+        ChosenFill: "#237A57",
+        ChosenText: "#FFFFFF",
+        ChosenStroke: "#8FD3B4",
+        DimFill: "#121E28",
+        DimStroke: "#24333F");
 
     /// <summary>Every colour, in declaration order, so the generator can check each is a hex value.</summary>
     internal IEnumerable<string> Colours =>

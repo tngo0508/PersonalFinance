@@ -11,6 +11,9 @@ public class MoneyPrioritiesViewModel
     /// <summary>Mermaid text of the whole tree, nothing highlighted, in the request's Language.</summary>
     public string WholeTreeDiagram { get; set; } = string.Empty;
 
+    /// <summary><see cref="WholeTreeDiagram"/> in the dark palette, drawn in dark mode (#489).</summary>
+    public string WholeTreeDiagramDark { get; set; } = string.Empty;
+
     /// <summary>The Priority Tree's thresholds, which decide the follow-up fields the form shows.</summary>
     public PriorityTreeThresholdsDto Thresholds { get; set; } = new();
 

@@ -7,7 +7,7 @@
     var fileName = new HtmlString($"<strong>{HtmlEncoder.Default.Encode(Model.FileName)}</strong>");
 }
 
-<div class="modal fade show" id="syncConflictModal" tabindex="-1" style="display: block; background: rgba(0,0,0,0.5);">
+<div class="modal fade show" id="syncConflictModal" tabindex="-1" style="display: block; background: var(--app-overlay-strong);">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header border-bottom">

@@ -59,8 +59,35 @@
     --app-warning-fill: #D89B26;
     --app-on-warning: #000000;
     --app-neutral-fill: var(--lp-muted);
+    /* Small positive text on --app-accent-positive-soft (a Dashboard badge), and an info icon on its soft tile (#489) */
+    --app-positive-on-soft: color-mix(in srgb, var(--app-accent-positive) 75%, #000);
+    --app-info-bg: #E4EEF5;
+    --app-info-text: #2F6690;
+
+    /* Dashboard budget donut (#489): one fixed colour per category key. The light set is the dataviz-validated one
+       (dashboard.css explains it); the dark set keeps each hue, lifted to 3:1 on the dark page and card. */
+    --app-dash-budget-housing: #C026D3;
+    --app-dash-budget-food: #EB6834;
+    --app-dash-budget-transportation: #6250D6;
+    --app-dash-budget-utilities: #E34948;
+    --app-dash-budget-insurance: #2A78D6;
+    --app-dash-budget-healthcare: #E87BA4;
+    --app-dash-budget-savings: #008300;
+    --app-dash-budget-debt-repayment: #EDA100;
+    --app-dash-budget-entertainment: #9B4DCA;
+    --app-dash-budget-miscellaneous: #1BAF7A;
+
+    /* Money Flow (#489): category slots 0-4 and the neutral node kinds (analysis.css explains the order) */
+    --app-money-flow-slot-0: #2A78D6;
+    --app-money-flow-slot-1: #EB6834;
+    --app-money-flow-slot-2: #6250D6;
+    --app-money-flow-slot-3: #EDA100;
+    --app-money-flow-slot-4: #E87BA4;
+    --app-money-flow-income: #475569;
+    --app-money-flow-spending: #6B7280;
+    --app-money-flow-uncategorized: #78716C;
+    --app-money-flow-other: #9CA3AF;
     /* Info wash: a notice, an active or hovered row (#484); and a hairline border for cards on a modal's plane */
-    --app-info-bg: #DEECF9;
     --app-border-subtle: rgba(20, 40, 59, 0.10);
 
     /* Overlays and the shadows of floating surfaces */
@@ -85,6 +112,17 @@
     --app-chart-4: #B42318;
     --app-chart-5: #6B4C9A;
     --app-chart-6: #2B7A89;
+    /* The Budget planner's ten categories: its doughnut's slices and their swatches (#487) */
+    --app-budget-category-1: #1D6A50;
+    --app-budget-category-2: #2F6690;
+    --app-budget-category-3: #8A6A1E;
+    --app-budget-category-4: #B4532A;
+    --app-budget-category-5: #6B4C8A;
+    --app-budget-category-6: #2A8C8C;
+    --app-budget-category-7: #14283B;
+    --app-budget-category-8: #9C3D5A;
+    --app-budget-category-9: #5E8C31;
+    --app-budget-category-10: #5B6B78;
     /* A label on a series' fill (the first two series) */
     --app-on-chart: #FFFFFF;
 
@@ -179,7 +217,30 @@
     --app-warning-text: #EBC774;
     --app-warning-fill: #E0B24A;
     --app-neutral-fill: #4A5966;
-    --app-info-bg: #15283A;
+    --app-positive-on-soft: var(--app-brand-on-soft);
+    --app-info-bg: #172B3D;
+    --app-info-text: #6FA8DC;
+
+    --app-dash-budget-housing: #E07AEC;
+    --app-dash-budget-food: #F08A5D;
+    --app-dash-budget-transportation: #9D8FF0;
+    --app-dash-budget-utilities: #F07A79;
+    --app-dash-budget-insurance: #6FA8E8;
+    --app-dash-budget-healthcare: #F0A0BE;
+    --app-dash-budget-savings: #4CC24C;
+    --app-dash-budget-debt-repayment: #EDB43A;
+    --app-dash-budget-entertainment: #C08AE6;
+    --app-dash-budget-miscellaneous: #3CCB95;
+
+    --app-money-flow-slot-0: #6FA8E8;
+    --app-money-flow-slot-1: #F08A5D;
+    --app-money-flow-slot-2: #9D8FF0;
+    --app-money-flow-slot-3: #EDB43A;
+    --app-money-flow-slot-4: #F0A0BE;
+    --app-money-flow-income: #A3B1C2;
+    --app-money-flow-spending: #9CA3AF;
+    --app-money-flow-uncategorized: #A8A29E;
+    --app-money-flow-other: #8A919C;
     --app-border-subtle: rgba(230, 236, 239, 0.12);
 
     --app-toast-bg: rgba(26, 40, 51, 0.95);
@@ -201,6 +262,17 @@
     --app-chart-4: #F0796B;
     --app-chart-5: #A98BDD;
     --app-chart-6: #4FC1D0;
+    /* Each Budget category keeps its hue, lifted to 3:1 on the dark page; the navy one turns pale steel */
+    --app-budget-category-1: #3FB884;
+    --app-budget-category-2: #6FA8DC;
+    --app-budget-category-3: #D4B25C;
+    --app-budget-category-4: #E08A5F;
+    --app-budget-category-5: #A98BDD;
+    --app-budget-category-6: #4FC1C1;
+    --app-budget-category-7: #A9BCD0;
+    --app-budget-category-8: #E07A9A;
+    --app-budget-category-9: #9BC765;
+    --app-budget-category-10: #7F8E9A;
     --app-on-chart: var(--lp-paper);
 
     --app-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.3);

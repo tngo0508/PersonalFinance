@@ -273,4 +273,46 @@ public sealed class PriorityDiagramTextTests : IDisposable
             Assert.DoesNotContain(value, all, StringComparison.Ordinal);
         }
     }
+
+    [Fact]
+    public void TheDarkPalette_IsHexOnly_AndItsTextMeetsWcagAaOnItsFills()
+    {
+        PriorityDiagramPalette dark = PriorityDiagramPalette.Dark;
+
+        // Generating with it validates every colour as #RRGGBB
+        Assert.Contains($"  classDef dim fill:{dark.DimFill},", PriorityDiagramText.WholeTree(L, Tree, ["S", "Q1", "L1"], dark),
+            StringComparison.Ordinal);
+        // Text on what it sits on (edge labels sit on the page background), 4.5:1; lines and borders 3:1
+        (string Foreground, string Background, double Minimum)[] pairs =
+        [
+            (dark.Ink, dark.Background, 4.5), (dark.Ink, dark.QuestionFill, 4.5), (dark.Ink, dark.OnPathFill, 4.5),
+            (dark.SoftText, dark.LeafFill, 4.5), (dark.DimText, dark.DimFill, 4.5), (dark.DimText, dark.Background, 4.5),
+            (dark.ChosenText, dark.ChosenFill, 4.5), (dark.Line, dark.Background, 3), (dark.OnPathStroke, dark.Background, 3),
+            (dark.QuestionStroke, dark.Background, 3)
+        ];
+        string[] failures = pairs
+            .Where(pair => ContrastRatio(pair.Foreground, pair.Background) < pair.Minimum)
+            .Select(pair => $"{pair.Foreground} on {pair.Background}: {ContrastRatio(pair.Foreground, pair.Background):F2}")
+            .ToArray();
+        Assert.Empty(failures);
+    }
+
+    /// <summary>The WCAG 2 contrast ratio of two #RRGGBB colours.</summary>
+    private static double ContrastRatio(string first, string second)
+    {
+        double a = RelativeLuminance(first);
+        double b = RelativeLuminance(second);
+        return (Math.Max(a, b) + 0.05) / (Math.Min(a, b) + 0.05);
+    }
+
+    private static double RelativeLuminance(string hex)
+    {
+        double Channel(int start)
+        {
+            double value = Convert.ToInt32(hex.Substring(start, 2), 16) / 255.0;
+            return value <= 0.03928 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);
+        }
+
+        return 0.2126 * Channel(1) + 0.7152 * Channel(3) + 0.0722 * Channel(5);
+    }
 }

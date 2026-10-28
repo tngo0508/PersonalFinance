@@ -23,6 +23,7 @@
         // The light theme's values (site.css), used when a token is missing, e.g. before the stylesheet loads.
         const TOKENS = {
             background: ['--app-surface', '#F8FAF9'],
+            page: ['--app-bg', '#FFFFFF'],
             grid: ['--app-chart-grid', '#E1E7E4'],
             axis: ['--app-chart-axis', '#5B6B78'],
             tooltipBackground: ['--app-chart-tooltip-bg', '#14283B'],
@@ -43,9 +44,10 @@
 
         /**
          * The chart colours of the theme in effect.
-         * @returns {{background: string, grid: string, axis: string,
+         * @returns {{background: string, page: string, grid: string, axis: string,
          *     tooltip: {background: string, text: string, border: string}, series: string[], positive: string,
-         *     negative: string, warning: string}} background: the chart's surface; grid: gridlines and ticks; axis:
+         *     negative: string, warning: string}} background: the chart's surface; page: the page and a plain card
+         *     behind the chart, e.g. for the gaps between a doughnut's slices; grid: gridlines and ticks; axis:
          *     axis text; tooltip: the hover box; series: the six categorical colours in order; positive, negative,
          *     warning: the mark colours for gains, losses and over-budget (the green accent and the negative and
          *     warning fills, which meet 3:1 on the page and card in both themes).
@@ -55,6 +57,7 @@
             const token = (entry) => style.getPropertyValue(entry[0]).trim() || entry[1];
             return {
                 background: token(TOKENS.background),
+                page: token(TOKENS.page),
                 grid: token(TOKENS.grid),
                 axis: token(TOKENS.axis),
                 tooltip: {
@@ -67,6 +70,19 @@
                 negative: token(TOKENS.negative),
                 warning: token(TOKENS.warning)
             };
+        }
+
+        /**
+         * A feature's own palette of the theme in effect, e.g. the Budget planner's ten category colours (#487). Its
+         * tokens are defined, with a dark value each, in the app token sheet (site.css).
+         * @param {string[]} names - The custom property names, in order.
+         * @returns {string[]} Each token's value; a missing one takes the categorical series colour at its position,
+         *     cycling past the sixth.
+         */
+        function readTokens (names) {
+            const style = window.getComputedStyle(document.documentElement);
+            const series = read().series;
+            return names.map((name, index) => style.getPropertyValue(name).trim() || series[index % series.length]);
         }
 
         /**
@@ -108,6 +124,7 @@
 
         return {
             read: read,
+            readTokens: readTokens,
             subscribe: subscribe,
             withAlpha: withAlpha
         };

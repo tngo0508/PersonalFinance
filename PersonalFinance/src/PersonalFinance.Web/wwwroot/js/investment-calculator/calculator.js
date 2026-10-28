@@ -628,8 +628,8 @@
             boxY = padding.top + chartH - boxH;
         }
 
-        // Shadow
-        ctx.shadowColor = 'rgba(20, 40, 59, 0.12)';
+        // Shadow: the tooltip surface, faint (the light theme's navy; #489)
+        ctx.shadowColor = window.ChartPalette.withAlpha(colors.tooltip.background, 0.12);
         ctx.shadowBlur = 12;
         ctx.shadowOffsetY = 4;
 
