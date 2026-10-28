@@ -178,9 +178,8 @@ public class DriveResultMessageTests
     }
 
     [Fact]
-    public async Task Sync_WithRejectedCredentials_ReportsInVietnamese()
+    public async Task Sync_WithRejectedCredentials_LeavesTheExplanationToTheErrorState()
     {
-        using var culture = new RequestCultureScope("vi-VN");
         var api = new FakeGoogleDriveApi
         {
             SyncResponse = new GoogleDriveFolderResponseDto
@@ -194,13 +193,33 @@ public class DriveResultMessageTests
 
         await controller.Sync(7);
 
-        Assert.Equal(TestLocalization.Vietnamese(Keys.CredentialsInvalid), controller.TempData["ErrorMessage"]);
+        // The redirected page's error state shows the connection's stored error; no banner repeats it (#476).
+        Assert.False(controller.TempData.ContainsKey("ErrorMessage"));
     }
 
     [Fact]
-    public async Task Reauth_WithRejectedCredentials_ReportsInVietnamese()
+    public async Task Sync_WithAnotherFailure_ReportsItInVietnamese()
     {
         using var culture = new RequestCultureScope("vi-VN");
+        var api = new FakeGoogleDriveApi
+        {
+            SyncResponse = new GoogleDriveFolderResponseDto
+            {
+                Success = false,
+                ErrorMessage = DriveResultMessages.Canceled.Message,
+                Error = DriveResultMessages.Canceled
+            }
+        };
+        GoogleDriveController controller = CreateController(api);
+
+        await controller.Sync(7);
+
+        Assert.Equal(TestLocalization.Vietnamese(Keys.Canceled), controller.TempData["ErrorMessage"]);
+    }
+
+    [Fact]
+    public async Task Reauth_WithRejectedCredentials_LeavesTheExplanationToTheErrorState()
+    {
         var api = new FakeGoogleDriveApi
         {
             ReauthResponse = new GoogleDriveConnectionDto
@@ -213,7 +232,7 @@ public class DriveResultMessageTests
 
         await controller.Reauth(7, "still-expired");
 
-        Assert.Equal(TestLocalization.Vietnamese(Keys.CredentialsInvalid), controller.TempData["ErrorMessage"]);
+        Assert.False(controller.TempData.ContainsKey("ErrorMessage"));
     }
 
     [Fact]
