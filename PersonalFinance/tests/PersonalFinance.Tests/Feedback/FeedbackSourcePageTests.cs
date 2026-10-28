@@ -7,7 +7,8 @@ namespace PersonalFinance.Tests.Feedback;
 
 /// <summary>
 /// <see cref="FeedbackSourcePage"/> picks the page that "Send feedback" links record as the page the Account came
-/// from: the current path and query, app-relative and within <see cref="FeedbackLimits.PageUrlMaxLength"/>.
+/// from: the current path and the view keys of its query, app-relative and within
+/// <see cref="FeedbackLimits.PageUrlMaxLength"/>.
 /// </summary>
 public class FeedbackSourcePageTests
 {
@@ -23,7 +24,17 @@ public class FeedbackSourcePageTests
     [InlineData("/Budget", "", "/Budget")]
     [InlineData("/BudgetTracker", "?year=2026&month=10", "/BudgetTracker?year=2026&month=10")]
     [InlineData("/", "", "/")]
-    public void From_IsThePathAndQueryOfTheCurrentPage(string path, string query, string expected)
+    public void From_IsThePathAndViewQueryOfTheCurrentPage(string path, string query, string expected)
+    {
+        Assert.Equal(expected, FeedbackSourcePage.From(Request(path, query)));
+    }
+
+    [Theory]
+    [InlineData("/News", "?q=rent%20for%20Jane", "/News")]
+    [InlineData("/News", "?category=markets&q=salary", "/News?category=markets")]
+    [InlineData("/BudgetTracker", "?id=42&month=10&returnUrl=%2FBudget", "/BudgetTracker?month=10")]
+    [InlineData("/Budget", "?Month=10&TAB=plan", "/Budget?Month=10&TAB=plan")]
+    public void From_KeepsOnlyTheViewKeysOfTheQuery(string path, string query, string expected)
     {
         Assert.Equal(expected, FeedbackSourcePage.From(Request(path, query)));
     }
@@ -31,7 +42,7 @@ public class FeedbackSourcePageTests
     [Fact]
     public void From_DropsAQueryThatWouldMakeItTooLong()
     {
-        string query = "?q=" + new string('a', FeedbackLimits.PageUrlMaxLength);
+        string query = "?tab=" + new string('a', FeedbackLimits.PageUrlMaxLength);
 
         Assert.Equal("/Search", FeedbackSourcePage.From(Request("/Search", query)));
     }
@@ -68,9 +79,15 @@ public class FeedbackSourcePageTests
     }
 
     [Fact]
-    public void Accept_KeepsAnotherPageWithItsQuery()
+    public void Accept_KeepsAnotherPageWithItsViewQuery()
     {
-        Assert.Equal("/FeedbackArchive?x=1", FeedbackSourcePage.Accept("/FeedbackArchive?x=1"));
+        Assert.Equal("/FeedbackArchive?tab=1", FeedbackSourcePage.Accept("/FeedbackArchive?tab=1"));
+    }
+
+    [Fact]
+    public void Accept_DropsASearchTermFromAHandWrittenSourcePage()
+    {
+        Assert.Equal("/Budget?month=10", FeedbackSourcePage.Accept("/Budget?q=my%20landlord&month=10"));
     }
 
     [Fact]

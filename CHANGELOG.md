@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [12.6.1] - 2026-10-27
+
+### Changed
+
+- **Feedback records only view state from the source page's query string**: the page Feedback was sent from keeps its path and the query keys that describe the view (`month`, `year`, `status`, `tab`, `category`, `source`, `includeArchived`, `ticker`), and drops everything else, so search terms, record ids and `returnUrl` are no longer stored next to the Account or shown in the Admin inbox (#124).
+  - `FeedbackSourcePage` filters both the "Send feedback" link and the posted `PageUrl`, so a hand-written `from=` is cleaned the same way. Feedback already stored is left as it is. No schema change.
+
 ## [12.6.0] - 2026-10-27
 
 ### Fixed
