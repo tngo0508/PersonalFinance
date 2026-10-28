@@ -65,6 +65,8 @@ const PAIRS = [
     // completed goal)
     ...pairs(BUDGET_CATEGORIES, ['--app-bg', '--app-surface'], AA_UI, BOTH),
     ...pairs(['--app-chart-1', '--app-chart-2', '--app-chart-3'], ['--app-surface-secondary'], AA_UI, BOTH),
+    // A Savings Goal's progress fill, in progress and complete, on its track
+    ...pairs(['--app-brand', '--app-accent-positive'], ['--app-surface-soft'], AA_UI, BOTH),
     ...pairs(['--app-brand-text', '--app-accent-negative'], ['--app-bg', '--app-surface'], AA_TEXT, BOTH),
     { fg: '--app-brand-text', bg: '--app-accent-positive-soft', minimum: AA_TEXT, themes: BOTH },
     { fg: '--app-accent-negative', bg: '--app-accent-negative-soft', minimum: AA_TEXT, themes: BOTH },

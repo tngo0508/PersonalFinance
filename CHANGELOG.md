@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Budget, Budget Tracker and Savings Goals in dark mode**: the pages use the theme tokens instead of fixed colours, so their cards, bars, badges and notices are readable in the dark theme (#487).
   - Green text for gains, on-target and completed states uses the brand text token, which stays at 4.5:1 on dark cards and table footers, where the fill green fell short.
   - The title icons use the brand fill behind their white glyph.
+  - The Budget Tracker's Expenses and Income card titles use the negative and brand text tokens instead of Bootstrap's fixed red and green, which fell below 4.5:1 on the dark card header.
   - The light theme keeps its colours, except where the Budget Tracker used Bootstrap's own: its active tab, hovers and focus rings are brand green instead of blue, its planned, spent and income bars use the chart series (blue, brass, green), its "manual" badge is a soft green chip instead of purple, and the archived badge uses the neutral fill. The Savings Goals delete button's hover wash is the app's negative wash.
 
 ## [13.5.0] - 2026-10-28

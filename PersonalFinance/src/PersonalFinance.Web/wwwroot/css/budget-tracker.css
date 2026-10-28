@@ -220,6 +220,16 @@
     gap: 0.5rem;
 }
 
+/* Expense and income card titles: theme tokens at 4.5:1 on the card header, where Bootstrap's fixed red and green
+   fell short in dark mode (#487) */
+.bt-card-title--expense {
+    color: var(--app-accent-negative);
+}
+
+.bt-card-title--income {
+    color: var(--app-brand-text);
+}
+
 .bt-table-responsive {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;

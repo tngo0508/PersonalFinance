@@ -649,7 +649,6 @@
         }
 
         const ctx = canvas.getContext('2d');
-        const colours = ChartPalette.read();
 
         chart = new Chart(ctx, {
             type: 'doughnut',
@@ -661,10 +660,7 @@
                     data: categories.map((c) => {
                         return toPercent(amountCents[c] || 0);
                     }),
-                    backgroundColor: ChartPalette.readTokens(categoryColorTokens),
-                    borderWidth: 2,
-                    // The gaps between slices are the card behind the chart
-                    borderColor: colours.page
+                    borderWidth: 2
                 }]
             },
             options: {
@@ -683,10 +679,6 @@
                         display: false
                     },
                     tooltip: {
-                        backgroundColor: colours.tooltip.background,
-                        titleColor: colours.tooltip.text,
-                        bodyColor: colours.tooltip.text,
-                        borderColor: colours.tooltip.border,
                         borderWidth: 1,
                         callbacks: {
                             label: function (context) {
@@ -706,10 +698,12 @@
                 cutout: '55%'
             }
         });
+        applyTheme(ChartPalette.read());
     }
 
     /**
-     * Recolour the pie chart for the theme now in effect. The swatches and the summary list follow their tokens in CSS.
+     * Colour the pie chart for the theme now in effect: when it is created, and on each theme switch. The swatches and
+     * the summary list follow their tokens in CSS.
      * @param {object} colours - The chart palette, from ChartPalette.read()
      */
     function applyTheme (colours) {
@@ -719,6 +713,7 @@
 
         const dataset = chart.data.datasets[0];
         dataset.backgroundColor = ChartPalette.readTokens(categoryColorTokens);
+        // The gaps between slices are the card behind the chart
         dataset.borderColor = colours.page;
 
         const tooltip = chart.options.plugins.tooltip;

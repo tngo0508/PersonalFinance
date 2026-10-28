@@ -34,7 +34,7 @@ const CONTRAST_PAGES = {
     budget: ['.budget-title', '.budget-subtitle', '.budget-card__title', '.budget-category__label',
         '.budget-remaining__label', '.budget-remaining__value'],
     budgetTracker: ['.bt-page-header__title', '.bt-page-header__subtitle', '.bt-tabs .nav-link.active',
-        '.bt-tabs .nav-link:not(.active)', '.bt-bar-title'],
+        '.bt-tabs .nav-link:not(.active)', '.bt-bar-title', '.bt-card-title--expense', '.bt-card-title--income'],
     savingsGoals: ['.savings-title', '.savings-subtitle', '.savings-empty__title', '.savings-empty__text']
 };
 
