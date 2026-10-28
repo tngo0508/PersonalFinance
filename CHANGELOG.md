@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [13.11.1] - 2026-10-28
+
+### Fixed
+
+- **Theme button alignment**: the theme button in the signed-out top bar is centred and as tall as the EN / VI and Sign in buttons beside it, instead of sitting at the top edge of the row.
+
 ## [13.11.0] - 2026-10-28
 
 ### Added
