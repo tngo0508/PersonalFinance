@@ -8,7 +8,8 @@ namespace PersonalFinance.ApiService.Features.AiAssistant;
 
 /// <summary>
 /// Enforces per-user daily message limits and a global monthly budget ceiling for the AI assistant.
-/// Uses the database for persistent tracking so limits survive restarts.
+/// Admins skip the daily limit but not the monthly budget. Uses the database for persistent tracking so limits
+/// survive restarts.
 /// </summary>
 internal sealed class AiQuotaService : IAiQuotaService
 {
@@ -70,13 +71,13 @@ internal sealed class AiQuotaService : IAiQuotaService
         DateTime todayStart = now.Date;
         var monthStart = new DateTime(now.Year, now.Month, 1);
 
-        // Check per-user daily limit
+        // Check per-user daily limit (Admins skip it)
         int userDailyCount = await _dbContext.AiUsageRecords
             .AsNoTracking()
             .Where(r => r.UserId == userId && r.CreatedAt >= todayStart)
             .CountAsync();
 
-        if (userDailyCount >= MaxDailyMessagesPerUser)
+        if (userDailyCount >= MaxDailyMessagesPerUser && !await IsAdminAsync(userId))
         {
             return new QuotaCheckResult
             {
@@ -111,6 +112,12 @@ internal sealed class AiQuotaService : IAiQuotaService
             BudgetWarning = budgetWarning,
         };
     }
+
+    private Task<bool> IsAdminAsync(string userId) =>
+        (from userRole in _dbContext.UserRoles.AsNoTracking()
+         join role in _dbContext.Roles.AsNoTracking() on userRole.RoleId equals role.Id
+         where userRole.UserId == userId && role.Name == AppRoles.Admin
+         select userRole).AnyAsync();
 
     /// <summary>
     /// Records token usage after a successful AI call.

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [12.7.0] - 2026-10-27
+
+### Changed
+
+- **Admins skip the AI Assistant's daily limit**: an Account with the Admin Role is no longer refused after 30 requests a day, while the $10 monthly budget still stops every Account, Admins included.
+  - `AiQuotaService` checks the Admin Role only once the daily count is reached, so other requests make no extra query. No schema change.
+
 ## [12.6.1] - 2026-10-27
 
 ### Changed
