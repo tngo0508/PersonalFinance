@@ -3,11 +3,13 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.Helpers;
+using PersonalFinance.Web.Infrastructure;
 
 namespace PersonalFinance.Web.Models.Networth;
 
 /// <summary>
-/// View model for the Net Worth projection page.
+/// View model for the Net Worth projection page. The amounts are checked against <see cref="NetWorthLimits"/> scaled to
+/// <see cref="CurrencyCode"/> (#444).
 /// </summary>
 public class NetWorthViewModel
 {
@@ -15,7 +17,7 @@ public class NetWorthViewModel
     /// User-configurable starting balance.
     /// </summary>
     [Display(Name = "NetWorth.Field.StartingBalance")]
-    [Range(0, 1_000_000_000, ErrorMessage = "NetWorth.Validation.StartingBalanceRange")]
+    [MoneyRange(NetWorthLimits.StartingBalanceMax, ErrorMessage = "NetWorth.Validation.StartingBalanceRange")]
     public decimal StartingBalance { get; set; } = NetWorthDefaults.StartingBalance;
 
     /// <summary>
@@ -30,21 +32,21 @@ public class NetWorthViewModel
     /// User-configurable annual savings amount.
     /// </summary>
     [Display(Name = "NetWorth.Field.AnnualSavings")]
-    [Range(0, 10_000_000, ErrorMessage = "NetWorth.Validation.AnnualSavingsRange")]
+    [MoneyRange(NetWorthLimits.AnnualSavingsMax, ErrorMessage = "NetWorth.Validation.AnnualSavingsRange")]
     public decimal AnnualSavings { get; set; } = NetWorthDefaults.AnnualSavings;
 
     /// <summary>
     /// User-configurable annual spending.
     /// </summary>
     [Display(Name = "NetWorth.Field.AnnualSpending")]
-    [Range(0, 10_000_000, ErrorMessage = "NetWorth.Validation.AnnualSpendingRange")]
+    [MoneyRange(NetWorthLimits.AnnualSpendingMax, ErrorMessage = "NetWorth.Validation.AnnualSpendingRange")]
     public decimal AnnualSpending { get; set; } = NetWorthDefaults.AnnualSpending;
 
     /// <summary>
     /// User-configurable annual income.
     /// </summary>
     [Display(Name = "NetWorth.Field.AnnualIncome")]
-    [Range(0, 100_000_000, ErrorMessage = "NetWorth.Validation.AnnualIncomeRange")]
+    [MoneyRange(NetWorthLimits.AnnualIncomeMax, ErrorMessage = "NetWorth.Validation.AnnualIncomeRange")]
     public decimal AnnualIncome { get; set; } = NetWorthDefaults.AnnualIncome;
 
     /// <summary>
@@ -86,7 +88,7 @@ public class NetWorthViewModel
     /// Aggressive scenario annual savings (higher savings rate).
     /// </summary>
     [Display(Name = "NetWorth.Field.AggressiveSavings")]
-    [Range(0, 10_000_000, ErrorMessage = "NetWorth.Validation.AggressiveSavingsRange")]
+    [MoneyRange(NetWorthLimits.AggressiveSavingsMax, ErrorMessage = "NetWorth.Validation.AggressiveSavingsRange")]
     public decimal AggressiveSavings { get; set; } = NetWorthDefaults.AggressiveSavings;
 
     /// <summary>

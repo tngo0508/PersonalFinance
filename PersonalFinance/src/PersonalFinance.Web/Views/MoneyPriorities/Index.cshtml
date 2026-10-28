@@ -1,7 +1,8 @@
 @model PersonalFinance.Web.Models.MoneyPriorities.MoneyPrioritiesViewModel
 @{
     ViewData["Title"] = L["MoneyPriorities.Title"].Value;
-    // The Walk is one document in one currency (ADR 0016): the selector under the amount sets it for every answer.
+    // The Walk is one document in one currency (ADR 0016): the selector under the amount sets it for every answer, and
+    // rescales each amount input's max from its data-max-usd and the option's data-bound-scale (#444).
     string inputCurrency = SupportedCurrencies.CodeOrDefault(Model.CurrencyCode);
     string symbol = SupportedCurrencies.Find(inputCurrency)!.Symbol;
 }
@@ -33,17 +34,18 @@
                         <div class="mp-field">
                             <label for="mpMonthlyAmount" class="form-label">@L.NamedHtml("MoneyPriorities.Form.MonthlyAmount", null, ("symbol", new Microsoft.AspNetCore.Html.HtmlString($"<span id=\"mpCurrencySymbol\">{symbol}</span>")))</label>
                             <input type="number" class="form-control" id="mpMonthlyAmount" name="MonthlyAmount"
-                                   min="0.01" max="1000000" step="0.01" inputmode="decimal" required
+                                   min="0.01" max="@MoneyBounds.MaxInvariant(MoneyPrioritiesLimits.MonthlyAmountMax, inputCurrency)"
+                                   data-max-usd="@MoneyPrioritiesLimits.MonthlyAmountMax" step="0.01" inputmode="decimal" required
                                    aria-describedby="mpErrMonthlyAmount"/>
                             <div class="mp-field-error" id="mpErrMonthlyAmount" data-mp-error="MonthlyAmount" hidden></div>
                         </div>
 
                         <div class="mp-field">
                             <label for="mpCurrency" class="form-label">@L["MoneyPriorities.Form.Currency"]</label>
-                            <select class="form-select" id="mpCurrency" name="CurrencyCode" data-currency-selector data-currency-symbols="#mpCurrencySymbol">
+                            <select class="form-select" id="mpCurrency" name="CurrencyCode" data-currency-selector data-currency-symbols="#mpCurrencySymbol" data-currency-bounds="#mpForm [data-max-usd]">
                                 @foreach (var currency in SupportedCurrencies.All)
                                 {
-                                    <option value="@currency.Code" selected="@(currency.Code == inputCurrency)">@currency.Code · @currency.DisplayName</option>
+                                    <option value="@currency.Code" data-bound-scale="@currency.BoundScale" selected="@(currency.Code == inputCurrency)">@currency.Code · @currency.DisplayName</option>
                                 }
                             </select>
                             <div class="mp-field-error" id="mpErrCurrencyCode" data-mp-error="CurrencyCode" hidden></div>
@@ -69,7 +71,8 @@
                         <div class="mp-field mp-follow-up" id="mpDebtBalanceField" data-mp-follow-up="DebtBalance" hidden>
                             <label for="mpDebtBalance" class="form-label">@L.Named("MoneyPriorities.Form.DebtBalance", ("symbol", symbol))</label>
                             <input type="number" class="form-control" id="mpDebtBalance" name="DebtBalance"
-                                   min="0.01" step="0.01" inputmode="decimal" aria-describedby="mpErrDebtBalance"/>
+                                   min="0.01" max="@MoneyBounds.MaxInvariant(MoneyPrioritiesLimits.DebtBalanceMax, inputCurrency)"
+                                   data-max-usd="@MoneyPrioritiesLimits.DebtBalanceMax" step="0.01" inputmode="decimal" aria-describedby="mpErrDebtBalance"/>
                             <div class="mp-field-error" id="mpErrDebtBalance" data-mp-error="DebtBalance" hidden></div>
                         </div>
 
@@ -84,7 +87,8 @@
                         <div class="mp-field mp-follow-up" id="mpMonthlyExpensesField" data-mp-follow-up="MonthlyExpenses" hidden>
                             <label for="mpMonthlyExpenses" class="form-label">@L.Named("MoneyPriorities.Form.MonthlyExpenses", ("symbol", symbol))</label>
                             <input type="number" class="form-control" id="mpMonthlyExpenses" name="MonthlyExpenses"
-                                   min="0.01" step="0.01" inputmode="decimal" aria-describedby="mpErrMonthlyExpenses"/>
+                                   min="0.01" max="@MoneyBounds.MaxInvariant(MoneyPrioritiesLimits.MonthlyExpensesMax, inputCurrency)"
+                                   data-max-usd="@MoneyPrioritiesLimits.MonthlyExpensesMax" step="0.01" inputmode="decimal" aria-describedby="mpErrMonthlyExpenses"/>
                             <div class="mp-field-error" id="mpErrMonthlyExpenses" data-mp-error="MonthlyExpenses" hidden></div>
                         </div>
 

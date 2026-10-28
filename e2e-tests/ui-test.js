@@ -5,6 +5,7 @@ const {runLanguageSwitchSmoke} = require('./language-switch-smoke');
 const {runReportingCurrencySmoke} = require('./reporting-currency-smoke');
 const {runIdleSignOutSmoke} = require('./idle-sign-out-smoke');
 const {runCurrencyConverterSmoke} = require('./currency-converter-smoke');
+const {runMoneyBoundsSmoke} = require('./money-bounds-smoke');
 
 (async () => {
     const results = {passed: 0, failed: 0, errors: []};
@@ -957,6 +958,17 @@ const {runCurrencyConverterSmoke} = require('./currency-converter-smoke');
             await runCurrencyConverterSmoke({browser, base, pass, fail});
         } catch (error) {
             fail(`Currency converter smoke failed: ${error.message}`);
+        }
+
+        // =========================================================
+        // Test 9i: Money bounds smoke (#444): a 30,000,000 ₫ Budget Planner income saves
+        // =========================================================
+        console.log('
+--- Test 9i: Money Bounds Smoke ---');
+        try {
+            await runMoneyBoundsSmoke({browser, base, pass, fail});
+        } catch (error) {
+            fail(`Money bounds smoke failed: ${error.message}`);
         }
 
         // =========================================================

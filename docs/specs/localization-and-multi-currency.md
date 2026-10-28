@@ -122,6 +122,12 @@ There is no ledger of assets.
   constant in `PersonalFinance.Shared` (code, display name, minor-unit decimals, symbol). No enum, no lookup table.
 - Columns stay `decimal(18,2)`; VND stores `.00` and renders with 0 decimals. Round to minor units on write with
   `MidpointRounding.AwayFromZero`; converted totals round once at the end of a sum.
+- Input bounds scale with the currency ([#444](https://github.com/tngo0508/PersonalFinance/issues/444)): each upper
+  bound is written once in whole US dollars (`BudgetPlannerLimits`, `NetWorthLimits`, `MoneyPrioritiesLimits`) and
+  `MoneyBounds` multiplies it by the currency's `BoundScale` (1 for USD, 25,000 for VND). The Web `[MoneyRange]`
+  attributes, the ApiService validators and the page scripts (`data-max-usd` times the selector option's
+  `data-bound-scale`) read that one table, and range messages carry the bound as a money argument. Bounds guard the
+  inputs only; the columns already hold these figures.
 - `ReportingCurrency` on the user preference Entity, default `USD`; changing it never rewrites stored amounts.
 - Inputs default to the Reporting Currency with a per-row `USD | VND` selector; parameter documents show it once.
 - `GoogleDriveConnection.CurrencyCode`, chosen at connect time (default Reporting Currency); imported rows inherit it.

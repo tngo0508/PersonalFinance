@@ -9,6 +9,7 @@ using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
+using PersonalFinance.Shared.Helpers;
 using MoneyPrioritiesApiController = PersonalFinance.ApiService.Features.MoneyPriorities.MoneyPrioritiesController;
 
 namespace PersonalFinance.Tests.MoneyPriorities;
@@ -73,7 +74,8 @@ public class MoneyPrioritiesEndpointTests
         ApiErrorDto body = Assert.IsType<ApiErrorDto>(badRequest.Value);
         Assert.Equal(
             [
-                (ApiErrorKeys.MoneyPriorities.MonthlyAmountRange, MoneyPrioritiesMessages.MonthlyAmountRange,
+                (ApiErrorKeys.MoneyPriorities.MonthlyAmountRange,
+                    MoneyBounds.Describe(MoneyPrioritiesMessages.MonthlyAmountRange, MoneyPrioritiesLimits.MonthlyAmountMax, null),
                     nameof(SubmitPriorityWalkRequest.MonthlyAmount)),
                 (ApiErrorKeys.MoneyPriorities.DebtBalanceRequired, MoneyPrioritiesMessages.DebtBalanceRequired,
                     nameof(SubmitPriorityWalkRequest.DebtBalance))

@@ -4,6 +4,7 @@ using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.MoneyPriorities;
+using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.ApiService.Features.MoneyPriorities.Validators;
 
@@ -11,20 +12,11 @@ namespace PersonalFinance.ApiService.Features.MoneyPriorities.Validators;
 /// Validator for a submitted Priority Walk: the ranges of the spec's column table (#315), and the follow-up rules. A
 /// question or follow-up is required exactly when Priority Tree version 1 asks it on the path the earlier answers lead
 /// to; an answer off that path is ignored, not rejected (the service stores it as null). The scale rules match the
-/// column precision, so a value round-trips through the database unchanged.
+/// column precision, so a value round-trips through the database unchanged. The amount bounds are
+/// <see cref="MoneyPrioritiesLimits"/> scaled to the Walk's currency (<see cref="MoneyBounds"/>, #444).
 /// </summary>
 internal sealed class SubmitPriorityWalkRequestValidator : AbstractValidator<SubmitPriorityWalkRequest>
 {
-    // The {min} and {max} of each "over {min} and at most {max}" amount message.
-    private static readonly IReadOnlyDictionary<string, ApiErrorArgDto> MonthlyAmountRangeArgs =
-        ErrorArgs.MoneyRange(0m, MoneyPrioritiesLimits.MonthlyAmountMax, SupportedCurrencies.Default.Code);
-
-    private static readonly IReadOnlyDictionary<string, ApiErrorArgDto> DebtBalanceRangeArgs =
-        ErrorArgs.MoneyRange(0m, MoneyPrioritiesLimits.DebtBalanceMax, SupportedCurrencies.Default.Code);
-
-    private static readonly IReadOnlyDictionary<string, ApiErrorArgDto> MonthlyExpensesRangeArgs =
-        ErrorArgs.MoneyRange(0m, MoneyPrioritiesLimits.MonthlyExpensesMax, SupportedCurrencies.Default.Code);
-
     public SubmitPriorityWalkRequestValidator()
     {
         RuleFor(x => x.CurrencyCode).SupportedCurrency(ApiErrorKeys.MoneyPriorities.CurrencyUnsupported);
@@ -35,12 +27,12 @@ internal sealed class SubmitPriorityWalkRequestValidator : AbstractValidator<Sub
                 .WithMessage(MoneyPrioritiesMessages.MonthlyAmountRequired)
             .GreaterThan(0m)
                 .WithErrorCode(ApiErrorKeys.MoneyPriorities.MonthlyAmountRange)
-                .WithMessage(MoneyPrioritiesMessages.MonthlyAmountRange)
-                .WithState(_ => MonthlyAmountRangeArgs)
-            .LessThanOrEqualTo(MoneyPrioritiesLimits.MonthlyAmountMax)
+                .WithMessage(x => Range(MoneyPrioritiesMessages.MonthlyAmountRange, MoneyPrioritiesLimits.MonthlyAmountMax, x))
+                .WithState(x => RangeArgs(MoneyPrioritiesLimits.MonthlyAmountMax, x))
+            .LessThanOrEqualTo(x => MoneyBounds.Max(MoneyPrioritiesLimits.MonthlyAmountMax, x.CurrencyCode))
                 .WithErrorCode(ApiErrorKeys.MoneyPriorities.MonthlyAmountRange)
-                .WithMessage(MoneyPrioritiesMessages.MonthlyAmountRange)
-                .WithState(_ => MonthlyAmountRangeArgs)
+                .WithMessage(x => Range(MoneyPrioritiesMessages.MonthlyAmountRange, MoneyPrioritiesLimits.MonthlyAmountMax, x))
+                .WithState(x => RangeArgs(MoneyPrioritiesLimits.MonthlyAmountMax, x))
             .PrecisionScale(18, 2, true)
                 .WithErrorCode(ApiErrorKeys.MoneyPriorities.WholeCents)
                 .WithMessage(MoneyPrioritiesMessages.WholeCents);
@@ -67,12 +59,12 @@ internal sealed class SubmitPriorityWalkRequestValidator : AbstractValidator<Sub
                 .WithMessage(MoneyPrioritiesMessages.DebtBalanceRequired)
             .GreaterThan(0m)
                 .WithErrorCode(ApiErrorKeys.MoneyPriorities.DebtBalanceRange)
-                .WithMessage(MoneyPrioritiesMessages.DebtBalanceRange)
-                .WithState(_ => DebtBalanceRangeArgs)
-            .LessThanOrEqualTo(MoneyPrioritiesLimits.DebtBalanceMax)
+                .WithMessage(x => Range(MoneyPrioritiesMessages.DebtBalanceRange, MoneyPrioritiesLimits.DebtBalanceMax, x))
+                .WithState(x => RangeArgs(MoneyPrioritiesLimits.DebtBalanceMax, x))
+            .LessThanOrEqualTo(x => MoneyBounds.Max(MoneyPrioritiesLimits.DebtBalanceMax, x.CurrencyCode))
                 .WithErrorCode(ApiErrorKeys.MoneyPriorities.DebtBalanceRange)
-                .WithMessage(MoneyPrioritiesMessages.DebtBalanceRange)
-                .WithState(_ => DebtBalanceRangeArgs)
+                .WithMessage(x => Range(MoneyPrioritiesMessages.DebtBalanceRange, MoneyPrioritiesLimits.DebtBalanceMax, x))
+                .WithState(x => RangeArgs(MoneyPrioritiesLimits.DebtBalanceMax, x))
             .PrecisionScale(18, 2, true)
                 .WithErrorCode(ApiErrorKeys.MoneyPriorities.WholeCents)
                 .WithMessage(MoneyPrioritiesMessages.WholeCents)
@@ -96,12 +88,12 @@ internal sealed class SubmitPriorityWalkRequestValidator : AbstractValidator<Sub
                 .WithMessage(MoneyPrioritiesMessages.MonthlyExpensesRequired)
             .GreaterThan(0m)
                 .WithErrorCode(ApiErrorKeys.MoneyPriorities.MonthlyExpensesRange)
-                .WithMessage(MoneyPrioritiesMessages.MonthlyExpensesRange)
-                .WithState(_ => MonthlyExpensesRangeArgs)
-            .LessThanOrEqualTo(MoneyPrioritiesLimits.MonthlyExpensesMax)
+                .WithMessage(x => Range(MoneyPrioritiesMessages.MonthlyExpensesRange, MoneyPrioritiesLimits.MonthlyExpensesMax, x))
+                .WithState(x => RangeArgs(MoneyPrioritiesLimits.MonthlyExpensesMax, x))
+            .LessThanOrEqualTo(x => MoneyBounds.Max(MoneyPrioritiesLimits.MonthlyExpensesMax, x.CurrencyCode))
                 .WithErrorCode(ApiErrorKeys.MoneyPriorities.MonthlyExpensesRange)
-                .WithMessage(MoneyPrioritiesMessages.MonthlyExpensesRange)
-                .WithState(_ => MonthlyExpensesRangeArgs)
+                .WithMessage(x => Range(MoneyPrioritiesMessages.MonthlyExpensesRange, MoneyPrioritiesLimits.MonthlyExpensesMax, x))
+                .WithState(x => RangeArgs(MoneyPrioritiesLimits.MonthlyExpensesMax, x))
             .PrecisionScale(18, 2, true)
                 .WithErrorCode(ApiErrorKeys.MoneyPriorities.WholeCents)
                 .WithMessage(MoneyPrioritiesMessages.WholeCents)
@@ -149,6 +141,15 @@ internal sealed class SubmitPriorityWalkRequestValidator : AbstractValidator<Sub
                 .WithMessage(MoneyPrioritiesMessages.AtContributionLimitRequired)
             .When(AsksContributionLimit);
     }
+
+    /// <summary>A range message's English text with the bounds in the Walk's currency.</summary>
+    private static string Range(string template, long dollarMax, SubmitPriorityWalkRequest request) =>
+        MoneyBounds.Describe(template, dollarMax, request.CurrencyCode);
+
+    /// <summary>The {min} and {max} of an "over {min} and at most {max}" message, in the Walk's currency.</summary>
+    private static IReadOnlyDictionary<string, ApiErrorArgDto> RangeArgs(long dollarMax, SubmitPriorityWalkRequest request) =>
+        ErrorArgs.MoneyRange(0m, MoneyBounds.Max(dollarMax, request.CurrencyCode),
+            SupportedCurrencies.CodeOrDefault(request.CurrencyCode));
 
     // Each condition asks the shared tree decisions (PriorityQuestions) which answers the path asks for, so the
     // validator and PriorityPathEvaluator cannot disagree.

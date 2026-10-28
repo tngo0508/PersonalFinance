@@ -2,12 +2,13 @@ namespace PersonalFinance.Shared.Constants;
 
 /// <summary>
 /// The ranges a Money Priorities answer must fall in (spec #315, the Priority Walk column table), shared by the
-/// ApiService validator and the Web form.
+/// ApiService validator and the Web form. The amounts are written in whole US dollars;
+/// <see cref="Helpers.MoneyBounds"/> scales them to the Walk's currency (#444).
 /// </summary>
 public static class MoneyPrioritiesLimits
 {
-    /// <summary>The largest extra monthly amount, in dollars. It must also be over 0.</summary>
-    public const decimal MonthlyAmountMax = 1_000_000m;
+    /// <summary>The largest extra monthly amount, in US dollars. It must also be over 0.</summary>
+    public const long MonthlyAmountMax = 1_000_000;
 
     /// <summary>The longest Purpose, in characters.</summary>
     public const int PurposeMaxLength = 300;
@@ -15,14 +16,14 @@ public static class MoneyPrioritiesLimits
     /// <summary>The largest debt APR, in percent. 0 means no debt.</summary>
     public const decimal DebtAprMax = 100m;
 
-    /// <summary>The largest debt balance, in dollars. It must also be over 0.</summary>
-    public const decimal DebtBalanceMax = 100_000_000m;
+    /// <summary>The largest debt balance, in US dollars. It must also be over 0.</summary>
+    public const long DebtBalanceMax = 100_000_000;
 
     /// <summary>The most months of expenses an emergency fund can be said to cover.</summary>
     public const decimal EmergencyFundMonthsMax = 120m;
 
-    /// <summary>The largest monthly expenses, in dollars. They must also be over 0.</summary>
-    public const decimal MonthlyExpensesMax = 1_000_000m;
+    /// <summary>The largest monthly expenses, in US dollars. They must also be over 0.</summary>
+    public const long MonthlyExpensesMax = 1_000_000;
 
     /// <summary>The largest employer match, in percent of pay.</summary>
     public const decimal EmployerMatchPercentMax = 100m;

@@ -14,8 +14,11 @@ public static class MoneyPrioritiesMessages
     /// <summary>The extra monthly amount is missing.</summary>
     public const string MonthlyAmountRequired = "Enter the extra amount you have each month.";
 
-    /// <summary>The extra monthly amount is out of range.</summary>
-    public const string MonthlyAmountRange = "Enter a monthly amount over $0 and at most $1,000,000.";
+    /// <summary>
+    /// The extra monthly amount is out of range. A template: <c>Helpers.MoneyBounds.Describe</c> fills <c>{min}</c> and
+    /// <c>{max}</c> in the Walk's currency (#444).
+    /// </summary>
+    public const string MonthlyAmountRange = "Enter a monthly amount over {min} and at most {max}.";
 
     /// <summary>A dollar amount has more than two decimal places.</summary>
     public const string WholeCents = "Enter a dollar amount with at most two decimal places.";
@@ -32,8 +35,8 @@ public static class MoneyPrioritiesMessages
     /// <summary>The debt balance is missing while the APR is 7% or more.</summary>
     public const string DebtBalanceRequired = "Enter the balance of that debt.";
 
-    /// <summary>The debt balance is out of range.</summary>
-    public const string DebtBalanceRange = "Enter a debt balance over $0 and at most $100,000,000.";
+    /// <summary>The debt balance is out of range; a template like <see cref="MonthlyAmountRange"/>.</summary>
+    public const string DebtBalanceRange = "Enter a debt balance over {min} and at most {max}.";
 
     /// <summary>The emergency fund months are missing while the question is asked.</summary>
     public const string EmergencyFundMonthsRequired = "Enter how many months of expenses your emergency fund covers.";
@@ -44,8 +47,8 @@ public static class MoneyPrioritiesMessages
     /// <summary>The monthly expenses are missing while the fund covers less than 3 months.</summary>
     public const string MonthlyExpensesRequired = "Enter your monthly expenses.";
 
-    /// <summary>The monthly expenses are out of range.</summary>
-    public const string MonthlyExpensesRange = "Enter monthly expenses over $0 and at most $1,000,000.";
+    /// <summary>The monthly expenses are out of range; a template like <see cref="MonthlyAmountRange"/>.</summary>
+    public const string MonthlyExpensesRange = "Enter monthly expenses over {min} and at most {max}.";
 
     /// <summary>The employer match question is not answered while it is asked.</summary>
     public const string HasFullEmployerMatchRequired = "Say whether you get the full employer match.";

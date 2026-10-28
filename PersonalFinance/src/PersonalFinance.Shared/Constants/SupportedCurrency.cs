@@ -16,6 +16,13 @@ public sealed record SupportedCurrency
     public required string Symbol { get; init; }
 
     /// <summary>
+    /// What the money range bounds, written in US dollars, are multiplied by for an amount in this currency: 1 for USD,
+    /// 25,000 for VND, a round figure near the exchange rate (<see cref="Helpers.MoneyBounds"/>, #444). Never a rate:
+    /// conversion goes through the currency converter, and a bound only has to be the same order of magnitude.
+    /// </summary>
+    public required int BoundScale { get; init; }
+
+    /// <summary>
     /// <paramref name="amount"/> rounded to this currency's minor units, halves away from zero (localization spec §2.5):
     /// how an amount is stored, so a VND amount is saved as whole đồng.
     /// </summary>
