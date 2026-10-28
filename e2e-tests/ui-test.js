@@ -963,8 +963,7 @@ const {runMoneyBoundsSmoke} = require('./money-bounds-smoke');
         // =========================================================
         // Test 9i: Money bounds smoke (#444): a 30,000,000 ₫ Budget Planner income saves
         // =========================================================
-        console.log('
---- Test 9i: Money Bounds Smoke ---');
+        console.log('\n--- Test 9i: Money Bounds Smoke ---');
         try {
             await runMoneyBoundsSmoke({browser, base, pass, fail});
         } catch (error) {
