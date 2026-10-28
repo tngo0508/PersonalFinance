@@ -212,7 +212,7 @@ jobs:
           claude_args: >-
             --model claude-opus-5-5
             --max-turns 200
-            --allowedTools "Read,Edit,Write,Glob,Grep,Agent,Skill,TodoWrite,Bash(dotnet:*),Bash(npm:*),Bash(git:*),Bash(gh:*),Bash(jq:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(find:*)"
+            --allowedTools "Read,Edit,Write,Glob,Grep,Agent,Skill,TodoWrite,Bash(bash .github/scripts/agent-version-check.sh:*),Bash(dotnet:*),Bash(npm:*),Bash(git:*),Bash(gh:*),Bash(jq:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(find:*)"
           prompt: |
             /implement ${{ env.ISSUE }}
 
@@ -243,10 +243,16 @@ jobs:
             3. Checks, all must pass before the PR: `dotnet test PersonalFinance.sln` and "npm run lint". Skip E2E:
                this runner has no database or app server. Say so in the PR.
             4. Done checklist from AGENTS.md: bump AppVersion (Current, Major, Minor, Patch together) and add the
-               CHANGELOG.md section. Choose a version above both `main` and every open PR from an `agent/issue-*`
-               branch (`gh pr list --state open --json headRefName,number`, then read their AppVersion.cs), so
-               parallel PRs never collide. Update docs/DIAGRAMS.md if you add an Entity or Feature.
-            5. Push `${{ env.BRANCH }}` and open the PR with the pr skill: base `main`, `--reviewer tngo0508`, the body
+               CHANGELOG.md section `## [x.y.z] - YYYY-MM-DD` at the top. Choose a version above both `main` and every
+               open PR from an `agent/issue-*` branch, so parallel PRs never collide. Update docs/DIAGRAMS.md if you
+               add an Entity or Feature.
+            5. Right before pushing, because main and the other agent PRs move while you work:
+               `git fetch origin main && git rebase origin/main` (keep main's AppVersion.cs and CHANGELOG.md sections,
+               re-apply yours on top), then `bash .github/scripts/agent-version-check.sh ${{ env.BRANCH }}`. It applies
+               the release check's rules and lists every problem: re-bump or fix the CHANGELOG as it says, commit, and
+               re-run it until it prints OK. If the rebase brought in code, re-run `dotnet test PersonalFinance.sln`.
+               Never open a PR while it fails.
+            6. Push `${{ env.BRANCH }}` and open the PR with the pr skill: base `main`, `--reviewer tngo0508`, the body
                starts with `Closes #${{ env.ISSUE }}`, and lists the commands you ran with their results and the
                code-review findings with what you did about each.
                If code-review left findings you could not resolve, open it with `--draft` instead, list those findings
@@ -257,6 +263,29 @@ jobs:
             - Never merge a PR, never push to `main`, never touch Azure, never apply migrations.
             - This repository and its Actions logs are public: never print secrets, tokens, connection strings or user
               financial data.
+
+      # The prompt has the agent run this check before it opens the PR; this repeats it on what was pushed. A PR that
+      # would fail the release check becomes a draft, so Agent Auto-Merge leaves it to a human.
+      - name: Check the PR's version and CHANGELOG
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          pr=$(gh pr list --state open --head "$BRANCH" --json number,isDraft --jq '.[] | select(.isDraft | not) | .number')
+          if [ -z "$pr" ]; then
+            echo "::notice::No ready PR for $BRANCH to check."
+            exit 0
+          fi
+          git fetch -q origin "$BRANCH" && git checkout -q --detach "origin/$BRANCH"
+          if out=$(bash .github/scripts/agent-version-check.sh --built-on-main "$BRANCH" 2>&1); then
+            echo "$out"
+            exit 0
+          fi
+          echo "$out"
+          gh pr ready "$pr" --undo || true
+          problems=$(sed -n 's/^::error:://p' <<< "$out" | sed 's/^/- /')
+          gh pr comment "$pr" --body "$(printf '🤖 This PR would fail the release check, so it is now a draft:\n\n%s\n\nFix AppVersion.cs / CHANGELOG.md and mark it ready for review.' "$problems")" || true
 
       - name: Release the claim
         if: always()
@@ -318,6 +347,13 @@ jobs:
       - name: Install npm packages
         run: npm ci
 
+      # The check below judges the rebase against main as it is now. Another agent PR can merge while Claude works;
+      # the next run rebases onto that, so it must not count as a failed rebase (#536 was labelled that way).
+      - name: Record main before the rebase
+        run: |
+          git fetch -q origin main
+          echo "START_MAIN=$(git rev-parse origin/main)" >> "$GITHUB_ENV"
+
       - name: Run Claude
         uses: anthropics/claude-code-action@v1
         with:
@@ -329,7 +365,7 @@ jobs:
           claude_args: >-
             --model claude-opus-5-5
             --max-turns 120
-            --allowedTools "Read,Edit,Write,Glob,Grep,TodoWrite,Bash(dotnet:*),Bash(npm:*),Bash(git:*),Bash(gh:*),Bash(jq:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(find:*)"
+            --allowedTools "Read,Edit,Write,Glob,Grep,TodoWrite,Bash(bash .github/scripts/agent-version-check.sh:*),Bash(dotnet:*),Bash(npm:*),Bash(git:*),Bash(gh:*),Bash(jq:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(find:*)"
           prompt: |
             You are the unattended scheduled ticket agent for ${{ github.repository }}. No human is watching this run.
             Your only job: rebase PR #${{ env.PR }} (branch `${{ env.BRANCH }}`, already checked out) onto `origin/main`,
@@ -345,7 +381,8 @@ jobs:
                  version and dated today.
                - Code: keep main's changes and re-apply this PR's change on top. If a conflict needs a product or design
                  decision, do not guess: `git rebase --abort`, explain it in a PR comment, and stop.
-            3. Run `dotnet test PersonalFinance.sln` and "npm run lint", and fix only what the rebase broke.
+            3. Run `dotnet test PersonalFinance.sln` and "npm run lint", and fix only what the rebase broke. Then run
+               `bash .github/scripts/agent-version-check.sh ${{ env.BRANCH }}` and fix what it lists until it prints OK.
             4. `git push --force-with-lease origin ${{ env.BRANCH }}`. Then comment on the PR with the new version and
                anything you had to resolve by hand.
 
@@ -361,8 +398,13 @@ jobs:
         run: |
           set -uo pipefail
           git fetch -q origin main "$BRANCH"
-          if [ "$JOB_STATUS" = "success" ] && git merge-base --is-ancestor origin/main "origin/$BRANCH"; then
-            echo "::notice::PR #$PR is rebased onto main."
+          if [ "$JOB_STATUS" = "success" ] && [ -n "${START_MAIN:-}" ] \
+            && git merge-base --is-ancestor "$START_MAIN" "origin/$BRANCH"; then
+            if git merge-base --is-ancestor origin/main "origin/$BRANCH"; then
+              echo "::notice::PR #$PR is rebased onto main."
+            else
+              echo "::notice::PR #$PR is rebased onto main as of ${START_MAIN:0:8}; main has moved since, so a later run rebases it again."
+            fi
             exit 0
           fi
           # Not retried every 30 minutes: the label keeps the picker off this PR until a human removes it.

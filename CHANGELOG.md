@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [13.1.0] - 2026-10-28
+## [13.3.0] - 2026-10-28
 
 ### Added
 
@@ -15,6 +15,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `tools/raw-colours.allowlist.json` records the 15 stylesheets that are not clean yet with their current counts. The test fails if a count changes without the list following it, if an unlisted file has a literal, or if a clean file is still on the list.
   - Site.css's Google Drive palette (`--gdrive-*`, a second `:root` block) counts against site.css, because it is not a token block.
   - `npm run css:raw-colours` prints the current counts, for lowering the list after a file is cleaned.
+
+## [13.2.2] - 2026-10-28
+
+### Fixed
+
+- **Google sign-up asks for consent and records it**: a visitor new to the site who signs up with Google must now tick the same "I agree to the Terms of Service and Privacy Policy" box as on Register before the Account is created, and the Account gets a `UserConsent` record with the current policy version and the request's IP address (#503, #313).
+  - When Google shares the email, it is shown read-only and the Account is created confirmed and signed in after one click; the email is always taken from Google's sign-in, never from the form.
+  - When Google shares no email, the visitor types one and ticks the box on the same form; the Account stays unconfirmed until the confirmation email is used, as before.
+  - Leaving the page without accepting creates nothing. Signing in with Google to an existing Account, or linking Google to one, is unchanged.
+
+## [13.2.1] - 2026-10-28
+
+### Changed
+
+- **Google Drive: a drive whose files cannot be loaded explains why once**: the page no longer shows a red banner above the error state; the error state's text is the drive's stored error (for example, an invalid API key) and falls back to the sharing-settings steps only when there is none (#476).
+  - Try again or Update API key with a key Google still rejects no longer adds the banner either; other failures still show it.
+  - The error state offers Try again and Update API key; its own Help button is gone, since the page header's Help opens the same guide.
+  - The loaded view's "This drive needs a new API key" notice, which could never render, is removed with its strings.
+
+## [13.2.0] - 2026-10-28
+
+### Changed
+
+- **One theme control in the top bar for everyone**: signed-in and signed-out visitors get the same icon button before the avatar or sign-in buttons (after the EN | VI switcher when signed out), opening a Light / Dark / System popover.
+  - The icon shows the mode in effect (sun, moon or monitor for System) and the button is named after it, for example "Theme: Dark".
+  - A choice applies at once and closes the popover; Escape or a click outside closes it without a choice. Enter or Space opens it, the arrow keys move between the choices, and focus returns to the button.
+  - The avatar menu no longer holds the theme items, and the signed-out sun/moon toggle is gone, so System can be chosen again at any time.
+  - The top-bar search now shrinks on narrow screens so the control, the bell and the avatar keep their room.
+
+## [13.0.3] - 2026-10-28
+
+### Changed
+
+- **Google Drive: one close control per modal**: the Budget report, Transactions and Help modals close from the header × only, and the API key and Remove drive dialogs from Cancel only; Escape still closes every modal.
+  - The Budget report footer keeps its keyboard tip and the Transactions footer its sheet name; the footer Close and Help's Got it are gone.
+- **Google Drive: Budget report Export CSV and Print move into a ⋯ menu**: the Transactions switch stays visible in the header, and Escape in the open menu closes only the menu.
+  - The full-year details table loses its Open → column and clickable rows; the period chips, the ‹ › arrows, the ←/→ keys and clicking a month in the chart change the period.
+- **Google Drive: one category filter in Transactions**: the Top spending categories bars are plain content, and the All categories select is the one category filter.
+  - The table hides its pager when the rows fit on one page and no longer has a page-length select (page size stays 25).
+- **Google Drive: How do I get one? opens Help at its answer**: both buttons (the connect form's Advanced panel and the API key dialog) open Help with section 4, "Optional: add a Google API key", expanded and scrolled into view.
 
 ## [13.0.1] - 2026-10-28
 

@@ -2,16 +2,19 @@
     'use strict';
 
     /**
-     * Theme mode module (issue #296): light, dark, or the device's setting.
+     * Theme mode module (issues #296 and #481): light, dark, or the device's setting.
      * The choice is per device, in localStorage; with none stored the page follows prefers-color-scheme.
      * An inline script in _Layout's <head> applies the stored theme before the first paint; this module keeps it in
-     * step with the switchers (_ThemeSwitcher) and with the device setting while no choice is stored.
+     * step with the top-bar control (_ThemeSwitcher: an icon button opening a Light / Dark / System popover) and with
+     * the device setting while no choice is stored.
      */
     window.ThemeMode = (function () {
         const STORAGE_KEY = 'theme';
         const THEMES = ['light', 'dark'];
         // The paper colour of each theme, for the browser chrome (meta theme-color); matches --lp-paper.
         const CHROME_COLORS = { light: '#ffffff', dark: '#0E1821' };
+        // Arrow keys in the popover: the step to the next (1) or previous (-1) choice.
+        const ARROW_STEPS = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
         const systemQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
         /**
@@ -59,7 +62,7 @@
 
         /**
          * Sets the theme on <html> (data-theme for the Ledger tokens, data-bs-theme for Bootstrap) and syncs the
-         * switchers. Dispatches a "themechange" event on document with the theme in effect.
+         * top-bar control. Dispatches a "themechange" event on document with the theme in effect.
          * @param {string} choice - 'light', 'dark' or 'system'.
          * @returns {void}
          */
@@ -75,66 +78,175 @@
                 meta.setAttribute('content', CHROME_COLORS[theme]);
             }
 
-            syncSwitchers(choice, theme);
+            syncControl(THEMES.indexOf(choice) >= 0 ? choice : 'system');
             if (changed) {
                 document.dispatchEvent(new CustomEvent('themechange', { detail: { theme: theme } }));
             }
         }
 
         /**
-         * Marks the current choice in the account menu and updates the top bar's one-button toggle.
-         * @param {string} choice - The stored choice.
-         * @param {string} theme - The theme in effect.
+         * Updates the top-bar control: the button's icon and name show the choice, and the popover checks it. The
+         * checked choice is the one focus lands on when the popover opens.
+         * @param {string} choice - 'light', 'dark' or 'system'.
          * @returns {void}
          */
-        function syncSwitchers (choice, theme) {
-            document.querySelectorAll('[data-theme-choice]').forEach((button) => {
-                const isCurrent = button.getAttribute('data-theme-choice') === choice;
-                button.classList.toggle('active', isCurrent);
-                button.setAttribute('aria-current', isCurrent ? 'true' : 'false');
-                const check = button.querySelector('.theme-switcher__check');
-                if (check) {
-                    check.hidden = !isCurrent;
-                }
-            });
-
-            document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
-                const isDark = theme === 'dark';
-                const label = button.getAttribute(isDark ? 'data-label-to-light' : 'data-label-to-dark');
-                button.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+        function syncControl (choice) {
+            document.querySelectorAll('[data-theme-button]').forEach((button) => {
+                const label = button.getAttribute(`data-label-${choice}`);
                 if (label) {
                     button.setAttribute('aria-label', label);
                     button.setAttribute('title', label);
                 }
-                const sun = button.querySelector('.theme-toggle__sun');
-                const moon = button.querySelector('.theme-toggle__moon');
-                // The icon shows the theme the button switches to.
-                if (sun) {
-                    sun.hidden = !isDark;
-                }
-                if (moon) {
-                    moon.hidden = isDark;
+                button.querySelectorAll('[data-theme-icon]').forEach((icon) => {
+                    icon.hidden = icon.getAttribute('data-theme-icon') !== choice;
+                });
+            });
+
+            document.querySelectorAll('[data-theme-choice]').forEach((item) => {
+                const isCurrent = item.getAttribute('data-theme-choice') === choice;
+                item.setAttribute('aria-checked', isCurrent ? 'true' : 'false');
+                item.setAttribute('tabindex', isCurrent ? '0' : '-1');
+            });
+        }
+
+        /**
+         * The control an element is part of, or null when it is outside every control.
+         * @param {Element|null} element - Any element.
+         * @returns {{root: Element, button: Element, popover: Element}|null}
+         */
+        function controlOf (element) {
+            const root = element ? element.closest('[data-theme-switcher]') : null;
+            if (!root) {
+                return null;
+            }
+            const button = root.querySelector('[data-theme-button]');
+            const popover = root.querySelector('[data-theme-popover]');
+            return button && popover ? { root: root, button: button, popover: popover } : null;
+        }
+
+        /**
+         * Opens the popover and moves focus to the checked choice.
+         * @param {{button: Element, popover: Element}} control - The control.
+         * @returns {void}
+         */
+        function open (control) {
+            control.popover.hidden = false;
+            control.button.setAttribute('aria-expanded', 'true');
+            const checked = control.popover.querySelector('[aria-checked="true"]')
+                || control.popover.querySelector('[data-theme-choice]');
+            if (checked) {
+                checked.focus();
+            }
+        }
+
+        /**
+         * Closes the popover.
+         * @param {{button: Element, popover: Element}} control - The control.
+         * @param {boolean} refocus - Return focus to the button.
+         * @returns {void}
+         */
+        function close (control, refocus) {
+            control.popover.hidden = true;
+            control.button.setAttribute('aria-expanded', 'false');
+            if (refocus) {
+                control.button.focus();
+            }
+        }
+
+        /**
+         * Can Tab reach this element? A click on such an element keeps the focus it gave it; elsewhere (plain content,
+         * or <main tabindex="-1">) focus goes back to the theme button.
+         * @param {Element|null} element - The focused element.
+         * @returns {boolean}
+         */
+        function isTabbable (element) {
+            return Boolean(element) && element !== document.body && element.tabIndex >= 0;
+        }
+
+        /**
+         * Closes every open popover except the one holding the given element.
+         * @param {Element|null} except - An element whose control stays as it is, or null to close them all.
+         * @param {boolean} refocus - Return focus to each closed control's button.
+         * @returns {void}
+         */
+        function closePopoversExcept (except, refocus) {
+            document.querySelectorAll('[data-theme-switcher]').forEach((root) => {
+                const control = controlOf(root);
+                if (control && !control.popover.hidden && !(except && root.contains(except))) {
+                    close(control, refocus);
                 }
             });
         }
 
         /**
-         * Wires the switchers and the device-setting listener.
+         * Handles a click: the button opens or closes its popover, a choice applies and closes it, and a click outside
+         * closes it without a choice.
+         * @param {MouseEvent} event - The click.
+         * @returns {void}
+         */
+        function onClick (event) {
+            const target = event.target instanceof Element ? event.target : null;
+            const control = controlOf(target);
+            if (!control) {
+                closePopoversExcept(null, !isTabbable(document.activeElement));
+                return;
+            }
+            closePopoversExcept(target, false);
+
+            const choice = target.closest('[data-theme-choice]');
+            if (choice) {
+                setChoice(choice.getAttribute('data-theme-choice'));
+                close(control, true);
+            } else if (target.closest('[data-theme-button]')) {
+                if (control.popover.hidden) {
+                    open(control);
+                } else {
+                    close(control, true);
+                }
+            }
+        }
+
+        /**
+         * Handles keys in an open popover: Escape closes it and the arrow keys move between the choices. Enter and
+         * Space on a choice are its own click.
+         * @param {KeyboardEvent} event - The key press.
+         * @returns {void}
+         */
+        function onKeydown (event) {
+            const target = event.target instanceof Element ? event.target : null;
+            const control = controlOf(target);
+            if (!control || control.popover.hidden) {
+                return;
+            }
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                close(control, true);
+                return;
+            }
+            const step = ARROW_STEPS[event.key];
+            const current = target.closest('[data-theme-choice]');
+            if (!step || !current) {
+                return;
+            }
+            event.preventDefault();
+            const items = Array.prototype.slice.call(control.popover.querySelectorAll('[data-theme-choice]'));
+            const next = items[(items.indexOf(current) + step + items.length) % items.length];
+            next.focus();
+        }
+
+        /**
+         * Wires the control and the device-setting listener.
          * @returns {void}
          */
         function setup () {
-            document.addEventListener('click', (event) => {
+            document.addEventListener('click', onClick);
+            document.addEventListener('keydown', onKeydown);
+            // Tabbing (or clicking) to another control closes the popover and leaves focus there. Other clicks outside
+            // are left to onClick, which returns focus to the button.
+            document.addEventListener('focusin', (event) => {
                 const target = event.target instanceof Element ? event.target : null;
-                if (!target) {
-                    return;
-                }
-                const choiceButton = target.closest('[data-theme-choice]');
-                if (choiceButton) {
-                    setChoice(choiceButton.getAttribute('data-theme-choice'));
-                    return;
-                }
-                if (target.closest('[data-theme-toggle]')) {
-                    setChoice(resolve(getChoice()) === 'dark' ? 'light' : 'dark');
+                if (isTabbable(target)) {
+                    closePopoversExcept(target, false);
                 }
             });
 

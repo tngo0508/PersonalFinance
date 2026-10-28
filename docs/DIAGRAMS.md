@@ -693,6 +693,7 @@ and the Identity Razor Pages `Manage/DeletePersonalData`, `DeletionRequested`, `
 ```mermaid
 stateDiagram-v2
     [*] --> Active : Register (UserConsent recorded, User role)
+    [*] --> Active : Google sign-up, after accepting the terms (UserConsent recorded, User role)
     Active --> Pending : POST api/account-deletion
     Pending --> Cancelled : POST api/account-deletion/cancel with the token, before PurgeAfter
     Cancelled --> Active : sign in again

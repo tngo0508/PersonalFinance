@@ -23,7 +23,6 @@
     var spreadsheets = files.Where(IsSpreadsheet).OrderByDescending(f => f.ModifiedTime).ToList();
 
     var currentConn = Model.SelectedConnection;
-    var isNeedsReauth = currentConn != null && (!currentConn.IsValid || currentConn.SyncStatus == "NeedsReauth");
     var showConnectForm = Model.ShowConnectForm || !Model.Connections.Any();
 
     // Names the app matches or that Google shows untranslated stay as written (spec §1): the "Monthly budget" file
@@ -373,7 +372,7 @@
                                 <input asp-for="ApiKey" class="form-control form-control-sm font-monospace" placeholder="AIzaSy..." />
                                 <div class="form-text">
                                     @L["GoogleDrive.Connect.ApiKeyHelp"]
-                                    <button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal">@L["GoogleDrive.ApiKey.HowToGet"]</button>
+                                    <button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal" data-help-section="helpApiKey">@L["GoogleDrive.ApiKey.HowToGet"]</button>
                                 </div>
                             </div>
                         </div>
@@ -480,17 +479,7 @@
                         }
                     </div>
 
-                    @if (isNeedsReauth)
-                    {
-                        <div class="gd-notice gd-notice--warning mt-3" role="alert">
-                            <div>
-                                <strong>@L["GoogleDrive.Notice.NeedsKeyTitle"]</strong>
-                                <div class="small">@(currentConn?.ErrorMessage ?? L["GoogleDrive.Notice.NeedsKeyText"].Value)</div>
-                            </div>
-                            <button type="button" class="btn btn-sm btn-warning text-nowrap" data-bs-toggle="modal" data-bs-target="#reauthModal">@L["GoogleDrive.Notice.UpdateKey"]</button>
-                        </div>
-                    }
-                    else if (response.IsDemoData)
+                    @if (response.IsDemoData)
                     {
                         <div class="gd-notice mt-3" role="status">
                             <div>
@@ -754,12 +743,19 @@
                         </svg>
                     </div>
                     <h2 class="gd-empty-state__title">@L.Named("GoogleDrive.LoadError.Title", ("name", currentConn.Name))</h2>
-                    <p class="gd-empty-state__text">@L["GoogleDrive.LoadError.Text"]</p>
-                    <ul class="gd-empty-state__troubleshoot text-start mb-4">
-                        <li>@L.NamedHtml("GoogleDrive.LoadError.CheckSharing", null, ("share", shareLabel), ("anyone", anyoneLabel))</li>
-                        <li>@L["GoogleDrive.LoadError.CheckKey"]</li>
-                        <li>@L["GoogleDrive.LoadError.CheckExists"]</li>
-                    </ul>
+                    @if (!string.IsNullOrEmpty(currentConn.ErrorMessage))
+                    {
+                        <p class="gd-empty-state__text mb-4">@currentConn.ErrorMessage</p>
+                    }
+                    else
+                    {
+                        <p class="gd-empty-state__text">@L["GoogleDrive.LoadError.Text"]</p>
+                        <ul class="gd-empty-state__troubleshoot text-start mb-4">
+                            <li>@L.NamedHtml("GoogleDrive.LoadError.CheckSharing", null, ("share", shareLabel), ("anyone", anyoneLabel))</li>
+                            <li>@L["GoogleDrive.LoadError.CheckKey"]</li>
+                            <li>@L["GoogleDrive.LoadError.CheckExists"]</li>
+                        </ul>
+                    }
                     <div class="gd-empty-state__actions">
                         <form asp-action="Sync" method="post" id="syncFormFallback">
                             @Html.AntiForgeryToken()
@@ -770,7 +766,6 @@
                             </button>
                         </form>
                         <button type="button" class="btn btn-light border" data-bs-toggle="modal" data-bs-target="#reauthModal">@L["GoogleDrive.ApiKey.Update"]</button>
-                        <button type="button" class="btn btn-light border" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal">@L["GoogleDrive.Header.Help"]</button>
                     </div>
                 </div>
             }
@@ -804,8 +799,20 @@
                             data-bs-toggle="modal" data-bs-target="#transactionsModal" disabled>
                         @L["GoogleDrive.Sheet.Transactions"]
                     </button>
-                    <button type="button" class="btn btn-sm btn-light border d-none d-sm-inline-block" id="btnExportBudget" disabled>@L["GoogleDrive.Report.ExportCsv"]</button>
-                    <button type="button" class="btn btn-sm btn-light border d-none d-sm-inline-block" id="btnPrintBudgetReport" disabled>@L["GoogleDrive.Report.Print"]</button>
+                    @* Export and Print are rare, so they sit in a ⋯ menu. Bootstrap's dropdown keeps aria-expanded current,
+                       moves focus with the arrow keys and closes on Escape without closing the modal. *@
+                    <div class="dropdown d-none d-sm-block">
+                        <button type="button" class="btn btn-sm btn-light border gd-icon-btn" id="btnBudgetMore" data-bs-toggle="dropdown" aria-expanded="false"
+                                aria-label="@L["GoogleDrive.Report.MoreActions"]" disabled>
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                                <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+                            </svg>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="btnBudgetMore">
+                            <li><button type="button" class="dropdown-item" id="btnExportBudget" disabled>@L["GoogleDrive.Report.ExportCsv"]</button></li>
+                            <li><button type="button" class="dropdown-item" id="btnPrintBudgetReport" disabled>@L["GoogleDrive.Report.Print"]</button></li>
+                        </ul>
+                    </div>
                     <button type="button" class="btn-close ms-1" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
                 </div>
             </div>
@@ -968,9 +975,9 @@
                 </div>
             </div>
 
-            <div class="modal-footer border-top justify-content-between">
-                <div class="small text-muted d-none d-md-block" id="budgetKeyboardHint">@L["GoogleDrive.Report.KeyboardHint"]</div>
-                <button type="button" class="btn btn-light border px-4 ms-auto" data-bs-dismiss="modal">@L["Common.Close"]</button>
+            @* The header × is the one close control; the footer keeps only the keyboard tip *@
+            <div class="modal-footer border-top justify-content-start d-none d-md-flex">
+                <div class="small text-muted" id="budgetKeyboardHint">@L["GoogleDrive.Report.KeyboardHint"]</div>
             </div>
         </div>
     </div>
@@ -1118,9 +1125,9 @@
                 </div>
             </div>
 
-            <div class="modal-footer border-top justify-content-between">
+            @* The header × is the one close control; the footer keeps only the sheet name *@
+            <div class="modal-footer border-top justify-content-start">
                 <div class="small text-muted" id="txSheetName"></div>
-                <button type="button" class="btn btn-light border px-4 ms-auto" data-bs-dismiss="modal">@L["Common.Close"]</button>
             </div>
         </div>
     </div>
@@ -1131,8 +1138,8 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header border-bottom">
+                @* A confirmation dialog: Cancel next to Save is its one close control (Escape still closes it) *@
                 <h5 class="modal-title fw-bold" id="reauthModalLabel">@L.Named("GoogleDrive.ApiKey.ModalTitle", ("name", currentConn?.Name ?? L["GoogleDrive.ApiKey.ThisDrive"].Value))</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
             </div>
             <form asp-action="Reauth" method="post">
                 @Html.AntiForgeryToken()
@@ -1147,7 +1154,7 @@
                     <input type="text" id="reauthApiKey" name="apiKey" class="form-control font-monospace" placeholder="AIzaSy..." />
                     <div class="form-text">
                         @L["GoogleDrive.ApiKey.Help"]
-                        <button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal">@L["GoogleDrive.ApiKey.HowToGet"]</button>
+                        <button type="button" class="btn btn-link btn-sm p-0 align-baseline" data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal" data-help-section="helpApiKey">@L["GoogleDrive.ApiKey.HowToGet"]</button>
                     </div>
                 </div>
                 <div class="modal-footer border-top">
@@ -1166,8 +1173,8 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow rounded-4">
                 <div class="modal-header border-bottom">
+                    @* A confirmation dialog: Cancel next to Remove is its one close control (Escape still closes it) *@
                     <h5 class="modal-title fw-bold" id="deleteDriveModalLabel">@L.Named("GoogleDrive.Remove.Title", ("name", currentConn.Name))</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Common.Close"]"></button>
                 </div>
                 <div class="modal-body">
                     <p class="mb-0">
@@ -1279,9 +1286,6 @@
                         </p>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer border-top">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">@L["GoogleDrive.Help.GotIt"]</button>
             </div>
         </div>
     </div>

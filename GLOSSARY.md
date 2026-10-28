@@ -379,6 +379,45 @@ Transaction and budget data analysis from Google Sheets. Provides dashboard view
 ### AI Assistant
 AI-powered financial advice via OpenAI chat integration.
 
+### Atelier
+The Learning page: a public Library of Term Entries and a Journey of Lessons for signed-in users. Educational only; it
+never gives personalised advice. In code it is the Learning Feature.
+_Avoid_: academy, course page, Learning (the code name only)
+
+### Term Entry
+One reviewed, published explanation of a financial term in plain English, with its Vietnamese name, cited sources and,
+where rules differ, notes for the US and Vietnam. It belongs to one Topic.
+_Avoid_: article, post, definition
+
+### Topic
+The one subject group a Term Entry belongs to, such as Borrowing & credit or Tax.
+_Avoid_: category (Budget Category and Feedback Category are different things), tag
+
+### Approved Source
+A website, law database or channel on the owner's allowlist that Atelier content may draw on, with its usage rule:
+draft and cite, concept with a link, or link only.
+_Avoid_: reference, provider
+
+### Journey
+The finite, ordered path of Lessons a signed-in user works through, one a day.
+_Avoid_: course, track, curriculum
+
+### Lesson
+One day's step of the Journey: a short intro, two or three Term Entries, a Check and a link to try the idea in the app.
+_Avoid_: module, chapter, unit
+
+### Review
+The flash cards from earlier Lessons that open a Lesson. The user marks each one Knew it or Not yet.
+_Avoid_: quiz, flashcard deck
+
+### Check
+The short practice that ends a Lesson. Answering it finishes the Lesson, whatever the score.
+_Avoid_: quiz, test, exam
+
+### Keepsake
+The object placed on the user's desk for each finished Lesson. It marks progress without points or streaks.
+_Avoid_: badge, reward, trophy
+
 ## Localization and Currency
 
 ### Language

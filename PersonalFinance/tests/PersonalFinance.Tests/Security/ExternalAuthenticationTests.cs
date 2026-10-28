@@ -4,13 +4,16 @@ using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using PersonalFinance.Data;
+using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Areas.Identity.Pages.Account;
+using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Tests.Security;
 
@@ -25,12 +28,44 @@ public class ExternalAuthenticationTests
     private const string NewPicture = "https://new.url/photo.jpg";
 
     [Fact]
-    public async Task GoogleCallback_ForANewEmail_CreatesAConfirmedAccount_LinksGoogle_AndSignsIn()
+    public async Task GoogleCallback_ForANewEmail_ShowsTheConfirmationPage_AndCreatesNoAccount()
     {
         await using ExternalLoginCallbackHarness harness = await ExternalLoginCallbackHarness.CreateAsync(
             new ExternalLoginCallbackHarness.Options { AccountExists = false });
 
         IActionResult result = await harness.Page.OnGetCallbackAsync();
+
+        Assert.IsType<PageResult>(result);
+        Assert.Null(await harness.UserManager.FindByEmailAsync(ExternalLoginCallbackHarness.Email));
+        Assert.Equal(0, harness.SignInManager.SignInCalls);
+    }
+
+    [Fact]
+    public async Task GoogleConfirmation_WithoutAcceptingTheTerms_ShowsTheError_AndCreatesNothing()
+    {
+        using var uiCulture = new UiCultureScope("en");
+        await using ExternalLoginCallbackHarness harness = await ExternalLoginCallbackHarness.CreateAsync(
+            new ExternalLoginCallbackHarness.Options { AccountExists = false });
+        harness.Page.Input.AcceptTerms = false;
+
+        IActionResult result = await harness.Page.OnPostConfirmationAsync();
+
+        Assert.IsType<PageResult>(result);
+        Assert.Equal(
+            "You must agree to the Terms of Service and Privacy Policy to create an account.",
+            Assert.Single(harness.Page.ModelState["Input.AcceptTerms"]!.Errors).ErrorMessage);
+        Assert.Null(await harness.UserManager.FindByEmailAsync(ExternalLoginCallbackHarness.Email));
+        Assert.Empty(await harness.Db.UserConsents.ToListAsync());
+    }
+
+    [Fact]
+    public async Task GoogleConfirmation_AcceptingTheTerms_CreatesAConfirmedAccount_RecordsConsent_AndSignsIn()
+    {
+        await using ExternalLoginCallbackHarness harness = await ExternalLoginCallbackHarness.CreateAsync(
+            new ExternalLoginCallbackHarness.Options { AccountExists = false });
+        harness.Page.Input.AcceptTerms = true;
+
+        IActionResult result = await harness.Page.OnPostConfirmationAsync();
 
         Assert.Equal("/", Assert.IsType<LocalRedirectResult>(result).Url);
         IdentityUser user = Assert.IsType<IdentityUser>(await harness.UserManager.FindByEmailAsync(ExternalLoginCallbackHarness.Email));
@@ -38,6 +73,8 @@ public class ExternalAuthenticationTests
         UserLoginInfo login = Assert.Single(await harness.UserManager.GetLoginsAsync(user));
         Assert.Equal(("Google", ExternalLoginCallbackHarness.ProviderKey), (login.LoginProvider, login.ProviderKey));
         Assert.True(await harness.UserManager.IsInRoleAsync(user, AppRoles.User));
+        UserConsent consent = Assert.Single(await harness.Db.UserConsents.ToListAsync());
+        Assert.Equal((user.Id, AppVersion.Current), (consent.UserId, consent.PolicyVersion));
         Assert.Equal(1, harness.SignInManager.SignInCalls);
     }
 
@@ -113,6 +150,7 @@ public class ExternalAuthenticationTests
             NullLogger<ExternalLoginModel>.Instance,
             new RecordingAccountEmailService(),
             new InMemoryUserPreferenceService(),
+            new UserConsentService(provider.GetRequiredService<AppDbContext>()),
             TestLocalization.Localizer);
 
         IActionResult result = model.OnGet();
