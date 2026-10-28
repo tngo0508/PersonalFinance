@@ -105,7 +105,7 @@
         <!-- Empty state -->
         <div class="analysis-empty-state text-center py-5">
             <div class="analysis-empty-state__icon mb-3" aria-hidden="true">
-                <svg width="64" height="64" fill="#adb5bd" viewBox="0 0 16 16">
+                <svg width="64" height="64" fill="currentColor" viewBox="0 0 16 16">
                     <path
                             d="M4 11H2v3h2v-3zm5-4H7v7h2V7zm5-5h-2v12h2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1h-2zM7 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H7zm-5 4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1H2z"/>
                 </svg>
@@ -162,7 +162,7 @@
             <div class="col-6 col-lg-3">
                 <div class="analysis-card analysis-card--savings h-100">
                     <div class="analysis-card__label">@L["Analysis.Summary.NetSavings"]</div>
-                    <div class="analysis-card__value" style="color: @(Model.NetSavings >= 0 ? "#198754" : "#dc3545")">
+                    <div class="analysis-card__value @(Model.NetSavings >= 0 ? "analysis-amount--positive" : "analysis-amount--negative")">
                         @MoneyFormatter.FormatWhole(Model.NetSavings, Model.ReportingCurrency)</div>
                     <div class="analysis-card__sub">@L["Analysis.Summary.IncomeMinusExpenses"]</div>
                 </div>
@@ -374,7 +374,7 @@
                                 <td class="fw-semibold">@category.CategoryName</td>
                                 <td class="text-end">@MoneyFormatter.FormatWhole(category.BudgetedAmount, Model.ReportingCurrency)</td>
                                 <td class="text-end">@MoneyFormatter.FormatWhole(category.ActualAmount, Model.ReportingCurrency)</td>
-                                <td class="text-end" style="color: @(category.Variance >= 0 ? "#198754" : "#dc3545")">
+                                <td class="text-end @(category.Variance >= 0 ? "analysis-amount--positive" : "analysis-amount--negative")">
                                     @(category.Variance >= 0 ? "+" : "")@MoneyFormatter.FormatWhole(category.Variance, Model.ReportingCurrency)
                                 </td>
                                 <td class="text-end">@category.PercentageUsed.ToString("F1")%</td>
@@ -418,7 +418,7 @@
                                 <td class="fw-semibold">@ranking.CategoryName</td>
                                 <td class="text-end">@MoneyFormatter.FormatWhole(ranking.BudgetedAmount, Model.ReportingCurrency)</td>
                                 <td class="text-end">@MoneyFormatter.FormatWhole(ranking.ActualAmount, Model.ReportingCurrency)</td>
-                                <td class="text-end" style="color: @(ranking.Variance >= 0 ? "#198754" : "#dc3545")">
+                                <td class="text-end @(ranking.Variance >= 0 ? "analysis-amount--positive" : "analysis-amount--negative")">
                                     @(ranking.Variance >= 0 ? "+" : "")@MoneyFormatter.FormatWhole(ranking.Variance, Model.ReportingCurrency)
                                 </td>
                                 <td class="text-end">
@@ -438,266 +438,7 @@
 </div>
 
 @section Styles {
-    <style>
-        /* Fix dropdown arrow overlap: restore Bootstrap's default right padding for form-select */
-        .analysis-period-selector .form-select {
-            padding-right: 2.25rem;
-        }
-
-        /* Chart container needs explicit height for maintainAspectRatio: false */
-        .analysis-chart-card__canvas {
-            position: relative;
-            height: 300px;
-        }
-
-        /*
-         * Money Flow colours, read by money-flow.js. Categories take slots 0-4 in display order: this order of the
-         * categorical palette passes the colour-blind and normal-vision checks for neighbouring bands, and slot 4
-         * (magenta) is also safe beside Saved. Income and Spending stay neutral so the categories carry the colour;
-         * Shortfall and Saved keep their negative/positive meaning.
-         */
-        .money-flow {
-            --money-flow-slot-0: #2a78d6;
-            --money-flow-slot-1: #eb6834;
-            --money-flow-slot-2: #6250d6;
-            --money-flow-slot-3: #eda100;
-            --money-flow-slot-4: #e87ba4;
-            --money-flow-income: #475569;
-            --money-flow-spending: #6B7280;
-            --money-flow-shortfall: var(--app-accent-negative, #DC2626);
-            --money-flow-saved: var(--app-accent-positive, #059669);
-            --money-flow-uncategorized: #78716C;
-            --money-flow-other: #9CA3AF;
-        }
-
-        .money-flow__swatch {
-            display: inline-block;
-            width: 0.75rem;
-            height: 0.75rem;
-            border-radius: 3px;
-            margin-right: 0.375rem;
-            vertical-align: -0.05em;
-        }
-
-        .money-flow__swatch--slot-0 { background: var(--money-flow-slot-0); }
-        .money-flow__swatch--slot-1 { background: var(--money-flow-slot-1); }
-        .money-flow__swatch--slot-2 { background: var(--money-flow-slot-2); }
-        .money-flow__swatch--slot-3 { background: var(--money-flow-slot-3); }
-        .money-flow__swatch--slot-4 { background: var(--money-flow-slot-4); }
-        .money-flow__swatch--uncategorized { background: var(--money-flow-uncategorized); }
-        .money-flow__swatch--other { background: var(--money-flow-other); }
-        .money-flow__swatch--saved { background: var(--money-flow-saved); }
-
-        /* Money Flow: a taller canvas so small bands keep readable labels */
-        .money-flow__canvas {
-            position: relative;
-            height: 360px;
-        }
-
-        .money-flow__note {
-            border-left: 4px solid var(--app-accent-negative, #DC2626);
-            background: var(--app-accent-negative-soft, #FEE2E2);
-            border-radius: 0.375rem;
-            padding: 0.625rem 0.875rem;
-        }
-
-        /* Row headers name a category; keep them as body text, not the uppercase column-header style */
-        .money-flow__table tbody th,
-        .money-flow__table tfoot th {
-            font-size: inherit;
-            text-transform: none;
-            letter-spacing: normal;
-            color: inherit;
-        }
-
-        /* Match site.css body-cell padding so footer amounts line up with the rows above */
-        .money-flow__table tbody th,
-        .money-flow__table tfoot th,
-        .money-flow__table tfoot td {
-            padding: var(--app-spacing-s) var(--app-spacing-m);
-        }
-
-        .money-flow__shortfall-row th,
-        .money-flow__shortfall-row td {
-            color: var(--app-accent-negative, #DC2626);
-        }
-
-        /* Canvas fills the container */
-        .analysis-chart-card__canvas canvas {
-            width: 100%;
-        }
-
-        .analysis-page-header {
-            border-bottom: 1px solid #e9ecef;
-            padding-bottom: 1rem;
-        }
-
-        .analysis-page-header__title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .analysis-page-header__icon {
-            color: #0d6efd;
-        }
-
-        .analysis-page-header__subtitle {
-            color: #6c757d;
-            margin: 0.25rem 0 0;
-        }
-
-        .analysis-card {
-            background: #fff;
-            border: 1px solid #e9ecef;
-            border-radius: 0.5rem;
-            padding: 1rem;
-        }
-
-        .analysis-card__label {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: #6c757d;
-            font-weight: 600;
-        }
-
-        .analysis-card__value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin: 0.25rem 0;
-        }
-
-        .analysis-card__sub {
-            font-size: 0.8rem;
-            color: #6c757d;
-        }
-
-        .analysis-section__title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
-
-        .analysis-section__header {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .analysis-section__badge {
-            font-size: 0.75rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-        }
-
-        .analysis-velocity-card {
-            background: #f8f9fa;
-            border-radius: 0.5rem;
-            padding: 1rem;
-            text-align: center;
-        }
-
-        .analysis-velocity-card__label {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: #6c757d;
-            font-weight: 600;
-        }
-
-        .analysis-velocity-card__value {
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin: 0.25rem 0;
-        }
-
-        .analysis-velocity-card__sub {
-            font-size: 0.8rem;
-            color: #6c757d;
-        }
-
-        .analysis-progress-bar__labels {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            color: #6c757d;
-            margin-bottom: 0.5rem;
-        }
-
-        .analysis-progress-bar__track {
-            position: relative;
-            height: 8px;
-            background: #e9ecef;
-            border-radius: 4px;
-            overflow: visible;
-        }
-
-        .analysis-progress-bar__fill {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            border-radius: 4px;
-            background: #0d6efd;
-            transition: width 0.3s ease;
-        }
-
-        .analysis-progress-bar__fill--budget {
-            background: linear-gradient(90deg, #198754, #0d6efd);
-        }
-
-        .analysis-progress-bar__marker {
-            position: absolute;
-            top: -4px;
-            width: 2px;
-            height: 16px;
-            background: #dc3545;
-            transform: translateX(-50%);
-        }
-
-        .analysis-chart-card {
-            background: #fff;
-            border: 1px solid #e9ecef;
-            border-radius: 0.5rem;
-            padding: 1rem;
-        }
-
-        .analysis-chart-card__title {
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
-
-        .analysis-table th {
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: #6c757d;
-            font-weight: 600;
-            border-top: none;
-        }
-
-        .analysis-empty-state__icon {
-            color: #adb5bd;
-        }
-
-        .analysis-empty-state__title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .analysis-empty-state__text {
-            color: #6c757d;
-            max-width: 400px;
-            margin: 0 auto;
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/analysis.css" asp-append-version="true"/>
 }
 
 @section Scripts {

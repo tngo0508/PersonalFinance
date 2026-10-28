@@ -3,9 +3,9 @@
  * by mouse and keyboard, checks that the root's theme attributes follow each choice, that System follows an emulated
  * device colour scheme, that the choice survives a reload and sign-in, and that the avatar menu holds no theme items.
  * In dark mode it checks key text against its effective background (4.5:1) on the Landing Page, a sign-in page,
- * Account settings and the Net Worth help modal (slice #482), and Budget, Budget Tracker and Savings Goals (slice #487),
- * and that the Investment Calculator's and the Budget planner's charts restyle on a theme switch without a reload
- * (slices #483 and #487). Run from ui-test.js as Test 9j.
+ * Account settings and the Net Worth help modal (slice #482), Budget, Budget Tracker and Savings Goals (slice #487),
+ * and the Dashboard and Money Priorities (slice #489), and that the Investment Calculator's and the Budget planner's
+ * charts restyle on a theme switch without a reload (slices #483 and #487). Run from ui-test.js as Test 9j.
  *
  * Expected labels are read from Resources/i18n/en.json, so a rewording does not break the test.
  */
@@ -35,7 +35,10 @@ const CONTRAST_PAGES = {
         '.budget-remaining__label', '.budget-remaining__value'],
     budgetTracker: ['.bt-page-header__title', '.bt-page-header__subtitle', '.bt-tabs .nav-link.active',
         '.bt-tabs .nav-link:not(.active)', '.bt-bar-title', '.bt-card-title--expense', '.bt-card-title--income'],
-    savingsGoals: ['.savings-title', '.savings-subtitle', '.savings-empty__title', '.savings-empty__text']
+    savingsGoals: ['.savings-title', '.savings-subtitle', '.savings-empty__title', '.savings-empty__text'],
+    // The Dashboard and Money Priorities (#489), as a fresh Account sees them
+    dashboard: ['.dash-header__eyebrow', '.dash-header__title', '.dash-header__lede'],
+    moneyPriorities: ['.mp-title', '.mp-intro', '.mp-card__title']
 };
 
 const PASSWORD = 'TestPass1!';
@@ -459,6 +462,12 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         await checkDarkContrast(page, 'Budget Tracker', CONTRAST_PAGES.budgetTracker, report);
         await page.goto(`${base}/SavingsGoals`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Savings Goals', CONTRAST_PAGES.savingsGoals, report);
+
+        // The Dashboard and Money Priorities (#489): dark contrast.
+        await page.goto(`${base}/Dashboard`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'Dashboard', CONTRAST_PAGES.dashboard, report);
+        await page.goto(`${base}/MoneyPriorities`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'Money Priorities', CONTRAST_PAGES.moneyPriorities, report);
 
         // 4. The avatar menu holds no theme items.
         await page.click('.app-user-toggle');

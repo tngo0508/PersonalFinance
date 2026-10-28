@@ -11,22 +11,32 @@
     const CHART_ELEMENT_ID = 'dash-projection-chart';
     const Y_AXIS_HEADROOM = 0.1;
 
-    // Ledger tokens (wwwroot/css/site.css); the same scenario colours as the Net Worth page.
-    const COLORS = {
-        base: '#1D6A50', // --app-brand
-        conservative: '#5B6B78', // --app-text-muted (neutral)
-        aggressive: '#2F6690', // --nw-aggressive
-        fiTarget: '#8A6A1E', // --app-accent-target
-        grid: '#E1E7E4', // --app-border
-        axis: '#5B6B78', // --app-text-muted
-        surface: '#FFFFFF' // --app-bg
-    };
-
     const SERIES = [
-        { key: 'base', nameKey: 'Dashboard.Js.Scenario.Base', color: COLORS.base, width: 3 },
-        { key: 'conservative', nameKey: 'Dashboard.Js.Scenario.Conservative', color: COLORS.conservative, width: 2 },
-        { key: 'aggressive', nameKey: 'Dashboard.Js.Scenario.Aggressive', color: COLORS.aggressive, width: 2 }
+        { key: 'base', nameKey: 'Dashboard.Js.Scenario.Base', width: 3 },
+        { key: 'conservative', nameKey: 'Dashboard.Js.Scenario.Conservative', width: 2 },
+        { key: 'aggressive', nameKey: 'Dashboard.Js.Scenario.Aggressive', width: 2 }
     ];
+
+    /**
+     * The chart's colours of the theme in effect, from the shared chart palette (core/chart-palette.js, #489): the
+     * same scenario colours as the Net Worth page (Base the first series, Conservative the neutral axis colour,
+     * Aggressive the second series) and the FI Target in the third, brass, series.
+     * @returns {{base: string, conservative: string, aggressive: string, fiTarget: string, grid: string, axis: string,
+     *     surface: string, mode: string}} mode: ApexCharts' 'light' or 'dark', for its legend and tooltip.
+     */
+    function themeColors () {
+        const palette = window.ChartPalette.read();
+        return {
+            base: palette.series[0],
+            conservative: palette.axis,
+            aggressive: palette.series[1],
+            fiTarget: palette.series[2],
+            grid: palette.grid,
+            axis: palette.axis,
+            surface: palette.page,
+            mode: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+        };
+    }
 
     // Separators from the page culture, symbol from the currency (PFI18n, spec §2.2). The amounts are in the
     // projection's currency: the Reporting Currency (ADR 0016), read from the data island.
@@ -46,15 +56,16 @@
     /**
      * Build the dashed FI Target reference line, or none when there is no FI Target.
      * @param {number} fiTarget - The FI Target amount.
+     * @param {Object} colors - From themeColors.
      * @returns {Array<Object>} ApexCharts y-axis annotations.
      */
-    function buildFiAnnotation (fiTarget) {
+    function buildFiAnnotation (fiTarget, colors) {
         if (!(fiTarget > 0)) {
             return [];
         }
         return [{
             y: fiTarget,
-            borderColor: COLORS.fiTarget,
+            borderColor: colors.fiTarget,
             strokeDashArray: 6,
             label: {
                 text: PFI18n.t('Dashboard.Js.FiTargetLine', { amount: compactFormatter.format(fiTarget) }),
@@ -62,7 +73,7 @@
                 textAnchor: 'start',
                 offsetX: 4,
                 borderColor: 'transparent',
-                style: { color: COLORS.fiTarget, background: COLORS.surface, fontSize: '11px' }
+                style: { color: colors.fiTarget, background: colors.surface, fontSize: '11px' }
             }
         }];
     }
@@ -113,13 +124,14 @@
         }
 
         const fiTarget = Number(netWorth.fiTarget) || 0;
-        const bounds = yAxisBounds(points, fiTarget);
         const animate = !window.PFDashboard.prefersReducedMotion();
-        const chart = new window.ApexCharts(element, {
+        const chart = new window.ApexCharts(element, Object.assign({
             chart: {
                 type: 'area',
                 height: chartHeight(),
                 fontFamily: 'Inter, sans-serif',
+                // The card shows through, in either theme
+                background: 'transparent',
                 toolbar: { show: false },
                 zoom: { enabled: false },
                 animations: { enabled: animate }
@@ -128,26 +140,50 @@
                 name: PFI18n.t(series.nameKey),
                 data: points.map((point) => ({ x: point.age, y: Number(point[series.key]) || 0 }))
             })),
-            colors: SERIES.map((series) => series.color),
             stroke: { curve: 'straight', width: SERIES.map((series) => series.width) },
             fill: {
                 type: 'gradient',
                 gradient: { opacityFrom: 0.18, opacityTo: 0, stops: [0, 100] }
             },
             dataLabels: { enabled: false },
-            markers: { size: 0, hover: { size: 5 }, strokeColors: COLORS.surface, strokeWidth: 2 },
             legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px' },
-            grid: { borderColor: COLORS.grid, strokeDashArray: 0, xaxis: { lines: { show: false } } },
+            responsive: [{
+                breakpoint: 576,
+                options: { legend: { position: 'bottom', horizontalAlign: 'center' } }
+            }]
+        }, themedOptions(points, fiTarget, themeColors())));
+        chart.render();
+
+        // A theme switch restyles the chart without a reload (#489)
+        window.ChartPalette.subscribe(() => {
+            chart.updateOptions(themedOptions(points, fiTarget, themeColors()), false, false);
+        });
+    }
+
+    /**
+     * The options that carry a colour, so a theme switch can apply them again.
+     * @param {Array<Object>} points - Projection points.
+     * @param {number} fiTarget - The FI Target amount (0 when there is none).
+     * @param {Object} colors - From themeColors.
+     * @returns {Object} ApexCharts options.
+     */
+    function themedOptions (points, fiTarget, colors) {
+        const bounds = yAxisBounds(points, fiTarget);
+        return {
+            theme: { mode: colors.mode },
+            colors: [colors.base, colors.conservative, colors.aggressive],
+            markers: { size: 0, hover: { size: 5 }, strokeColors: colors.surface, strokeWidth: 2 },
+            grid: { borderColor: colors.grid, strokeDashArray: 0, xaxis: { lines: { show: false } } },
             xaxis: {
                 type: 'numeric',
                 tickAmount: Math.min(points.length - 1, 8),
-                title: { text: PFI18n.t('Dashboard.Js.Age'), style: { color: COLORS.axis, fontWeight: 500 } },
+                title: { text: PFI18n.t('Dashboard.Js.Age'), style: { color: colors.axis, fontWeight: 500 } },
                 labels: {
-                    style: { colors: COLORS.axis },
+                    style: { colors: colors.axis },
                     formatter: (value) => `${Math.round(value)}`
                 },
-                axisBorder: { color: COLORS.grid },
-                axisTicks: { color: COLORS.grid },
+                axisBorder: { color: colors.grid },
+                axisTicks: { color: colors.grid },
                 tooltip: { enabled: false }
             },
             yaxis: {
@@ -155,25 +191,21 @@
                 max: bounds.max,
                 forceNiceScale: true,
                 labels: {
-                    style: { colors: COLORS.axis },
+                    style: { colors: colors.axis },
                     formatter: (value) => compactFormatter.format(value)
                 }
             },
-            annotations: { yaxis: buildFiAnnotation(fiTarget) },
+            annotations: { yaxis: buildFiAnnotation(fiTarget, colors) },
             tooltip: {
+                theme: colors.mode,
                 shared: true,
                 intersect: false,
                 x: {
                     formatter: (_value, options) => tooltipTitle(points, options ? options.dataPointIndex : -1)
                 },
                 y: { formatter: (value) => currencyFormatter.format(value) }
-            },
-            responsive: [{
-                breakpoint: 576,
-                options: { legend: { position: 'bottom', horizontalAlign: 'center' } }
-            }]
-        });
-        chart.render();
+            }
+        };
     }
 
     if (window.PFDashboard) {

@@ -35,6 +35,8 @@
     let submitButton = null;
     let diagramFrame = null;
     let wholeTreeDiagram = '';
+    /** The same tree in the dark palette, which diagram.js draws in dark mode (#489). */
+    let wholeTreeDiagramDark = '';
     /** The Priority Tree's thresholds, sent by the server: { highInterestAprPercent, emergencyFundTargetMonths, longHorizonYears }. */
     let thresholds = {};
     /** The AI disclaimer shown under a Purpose Note (the server's reply carries its own; a saved note uses this one). */
@@ -496,7 +498,12 @@
         byId('mpPath').replaceChildren(...(view.pathSentences || []).map((sentence) => el('li', null, sentence)));
         byId('mpAssumptions').replaceChildren(...assumptionNodes(result));
         startPurposeNote(result);
-        await showDiagram({ wholeTree: view.wholeTreeDiagram, pathView: view.pathViewDiagram });
+        await showDiagram({
+            wholeTree: view.wholeTreeDiagram,
+            pathView: view.pathViewDiagram,
+            wholeTreeDark: view.wholeTreeDiagramDark,
+            pathViewDark: view.pathViewDiagramDark
+        });
     }
 
     // ---------------------------------------------------------------------------------------------------------------
@@ -777,6 +784,7 @@
         }
         const data = readPageData() || {};
         wholeTreeDiagram = data.wholeTreeDiagram || '';
+        wholeTreeDiagramDark = data.wholeTreeDiagramDark || '';
         thresholds = data.thresholds || {};
         noteDisclaimer = data.purposeNoteDisclaimer || '';
         noteUnavailable = data.purposeNoteUnavailable || '';
@@ -788,7 +796,7 @@
         fillForm(data.latestAnswers || null);
         applyFieldRules();
         renderEarlier(Array.isArray(data.recentWalks) ? data.recentWalks : []);
-        showDiagram({ wholeTree: wholeTreeDiagram, pathView: null });
+        showDiagram({ wholeTree: wholeTreeDiagram, pathView: null, wholeTreeDark: wholeTreeDiagramDark, pathViewDark: null });
     }
 
     if (document.readyState === 'loading') {

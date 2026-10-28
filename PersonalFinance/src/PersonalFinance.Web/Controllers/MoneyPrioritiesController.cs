@@ -54,7 +54,8 @@ public class MoneyPrioritiesController : Controller
                 ? SupportedCurrencies.DefaultCode
                 : await _preferences.GetReportingCurrencyAsync(userId, cancellationToken);
             PriorityTreeDiagramDto tree = await _moneyPrioritiesApi.GetTreeAsync(cancellationToken);
-            model.WholeTreeDiagram = MoneyPrioritiesText.WholeTreeDiagram(_localizer, tree.Tree);
+            model.WholeTreeDiagram = MoneyPrioritiesText.WholeTreeDiagram(_localizer, tree.Tree, PriorityDiagramPalette.Light);
+            model.WholeTreeDiagramDark = MoneyPrioritiesText.WholeTreeDiagram(_localizer, tree.Tree, PriorityDiagramPalette.Dark);
             model.Thresholds = tree.Thresholds;
             model.RecentWalks = MoneyPrioritiesText.Localize(_localizer,
                 await _moneyPrioritiesApi.GetRecentWalksAsync(cancellationToken));

@@ -87,13 +87,15 @@ public static class MoneyPrioritiesText
             Walk = Localize(localizer, walk),
             PathSentences = PathSentences(localizer, walk.Tree, walk.PathNodeIds),
             WholeTreeDiagram = PriorityDiagramText.WholeTree(localizer, walk.Tree, walk.PathNodeIds, PriorityDiagramPalette.Light),
-            PathViewDiagram = PriorityDiagramText.PathView(localizer, walk.Tree, walk.PathNodeIds, PriorityDiagramPalette.Light)
+            PathViewDiagram = PriorityDiagramText.PathView(localizer, walk.Tree, walk.PathNodeIds, PriorityDiagramPalette.Light),
+            WholeTreeDiagramDark = PriorityDiagramText.WholeTree(localizer, walk.Tree, walk.PathNodeIds, PriorityDiagramPalette.Dark),
+            PathViewDiagramDark = PriorityDiagramText.PathView(localizer, walk.Tree, walk.PathNodeIds, PriorityDiagramPalette.Dark)
         };
     }
 
-    /// <summary>The whole tree before a submit, unhighlighted, in the request's Language.</summary>
-    public static string WholeTreeDiagram(IStringLocalizer localizer, PriorityTreeDto tree) =>
-        PriorityDiagramText.WholeTree(localizer, tree, PriorityDiagramPalette.Light);
+    /// <summary>The whole tree before a submit, unhighlighted, in the request's Language and the given palette.</summary>
+    internal static string WholeTreeDiagram(IStringLocalizer localizer, PriorityTreeDto tree, PriorityDiagramPalette palette) =>
+        PriorityDiagramText.WholeTree(localizer, tree, palette);
 
     /// <summary>Translates a Walk's result in place: its leaf labels and its estimate disclaimer.</summary>
     public static PriorityWalkResultDto Localize(IStringLocalizer localizer, PriorityWalkResultDto walk)
