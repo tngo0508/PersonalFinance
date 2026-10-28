@@ -86,7 +86,7 @@ By default, the AI assistant uses `gpt-4o-mini`. The defaults live in `appsettin
 |---|---|---|
 | `OpenAI:Model` | `gpt-4o-mini` | The OpenAI model to use. Other options: `gpt-4o`, `gpt-3.5-turbo`. The cost estimate always uses gpt-4o-mini prices (see section 4). |
 | `OpenAI:MaxTokens` | `400` | Maximum output tokens per model call, for chat and news summaries. Purpose Notes use a fixed 220. |
-| `OpenAI:DailyMessageLimit` | `30` | Requests per Account per day (chat, summaries and Purpose Notes together). |
+| `OpenAI:DailyMessageLimit` | `30` | Requests per Account per day (chat, summaries and Purpose Notes together). Accounts with the Admin Role skip this limit. |
 | `OpenAI:MonthlyBudgetUsd` | `10` | Estimated spend, in USD, across all Accounts per calendar month. Above it every request is refused until the next month. |
 | `OpenAI:BudgetWarningThreshold` | `0.9` | Fraction of the monthly budget at which replies carry a budget warning. |
 
@@ -175,7 +175,7 @@ Each chat request includes:
 ### Cost Control Measures
 
 The implementation includes the following cost controls:
-- **Daily limit per Account:** 30 requests a day (`OpenAI:DailyMessageLimit`).
+- **Daily limit per Account:** 30 requests a day (`OpenAI:DailyMessageLimit`). Admins skip it, but not the monthly budget.
 - **Monthly budget for all Accounts:** $10 of estimated spend (`OpenAI:MonthlyBudgetUsd`), with a warning on replies from 90%.
 - **Output cap:** 400 tokens per model call (`OpenAI:MaxTokens`).
 - **Conversation history is limited** to the last 10 messages, each cut to 2,000 characters.
