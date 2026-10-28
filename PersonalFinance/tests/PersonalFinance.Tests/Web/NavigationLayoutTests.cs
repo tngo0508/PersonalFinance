@@ -77,6 +77,31 @@ public class NavigationLayoutTests
     }
 
     [Fact]
+    public void Sidebar_LinksToCurrencyConverter_RightAfterInvestmentCalculator()
+    {
+        string sidebar = Between(ReadView("Shared", "_Layout.cshtml"), "<aside", "</aside>");
+        string resources = Between(sidebar, "@L[\"Shell.Nav.Resources\"]</div>", "</nav>");
+
+        int calculator = resources.IndexOf("asp-controller=\"InvestmentCalculator\"", StringComparison.Ordinal);
+        int converter = resources.IndexOf("asp-controller=\"CurrencyConverter\" asp-action=\"Index\"", StringComparison.Ordinal);
+        int research = resources.IndexOf("asp-controller=\"Research\"", StringComparison.Ordinal);
+        Assert.True(calculator >= 0 && converter > calculator && research > converter,
+            "Currency Converter should sit in Resources right after Investment Calculator.");
+        Assert.Contains("currentController == \"CurrencyConverter\" ? \"active\"", resources);
+        Assert.Contains("<span class=\"sidebar-link-text\">@L[\"Shell.Nav.CurrencyConverter\"]</span>", resources);
+    }
+
+    [Fact]
+    public void BottomNav_LightsToolsOnCurrencyConverter()
+    {
+        string bottomNav = Between(ReadView("Shared", "_Layout.cshtml"), "<nav class=\"bottom-nav\"", "</nav>");
+
+        string tools = bottomNav[..bottomNav.IndexOf("<span>@L[\"Shell.BottomNav.Tools\"]</span>", StringComparison.Ordinal)];
+        tools = tools[tools.LastIndexOf("<a ", StringComparison.Ordinal)..];
+        Assert.Contains("currentController == \"CurrencyConverter\"", tools);
+    }
+
+    [Fact]
     public void SidebarLinkLabels_AreShellNavResources()
     {
         // Only English is required: a missing translation falls back to English and never fails a build (ADR 0015).

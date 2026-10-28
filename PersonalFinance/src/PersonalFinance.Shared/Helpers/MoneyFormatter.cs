@@ -40,6 +40,28 @@ public static class MoneyFormatter
             culture ?? CultureInfo.CurrentCulture);
     }
 
+    /// <summary>
+    /// <paramref name="amount"/> in any convertible currency (the Currency Converter's result): a supported one exactly
+    /// as <see cref="Format"/> writes it; another, which has no symbol here, grouped with its minor units and followed
+    /// by its ISO code (<c>1,000,000 JPY</c>), rounded half away from zero.
+    /// </summary>
+    /// <exception cref="ArgumentException">The currency is not in <see cref="ConvertibleCurrencies"/>.</exception>
+    public static string FormatConvertible(decimal amount, string currencyCode, CultureInfo? culture = null)
+    {
+        if (SupportedCurrencies.IsSupported(currencyCode))
+        {
+            return Format(amount, currencyCode, culture);
+        }
+
+        ConvertibleCurrency currency = ConvertibleCurrencies.Find(currencyCode)
+                                       ?? throw new ArgumentException(
+                                           $"'{currencyCode}' is not a convertible currency.", nameof(currencyCode));
+        decimal rounded = currency.Round(amount);
+        string number = (rounded == 0m ? 0m : rounded).ToString(
+            "N" + currency.MinorUnits.ToString(CultureInfo.InvariantCulture), culture ?? CultureInfo.CurrentCulture);
+        return $"{number} {currency.Code}";
+    }
+
     private static SupportedCurrency Currency(string currencyCode) =>
         SupportedCurrencies.Find(currencyCode)
         ?? throw new ArgumentException($"'{currencyCode}' is not a supported currency.", nameof(currencyCode));

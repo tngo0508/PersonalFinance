@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [12.4.0] - 2026-10-27
+
+### Added
+
+- **Currency Converter**: signed-in users can open Currency Converter from the sidebar, right after Investment Calculator, and convert an amount between any two Convertible Currencies at the latest stored rate or the rate of a past day (#446).
+  - The page is a plain GET form, so the URL holds the inputs. From defaults to US dollars (đồng when the Reporting Currency is US dollars) and To to the Reporting Currency; the date may be empty (latest) or from 2015-01-01 to today.
+  - The result shows the converted amount in the To currency's minor units, "1 {From} = {rate} {To}" to 6 significant digits, the rate date (with a "rate as of" notice when it is more than 3 days old) and the source, or "Conversion unavailable" with no amount when a currency has no stored rate.
+  - New `GET api/CurrencyConverter` endpoint for signed-in users in the new `CurrencyConverter` Feature. It reads only stored, cached exchange rates through the shared `ICurrencyConverter`, so it has no rate limit of its own and no rate lookup of its own. Nothing is saved; no schema change.
+  - The bottom navigation's Tools item is active on the page. A Playwright smoke test converts 1,000,000 JPY to VND, and the E2E fixture seeder now stores yen rates too.
+
+### Changed
+
+- **Shared currency converter**: `ICurrencyConverter.PrepareAsync` now accepts any Convertible Currency as the target and rounds by its ISO minor units; Features still pass only the Reporting Currency, so their results do not change.
+  - Cached rate rows now carry their source, and `ReportingConversion.Quote` gives one conversion's effective cross rate, its older leg's date, its sources and whether it is stale.
+  - `MoneyFormatter.FormatConvertible` formats an amount in a Convertible Currency that has no symbol here as the number followed by its ISO code (`1,000,000 JPY`).
+
 ## [12.3.5] - 2026-10-27
 
 ### Changed

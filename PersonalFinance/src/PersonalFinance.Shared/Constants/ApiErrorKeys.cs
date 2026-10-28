@@ -458,4 +458,26 @@ public static class ApiErrorKeys
         /// <summary>A Google Drive connection named a currency that is not supported.</summary>
         public const string CurrencyUnsupported = "GoogleDrive.Validation.CurrencyUnsupported";
     }
+
+    /// <summary>The keys of the Currency Converter Feature's rejections.</summary>
+    public static class CurrencyConverter
+    {
+        /// <summary>A conversion named no amount.</summary>
+        public const string AmountRequired = "CurrencyConverter.Validation.AmountRequired";
+
+        /// <summary>A conversion's amount was below zero.</summary>
+        public const string AmountNegative = "CurrencyConverter.Validation.AmountNegative";
+
+        /// <summary>A conversion's From code is not a convertible currency.</summary>
+        public const string FromUnsupported = "CurrencyConverter.Validation.FromUnsupported";
+
+        /// <summary>A conversion's To code is not a convertible currency.</summary>
+        public const string ToUnsupported = "CurrencyConverter.Validation.ToUnsupported";
+
+        /// <summary>A conversion's date was before 2015-01-01.</summary>
+        public const string DateTooEarly = "CurrencyConverter.Validation.DateTooEarly";
+
+        /// <summary>A conversion's date was after today (UTC).</summary>
+        public const string DateInFuture = "CurrencyConverter.Validation.DateInFuture";
+    }
 }

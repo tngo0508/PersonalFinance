@@ -32,6 +32,7 @@ public static class InternalApiClientExtensions
         services.AddInternalApiClient<IAiAssistantApi>(apiBaseUrl, TimeSpan.FromSeconds(30));
         services.AddInternalApiClient<IBudgetTrackerApi>(apiBaseUrl);
         services.AddInternalApiClient<ICommunityApi>(apiBaseUrl);
+        services.AddInternalApiClient<ICurrencyConverterApi>(apiBaseUrl);
         services.AddInternalApiClient<IDashboardApi>(apiBaseUrl);
         services.AddInternalApiClient<IDataExportApi>(apiBaseUrl);
         services.AddInternalApiClient<IFeedbackApi>(apiBaseUrl);
