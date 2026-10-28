@@ -1,4 +1,4 @@
-/* global PFI18n */
+/* global PFI18n, ChartPalette */
 (function () {
     'use strict';
 
@@ -18,10 +18,10 @@
     // Display labels, filled by init from the page's translated category labels (<label for="DebtRepayment">).
     const categoryLabels = {};
 
-    const categoryColors = [
-        '#1D6A50', '#2F6690', '#8A6A1E', '#B4532A', '#6B4C8A',
-        '#2A8C8C', '#14283B', '#9C3D5A', '#5E8C31', '#5B6B78'
-    ];
+    // Each category's colour token (site.css), in category order: the chart's slices and the swatches (#487)
+    const categoryColorTokens = categories.map((_, index) => {
+        return `--app-budget-category-${ index + 1 }`;
+    });
 
     let chart = null;
     let incomeCents = 0;
@@ -53,6 +53,9 @@
         // Initialize chart
         initChart();
 
+        // Recolour the chart and the swatches when the theme changes, without a reload
+        ChartPalette.subscribe(applyTheme);
+
         // Initial update
         updateAll();
     };
@@ -68,14 +71,23 @@
     }
 
     /**
+     * A category's colour as a CSS value that follows the theme, for the swatches and the summary list.
+     * @param {number} index - The category's position
+     * @returns {string} The var() of its colour token
+     */
+    function categoryColor (index) {
+        return `var(${ categoryColorTokens[index] })`;
+    }
+
+    /**
      * Set background colors on category color boxes to match chart slice colors.
      */
     function setColorBoxes () {
         const colorBoxes = document.querySelectorAll('.budget-category-color-box');
         colorBoxes.forEach((box) => {
             const index = parseInt(box.getAttribute('data-color-index'), 10);
-            if (index >= 0 && index < categoryColors.length) {
-                box.style.backgroundColor = categoryColors[index];
+            if (index >= 0 && index < categoryColorTokens.length) {
+                box.style.backgroundColor = categoryColor(index);
             }
         });
     }
@@ -404,7 +416,7 @@
             totalCents += cents;
 
             const barWidth = maxCents > 0 ? (cents / maxCents) * 100 : 0;
-            const color = categoryColors[index];
+            const color = categoryColor(index);
 
             // Build row with DOM APIs
             const item = document.createElement('div');
@@ -536,7 +548,9 @@
             ctx.save();
             const fontSize = Math.max(9, Math.round(11 * scale));
             ctx.font = `${fontSize }px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-            ctx.fillStyle = '#505050';
+            // The percentage labels take the chart's axis text colour of the theme in effect
+            const labelColor = ChartPalette.read().axis;
+            ctx.fillStyle = labelColor;
             ctx.textBaseline = 'middle';
 
             const placedLabels = [];
@@ -613,7 +627,7 @@
                 }
 
                 ctx.textAlign = textAlign;
-                ctx.fillStyle = '#505050';
+                ctx.fillStyle = labelColor;
                 ctx.fillText(displayText, textX, labelY);
 
                 placedLabels.push({ x: labelX, y: labelY });
@@ -646,9 +660,7 @@
                     data: categories.map((c) => {
                         return toPercent(amountCents[c] || 0);
                     }),
-                    backgroundColor: categoryColors,
-                    borderWidth: 2,
-                    borderColor: '#ffffff'
+                    borderWidth: 2
                 }]
             },
             options: {
@@ -667,6 +679,7 @@
                         display: false
                     },
                     tooltip: {
+                        borderWidth: 1,
                         callbacks: {
                             label: function (context) {
                                 const label = context.label || '';
@@ -685,6 +698,30 @@
                 cutout: '55%'
             }
         });
+        applyTheme(ChartPalette.read());
+    }
+
+    /**
+     * Colour the pie chart for the theme now in effect: when it is created, and on each theme switch. The swatches and
+     * the summary list follow their tokens in CSS.
+     * @param {object} colours - The chart palette, from ChartPalette.read()
+     */
+    function applyTheme (colours) {
+        if (!chart) {
+            return;
+        }
+
+        const dataset = chart.data.datasets[0];
+        dataset.backgroundColor = ChartPalette.readTokens(categoryColorTokens);
+        // The gaps between slices are the card behind the chart
+        dataset.borderColor = colours.page;
+
+        const tooltip = chart.options.plugins.tooltip;
+        tooltip.backgroundColor = colours.tooltip.background;
+        tooltip.titleColor = colours.tooltip.text;
+        tooltip.bodyColor = colours.tooltip.text;
+        tooltip.borderColor = colours.tooltip.border;
+        chart.update('none');
     }
 
     /**

@@ -81,6 +81,17 @@
     --app-chart-4: #B42318;
     --app-chart-5: #6B4C9A;
     --app-chart-6: #2B7A89;
+    /* The Budget planner's ten categories: its doughnut's slices and their swatches (#487) */
+    --app-budget-category-1: #1D6A50;
+    --app-budget-category-2: #2F6690;
+    --app-budget-category-3: #8A6A1E;
+    --app-budget-category-4: #B4532A;
+    --app-budget-category-5: #6B4C8A;
+    --app-budget-category-6: #2A8C8C;
+    --app-budget-category-7: #14283B;
+    --app-budget-category-8: #9C3D5A;
+    --app-budget-category-9: #5E8C31;
+    --app-budget-category-10: #5B6B78;
 
     /* Minimal shadows — rules over elevation */
     --app-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -192,6 +203,17 @@
     --app-chart-4: #F0796B;
     --app-chart-5: #A98BDD;
     --app-chart-6: #4FC1D0;
+    /* Each Budget category keeps its hue, lifted to 3:1 on the dark page; the navy one turns pale steel */
+    --app-budget-category-1: #3FB884;
+    --app-budget-category-2: #6FA8DC;
+    --app-budget-category-3: #D4B25C;
+    --app-budget-category-4: #E08A5F;
+    --app-budget-category-5: #A98BDD;
+    --app-budget-category-6: #4FC1C1;
+    --app-budget-category-7: #A9BCD0;
+    --app-budget-category-8: #E07A9A;
+    --app-budget-category-9: #9BC765;
+    --app-budget-category-10: #7F8E9A;
 
     --app-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.3);
     --app-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.35);

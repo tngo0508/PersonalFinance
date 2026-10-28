@@ -18,6 +18,7 @@ const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'wwwroot', 'js', 'core
 
 // The dark theme's chart tokens (site.css and ledger.css, #482), with the leading space a browser's computed value has.
 const DARK_TOKENS = {
+    '--app-bg': ' #0E1821',
     '--app-surface': ' #121E28',
     '--app-chart-grid': ' #2A3A47',
     '--app-chart-axis': ' #94A4B0',
@@ -72,6 +73,7 @@ function load (tokens) {
 test('read takes each chart colour from its computed token, trimmed', () => {
     const colours = load(DARK_TOKENS).palette.read();
     assert.strictEqual(colours.background, '#121E28');
+    assert.strictEqual(colours.page, '#0E1821');
     assert.strictEqual(colours.grid, '#2A3A47');
     assert.strictEqual(colours.axis, '#94A4B0');
     assert.deepStrictEqual(JSON.parse(JSON.stringify(colours.tooltip)),
@@ -86,9 +88,20 @@ test('a missing token falls back to its light-theme value', () => {
     const colours = load({ '--app-chart-grid': ' #2A3A47' }).palette.read();
     assert.strictEqual(colours.grid, '#2A3A47');
     assert.strictEqual(colours.background, '#F8FAF9');
+    assert.strictEqual(colours.page, '#FFFFFF');
     assert.strictEqual(colours.tooltip.background, '#14283B');
     assert.strictEqual(colours.series[1], '#2F6690');
     assert.strictEqual(colours.warning, '#D89B26');
+});
+
+test('readTokens reads a feature palette from its tokens, falling back to the series in turn', () => {
+    // A feature's own palette, e.g. the Budget planner's ten categories (#487)
+    const { palette } = load(Object.assign({ '--feature-1': ' #3FB884', '--feature-2': ' #6FA8DC' }, DARK_TOKENS));
+    assert.deepStrictEqual(Array.from(palette.readTokens(['--feature-1', '--feature-2'])), ['#3FB884', '#6FA8DC']);
+    // A missing token takes the categorical series colour at its position, cycling past the sixth
+    const names = ['--feature-1', '--m2', '--m3', '--m4', '--m5', '--m6', '--m7', '--m8'];
+    assert.deepStrictEqual(Array.from(palette.readTokens(names)),
+        ['#3FB884', '#6FA8DC', '#D4B25C', '#F0796B', '#A98BDD', '#4FC1D0', '#3FB884', '#6FA8DC']);
 });
 
 test('subscribers are called with the new palette on themechange, until they unsubscribe', () => {

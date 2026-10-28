@@ -1,7 +1,5 @@
 {
     "wwwroot/css/ai-chat-widget.css": 7,
-    "wwwroot/css/budget-tracker.css": 19,
-    "wwwroot/css/budget.css": 2,
     "wwwroot/css/community.css": 24,
     "wwwroot/css/dashboard.css": 12,
     "wwwroot/css/investment-calculator.css": 3,
@@ -9,6 +7,5 @@
     "wwwroot/css/news.css": 29,
     "wwwroot/css/research-funds.css": 23,
     "wwwroot/css/research.css": 27,
-    "wwwroot/css/savings-goals.css": 7,
     "wwwroot/css/site.css": 56
 }

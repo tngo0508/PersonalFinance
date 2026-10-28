@@ -4,10 +4,11 @@
    ========================================================================== */
 
 :root {
+    /* On the app tokens, so the page follows the theme (#487). --budget-success is the green as text. */
     --budget-primary: var(--app-brand);
     --budget-primary-hover: var(--app-brand-hover);
     --budget-primary-light: var(--app-brand-bg);
-    --budget-primary-glow: rgba(29, 106, 80, 0.15);
+    --budget-primary-glow: color-mix(in srgb, var(--app-brand) 15%, transparent);
     --budget-surface: var(--app-bg);
     --budget-surface-soft: var(--app-surface-soft);
     --budget-border: var(--app-border);
@@ -15,7 +16,7 @@
     --budget-text-main: var(--app-text);
     --budget-text-muted: var(--app-text-muted);
     --budget-text-faint: var(--app-text-disabled);
-    --budget-success: var(--app-accent-positive);
+    --budget-success: var(--app-brand-text);
     --budget-success-light: var(--app-accent-positive-soft);
     --budget-warning: var(--app-accent-warning);
     --budget-warning-light: var(--app-accent-warning-soft);
@@ -72,8 +73,8 @@
     width: 36px;
     height: 36px;
     border-radius: var(--app-radius-m);
-    background: var(--app-brand);
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-text-on-brand);
     flex-shrink: 0;
 }
 
@@ -125,7 +126,7 @@
     height: 44px;
     border-radius: var(--app-radius-m);
     background: var(--app-accent-positive-bg);
-    color: var(--app-accent-positive);
+    color: var(--app-brand-text);
     flex-shrink: 0;
 }
 
@@ -243,7 +244,7 @@
     height: 28px;
     border-radius: var(--app-radius-s);
     background: var(--app-brand-bg);
-    color: var(--app-brand);
+    color: var(--app-brand-text);
     flex-shrink: 0;
 }
 
@@ -291,7 +292,7 @@
     font-weight: var(--app-font-weight-semibold);
     font-family: var(--app-font-mono);
     background: var(--app-brand-bg);
-    color: var(--app-brand);
+    color: var(--app-brand-text);
     transition: background 0.15s ease, color 0.15s ease;
     white-space: nowrap;
 }
@@ -358,7 +359,7 @@
     height: 28px;
     border-radius: var(--app-radius-s);
     background: var(--app-brand-bg);
-    color: var(--app-brand);
+    color: var(--app-brand-text);
     flex-shrink: 0;
     font-size: 0.9rem;
 }
@@ -504,7 +505,7 @@
 .budget-remaining__value {
     font-weight: var(--app-font-weight-bold);
     font-family: var(--app-font-mono);
-    color: var(--app-brand);
+    color: var(--app-brand-text);
 }
 
 .budget-remaining--over {

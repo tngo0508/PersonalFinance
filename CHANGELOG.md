@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [13.7.0] - 2026-10-28
+
+### Added
+
+- **Budget pages in the theme smoke**: in dark mode the E2E theme smoke checks key text on Budget, Budget Tracker and Savings Goals at 4.5:1, and switches the theme to check the Budget planner's chart recolours without a reload (#487).
+- **Budget category tokens**: `--app-budget-category-1` to `-10`, the Budget planner's ten category colours, each with a dark value that keeps its hue at 3:1 on the dark page; the token test checks them in both themes (#487).
+- **`ChartPalette.readTokens()` and `read().page`**: a chart reads a feature's own palette from its tokens, and the page colour behind it, through the chart palette (#487).
+
+### Changed
+
+- **The Budget planner's chart follows the theme**: the doughnut's slices, the gaps between them, its percentage labels and its tooltip take their colours from the chart palette and recolour on a theme switch without a reload; the category swatches and the summary list follow the same tokens (#487).
+- **Three stylesheets are off the raw-colour allow-list**: `budget.css`, `budget-tracker.css` and `savings-goals.css` hold no colour literals now (#487).
+
+### Fixed
+
+- **Budget, Budget Tracker and Savings Goals in dark mode**: the pages use the theme tokens instead of fixed colours, so their cards, bars, badges and notices are readable in the dark theme (#487).
+  - Green text for gains, on-target and completed states uses the brand text token, which stays at 4.5:1 on dark cards and table footers, where the fill green fell short.
+  - The title icons use the brand fill behind their white glyph.
+  - The Budget Tracker's Expenses and Income card titles use the negative and brand text tokens instead of Bootstrap's fixed red and green, which fell below 4.5:1 on the dark card header.
+  - The light theme keeps its colours, except where the Budget Tracker used Bootstrap's own: its active tab, hovers and focus rings are brand green instead of blue, its planned, spent and income bars use the chart series (blue, brass, green), its "manual" badge is a soft green chip instead of purple, and the archived badge uses the neutral fill. The Savings Goals delete button's hover wash is the app's negative wash.
+
 ## [13.5.0] - 2026-10-28
 
 ### Added

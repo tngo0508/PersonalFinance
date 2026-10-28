@@ -16,6 +16,8 @@ const BOTH = ['light', 'dark'];
 const DARK = ['dark'];
 const PAGE_SURFACES = ['--app-bg', '--app-surface', '--app-surface-secondary', '--app-surface-raised'];
 const CHART_SERIES = ['--app-chart-1', '--app-chart-2', '--app-chart-3', '--app-chart-4', '--app-chart-5', '--app-chart-6'];
+// The Budget planner's ten category colours: its doughnut slices and their swatches (#487)
+const BUDGET_CATEGORIES = Array.from({ length: 10 }, (_, index) => `--app-budget-category-${index + 1}`);
 
 /**
  * Builds the pairs to check: each foreground on each background.
@@ -57,7 +59,18 @@ const PAIRS = [
     // Charts: axis text, tooltip, and each categorical series as a UI part on the page and a card
     ...pairs(['--app-chart-axis'], ['--app-bg', '--app-surface'], AA_TEXT, BOTH),
     { fg: '--app-chart-tooltip-text', bg: '--app-chart-tooltip-bg', minimum: AA_TEXT, themes: BOTH },
-    ...pairs(CHART_SERIES, ['--app-bg', '--app-surface'], AA_UI, BOTH)
+    ...pairs(CHART_SERIES, ['--app-bg', '--app-surface'], AA_UI, BOTH),
+    // Budget, Budget Tracker and Savings Goals (#487): the doughnut's slices on its card, the tracker's bars on their
+    // track, gains and losses as text on a card, its header and their soft backgrounds (over budget, on target, a
+    // completed goal)
+    ...pairs(BUDGET_CATEGORIES, ['--app-bg', '--app-surface'], AA_UI, BOTH),
+    ...pairs(['--app-chart-1', '--app-chart-2', '--app-chart-3'], ['--app-surface-secondary'], AA_UI, BOTH),
+    // A Savings Goal's progress fill, in progress and complete, on its track
+    ...pairs(['--app-brand', '--app-accent-positive'], ['--app-surface-soft'], AA_UI, BOTH),
+    ...pairs(['--app-brand-text', '--app-accent-negative'], ['--app-bg', '--app-surface'], AA_TEXT, BOTH),
+    { fg: '--app-brand-text', bg: '--app-accent-positive-soft', minimum: AA_TEXT, themes: BOTH },
+    { fg: '--app-accent-negative', bg: '--app-accent-negative-soft', minimum: AA_TEXT, themes: BOTH },
+    ...pairs(['--app-text', '--app-text-muted'], ['--app-accent-positive-bg'], AA_TEXT, BOTH)
 ];
 
 const NEW_TOKENS = [
@@ -68,7 +81,7 @@ const NEW_TOKENS = [
     '--app-overlay-strong', '--app-shadow-popover', '--app-shadow-dialog', '--app-shadow-banner',
     '--app-chart-grid', '--app-chart-axis', '--app-chart-tooltip-bg', '--app-chart-tooltip-text',
     '--app-chart-tooltip-border', '--app-shadow-positive', '--lp-raised', '--lp-ledger-fill', '--lp-ledger-text',
-    '--lp-ledger-on-wash', '--lp-brass-glow', '--lp-shadow-float', ...CHART_SERIES
+    '--lp-ledger-on-wash', '--lp-brass-glow', '--lp-shadow-float', ...CHART_SERIES, ...BUDGET_CATEGORIES
 ];
 // White and black labels, and what sits on the navy band, are the same in both themes on purpose
 const SAME_IN_BOTH = [
