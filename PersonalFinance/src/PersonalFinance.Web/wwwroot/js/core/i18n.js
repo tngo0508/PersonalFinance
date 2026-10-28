@@ -93,6 +93,15 @@
         VND: { minorUnits: 0, symbol: '₫' }
     };
 
+    /**
+     * Mirror of PersonalFinance.Shared.Constants.ConvertibleCurrencies: the minor units of every currency the Currency
+     * Converter offers.
+     * @type {Object<string, number>}
+     */
+    const CONVERTIBLE_MINOR_UNITS = {
+        USD: 2, VND: 0, JPY: 0, EUR: 2, GBP: 2, CNY: 2, KRW: 0, THB: 2, SGD: 2, AUD: 2, CAD: 2
+    };
+
     /** The currency every amount is in until amounts carry their own (slice C1). */
     const DEFAULT_CURRENCY = 'USD';
 
@@ -157,6 +166,27 @@
         }).format(roundHalfAway(Number(amount) || 0, decimals));
         // narrowSymbol is the plain symbol; replace in case a browser's data differs from the server's.
         return formatted.replace(/US\$|₫|\$/, currency.symbol);
+    }
+
+    /**
+     * Format an amount in any convertible currency like the server's MoneyFormatter.FormatConvertible: a supported
+     * currency exactly as formatMoney writes it ($1,234.57); another, which has no symbol here, grouped with its minor
+     * units and followed by its ISO code (1,000,000 JPY).
+     * @param {number} amount - The amount.
+     * @param {string} currencyCode - ISO 4217 code of a convertible currency.
+     * @returns {string} The formatted amount.
+     */
+    function formatConvertible (amount, currencyCode) {
+        if (CURRENCIES[currencyCode]) {
+            return formatMoney(amount, currencyCode);
+        }
+        const decimals = CONVERTIBLE_MINOR_UNITS[currencyCode];
+        if (decimals === undefined) {
+            throw new Error(`'${currencyCode}' is not a convertible currency.`);
+        }
+        const number = new Intl.NumberFormat(culture, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+            .format(roundHalfAway(Number(amount) || 0, decimals));
+        return `${number} ${currencyCode}`;
     }
 
     /**
@@ -356,6 +386,7 @@
         format: format,
         currencySymbol: currencySymbol,
         formatMoney: formatMoney,
+        formatConvertible: formatConvertible,
         formatCompactMoney: formatCompactMoney,
         formatAmount: formatAmount,
         formatNumber: formatNumber,

@@ -89,6 +89,20 @@ test('formatAmount is the number without the symbol, as a money input shows it',
     assert.strictEqual(vi.formatAmount(1234567.5, 'VND'), '1.234.568');
 });
 
+test('formatConvertible matches the C# formatter: a supported currency with its symbol, another with its ISO code', () => {
+    assert.strictEqual(en.formatConvertible(1234.565, 'USD'), '$1,234.57');
+    assert.strictEqual(en.formatConvertible(170000000, 'VND'), '₫170,000,000');
+    assert.strictEqual(en.formatConvertible(1000000, 'JPY'), '1,000,000 JPY');
+    assert.strictEqual(en.formatConvertible(1234.565, 'EUR'), '1,234.57 EUR');
+    assert.strictEqual(vi.formatConvertible(1234.5, 'EUR'), '1.234,50 EUR');
+    assert.strictEqual(vi.formatConvertible(1234567.5, 'KRW'), '1.234.568 KRW');
+    assert.strictEqual(en.formatConvertible(-0.004, 'GBP'), '0.00 GBP');
+});
+
+test('formatConvertible refuses a currency that is not convertible', () => {
+    assert.throws(() => en.formatConvertible(1, 'CHF'));
+});
+
 test('the culture comes from <html data-culture>, never from navigator.language', () => {
     const fallback = load('en');
     assert.strictEqual(fallback.culture, 'en-US');
