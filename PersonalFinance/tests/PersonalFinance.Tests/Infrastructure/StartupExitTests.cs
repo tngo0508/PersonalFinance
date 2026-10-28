@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Hosting;
+using PersonalFinance.Tests.TestSupport;
 using Xunit;
 
 namespace PersonalFinance.Tests.Infrastructure;
@@ -45,5 +46,15 @@ public class StartupExitTests
     {
         Assert.Equal(0, StartupExit.Success);
         Assert.NotEqual(0, StartupExit.Failure);
+    }
+
+    [Fact]
+    public void JobSucceededMessage_IsWhatTheJobAlertLooksFor()
+    {
+        // The job alert (infra/modules/job-alerts.bicep) fires when a job logs no line containing this text for 26 h.
+        // Changing it here without the query would page every day.
+        Assert.Equal("Scheduled job succeeded.", StartupExit.JobSucceededMessage);
+        string alert = File.ReadAllText(Path.Combine(RepositoryRoot.Find(), "infra", "modules", "job-alerts.bicep"));
+        Assert.Contains($"has \"{StartupExit.JobSucceededMessage.TrimEnd('.')}\"", alert, StringComparison.Ordinal);
     }
 }

@@ -313,7 +313,32 @@ stateDiagram-v2
 - **Migrations at startup**: both `Program.cs` files call `MigrateAndSeedDatabaseAsync()`, so a deploy that adds a migration applies it when the new revision starts. `--migrate-only` / `MIGRATE_ONLY=true` runs migrations and exits, for use as a one-off job; it exits non-zero when startup or a migration fails.
 - **Daily Purge job**: `infra/modules/purge-job.bicep` deploys a Container Apps Job that runs the API image with `--purge-only` (or `PURGE_ONLY=true`) every day at `purgeJobCron` (default `0 15 * * *`, UTC). It applies pending migrations, permanently erases Accounts whose 30-day Grace Period has ended (ADR 0005), and exits non-zero if any Account failed; those are retried the next day. It runs as a job because the API scales to zero. To run it now: `az containerapp job start --name <purge job> --resource-group <rg>`; executions and logs: `az containerapp job execution list --name <purge job> --resource-group <rg>`.
 - **Daily Research refresh job**: `infra/modules/research-refresh-job.bicep` deploys a Container Apps Job named `research-<environment>-<location suffix>` that runs the API image with `--refresh-research` (or `REFRESH_RESEARCH=true`) every day at `researchRefreshJobCron` (default `0 10 * * *`, UTC). It applies pending migrations, rebuilds the Research snapshots from SEC EDGAR, the World Bank, the Bureau of Labor Statistics and the Fed Board's H.15 release (ADR 0012), and exits. It exits non-zero if any dataset failed (that one keeps its previous snapshot) or if `vars.SEC_USER_AGENT` is unset, in which case only World is rebuilt (the BLS and Fed requests carry the same contact). Until its first run the Research page shows the Unavailable State, so after the first deploy start it once instead of waiting for 10:00 UTC: `az containerapp job start --name <research job> --resource-group <rg>` (or **Run now** on the job in the Azure Portal); executions: `az containerapp job execution list --name <research job> --resource-group <rg>`. Start it the same way after any release that adds or changes a Research dataset: deploying does not refresh the data. The full steps, with how to follow the logs, are in `docs/DEVELOPMENT.md` under "Refreshing production by hand".
+- **Job alert**: `infra/modules/job-alerts.bicep` deploys an Azure Monitor log alert (~$0.55/month) and an email Action Group that sends to `alertEmail` (default the owner's address). Each job logs `Scheduled job succeeded.` only when it exits with success (`StartupExit.JobSucceededMessage`). Every hour the rule looks for that line in `ContainerAppConsoleLogs_CL` and fires for each job (`purge`, `research-refresh`) that has not logged it in 26 hours, so a failure, a timeout, a crash and a job that never started all alert. The alert is split by the `Job` dimension: the email names the job, and each job resolves on its own after its next successful run. While `vars.SEC_USER_AGENT` is unset the Research refresh always exits non-zero, so its alert stays fired.
 - **Logs**: container stdout (Serilog console output) goes to the Log Analytics workspace (`ContainerAppConsoleLogs_CL`). See Section 8.6 for live tailing.
+
+#### A job alert fired
+
+1. Find which job missed from the alert email: the `Job` dimension is the container name, `purge` or `research-refresh`.
+2. Read its last runs: `az containerapp job execution list --name <job> --resource-group <rg> --output table`. Then read its console output in the Log Analytics workspace (`law-<environment>-<suffix>`, Logs):
+
+   ```kusto
+   ContainerAppConsoleLogs_CL
+   | where TimeGenerated > ago(2d)
+   | where ContainerName_s == "purge"   // or "research-refresh"
+   | project TimeGenerated, Log_s
+   | order by TimeGenerated asc
+   ```
+
+3. Fix the cause, then start the job by hand: `az containerapp job start --name <job> --resource-group <rg>`. The alert clears itself after the next successful run.
+4. **A Purge alert is urgent.** The Privacy Policy promises erasure within 31 days of a Deletion Request and the Grace Period is 30 days, so there is about one day of slack. A Research alert can wait for the next daily run.
+
+#### First rollout of the job alert
+
+Until a job has logged its success line, the alert fires for it within the hour. Right after the first deploy that adds the alert:
+
+1. Start both jobs by hand: `az containerapp job start --name <purge job> --resource-group <rg>`, then the same for the Research refresh job. This also proves the success path works.
+2. In the Azure Portal, open Monitor → Alerts → Action groups, select the job alert's Action Group and use **Test** to confirm the email arrives.
+3. Once both runs have finished, check that the alert rule shows both `Job` series as healthy.
 
 ### 1.8 Environments at a Glance
 

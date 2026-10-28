@@ -69,6 +69,12 @@ internal static class ResearchRefreshJob
                 string.Join(", ", summary.Built), string.Join(", ", summary.Failed), string.Join(", ", summary.Skipped));
         }
 
-        return secConfigured && summary.Failed.Count == 0 ? StartupExit.Success : StartupExit.Failure;
+        if (!secConfigured || summary.Failed.Count > 0)
+        {
+            return StartupExit.Failure;
+        }
+
+        logger.LogInformation(StartupExit.JobSucceededMessage);
+        return StartupExit.Success;
     }
 }

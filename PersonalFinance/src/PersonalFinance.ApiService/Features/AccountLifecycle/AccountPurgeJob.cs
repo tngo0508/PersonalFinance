@@ -26,12 +26,20 @@ internal static class AccountPurgeJob
         await host.MigrateAndSeedDatabaseAsync(cancellationToken);
 
         await using AsyncServiceScope scope = host.Services.CreateAsyncScope();
-        ILogger logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(AccountPurgeJob));
+        return await PurgeAsync(scope.ServiceProvider, cancellationToken);
+    }
+
+    /// <summary>
+    /// Purges every due Account. Non-zero when any Account failed or the run was stopped; only a successful run logs
+    /// <see cref="StartupExit.JobSucceededMessage"/>, which the job alert looks for.
+    /// </summary>
+    internal static async Task<int> PurgeAsync(IServiceProvider services, CancellationToken cancellationToken = default)
+    {
+        ILogger logger = services.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(AccountPurgeJob));
         AccountPurgeSummary summary;
         try
         {
-            summary = await scope.ServiceProvider.GetRequiredService<IAccountPurgeService>()
-                .PurgeDueAsync(cancellationToken);
+            summary = await services.GetRequiredService<IAccountPurgeService>().PurgeDueAsync(cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -47,6 +55,12 @@ internal static class AccountPurgeJob
                 summary.Purged, summary.Skipped, summary.Failed);
         }
 
-        return summary.Failed == 0 ? StartupExit.Success : StartupExit.Failure;
+        if (summary.Failed > 0)
+        {
+            return StartupExit.Failure;
+        }
+
+        logger.LogInformation(StartupExit.JobSucceededMessage);
+        return StartupExit.Success;
     }
 }

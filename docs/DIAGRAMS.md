@@ -55,6 +55,8 @@ flowchart LR
         db[("SQL Server / Azure SQL<br/>AppDbContext")]
         purge[["Purge job<br/>ApiService image, --purge-only<br/>daily 15:00 UTC"]]
         refresh[["Research refresh job<br/>ApiService image, --refresh-research<br/>daily 10:00 UTC"]]
+        logs[("Log Analytics<br/>ContainerAppConsoleLogs_CL")]
+        alert{{"Job alert, hourly<br/>no success line in 26 h"}}
     end
 
     subgraph ext["External services"]
@@ -76,13 +78,16 @@ flowchart LR
     purge --> db
     refresh --> db
     refresh --> sec & wb & fed & fx
+    purge & refresh -- "Scheduled job succeeded." --> logs
+    alert -- "queries" --> logs
+    alert -- "email (Action Group)" --> owner(["Owner"])
     web --> goauth & brevo
     api --> gdrive & openai & rss
     api -- "company lookup<br/>(live, cached 24 h)" --> sec
 ```
 
-Drawn from `Web/Infrastructure/InternalApiClientExtensions.cs`, `ApiService/Program.cs`, `infra/main.bicep` and the
-Feature `Adapters/` folders.
+Drawn from `Web/Infrastructure/InternalApiClientExtensions.cs`, `ApiService/Program.cs`, `infra/main.bicep`,
+`infra/modules/job-alerts.bicep` and the Feature `Adapters/` folders.
 
 ## 2. Anatomy of a Feature
 
@@ -1256,6 +1261,7 @@ listed here.
 |---|---|---|---|
 | Account Purge | Container Apps Job `infra/modules/purge-job.bicep`, ApiService image with `--purge-only` (`AccountPurgeJob`) | daily, cron `0 15 * * *` UTC, 900 s timeout | Hard-delete Accounts whose Grace Period ended ([7](#7-account-lifecycle)) |
 | Research refresh | Container Apps Job `infra/modules/research-refresh-job.bicep`, ApiService image with `--refresh-research` (`ResearchRefreshJob`) | daily, cron `0 10 * * *` UTC, 1800 s timeout | Rebuild every `ResearchSnapshot` from official sources ([10](#10-research-pipeline)) |
+| Job alert | Azure Monitor log alert `infra/modules/job-alerts.bicep`, split by `Job` | hourly, over the last 26 h | Email the owner when the Purge or the Research refresh logged no `Scheduled job succeeded.` line (`StartupExit.JobSucceededMessage`); runbook in [`deployment.md`](deployment.md) 1.7 |
 | Migrations | ApiService image with `--migrate-only` (`Data/DatabaseMigrationExtensions.cs`) | each deploy, from `.github/workflows/deploy-azure.yml` | Apply EF Core migrations and seed, then exit |
 | Warm window | KEDA cron rule `cron-business-hours` in `api-service.bicep` and `web-service.bicep` | 08:00 to 22:00 America/Los_Angeles, production only | Keep one replica of each app warm ([ADR 0011](adr/0011-warm-window-instead-of-always-on-replicas.md)) |
 | `ApiServiceStartupWarmer` | `Web/Infrastructure/ApiServiceStartupWarmer.cs`, the only `IHostedService` | once per Web replica start | `GET /alive` on the ApiService so both wake together |
