@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [12.7.0] - 2026-10-27
+## [12.8.0] - 2026-10-27
 
 ### Added
 
@@ -23,6 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Your parameters read as an editable sentence ("I'm 33 years old with …"), each with its slider; return rates, currency and inflation sit under Assumptions.
 - **Year-by-year projection**: the table shows every five years plus milestone ages (or every year), all three scenarios side by side, a brass dot where each first reaches the FI Target, and a bar splitting the Base balance into what you put in and what growth added.
   - Milestones above the table mark when your money first earns more than you save, when growth passes your contributions, halfway to FI, FI and retirement. Selecting an age or a milestone moves the chart's marker, and the age column stays in view when the table scrolls sideways.
+
+## [12.7.0] - 2026-10-27
+
+### Changed
+
+- **Admins skip the AI Assistant's daily limit**: an Account with the Admin Role is no longer refused after 30 requests a day, while the $10 monthly budget still stops every Account, Admins included.
+  - `AiQuotaService` checks the Admin Role only once the daily count is reached, so other requests make no extra query. No schema change.
 
 ## [12.6.1] - 2026-10-27
 
