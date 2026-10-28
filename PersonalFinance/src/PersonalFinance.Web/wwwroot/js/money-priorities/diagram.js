@@ -18,10 +18,12 @@
     /** Smallest readable label size, as a share of the body font size (spec: 80%). */
     const MIN_LABEL_SCALE = 0.8;
 
-    let initialised = false;
     let idCount = 0;
     /** @type {WeakMap<HTMLElement, object>} */
     const states = new WeakMap();
+    /** The frames drawn so far, redrawn in the other palette on a theme switch (#489). @type {Set<HTMLElement>} */
+    const frames = new Set();
+    let subscribed = false;
 
     /**
      * Returns a fresh id for a render or an element.
@@ -43,12 +45,20 @@
     }
 
     /**
-     * Initialises Mermaid once, with the one configuration ADR 0014 allows.
+     * Whether the dark theme is in effect (core/theme.js sets data-theme on <html>).
+     * @returns {boolean}
      */
-    function ensureInitialised () {
-        if (initialised) {
-            return;
-        }
+    function isDark () {
+        return document.documentElement.getAttribute('data-theme') === 'dark';
+    }
+
+    /**
+     * Configures Mermaid with the one configuration ADR 0014 allows, before each render, so its theme variables follow
+     * the theme in effect. They come from the chart palette (core/chart-palette.js, #489): Mermaid needs colour values
+     * here, not CSS variables. The nodes' and edges' own colours are in the texts, one per palette.
+     */
+    function configure () {
+        const palette = window.ChartPalette.read();
         mermaid.initialize({
             startOnLoad: false,
             securityLevel: 'strict',
@@ -60,11 +70,38 @@
             themeVariables: {
                 fontFamily: window.getComputedStyle(document.body).fontFamily,
                 fontSize: `${bodyFontSize()}px`,
-                // Mermaid needs a colour value here, not a CSS variable: the light palette's white (ADR 0014).
-                edgeLabelBackground: '#FFFFFF'
+                // Edge labels sit on the page; arrowheads take the axis grey, like the light palette's lines
+                edgeLabelBackground: palette.page,
+                lineColor: palette.axis
             }
         });
-        initialised = true;
+    }
+
+    /**
+     * Redraws every drawn frame in the palette of the new theme, keeping each frame's open or closed whole tree.
+     */
+    function onThemeChange () {
+        frames.forEach(redraw);
+    }
+
+    /**
+     * Draws a frame's texts again, keeping its whole tree open when it was.
+     * @param {HTMLElement} frame
+     * @returns {Promise<void>}
+     */
+    async function redraw (frame) {
+        const state = states.get(frame);
+        if (!state || !state.texts) {
+            return;
+        }
+        const expanded = state.expanded;
+        const texts = state.texts;
+        await show(frame, texts);
+        // Unless a newer diagram (a submit) replaced this one meanwhile
+        if (state.whole && expanded && state.texts === texts) {
+            state.expanded = true;
+            applyMode(frame, state);
+        }
     }
 
     /**
@@ -241,7 +278,8 @@
             expanded: false,
             mode: null,
             latest: 0,
-            pending: false
+            pending: false,
+            texts: null
         };
 
         toggle.addEventListener('click', () => {
@@ -287,10 +325,13 @@
     }
 
     /**
-     * Renders the Priority Tree into `frame`. `texts.wholeTree` is always given; `texts.pathView` is null before the
-     * first submit, and then the whole tree is always shown. Resolves when the SVG is in the page.
+     * Renders the Priority Tree into `frame`, in the palette of the theme in effect, and again in the other palette
+     * when the theme changes. `texts.wholeTree` is always given; `texts.pathView` is null before the first submit, and
+     * then the whole tree is always shown. The `...Dark` texts are the same diagrams in the dark palette; without them
+     * the light ones are drawn. Resolves when the SVG is in the page.
      * @param {HTMLElement} frame The empty element the page provides.
-     * @param {{ wholeTree: string, pathView: (string|null) }} texts The Mermaid texts from the ApiService.
+     * @param {{ wholeTree: string, pathView: (string|null), wholeTreeDark: (string|undefined),
+     *     pathViewDark: (string|null|undefined) }} texts The Mermaid texts Web generated.
      * @returns {Promise<void>}
      */
     async function show (frame, texts) {
@@ -300,6 +341,12 @@
         const state = states.get(frame) || createState(frame);
         state.latest += 1;
         const call = state.latest;
+        state.texts = texts;
+        frames.add(frame);
+        if (!subscribed && window.ChartPalette) {
+            window.ChartPalette.subscribe(onThemeChange);
+            subscribed = true;
+        }
 
         let whole = null;
         let path = null;
@@ -308,10 +355,12 @@
             if (typeof mermaid === 'undefined' || !texts || !texts.wholeTree) {
                 throw new Error('Nothing to draw');
             }
-            ensureInitialised();
-            whole = await renderOffscreen(texts.wholeTree);
-            if (texts.pathView) {
-                path = await renderOffscreen(texts.pathView);
+            const dark = isDark() && Boolean(texts.wholeTreeDark);
+            configure();
+            whole = await renderOffscreen(dark ? texts.wholeTreeDark : texts.wholeTree);
+            const pathText = dark && texts.pathViewDark ? texts.pathViewDark : texts.pathView;
+            if (pathText) {
+                path = await renderOffscreen(pathText);
             }
         } catch {
             failed = true;

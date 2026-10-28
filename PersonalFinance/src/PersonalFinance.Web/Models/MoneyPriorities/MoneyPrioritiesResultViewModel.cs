@@ -19,4 +19,10 @@ public class MoneyPrioritiesResultViewModel
 
     /// <summary>Mermaid text of the path nodes only, in one column, highlighted (light palette).</summary>
     public string PathViewDiagram { get; set; } = string.Empty;
+
+    /// <summary><see cref="WholeTreeDiagram"/> in the dark palette, drawn in dark mode (#489).</summary>
+    public string WholeTreeDiagramDark { get; set; } = string.Empty;
+
+    /// <summary><see cref="PathViewDiagram"/> in the dark palette, drawn in dark mode (#489).</summary>
+    public string PathViewDiagramDark { get; set; } = string.Empty;
 }

@@ -13,17 +13,35 @@
 
     const CHART_ELEMENT_ID = 'dash-budget-chart';
     const UNALLOCATED_KEY = 'unallocated';
-    const FALLBACK_COLOR = '#6B7280';
 
     /**
-     * Read a category's colour token from the card.
+     * Read a category's colour token from the card, for the theme in effect.
      * @param {Element} element - Element inside the budget card.
      * @param {string} slug - Category slug.
+     * @param {Object} palette - The chart palette (core/chart-palette.js); its axis grey stands in for a missing token.
      * @returns {string} The colour value.
      */
-    function colorFor (element, slug) {
+    function colorFor (element, slug, palette) {
         const value = window.getComputedStyle(element).getPropertyValue(`--dash-budget-${slug}`).trim();
-        return value || FALLBACK_COLOR;
+        return value || palette.axis;
+    }
+
+    /**
+     * The options that carry a colour, so a theme switch can apply them again (#489).
+     * @param {Element} element - The chart container.
+     * @param {Array<{slug: string}>} slices - The drawn slices.
+     * @returns {Object} ApexCharts options.
+     */
+    function themedOptions (element, slices) {
+        const palette = window.ChartPalette.read();
+        const mode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+        return {
+            theme: { mode: mode },
+            colors: slices.map((slice) => colorFor(element, slice.slug, palette)),
+            // 2px gap in the card's colour between segments so neighbours never touch.
+            stroke: { width: 2, colors: [palette.page] },
+            tooltip: { theme: mode }
+        };
     }
 
     /**
@@ -86,30 +104,35 @@
         // Dollar amounts stay in the server-rendered legend so currency formatting has one source.
         const percent = new Intl.NumberFormat(PFI18n.culture, { maximumFractionDigits: 1 });
 
-        const chart = new window.ApexCharts(element, {
+        const themed = themedOptions(element, slices);
+        const chart = new window.ApexCharts(element, Object.assign({}, themed, {
             chart: {
                 type: 'donut',
                 height: 220,
                 fontFamily: 'Inter, sans-serif',
+                // The card shows through, in either theme
+                background: 'transparent',
                 animations: { enabled: !window.PFDashboard.prefersReducedMotion() }
             },
             series: slices.map((slice) => slice.percent),
             labels: slices.map((slice) => slice.label),
-            colors: slices.map((slice) => colorFor(element, slice.slug)),
             // The server-rendered legend list carries names, percents, and amounts.
             legend: { show: false },
             dataLabels: { enabled: false },
-            // 2px surface gap between segments so neighbours never touch.
-            stroke: { width: 2, colors: ['#FFFFFF'] },
             plotOptions: { pie: { donut: { size: '68%' } } },
             states: { active: { filter: { type: 'none' } } },
-            tooltip: {
+            tooltip: Object.assign({}, themed.tooltip, {
                 y: {
                     formatter: (value) => PFI18n.t('Dashboard.Js.PercentOfIncome', { percent: percent.format(value) })
                 }
-            }
-        });
+            })
+        }));
         chart.render();
+
+        // A theme switch recolours the slices without a reload (#489)
+        window.ChartPalette.subscribe(() => {
+            chart.updateOptions(themedOptions(element, slices), false, false);
+        });
     }
 
     if (window.PFDashboard) {

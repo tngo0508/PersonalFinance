@@ -90,6 +90,19 @@ const SAME_IN_BOTH = [
     '--lp-on-navy-wash'
 ];
 
+// Dashboard, Money Flow and the Investment Calculator (#489): the Dashboard donut's categories and the Money Flow
+// bands as UI parts on the dark page and card (their light sets are dataviz-validated and named in a legend or
+// table), and the calculator's info icon on its tile
+const DASH_BUDGET = ['housing', 'food', 'transportation', 'utilities', 'insurance', 'healthcare', 'savings',
+    'debt-repayment', 'entertainment', 'miscellaneous'].map(key => `--app-dash-budget-${key}`);
+const MONEY_FLOW = ['slot-0', 'slot-1', 'slot-2', 'slot-3', 'slot-4', 'income', 'spending', 'uncategorized', 'other']
+    .map(key => `--app-money-flow-${key}`);
+PAIRS.push(
+    ...pairs([...DASH_BUDGET, ...MONEY_FLOW], ['--app-bg', '--app-surface'], AA_UI, DARK),
+    { fg: '--app-info-text', bg: '--app-info-bg', minimum: AA_TEXT, themes: BOTH }
+);
+NEW_TOKENS.push(...DASH_BUDGET, ...MONEY_FLOW, '--app-info-bg', '--app-info-text');
+
 for (const theme of BOTH) {
     test(`the semantic tokens are defined in the ${theme} theme`, () => {
         const tokens = readThemeTokens(theme);

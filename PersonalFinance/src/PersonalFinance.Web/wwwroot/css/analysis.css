@@ -1,0 +1,272 @@
+/* ==========================================================================
+   Analysis page: summary cards, Spending Velocity, the trend and category charts, Money Flow and the tables.
+   Moved out of Views/Analysis/Index.cshtml so its colours come from the tokens and follow the theme (#489).
+   ========================================================================== */
+
+/* Fix dropdown arrow overlap: restore Bootstrap's default right padding for form-select */
+.analysis-period-selector .form-select {
+    padding-right: 2.25rem;
+}
+
+/* Chart container needs explicit height for maintainAspectRatio: false */
+.analysis-chart-card__canvas {
+    position: relative;
+    height: 300px;
+}
+
+/*
+ * Money Flow colours, read by money-flow.js. Categories take slots 0-4 in display order: this order of the
+ * categorical palette passes the colour-blind and normal-vision checks for neighbouring bands, and slot 4
+ * (magenta) is also safe beside Saved. Income and Spending stay neutral so the categories carry the colour;
+ * Shortfall and Saved keep their negative/positive meaning. The values are tokens in site.css, with a dark set.
+ */
+.money-flow {
+    --money-flow-slot-0: var(--app-money-flow-slot-0);
+    --money-flow-slot-1: var(--app-money-flow-slot-1);
+    --money-flow-slot-2: var(--app-money-flow-slot-2);
+    --money-flow-slot-3: var(--app-money-flow-slot-3);
+    --money-flow-slot-4: var(--app-money-flow-slot-4);
+    --money-flow-income: var(--app-money-flow-income);
+    --money-flow-spending: var(--app-money-flow-spending);
+    --money-flow-shortfall: var(--app-accent-negative);
+    --money-flow-saved: var(--app-accent-positive);
+    --money-flow-uncategorized: var(--app-money-flow-uncategorized);
+    --money-flow-other: var(--app-money-flow-other);
+}
+
+.money-flow__swatch {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 3px;
+    margin-right: 0.375rem;
+    vertical-align: -0.05em;
+}
+
+.money-flow__swatch--slot-0 { background: var(--money-flow-slot-0); }
+.money-flow__swatch--slot-1 { background: var(--money-flow-slot-1); }
+.money-flow__swatch--slot-2 { background: var(--money-flow-slot-2); }
+.money-flow__swatch--slot-3 { background: var(--money-flow-slot-3); }
+.money-flow__swatch--slot-4 { background: var(--money-flow-slot-4); }
+.money-flow__swatch--uncategorized { background: var(--money-flow-uncategorized); }
+.money-flow__swatch--other { background: var(--money-flow-other); }
+.money-flow__swatch--saved { background: var(--money-flow-saved); }
+
+/* Money Flow: a taller canvas so small bands keep readable labels */
+.money-flow__canvas {
+    position: relative;
+    height: 360px;
+}
+
+.money-flow__note {
+    border-left: 4px solid var(--app-accent-negative);
+    background: var(--app-accent-negative-soft);
+    border-radius: 0.375rem;
+    padding: 0.625rem 0.875rem;
+}
+
+/* Row headers name a category; keep them as body text, not the uppercase column-header style */
+.money-flow__table tbody th,
+.money-flow__table tfoot th {
+    font-size: inherit;
+    text-transform: none;
+    letter-spacing: normal;
+    color: inherit;
+}
+
+/* Match site.css body-cell padding so footer amounts line up with the rows above */
+.money-flow__table tbody th,
+.money-flow__table tfoot th,
+.money-flow__table tfoot td {
+    padding: var(--app-spacing-s) var(--app-spacing-m);
+}
+
+.money-flow__shortfall-row th,
+.money-flow__shortfall-row td {
+    color: var(--app-accent-negative);
+}
+
+/* Canvas fills the container */
+.analysis-chart-card__canvas canvas {
+    width: 100%;
+}
+
+.analysis-page-header {
+    border-bottom: 1px solid var(--app-border);
+    padding-bottom: 1rem;
+}
+
+.analysis-page-header__title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.analysis-page-header__icon {
+    color: var(--app-brand-text);
+}
+
+.analysis-page-header__subtitle {
+    color: var(--app-text-muted);
+    margin: 0.25rem 0 0;
+}
+
+.analysis-card {
+    background: var(--app-bg);
+    border: 1px solid var(--app-border);
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.analysis-card__label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--app-text-muted);
+    font-weight: 600;
+}
+
+.analysis-card__value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0.25rem 0;
+}
+
+.analysis-card__sub {
+    font-size: 0.8rem;
+    color: var(--app-text-muted);
+}
+
+/* A gain or a loss: net savings and a category's variance */
+.analysis-amount--positive {
+    color: var(--app-brand-text);
+}
+
+.analysis-amount--negative {
+    color: var(--app-accent-negative);
+}
+
+.analysis-section__title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.analysis-section__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.analysis-section__badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.analysis-velocity-card {
+    background: var(--app-surface);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    text-align: center;
+}
+
+.analysis-velocity-card__label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--app-text-muted);
+    font-weight: 600;
+}
+
+.analysis-velocity-card__value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0.25rem 0;
+}
+
+.analysis-velocity-card__sub {
+    font-size: 0.8rem;
+    color: var(--app-text-muted);
+}
+
+.analysis-progress-bar__labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--app-text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.analysis-progress-bar__track {
+    position: relative;
+    height: 8px;
+    background: var(--app-border);
+    border-radius: 4px;
+    overflow: visible;
+}
+
+.analysis-progress-bar__fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    border-radius: 4px;
+    background: var(--app-chart-2);
+    transition: width 0.3s ease;
+}
+
+.analysis-progress-bar__fill--budget {
+    background: linear-gradient(90deg, var(--app-chart-1), var(--app-chart-2));
+}
+
+.analysis-progress-bar__marker {
+    position: absolute;
+    top: -4px;
+    width: 2px;
+    height: 16px;
+    background: var(--app-negative-fill);
+    transform: translateX(-50%);
+}
+
+.analysis-chart-card {
+    background: var(--app-bg);
+    border: 1px solid var(--app-border);
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.analysis-chart-card__title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.analysis-table th {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--app-text-muted);
+    font-weight: 600;
+    border-top: none;
+}
+
+.analysis-empty-state__icon {
+    color: var(--app-text-faint);
+}
+
+.analysis-empty-state__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.analysis-empty-state__text {
+    color: var(--app-text-muted);
+    max-width: 400px;
+    margin: 0 auto;
+}
