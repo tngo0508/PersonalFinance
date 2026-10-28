@@ -1,0 +1,25 @@
+{
+  "slug": "build-a-cushion",
+  "day": 1,
+  "title": "Build a cushion",
+  "intro": "Life brings costs you do not plan for. This Lesson shows how a small fund protects you. It also shows how savings grow over time.",
+  "terms": ["emergency-fund", "compound-interest"],
+  "check": [
+    {
+      "format": "myth-or-fact",
+      "prompt": "An emergency fund is money for holidays.",
+      "options": ["Myth", "Fact"],
+      "correctOption": 0,
+      "explanation": "Myth. An emergency fund is only for costs you did not plan."
+    },
+    {
+      "format": "what-happens-next",
+      "prompt": "Lan saves $1,000 at 5% a year and adds nothing. How much does she have after two years?",
+      "options": ["Exactly $1,000", "More than $1,100", "Less than $1,000"],
+      "correctOption": 1,
+      "explanation": "She has about $1,102. The second year pays interest on the first year's interest."
+    }
+  ],
+  "tryIt": { "label": "Savings Goals", "url": "/SavingsGoals" },
+  "keepsake": { "symbol": "🫙", "name": "Coin jar" }
+}

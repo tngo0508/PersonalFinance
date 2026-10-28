@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [13.9.0] - 2026-10-28
+
+### Added
+
+- **Atelier content model and loader**: a new Learning Feature reads Term Entries and Lessons from JSON files in `Features/Learning/Content/` at startup and serves them from memory by slug and by Topic, with the Vietnamese falling back to English field by field (#516).
+  - A Term Entry carries the 13 fields of the spec plus its Topic; a Lesson its day, intro, 2–3 Term Entries, Check, Try it link and keepsake. The six Topics are a fixed set.
+  - `Learning:ContentPath` points the loader at another folder, so tests and local runs can use fixture content. A malformed file stops the host at startup, naming the file.
+  - The content folder holds no Term Entries or Lessons yet; they arrive in their own content PRs.
+- **Approved Sources allowlist**: `approved-sources.json` lists each Approved Source with its country, URL prefixes and usage rule (draft + cite, concept + cite + link, link-only), seeded with the sources the spec approved (#516).
+- **Content checks**: xUnit checks fail the build on a content file that breaks a measurable rule, naming the file and field (#516).
+  - Lengths: one-liner, entry, country note, sentence, option and explanation limits, and a Rules-as-of year on each country note.
+  - Sources: at least one; every citation and link under an allowlisted prefix and allowed by its usage rule; each country note cites its own country; IRS citations give the tax year.
+  - References: slugs match file names and resolve; Terms and aliases are unique; 2–5 related terms; each Term Entry in at most one Lesson; Lesson days run from 1 with no gap.
+  - Plain English: no advice phrasing or listed idioms, from `plain-english.json`. Each check has a fixture it rejects.
+
 ## [13.8.0] - 2026-10-28
 
 ### Added

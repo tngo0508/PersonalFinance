@@ -1,0 +1,13 @@
+{
+  "slug": "apr",
+  "term": "Lãi suất phần trăm hằng năm",
+  "oneLine": "Chi phí vay tiền trong một năm, tính theo phần trăm.",
+  "explanation": [
+    "APR là lãi suất phần trăm hằng năm. Nó cho biết một khoản vay hay thẻ tín dụng tốn bao nhiêu trong một năm.",
+    "",
+    "APR giúp bạn so sánh hai khoản vay cùng loại."
+  ],
+  "inVietnam": {
+    "text": "Ngân hàng công bố lãi suất năm. Lãi suất này có thể chưa gồm mọi khoản phí."
+  }
+}

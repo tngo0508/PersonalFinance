@@ -11,6 +11,11 @@
     </ItemGroup>
 
     <ItemGroup>
+        <!-- The Atelier content (ADR 0019), read from the output folder at startup -->
+        <Content Update="Features\Learning\Content\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
         <!-- Project References -->
         <ProjectReference Include="..\PersonalFinance.ServiceDefaults\PersonalFinance.ServiceDefaults.csproj" />
         <ProjectReference Include="..\PersonalFinance.Shared\PersonalFinance.Shared.csproj" />

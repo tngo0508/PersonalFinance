@@ -1,0 +1,96 @@
+{
+  "sources": [
+    {
+      "name": "Investor.gov (SEC)",
+      "country": "US",
+      "usage": "draft-cite",
+      "urlPrefixes": ["https://www.investor.gov/"],
+      "note": "Cite \"Source: U.S. SEC, Investor.gov\". No SEC seal or logos, no endorsement claim, no third-party material."
+    },
+    {
+      "name": "IRS",
+      "country": "US",
+      "usage": "draft-cite",
+      "urlPrefixes": ["https://www.irs.gov/"],
+      "requiresTaxYear": true,
+      "note": "Cite \"Source: IRS\" with the tax year. The English page is authoritative; /vi is a terminology aid only."
+    },
+    {
+      "name": "CFPB",
+      "country": "US",
+      "usage": "draft-cite",
+      "urlPrefixes": ["https://www.consumerfinance.gov/"],
+      "note": "Cite \"Source: CFPB\". No logo. Recheck links at review: the site moves pages."
+    },
+    {
+      "name": "Vietnamese laws (vbpl.vn)",
+      "country": "VN",
+      "usage": "draft-cite",
+      "urlPrefixes": ["https://vbpl.vn/van-ban/chi-tiet/"],
+      "note": "Give the law number, article and in-force date. The owner pastes the text in: the site needs JavaScript."
+    },
+    {
+      "name": "SSC / UBCKNN",
+      "country": "VN",
+      "usage": "concept-cite-link",
+      "urlPrefixes": ["https://ssc.gov.vn/"],
+      "note": "Explain in our own words, cite laws and circulars by number, never paraphrase SSC articles closely."
+    },
+    {
+      "name": "State Bank of Vietnam",
+      "country": "VN",
+      "usage": "concept-cite-link",
+      "urlPrefixes": ["https://sbv.gov.vn/vi/", "https://sbv.gov.vn/en/"],
+      "note": "Its circulars may be quoted; its \"Phổ biến kiến thức\" articles may not."
+    },
+    {
+      "name": "HNX",
+      "country": "VN",
+      "usage": "concept-cite-link",
+      "urlPrefixes": ["https://hnx.vn/vi-vn/", "https://hnx.vn/en-gb/"],
+      "note": "Its glossary is for checking terminology only: never reproduce it."
+    },
+    {
+      "name": "MoF policy Q&A",
+      "country": "VN",
+      "usage": "concept-cite-link",
+      "urlPrefixes": ["https://portal.mof.gov.vn/hoidapcstc/"],
+      "note": "Optional. Prefer the underlying law."
+    },
+    {
+      "name": "FINRA",
+      "country": "US",
+      "usage": "link-only",
+      "urlPrefixes": ["https://www.finra.org/investors/"],
+      "note": "Further reading only. Never in a drafting prompt, never paraphrased, never framed."
+    },
+    {
+      "name": "HOSE",
+      "country": "VN",
+      "usage": "link-only",
+      "urlPrefixes": ["https://www.hsx.vn/"],
+      "note": "Its market data is a paid product."
+    },
+    {
+      "name": "Tax Department (Cục Thuế)",
+      "country": "VN",
+      "usage": "link-only",
+      "urlPrefixes": ["https://gdt.gov.vn/"],
+      "note": "Link-only until vetted from a Vietnamese connection."
+    },
+    {
+      "name": "CIC",
+      "country": "VN",
+      "usage": "link-only",
+      "urlPrefixes": ["https://cic.org.vn/"],
+      "note": "Link-only until vetted from a Vietnamese connection."
+    },
+    {
+      "name": "YouTube (owner-picked channels)",
+      "country": null,
+      "usage": "link-only",
+      "urlPrefixes": ["https://www.youtube-nocookie.com/embed/"],
+      "note": "Embed only, privacy-enhanced, autoplay off. A video the owner has watched; never summarised."
+    }
+  ]
+}
