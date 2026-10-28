@@ -2,7 +2,8 @@
  * Theme smoke test (#479, slice #481): the one top-bar theme control. Signed out, then signed in, it drives the control
  * by mouse and keyboard, checks that the root's theme attributes follow each choice, that System follows an emulated
  * device colour scheme, that the choice survives a reload and sign-in, and that the avatar menu holds no theme items.
- * Run from ui-test.js as Test 9j.
+ * In dark mode it checks key text against its effective background (4.5:1) on the Landing Page, a sign-in page,
+ * Account settings and the Net Worth help modal (slice #482). Run from ui-test.js as Test 9j.
  *
  * Expected labels are read from Resources/i18n/en.json, so a rewording does not break the test.
  */
@@ -10,7 +11,24 @@
 const path = require('path');
 
 const TIMEOUT = 15000;
-const en = require(path.join(__dirname, '..', 'PersonalFinance', 'src', 'PersonalFinance.Web', 'Resources', 'i18n', 'en.json'));
+const WEB = path.join(__dirname, '..', 'PersonalFinance', 'src', 'PersonalFinance.Web');
+const en = require(path.join(WEB, 'Resources', 'i18n', 'en.json'));
+// Written in the repo, not axe-core (MPL-2.0 is not on the license policy's list)
+const {AA_TEXT, contrastRatio, flattenBackground} = require(path.join(WEB, 'tools', 'contrast.js'));
+
+/**
+ * Key text on each page the dark contrast check visits (#482). Each selector's first visible element is measured.
+ * Feature slices add their pages here.
+ */
+const CONTRAST_PAGES = {
+    landing: ['.lp-hero__title', '.lp-hero__lead', '.lp-hero__note a', '.lp-section__title', '.lp-tool__text',
+        '.lp-step__text', '.lp-privacy__list', '.lp-closing__lead', '.lp-btn--primary', '.app-footer__links a'],
+    signIn: ['.auth-page__title', '.auth-page__subtitle', '.auth-page .form-label', '#forgot-password', '#login-submit'],
+    accountSettings: ['.account-page__title', '.account-page__subtitle', '.account-nav__link[aria-current="page"]',
+        '.account-nav__link:not([aria-current="page"])', '.account-page__content .form-label'],
+    modal: ['#nwHelpModal .modal-title', '#nwHelpModal .nw-text', '#nwHelpModal .nw-help-note__title',
+        '#nwHelpModal .modal-footer .btn']
+};
 
 const PASSWORD = 'TestPass1!';
 const BUTTON = '[data-theme-button]';
@@ -144,6 +162,52 @@ async function driveControl(page, who, report) {
 }
 
 /**
+ * The colours of the first visible element per selector: its text colour, and the background colours of it and its
+ * ancestors, outermost first. Gradients and pseudo-element overlays (the Landing Page skyline) are not read, so the
+ * check measures text against the surface colour under them.
+ * @param {import('playwright').Page} page - The page.
+ * @param {string[]} selectors - The key text.
+ * @returns {Promise<{selector: string, found: boolean, colour?: string, layers?: string[]}[]>}
+ */
+async function measureColours(page, selectors) {
+    return page.evaluate((list) => list.map((selector) => {
+        const element = Array.from(document.querySelectorAll(selector))
+            .find((el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden');
+        if (!element) {
+            return {selector, found: false};
+        }
+        const layers = [];
+        for (let node = element; node; node = node.parentElement) {
+            layers.unshift(getComputedStyle(node).backgroundColor);
+        }
+        return {selector, found: true, colour: getComputedStyle(element).color, layers};
+    }), selectors);
+}
+
+/**
+ * In dark mode, check that each key text on a page meets 4.5:1 against its effective background.
+ * @param {import('playwright').Page} page - A page showing the content to check, in dark mode.
+ * @param {string} name - The page, for the messages.
+ * @param {string[]} selectors - The key text.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+async function checkDarkContrast(page, name, selectors, report) {
+    const theme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+    check(theme === 'dark', `${name}: the page is in dark mode for the contrast check`, `data-theme=${theme}`, report);
+    for (const measured of await measureColours(page, selectors)) {
+        if (!measured.found) {
+            report.fail(`${name}: no visible "${measured.selector}" to check contrast`);
+            continue;
+        }
+        const background = flattenBackground(measured.layers);
+        const ratio = contrastRatio(measured.colour, background);
+        const shown = `rgb(${[background.r, background.g, background.b].map(Math.round).join(', ')})`;
+        check(ratio >= AA_TEXT, `${name}: "${measured.selector}" meets ${AA_TEXT}:1 in dark mode`,
+            `${ratio.toFixed(2)}:1 (${measured.colour} on ${shown})`, report);
+    }
+}
+
+/**
  * Register a fresh Account and make sure it is signed in.
  * @param {import('playwright').Page} page - A page in a signed-out context.
  * @param {string} base - The Web app's base URL.
@@ -197,6 +261,11 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         check(state.theme === 'dark' && state.label === labelFor('dark') && state.checked.join() === 'dark',
             'Dark survives a reload', JSON.stringify(state), report);
 
+        // Dark contrast, signed out (#482): a sign-in page and the Landing Page.
+        await checkDarkContrast(page, 'Sign-in page', CONTRAST_PAGES.signIn, report);
+        await page.goto(`${base}/`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'Landing Page', CONTRAST_PAGES.landing, report);
+
         // 3. And signing in.
         if (!await registerFreshAccount(page, base)) {
             fail('Theme smoke: could not register and sign in');
@@ -204,6 +273,16 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         }
         state = await themeState(page);
         check(state.theme === 'dark' && state.label === labelFor('dark'), 'Dark survives signing in', JSON.stringify(state), report);
+
+        // Dark contrast, signed in: Account settings, and a page with a modal open (the Net Worth help).
+        await page.goto(`${base}/Identity/Account/Manage`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'Account settings', CONTRAST_PAGES.accountSettings, report);
+        await page.goto(`${base}/Networth`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await page.click('.nw-help-btn');
+        await page.locator('#nwHelpModal.show .modal-title').waitFor({state: 'visible', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'Net Worth help modal', CONTRAST_PAGES.modal, report);
+        // Reload to close the modal before the avatar menu check
+        await page.reload({waitUntil: 'networkidle', timeout: TIMEOUT});
 
         // 4. The avatar menu holds no theme items.
         await page.click('.app-user-toggle');

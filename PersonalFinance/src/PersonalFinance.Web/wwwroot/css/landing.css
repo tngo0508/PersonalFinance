@@ -50,14 +50,14 @@
 }
 
 .lp-btn--primary {
-    background: var(--lp-ledger);
-    color: #fff;
+    background: var(--lp-ledger-fill);
+    color: var(--lp-on-ledger);
 }
 
 .lp-btn--primary:hover,
 .lp-btn--primary:active {
-    background: var(--lp-ledger-deep);
-    color: #fff;
+    background: var(--lp-ledger-fill-hover);
+    color: var(--lp-on-ledger);
 }
 
 .lp-btn--secondary {
@@ -71,30 +71,31 @@
     color: var(--lp-ink);
 }
 
+/* Light and ghost buttons sit on the navy band, which stays navy in dark mode, so they keep their colours */
 .lp-btn--light {
-    background: #fff;
-    color: var(--lp-ink);
+    background: var(--lp-on-navy);
+    color: var(--lp-navy);
 }
 
 .lp-btn--light:hover {
-    background: var(--lp-ledger-wash);
-    color: var(--lp-ink);
+    background: var(--lp-on-navy-wash);
+    color: var(--lp-navy);
 }
 
 .lp-btn--ghost {
-    border-color: rgba(255, 255, 255, 0.6);
-    color: #fff;
+    border-color: var(--lp-on-navy-outline);
+    color: var(--lp-on-navy);
 }
 
 .lp-btn--ghost:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: #fff;
-    color: #fff;
+    background: var(--lp-on-navy-rule);
+    border-color: var(--lp-on-navy);
+    color: var(--lp-on-navy);
 }
 
 .lp-btn--light:focus-visible,
 .lp-btn--ghost:focus-visible {
-    outline-color: #fff;
+    outline-color: var(--lp-on-navy);
 }
 
 /* ==========================================================================
@@ -136,12 +137,12 @@
 }
 
 .lp-hero__note a {
-    color: var(--lp-ledger);
+    color: var(--lp-ledger-text);
     font-weight: 500;
 }
 
 .lp-hero__note a:hover {
-    color: var(--lp-ledger-deep);
+    color: var(--lp-ledger-text-hover);
 }
 
 /* ==========================================================================
@@ -206,7 +207,7 @@
                 color-mix(in srgb, var(--lp-paper) 94%, transparent) 0%,
                 color-mix(in srgb, var(--lp-paper) 80%, transparent) 32%,
                 color-mix(in srgb, var(--lp-paper) var(--lp-skyline-dim, 0%), transparent) 58%),
-            linear-gradient(180deg, transparent 72%, var(--app-bg, #fff) 100%);
+            linear-gradient(180deg, transparent 72%, var(--app-bg) 100%);
     }
 
     :root[data-theme="dark"] .lp-skyline::before {
@@ -214,7 +215,7 @@
     }
 
     .lp-skyline::after {
-        background: radial-gradient(ellipse 38% 45% at 68% 52%, rgba(138, 106, 30, 0.13), rgba(138, 106, 30, 0) 70%);
+        background: radial-gradient(ellipse 38% 45% at 68% 52%, var(--lp-brass-glow), transparent 70%);
     }
 
     .lp-skyline__credit {
@@ -237,7 +238,7 @@
     .lp-hero .lp-plan {
         border-color: color-mix(in srgb, var(--lp-rule) 80%, transparent);
         background: color-mix(in srgb, var(--lp-surface) 64%, transparent);
-        box-shadow: 0 18px 40px -24px rgba(20, 40, 59, 0.45);
+        box-shadow: var(--lp-shadow-float);
         -webkit-backdrop-filter: blur(5px);
         backdrop-filter: blur(5px);
     }
@@ -455,7 +456,7 @@
 
 .lp-rule__term {
     margin-bottom: 0.35rem;
-    color: var(--lp-ledger);
+    color: var(--lp-ledger-text);
     font-size: 0.95rem;
     font-weight: 600;
 }
@@ -557,8 +558,8 @@
     height: 2rem;
     margin-bottom: 0.9rem;
     border-radius: 50%;
-    background: var(--lp-ledger);
-    color: #fff;
+    background: var(--lp-ledger-fill);
+    color: var(--lp-on-ledger);
     font-weight: 600;
 }
 
@@ -606,13 +607,13 @@
     background: var(--lp-navy);
     box-shadow: 0 0 0 100vmax var(--lp-navy);
     clip-path: inset(0 -100vmax);
-    color: #fff;
+    color: var(--lp-on-navy);
     text-align: center;
 }
 
 .lp-closing__title {
     margin: 0 0 0.75rem;
-    color: #fff;
+    color: var(--lp-on-navy);
     font-size: clamp(1.65rem, 3vw, 2.25rem);
     font-weight: 600;
     letter-spacing: -0.02em;
@@ -621,7 +622,7 @@
 .lp-closing__lead {
     margin: 0 auto 2rem;
     max-width: 32rem;
-    color: #D3DEE6;
+    color: var(--lp-on-navy-soft);
     font-size: 1.1rem;
 }
 

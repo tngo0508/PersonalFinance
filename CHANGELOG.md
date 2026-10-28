@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [13.4.0] - 2026-10-28
+
+### Added
+
+- **Semantic dark tokens for the shared surfaces**: `ledger.css` and `site.css` gain light and dark tokens for surface levels, link and fill greens, control borders, the positive, negative and warning states with their soft backgrounds, overlays and shadows, and a chart set (gridline, axis text, tooltip, six categorical series) for the chart slice to use (#482).
+  - New: `--app-surface-raised` (modals, popovers, dropdowns), `--app-brand-text` and `--app-brand-fill` (the green as link text and behind white labels), `--app-border-control`, `--app-positive-*`, `--app-negative-*`, `--app-warning-*`, `--app-neutral-fill`, `--app-toast-bg`, `--app-overlay*`, `--app-shadow-popover|dialog|banner`, `--app-chart-*`, and `--lp-on-navy-*` for the navy band and sidebar.
+  - A Node test (`tools/theme-tokens.test.js`) checks that every new token exists in both themes and that each text/surface pair meets WCAG AA: 4.5:1 for text, 3:1 for UI parts.
+- **Dark contrast in the theme smoke**: in dark mode the E2E theme smoke measures key text against its effective background on the Landing Page, the sign-in page, Account settings and the Net Worth help modal, and fails below 4.5:1, using a contrast function written in the repo (`tools/contrast.js`) because axe-core is MPL-2.0.
+
+### Fixed
+
+- **Shared surfaces read correctly in dark mode**: modals, dropdowns, toasts, popovers, alerts, badges, form controls, the top bar and sidebar, the cookie banner, the footer and Legal Pages, the Identity pages and Account settings now take their colours from the tokens, so nothing renders light on light or with low-contrast text (#482).
+  - Dark alerts use dark soft backgrounds with light text; the info notice, the Identity status messages and the current Account settings link were about 2:1 and now meet 4.5:1.
+  - Dark buttons, badges and active items use a deeper green fill under their white labels (5.3:1, was 3.9:1), and links on cards and modals use a lighter green (4.9:1 or more, was about 4:1).
+  - Modals, dropdowns and the top-bar popovers sit on a raised dark surface instead of the page colour; form-control borders meet 3:1.
+  - The light theme is unchanged, except that the idle sign-out backdrop matches the modal backdrop.
+
+### Changed
+
+- **Raw-colour allow-list shrinks**: `auth.css`, `landing.css` and `sidebar.css` are clean and leave the list; `site.css` drops from 78 to 56 (the rest is the Google Drive and budget report styles, for their own slice).
+
 ## [13.3.0] - 2026-10-28
 
 ### Added

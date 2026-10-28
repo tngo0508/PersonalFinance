@@ -36,6 +36,52 @@
     --app-text-disabled: #C3CDD3;
     --app-header-height: 56px;
 
+    /* Semantic tokens (#482): the shared surfaces and the feature pages take their colours from these.
+       Surfaces: page (--app-bg), card (--app-surface), secondary (--app-surface-secondary), modal and popover
+       (--app-surface-raised). Brand text is the green for links; brand fill is the green behind white labels. */
+    --app-surface-raised: var(--lp-raised);
+    --app-brand-text: var(--lp-ledger-text);
+    --app-brand-text-hover: var(--lp-ledger-text-hover);
+    --app-brand-fill: var(--lp-ledger-fill);
+    --app-brand-fill-hover: var(--lp-ledger-fill-hover);
+    --app-brand-on-soft: var(--app-brand-pressed);
+    --app-text-on-brand: var(--lp-on-ledger);
+    --app-border-control: var(--app-border);
+
+    /* States: text on the soft background of an alert or notice, and the solid fill of a badge or bar */
+    --app-positive-bg: #DFF6DD;
+    --app-positive-text: #006300;
+    --app-negative-bg: #FDE7E9;
+    --app-negative-text: #A02020;
+    --app-negative-fill: var(--app-accent-negative);
+    --app-warning-bg: #FFF4CE;
+    --app-warning-text: #8A5A00;
+    --app-warning-fill: #D89B26;
+    --app-on-warning: #000000;
+    --app-neutral-fill: var(--lp-muted);
+
+    /* Overlays and the shadows of floating surfaces */
+    --app-toast-bg: rgba(255, 255, 255, 0.85);
+    --app-overlay: rgba(0, 0, 0, 0.4);
+    --app-overlay-strong: rgba(0, 0, 0, 0.5);
+    --app-shadow-popover: 0 8px 24px rgba(20, 40, 59, 0.12);
+    --app-shadow-dialog: 0 12px 32px rgba(0, 0, 0, 0.18);
+    --app-shadow-banner: 0 -4px 12px rgba(0, 0, 0, 0.08);
+    --app-shadow-positive: 0 2px 6px rgba(5, 150, 105, 0.15);
+
+    /* Charts: gridlines, axis text, the tooltip, and the categorical series (3:1 on the page and on a card) */
+    --app-chart-grid: var(--app-border);
+    --app-chart-axis: var(--lp-muted);
+    --app-chart-tooltip-bg: var(--lp-navy);
+    --app-chart-tooltip-text: #FFFFFF;
+    --app-chart-tooltip-border: var(--lp-navy);
+    --app-chart-1: #1D6A50;
+    --app-chart-2: #2F6690;
+    --app-chart-3: #8A6A1E;
+    --app-chart-4: #B42318;
+    --app-chart-5: #6B4C9A;
+    --app-chart-6: #2B7A89;
+
     /* Minimal shadows — rules over elevation */
     --app-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.04);
     --app-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.06);
@@ -73,9 +119,9 @@
     /* Bootstrap overrides — map Ledger tokens to Bootstrap variables */
   --bs-primary: var(--app-brand);
     --bs-primary-rgb: 29, 106, 80;
-  --bs-link-color: var(--app-brand);
+  --bs-link-color: var(--app-brand-text);
     --bs-link-color-rgb: 29, 106, 80;
-  --bs-link-hover-color: var(--app-brand-hover);
+  --bs-link-hover-color: var(--app-brand-text-hover);
     --bs-link-hover-color-rgb: 19, 74, 56;
   --bs-body-color: var(--app-text);
   --bs-border-color: var(--app-border);
@@ -116,6 +162,37 @@
     --app-text-faint: #7A8A96;
     --app-text-disabled: #4A5966;
 
+    --app-brand-on-soft: #8FD3B4;
+    --app-border-control: #687B8B;
+    --app-positive-bg: #16302A;
+    --app-positive-text: #7FD1A8;
+    --app-negative-bg: #3A1E1E;
+    --app-negative-text: #F5A097;
+    --app-negative-fill: #C4372B;
+    --app-warning-bg: #33290F;
+    --app-warning-text: #EBC774;
+    --app-warning-fill: #E0B24A;
+    --app-neutral-fill: #4A5966;
+
+    --app-toast-bg: rgba(26, 40, 51, 0.95);
+    --app-overlay: rgba(0, 0, 0, 0.6);
+    --app-overlay-strong: rgba(0, 0, 0, 0.7);
+    --app-shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --app-shadow-dialog: 0 12px 32px rgba(0, 0, 0, 0.55);
+    --app-shadow-banner: 0 -4px 12px rgba(0, 0, 0, 0.4);
+    --app-shadow-positive: 0 2px 6px rgba(0, 0, 0, 0.3);
+
+    --app-chart-grid: #2A3A47;
+    --app-chart-tooltip-bg: var(--lp-raised);
+    --app-chart-tooltip-text: var(--lp-ink);
+    --app-chart-tooltip-border: var(--lp-rule);
+    --app-chart-1: #3FB884;
+    --app-chart-2: #6FA8DC;
+    --app-chart-3: #D4B25C;
+    --app-chart-4: #F0796B;
+    --app-chart-5: #A98BDD;
+    --app-chart-6: #4FC1D0;
+
     --app-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.3);
     --app-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.35);
     --app-shadow-8: 0 4px 8px rgba(0, 0, 0, 0.4);
@@ -123,8 +200,8 @@
     --app-shadow-32: 0 16px 32px rgba(0, 0, 0, 0.5);
 
     --bs-primary-rgb: 44, 145, 104;
-    --bs-link-color-rgb: 44, 145, 104;
-    --bs-link-hover-color-rgb: 35, 122, 87;
+    --bs-link-color-rgb: 58, 166, 119;
+    --bs-link-hover-color-rgb: 91, 191, 146;
     --bs-body-bg: var(--app-bg);
     --bs-body-bg-rgb: 14, 24, 33;
     --bs-secondary-bg: var(--app-surface-secondary);
@@ -191,14 +268,18 @@ table .text-end,
 
 /* Buttons — clean, no shadows, ledger brand */
 .btn-primary {
-  --bs-btn-bg: var(--app-brand);
-  --bs-btn-border-color: var(--app-brand);
-  --bs-btn-hover-bg: var(--app-brand-hover);
-  --bs-btn-hover-border-color: var(--app-brand-hover);
+  --bs-btn-color: var(--app-text-on-brand);
+  --bs-btn-bg: var(--app-brand-fill);
+  --bs-btn-border-color: var(--app-brand-fill);
+  --bs-btn-hover-color: var(--app-text-on-brand);
+  --bs-btn-hover-bg: var(--app-brand-fill-hover);
+  --bs-btn-hover-border-color: var(--app-brand-fill-hover);
+  --bs-btn-active-color: var(--app-text-on-brand);
   --bs-btn-active-bg: var(--app-brand-pressed);
   --bs-btn-active-border-color: var(--app-brand-pressed);
-  --bs-btn-disabled-bg: var(--app-brand);
-  --bs-btn-disabled-border-color: var(--app-brand);
+  --bs-btn-disabled-color: var(--app-text-on-brand);
+  --bs-btn-disabled-bg: var(--app-brand-fill);
+  --bs-btn-disabled-border-color: var(--app-brand-fill);
     border-radius: var(--app-radius-s);
     font-weight: var(--app-font-weight-medium);
     padding: 8px 18px;
@@ -207,10 +288,12 @@ table .text-end,
 }
 
 .btn-outline-primary {
-  --bs-btn-color: var(--app-brand);
+  --bs-btn-color: var(--app-brand-text);
   --bs-btn-border-color: var(--app-brand);
-  --bs-btn-hover-bg: var(--app-brand);
-  --bs-btn-hover-border-color: var(--app-brand);
+  --bs-btn-hover-color: var(--app-text-on-brand);
+  --bs-btn-hover-bg: var(--app-brand-fill);
+  --bs-btn-hover-border-color: var(--app-brand-fill);
+  --bs-btn-active-color: var(--app-text-on-brand);
   --bs-btn-active-bg: var(--app-brand-pressed);
   --bs-btn-active-border-color: var(--app-brand-pressed);
     border-radius: var(--app-radius-s);
@@ -220,7 +303,7 @@ table .text-end,
     transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 .btn-outline-primary:hover {
-  color: #fff;
+  color: var(--app-text-on-brand);
 }
 
 /* Secondary buttons */
@@ -284,7 +367,7 @@ table .text-end,
   border-radius: 10px;
   font-weight: 600;
   transition: all 0.25s ease;
-  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.15);
+  box-shadow: var(--app-shadow-positive);
 }
 .gd-page .btn-success:hover {
   box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
@@ -309,7 +392,7 @@ table .text-end,
 
 .dropdown-item.active,
 .dropdown-item:active {
-  background-color: var(--app-brand);
+  background-color: var(--app-brand-fill);
 }
 
 /* Fluent UI focus ring — 2px outer ring, matching brand color */
@@ -327,7 +410,7 @@ table .text-end,
 .form-control,
 .form-select {
   border-radius: var(--app-radius-m);
-  border: 1px solid var(--app-border);
+  border: 1px solid var(--app-border-control);
   font-size: var(--app-font-size-base);
   padding: 5px 12px;
   transition: border-color 0.1s ease;
@@ -415,6 +498,8 @@ table .text-end,
 
 /* --- Modals --- */
 .modal-content {
+  --bs-modal-bg: var(--app-surface-raised);
+  --bs-modal-color: var(--app-text);
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-m);
   box-shadow: var(--app-shadow-16);
@@ -439,7 +524,17 @@ table .text-end,
   padding: var(--app-spacing-s) var(--app-spacing-l);
 }
 .modal-backdrop.show {
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--app-overlay);
+}
+
+/* --- Toasts and popovers float like modals --- */
+.toast {
+  --bs-toast-bg: var(--app-toast-bg);
+  --bs-toast-color: var(--app-text);
+  --bs-toast-header-bg: var(--app-toast-bg);
+}
+.popover {
+  --bs-popover-bg: var(--app-surface-raised);
 }
 
 /* --- Alerts --- */
@@ -450,25 +545,25 @@ table .text-end,
   padding: var(--app-spacing-m) var(--app-spacing-l);
 }
 .alert-success {
-  background: #dff6dd;
+  background: var(--app-positive-bg);
   border-color: var(--app-accent-positive);
-  color: #006300;
+  color: var(--app-positive-text);
 }
 .alert-danger,
 .alert-error {
-  background: #fde7e9;
+  background: var(--app-negative-bg);
   border-color: var(--app-accent-negative);
-  color: #a02020;
+  color: var(--app-negative-text);
 }
 .alert-warning {
-  background: #fff4ce;
-  border-color: #d89b26;
-  color: #8a5a00;
+  background: var(--app-warning-bg);
+  border-color: var(--app-warning-fill);
+  color: var(--app-warning-text);
 }
 .alert-info {
   background: var(--app-brand-soft);
   border-color: var(--app-brand);
-  color: var(--app-brand-pressed);
+  color: var(--app-brand-on-soft);
 }
 
 /* --- Badges --- */
@@ -477,29 +572,32 @@ table .text-end,
   font-size: var(--app-font-size-small);
   border-radius: var(--app-radius-s);
   padding: 2px 8px;
+  --bs-badge-color: var(--app-text-on-brand);
 }
 .badge.bg-primary {
-  background: var(--app-brand) !important;
+  background: var(--app-brand-fill) !important;
 }
 .badge.bg-secondary {
-  background: var(--app-text-muted) !important;
+  background: var(--app-neutral-fill) !important;
 }
 .badge.bg-success {
-  background: var(--app-accent-positive) !important;
+  background: var(--app-brand-fill) !important;
 }
 .badge.bg-danger {
-  background: var(--app-accent-negative) !important;
+  background: var(--app-negative-fill) !important;
 }
 .badge.bg-warning {
-  background: #d89b26 !important;
-  color: #000;
+  background: var(--app-warning-fill) !important;
+  color: var(--app-on-warning);
 }
 .badge.bg-info {
-  background: var(--app-brand) !important;
+  background: var(--app-brand-fill) !important;
 }
 
 /* --- Dropdowns --- */
 .dropdown-menu {
+  --bs-dropdown-bg: var(--app-surface-raised);
+  --bs-dropdown-color: var(--app-text);
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-m);
   box-shadow: var(--app-shadow-8);
@@ -519,8 +617,8 @@ table .text-end,
 }
 .dropdown-item.active,
 .dropdown-item:active {
-  background: var(--app-brand);
-  color: #fff;
+  background: var(--app-brand-fill);
+  color: var(--app-text-on-brand);
 }
 .dropdown-divider {
   border-color: var(--app-border);
@@ -552,9 +650,9 @@ table .text-end,
   color: var(--app-text);
 }
 .page-item.active .page-link {
-  background: var(--app-brand);
-  border-color: var(--app-brand);
-  color: #fff;
+  background: var(--app-brand-fill);
+  border-color: var(--app-brand-fill);
+  color: var(--app-text-on-brand);
   font-weight: var(--app-font-weight-semibold);
 }
 .page-item.disabled .page-link {
@@ -578,7 +676,7 @@ table .text-end,
   background: var(--app-accent-positive);
 }
 .progress-bar.bg-warning {
-  background: #d89b26;
+  background: var(--app-warning-fill);
 }
 .progress-bar.bg-danger {
   background: var(--app-accent-negative);
@@ -599,9 +697,9 @@ table .text-end,
   background: var(--app-surface-secondary);
 }
 .list-group-item.active {
-  background: var(--app-brand);
-  border-color: var(--app-brand);
-  color: #fff;
+  background: var(--app-brand-fill);
+  border-color: var(--app-brand-fill);
+  color: var(--app-text-on-brand);
   font-weight: var(--app-font-weight-semibold);
 }
 .list-group-item-action {
@@ -629,7 +727,7 @@ table .text-end,
 }
 .accordion-button:not(.collapsed) {
   background: var(--app-brand-soft);
-  color: var(--app-brand);
+  color: var(--app-brand-text);
 }
 .accordion-button:focus {
   box-shadow: 0 0 0 2px var(--app-brand-soft);
@@ -649,8 +747,8 @@ table .text-end,
   color: var(--app-text);
 }
 .nav-pills .nav-link.active {
-  background: var(--app-brand);
-  color: #fff;
+  background: var(--app-brand-fill);
+  color: var(--app-text-on-brand);
   font-weight: var(--app-font-weight-semibold);
 }
 .nav-tabs {
@@ -670,7 +768,7 @@ table .text-end,
   border-color: var(--app-border);
 }
 .nav-tabs .nav-link.active {
-  color: var(--app-brand);
+  color: var(--app-brand-text);
   background: var(--app-surface);
   border-color: var(--app-border);
   border-bottom-color: transparent;
@@ -699,11 +797,11 @@ table .text-end,
   font-size: var(--app-font-size-base);
 }
 .breadcrumb-item a {
-  color: var(--app-brand);
+  color: var(--app-brand-text);
   text-decoration: none;
 }
 .breadcrumb-item a:hover {
-  color: var(--app-brand-hover);
+  color: var(--app-brand-text-hover);
   text-decoration: underline;
 }
 .breadcrumb-item.active {
@@ -722,12 +820,12 @@ table .text-end,
 /* --- Form check (checkbox/radio) --- */
 .form-check-input {
   border-radius: var(--app-radius-s);
-  border: 1px solid var(--app-border);
+  border: 1px solid var(--app-border-control);
   background-color: var(--app-surface);
 }
 .form-check-input:checked {
-  background-color: var(--app-brand);
-  border-color: var(--app-brand);
+  background-color: var(--app-brand-fill);
+  border-color: var(--app-brand-fill);
 }
 .form-check-input:focus {
   box-shadow: 0 0 0 2px var(--app-brand-soft);
@@ -750,7 +848,7 @@ table .text-end,
 /* --- Input group --- */
 .input-group-text {
   background: var(--app-surface-secondary);
-  border: 1px solid var(--app-border);
+  border: 1px solid var(--app-border-control);
   border-radius: var(--app-radius-m);
   color: var(--app-text-muted);
   font-size: var(--app-font-size-base);
@@ -760,7 +858,7 @@ table .text-end,
 .form-floating > .form-control:focus ~ label,
 .form-floating > .form-control:not(:placeholder-shown) ~ label,
 .form-floating > .form-select ~ label {
-  color: var(--app-brand);
+  color: var(--app-brand-text);
 }
 
 /* --- Text utilities --- */
@@ -802,11 +900,11 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--app-text);
 }
 a {
-  color: var(--app-brand);
+  color: var(--app-brand-text);
   text-decoration: none;
 }
 a:hover {
-  color: var(--app-brand-hover);
+  color: var(--app-brand-text-hover);
   text-decoration: underline;
 }
 
@@ -869,8 +967,8 @@ hr {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--app-brand);
-  color: #ffffff;
+  background: var(--app-brand-fill);
+  color: var(--app-text-on-brand);
 }
 
 .app-nav {
@@ -944,7 +1042,7 @@ hr {
   align-items: center;
   justify-content: center;
   background: var(--app-brand-soft);
-  color: var(--app-brand);
+  color: var(--app-brand-text);
   font-weight: var(--app-font-weight-bold);
   font-size: 0.9rem;
 }
@@ -2608,7 +2706,7 @@ hr {
 }
 
 .app-footer__links a:hover {
-  color: var(--app-brand);
+  color: var(--app-brand-text);
   text-decoration: underline;
 }
 
@@ -2623,11 +2721,11 @@ hr {
   background: var(--app-surface);
   border: 1px solid var(--app-border);
   border-radius: 0.75rem;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--app-shadow-dialog);
 }
 
 .idle-sign-out-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--app-overlay);
 }
 
 .idle-sign-out-dialog__countdown {
@@ -2649,7 +2747,7 @@ hr {
   right: 0;
   background: var(--app-surface);
   border-top: 1px solid var(--app-border);
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--app-shadow-banner);
   z-index: 1050;
   padding: 1rem 0;
 }
@@ -2674,7 +2772,7 @@ hr {
 }
 
 .cookie-banner__text a {
-  color: var(--app-brand);
+  color: var(--app-brand-text);
   text-decoration: underline;
 }
 
@@ -2747,7 +2845,7 @@ hr {
 .conversion-caption {
     margin: 0.25rem 0 0;
     font-size: 0.8125rem;
-    color: var(--app-text-muted, #5b6b78);
+    color: var(--app-text-muted);
 }
 
 .conversion-caption[hidden] {
