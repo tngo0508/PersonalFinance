@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [13.0.3] - 2026-10-28
+
+### Changed
+
+- **Google Drive: one close control per modal**: the Budget report, Transactions and Help modals close from the header × only, and the API key and Remove drive dialogs from Cancel only; Escape still closes every modal.
+  - The Budget report footer keeps its keyboard tip and the Transactions footer its sheet name; the footer Close and Help's Got it are gone.
+- **Google Drive: Budget report Export CSV and Print move into a ⋯ menu**: the Transactions switch stays visible in the header, and Escape in the open menu closes only the menu.
+  - The full-year details table loses its Open → column and clickable rows; the period chips, the ‹ › arrows, the ←/→ keys and clicking a month in the chart change the period.
+- **Google Drive: one category filter in Transactions**: the Top spending categories bars are plain content, and the All categories select is the one category filter.
+  - The table hides its pager when the rows fit on one page and no longer has a page-length select (page size stays 25).
+- **Google Drive: How do I get one? opens Help at its answer**: both buttons (the connect form's Advanced panel and the API key dialog) open Help with section 4, "Optional: add a Google API key", expanded and scrolled into view.
+
 ## [13.0.1] - 2026-10-28
 
 ### Changed

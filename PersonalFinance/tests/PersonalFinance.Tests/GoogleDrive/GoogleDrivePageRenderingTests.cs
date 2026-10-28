@@ -27,7 +27,8 @@ namespace PersonalFinance.Tests.GoogleDrive;
 /// <summary>
 /// The connected Google Drive page rendered through the real compiled Razor view (Reduce Clutter, #475): the
 /// Spreadsheets cards are the one home for sheet actions, the All files list and grid are content, and the drive
-/// header offers Refresh plus a ⋯ menu.
+/// header offers Refresh plus a ⋯ menu. Every modal has one close control, and the Budget report keeps its rare
+/// actions in a ⋯ menu (#477).
 /// </summary>
 public sealed partial class GoogleDrivePageRenderingTests : IAsyncLifetime
 {
@@ -220,6 +221,88 @@ public sealed partial class GoogleDrivePageRenderingTests : IAsyncLifetime
         Assert.DoesNotContain("Add API key", Page(html), StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("monthlyBudgetModal")]
+    [InlineData("transactionsModal")]
+    [InlineData("apiKeyGuideModal")]
+    public async Task InformationModals_CloseOnlyFromTheHeaderX(string modalId)
+    {
+        string html = await GetPageAsync();
+
+        string modal = Modal(html, modalId);
+        Assert.Single(Regex.Matches(modal, "data-bs-dismiss=\"modal\""));
+        Assert.Matches(HeaderCloseX(), modal);
+        Assert.DoesNotContain(">Close<", modal, StringComparison.Ordinal);
+        Assert.DoesNotContain("Got it", modal, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InformationModalFooters_KeepTheirTipAndSheetName()
+    {
+        string html = await GetPageAsync();
+
+        Assert.Contains("id=\"budgetKeyboardHint\"", Modal(html, "monthlyBudgetModal"), StringComparison.Ordinal);
+        Assert.Contains("id=\"txSheetName\"", Modal(html, "transactionsModal"), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("reauthModal")]
+    [InlineData("deleteDriveModal")]
+    public async Task ConfirmationDialogs_CloseOnlyFromCancel(string modalId)
+    {
+        string html = await GetPageAsync();
+
+        string modal = Modal(html, modalId);
+        Assert.DoesNotContain("btn-close", modal, StringComparison.Ordinal);
+        Assert.Single(Regex.Matches(modal, "data-bs-dismiss=\"modal\""));
+        Assert.Matches(CancelButton(), modal);
+    }
+
+    [Fact]
+    public async Task BudgetReport_ExportAndPrint_LiveInAMoreMenu_TransactionsStaysVisible()
+    {
+        string html = await GetPageAsync();
+
+        string header = Between(Modal(html, "monthlyBudgetModal"), "modal-header", "modal-body");
+        string menu = Menu(header, "btnBudgetMore");
+        string visible = header.Replace(menu, string.Empty, StringComparison.Ordinal);
+        Assert.Matches(BudgetMoreToggle(), header);
+        Assert.Contains("id=\"btnExportBudget\"", menu, StringComparison.Ordinal);
+        Assert.Contains("id=\"btnPrintBudgetReport\"", menu, StringComparison.Ordinal);
+        Assert.Contains("id=\"btnBudgetToTransactions\"", visible, StringComparison.Ordinal);
+        Assert.DoesNotContain("btnExportBudget", visible, StringComparison.Ordinal);
+        Assert.DoesNotContain("btnPrintBudgetReport", visible, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Transactions_ExportCsv_StaysAPlainButton()
+    {
+        string html = await GetPageAsync();
+
+        string header = Between(Modal(html, "transactionsModal"), "modal-header", "modal-body");
+        Assert.Contains("id=\"btnExportTx\"", header, StringComparison.Ordinal);
+        Assert.DoesNotContain("dropdown", header, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task HowDoIGetOne_InTheApiKeyDialog_OpensHelpAtTheApiKeySection()
+    {
+        string html = await GetPageAsync();
+
+        Assert.Single(HowDoIGetOneButton().Matches(Modal(html, "reauthModal")));
+    }
+
+    [Fact]
+    public async Task HowDoIGetOne_InTheConnectForm_OpensHelpAtTheApiKeySection()
+    {
+        _driveProxy.Returns(nameof(IGoogleDriveApi.GetUserConnectionsAsync), new List<GoogleDriveConnectionDto>());
+
+        string html = await GetPageAsync();
+
+        Assert.Single(HowDoIGetOneButton().Matches(Between(html, "id=\"advancedSettingsCollapse\"", "</form>")));
+        Assert.Contains("id=\"helpApiKey\"", Modal(html, "apiKeyGuideModal"), StringComparison.Ordinal);
+    }
+
     private void GivenTheDrive(bool hasApiKey, bool isDemoData, GoogleDriveFileDto[]? files = null)
     {
         files ??= SampleFiles;
@@ -265,6 +348,19 @@ public sealed partial class GoogleDrivePageRenderingTests : IAsyncLifetime
     private static string SheetCard(string html, string fileId) =>
         Between(html, $"data-sheet-card=\"{fileId}\"", "</article>");
 
+    /// <summary>One modal, from its opening tag to the next modal or the toast that follows the last one.</summary>
+    private static string Modal(string html, string modalId)
+    {
+        string start = $"class=\"modal fade\" id=\"{modalId}\"";
+        int from = html.IndexOf(start, StringComparison.Ordinal);
+        Assert.True(from >= 0, $"The page has no #{modalId}.");
+        int next = html.IndexOf("class=\"modal fade\"", from + start.Length, StringComparison.Ordinal);
+        int toast = html.IndexOf("<!-- Toast Feedback -->", from, StringComparison.Ordinal);
+        Assert.True(toast > from, $"The page has no toast after #{modalId}.");
+        int to = next >= 0 && next < toast ? next : toast;
+        return html[from..to];
+    }
+
     private static string DriveMenu(string html) => Menu(html, "gdDriveMoreBtn");
 
     private static string SheetMenu(string card, string fileId) => Menu(card, $"gdSheetMore_{fileId}");
@@ -295,6 +391,18 @@ public sealed partial class GoogleDrivePageRenderingTests : IAsyncLifetime
 
     [GeneratedRegex("""<button type="button"[^>]*id="gdDriveMoreBtn"[^>]*data-bs-toggle="dropdown"[^>]*aria-expanded="false"[^>]*aria-label="[^"]+"[^>]*>""")]
     private static partial Regex DriveMoreToggle();
+
+    [GeneratedRegex("""<button type="button"[^>]*id="btnBudgetMore"[^>]*data-bs-toggle="dropdown"[^>]*aria-expanded="false"[^>]*aria-label="[^"]+"[^>]*>""")]
+    private static partial Regex BudgetMoreToggle();
+
+    [GeneratedRegex("""class="modal-header[^"]*">.*?<button type="button" class="btn-close[^"]*" data-bs-dismiss="modal" aria-label="Close">.*?class="modal-body""", RegexOptions.Singleline)]
+    private static partial Regex HeaderCloseX();
+
+    [GeneratedRegex("""<button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>""")]
+    private static partial Regex CancelButton();
+
+    [GeneratedRegex("""<button type="button"[^>]*data-bs-toggle="modal" data-bs-target="#apiKeyGuideModal" data-help-section="helpApiKey">How do I get one\?</button>""")]
+    private static partial Regex HowDoIGetOneButton();
 
     [GeneratedRegex("""id="btnSyncDrive"[^>]*title="Get the latest files from Google Drive"[^>]*>.*?<span>Refresh</span>""", RegexOptions.Singleline)]
     private static partial Regex RefreshButton();
