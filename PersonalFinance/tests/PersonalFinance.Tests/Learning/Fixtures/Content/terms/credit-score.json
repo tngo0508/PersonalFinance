@@ -1,0 +1,41 @@
+{
+  "slug": "credit-score",
+  "term": "Credit score",
+  "vietnameseName": "điểm tín dụng",
+  "alsoKnownAs": [],
+  "topic": "borrowing-credit",
+  "oneLine": "A number that shows lenders how well you repaid money before.",
+  "explanation": [
+    "A credit score is a number based on your borrowing history.",
+    "A higher score means lenders see less risk. It goes up when you repay on time.",
+    "It goes down when you pay late or use too much of your credit limit."
+  ],
+  "whyItMatters": "A good score can give you a lower APR. Over many years, a lower APR can save you a lot of money.",
+  "workedExample": "Two people borrow $20,000 for a car, for 5 years. One gets a 6% APR. The other gets 12%. The second person pays about $3,500 more in interest.",
+  "inTheUs": {
+    "text": "Many scores go from 300 to 850. You can see your credit report for free.",
+    "rulesAsOf": 2026,
+    "sources": [
+      {
+        "name": "CFPB, What is a credit score?",
+        "url": "https://www.consumerfinance.gov/ask-cfpb/what-is-a-credit-score-en-315/",
+        "accessed": "2026-10-27"
+      }
+    ]
+  },
+  "relatedTerms": ["apr", "emergency-fund"],
+  "sources": [
+    {
+      "name": "CFPB, What is a credit score?",
+      "url": "https://www.consumerfinance.gov/ask-cfpb/what-is-a-credit-score-en-315/",
+      "accessed": "2026-10-27"
+    }
+  ],
+  "furtherReading": [
+    {
+      "name": "FINRA, Understanding credit scores",
+      "url": "https://www.finra.org/investors/personal-finance/understanding-credit-scores"
+    }
+  ],
+  "lastReviewed": "2026-10-27"
+}

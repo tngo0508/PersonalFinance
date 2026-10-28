@@ -1,0 +1,28 @@
+{
+  "slug": "compound-interest",
+  "term": "Compound interest",
+  "vietnameseName": "lãi kép",
+  "alsoKnownAs": [],
+  "topic": "saving-banking",
+  "oneLine": "Interest you earn on your savings and on earlier interest.",
+  "explanation": [
+    "Compound interest is interest on interest. The bank pays interest on your money. Next time, it also pays interest on that interest.",
+    "Over many years, this makes savings grow faster. The longer the money stays, the bigger the effect."
+  ],
+  "whyItMatters": "Starting early gives compound interest more time to work. Small amounts saved when you are young can grow large. The same effect makes unpaid debt grow fast.",
+  "workedExample": "You save $1,000 at 5% a year. After one year, you have $1,050. In the second year, you earn 5% on $1,050, which is $52.50. After 10 years, you have about $1,629.",
+  "relatedTerms": ["emergency-fund", "apr"],
+  "sources": [
+    {
+      "name": "U.S. SEC, Investor.gov, Compound interest calculator",
+      "url": "https://www.investor.gov/financial-tools-calculators/calculators/compound-interest-calculator",
+      "accessed": "2026-10-27"
+    }
+  ],
+  "furtherReading": [],
+  "video": {
+    "title": "What is compound interest?",
+    "url": "https://www.youtube-nocookie.com/embed/fixture0001"
+  },
+  "lastReviewed": "2026-10-27"
+}
