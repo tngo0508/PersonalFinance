@@ -84,6 +84,17 @@ function composite (top, bottom) {
 }
 
 /**
+ * The background an element is painted on: its own and its ancestors' background colours, laid one over the
+ * other from the canvas (white) up. Background images, gradients and opacity are not read.
+ * @param {string[]} layers The computed background colours, outermost (html) first. An unreadable one is skipped.
+ * @returns {{r: number, g: number, b: number, a: number}} The opaque colour seen.
+ */
+function flattenBackground (layers) {
+    return layers.map(parseColour).filter(Boolean)
+        .reduce((below, layer) => composite(layer, below), { r: 255, g: 255, b: 255, a: 1 });
+}
+
+/**
  * The WCAG relative luminance of an opaque colour.
  * @param {{r: number, g: number, b: number}} colour The colour.
  * @returns {number} 0 (black) to 1 (white).
@@ -183,4 +194,6 @@ function resolveToken (tokens, name) {
     throw new Error(`${name} is not defined`);
 }
 
-module.exports = { AA_TEXT, AA_UI, parseColour, composite, relativeLuminance, contrastRatio, readThemeTokens, resolveToken };
+module.exports = {
+    AA_TEXT, AA_UI, parseColour, composite, flattenBackground, relativeLuminance, contrastRatio, readThemeTokens, resolveToken
+};

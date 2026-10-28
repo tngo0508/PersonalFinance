@@ -44,16 +44,16 @@
     --app-brand-text-hover: var(--lp-ledger-text-hover);
     --app-brand-fill: var(--lp-ledger-fill);
     --app-brand-fill-hover: var(--lp-ledger-fill-hover);
-    --app-brand-on-soft: #0E3A2C;
+    --app-brand-on-soft: var(--app-brand-pressed);
     --app-text-on-brand: var(--lp-on-ledger);
-    --app-border-control: #E1E7E4;
+    --app-border-control: var(--app-border);
 
     /* States: text on the soft background of an alert or notice, and the solid fill of a badge or bar */
     --app-positive-bg: #DFF6DD;
     --app-positive-text: #006300;
     --app-negative-bg: #FDE7E9;
     --app-negative-text: #A02020;
-    --app-negative-fill: #B42318;
+    --app-negative-fill: var(--app-accent-negative);
     --app-warning-bg: #FFF4CE;
     --app-warning-text: #8A5A00;
     --app-warning-fill: #D89B26;
@@ -70,7 +70,7 @@
     --app-shadow-positive: 0 2px 6px rgba(5, 150, 105, 0.15);
 
     /* Charts: gridlines, axis text, the tooltip, and the categorical series (3:1 on the page and on a card) */
-    --app-chart-grid: #E1E7E4;
+    --app-chart-grid: var(--app-border);
     --app-chart-axis: var(--lp-muted);
     --app-chart-tooltip-bg: var(--lp-navy);
     --app-chart-tooltip-text: #FFFFFF;
@@ -532,7 +532,6 @@ table .text-end,
   --bs-toast-bg: var(--app-toast-bg);
   --bs-toast-color: var(--app-text);
   --bs-toast-header-bg: var(--app-toast-bg);
-  --bs-toast-header-color: var(--app-text-muted);
 }
 .popover {
   --bs-popover-bg: var(--app-surface-raised);
@@ -566,6 +565,7 @@ table .text-end,
   border-color: var(--app-brand);
   color: var(--app-brand-on-soft);
 }
+
 /* --- Badges --- */
 .badge {
   font-weight: var(--app-font-weight-semibold);
@@ -2718,7 +2718,7 @@ hr {
   width: min(28rem, calc(100vw - 2rem));
   padding: 1.5rem;
   color: var(--bs-body-color);
-  background: var(--app-surface-raised);
+  background: var(--app-surface);
   border: 1px solid var(--app-border);
   border-radius: 0.75rem;
   box-shadow: var(--app-shadow-dialog);

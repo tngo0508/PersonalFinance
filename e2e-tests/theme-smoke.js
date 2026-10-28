@@ -14,7 +14,7 @@ const TIMEOUT = 15000;
 const WEB = path.join(__dirname, '..', 'PersonalFinance', 'src', 'PersonalFinance.Web');
 const en = require(path.join(WEB, 'Resources', 'i18n', 'en.json'));
 // Written in the repo, not axe-core (MPL-2.0 is not on the license policy's list)
-const {AA_TEXT, composite, contrastRatio, parseColour} = require(path.join(WEB, 'tools', 'contrast.js'));
+const {AA_TEXT, contrastRatio, flattenBackground} = require(path.join(WEB, 'tools', 'contrast.js'));
 
 /**
  * Key text on each page the dark contrast check visits (#482). Each selector's first visible element is measured.
@@ -162,8 +162,9 @@ async function driveControl(page, who, report) {
 }
 
 /**
- * The colours of the first visible element per selector: its text colour, and the background it is painted on,
- * found by laying each ancestor's background colour over the one below, from the canvas (white) up.
+ * The colours of the first visible element per selector: its text colour, and the background colours of it and its
+ * ancestors, outermost first. Gradients and pseudo-element overlays (the Landing Page skyline) are not read, so the
+ * check measures text against the surface colour under them.
  * @param {import('playwright').Page} page - The page.
  * @param {string[]} selectors - The key text.
  * @returns {Promise<{selector: string, found: boolean, colour?: string, layers?: string[]}[]>}
@@ -198,23 +199,12 @@ async function checkDarkContrast(page, name, selectors, report) {
             report.fail(`${name}: no visible "${measured.selector}" to check contrast`);
             continue;
         }
-        const background = measured.layers.reduce((below, layer) => blend(layer, below), 'rgb(255, 255, 255)');
+        const background = flattenBackground(measured.layers);
         const ratio = contrastRatio(measured.colour, background);
+        const shown = `rgb(${[background.r, background.g, background.b].map(Math.round).join(', ')})`;
         check(ratio >= AA_TEXT, `${name}: "${measured.selector}" meets ${AA_TEXT}:1 in dark mode`,
-            `${ratio.toFixed(2)}:1 (${measured.colour} on ${background})`, report);
+            `${ratio.toFixed(2)}:1 (${measured.colour} on ${shown})`, report);
     }
-}
-
-/**
- * Lay one computed background colour over another.
- * @param {string} top - The upper colour.
- * @param {string} below - The colour under it.
- * @returns {string} The colour seen, as rgba().
- */
-function blend(top, below) {
-    const upper = parseColour(top) || {r: 0, g: 0, b: 0, a: 0};
-    const {r, g, b, a} = composite(upper, parseColour(below));
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
 }
 
 /**

@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Dark buttons, badges and active items use a deeper green fill under their white labels (5.3:1, was 3.9:1), and links on cards and modals use a lighter green (4.9:1 or more, was about 4:1).
   - Modals, dropdowns and the top-bar popovers sit on a raised dark surface instead of the page colour; form-control borders meet 3:1.
   - The light theme is unchanged, except that the idle sign-out backdrop matches the modal backdrop.
+
+### Changed
+
 - **Raw-colour allow-list shrinks**: `auth.css`, `landing.css` and `sidebar.css` are clean and leave the list; `site.css` drops from 78 to 56 (the rest is the Google Drive and budget report styles, for their own slice).
 
 ## [13.3.0] - 2026-10-28

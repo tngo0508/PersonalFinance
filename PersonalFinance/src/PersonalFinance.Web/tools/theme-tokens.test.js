@@ -10,7 +10,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { AA_TEXT, AA_UI, parseColour, contrastRatio, readThemeTokens, resolveToken } = require('./contrast');
+const { AA_TEXT, AA_UI, parseColour, contrastRatio, flattenBackground, readThemeTokens, resolveToken } = require('./contrast');
 
 const BOTH = ['light', 'dark'];
 const DARK = ['dark'];
@@ -62,18 +62,25 @@ const PAIRS = [
 
 const NEW_TOKENS = [
     '--app-surface-raised', '--app-brand-text', '--app-brand-text-hover', '--app-brand-fill', '--app-brand-fill-hover',
-    '--app-text-on-brand', '--app-brand-on-soft', '--app-border-control', '--app-positive-bg', '--app-positive-text',
+    '--app-brand-on-soft', '--app-border-control', '--app-positive-bg', '--app-positive-text',
     '--app-negative-bg', '--app-negative-text', '--app-negative-fill', '--app-warning-bg', '--app-warning-text',
-    '--app-warning-fill', '--app-on-warning', '--app-neutral-fill', '--app-toast-bg', '--app-overlay',
+    '--app-warning-fill', '--app-neutral-fill', '--app-toast-bg', '--app-overlay',
     '--app-overlay-strong', '--app-shadow-popover', '--app-shadow-dialog', '--app-shadow-banner',
     '--app-chart-grid', '--app-chart-axis', '--app-chart-tooltip-bg', '--app-chart-tooltip-text',
-    '--app-chart-tooltip-border', ...CHART_SERIES
+    '--app-chart-tooltip-border', '--app-shadow-positive', '--lp-raised', '--lp-ledger-fill', '--lp-ledger-text',
+    '--lp-ledger-on-wash', '--lp-brass-glow', '--lp-shadow-float', ...CHART_SERIES
+];
+// White and black labels, and what sits on the navy band, are the same in both themes on purpose
+const SAME_IN_BOTH = [
+    '--app-text-on-brand', '--app-on-warning', '--lp-on-ledger', '--lp-on-navy', '--lp-on-navy-soft', '--lp-on-navy-muted',
+    '--lp-on-navy-accent', '--lp-on-navy-accent-wash', '--lp-on-navy-rule', '--lp-on-navy-hover', '--lp-on-navy-outline',
+    '--lp-on-navy-wash'
 ];
 
 for (const theme of BOTH) {
     test(`the semantic tokens are defined in the ${theme} theme`, () => {
         const tokens = readThemeTokens(theme);
-        const missing = NEW_TOKENS.filter(name => {
+        const missing = [...NEW_TOKENS, ...SAME_IN_BOTH].filter(name => {
             try {
                 resolveToken(tokens, name);
                 return false;
@@ -103,8 +110,7 @@ test('the dark theme gives each new colour token its own value', () => {
         const colour = parseColour(value);
         return colour ? JSON.stringify(colour) : value;
     };
-    const unchanged = NEW_TOKENS.filter(name => !['--app-text-on-brand', '--app-on-warning'].includes(name))
-        .filter(name => resolve(light, name) === resolve(dark, name));
+    const unchanged = NEW_TOKENS.filter(name => resolve(light, name) === resolve(dark, name));
     assert.deepStrictEqual(unchanged, []);
 });
 
@@ -119,6 +125,13 @@ test('a translucent colour is laid over what is behind it', () => {
     // Half-transparent black over white is mid grey
     assert.strictEqual(contrastRatio('rgba(0, 0, 0, 0.5)', '#fff').toFixed(2), contrastRatio('rgb(127.5, 127.5, 127.5)', '#fff').toFixed(2));
     assert.strictEqual(contrastRatio('#000', 'transparent').toFixed(2), '21.00');
+});
+
+test('an element\'s background is its ancestors\' colours laid over white', () => {
+    // A transparent body over a navy page, under a half-white card
+    const seen = flattenBackground(['rgb(20, 40, 60)', 'rgba(0, 0, 0, 0)', 'rgba(255, 255, 255, 0.5)', 'oklch(1 0 0)']);
+    assert.deepStrictEqual(seen, { r: 137.5, g: 147.5, b: 157.5, a: 1 });
+    assert.deepStrictEqual(flattenBackground([]), { r: 255, g: 255, b: 255, a: 1 });
 });
 
 test('colours are read in the forms a browser computes', () => {
