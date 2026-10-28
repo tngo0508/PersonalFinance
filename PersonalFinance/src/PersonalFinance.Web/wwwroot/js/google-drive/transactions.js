@@ -1,4 +1,4 @@
-/* global PFI18n */
+/* global PFI18n, ChartPalette */
 // Spreadsheet Transactions modal on the Google Drive page.
 // Server values come from data- attributes on #transactionsModal (data-transactions-url, data-connection-id).
 (function ($) {
@@ -8,8 +8,6 @@
         const $modal = $('#transactionsModal');
         if ($modal.length === 0) { return; }
 
-        // Same series colors as the budget report (validated pair: slot 1 blue, slot 2 orange)
-        const TX_COLORS = { spend: '#eb6834', grid: '#e1e0d9', axis: '#c3c2b7', muted: '#898781' };
         const TOP_CATEGORY_COUNT = 6;
         const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -95,6 +93,43 @@
             }
             $('#txTable tbody').empty();
         }
+
+        /**
+         * The timeline's colours from the shared chart palette (core/chart-palette.js, #484). Spending is the same
+         * series as in the budget report and the --bgt-spend swatch.
+         * @returns {object} The palette, plus spend and baseline (the x axis).
+         */
+        function txChartColours () {
+            const palette = ChartPalette.read();
+            return Object.assign(palette, {
+                spend: palette.series[1],
+                baseline: ChartPalette.withAlpha(palette.axis, 0.5)
+            });
+        }
+
+        // Sets the theme colours on the timeline (a Chart or its config): bars, tooltip, axis text and gridlines
+        function themeTimeline (chart, colours) {
+            const options = chart.options;
+            const tooltip = options.plugins.tooltip;
+            chart.data.datasets[0].backgroundColor = colours.spend;
+            tooltip.backgroundColor = colours.tooltip.background;
+            tooltip.titleColor = colours.tooltip.text;
+            tooltip.bodyColor = colours.tooltip.text;
+            tooltip.borderColor = colours.tooltip.border;
+            tooltip.borderWidth = 1;
+            options.scales.x.border.color = colours.baseline;
+            options.scales.x.ticks.color = colours.axis;
+            options.scales.y.ticks.color = colours.axis;
+            options.scales.y.grid.color = colours.grid;
+        }
+
+        // Restyles the timeline in place when the theme changes, without a reload (#484)
+        ChartPalette.subscribe(() => {
+            if (txChart) {
+                themeTimeline(txChart, txChartColours());
+                txChart.update('none');
+            }
+        });
 
         // ---------- Summary ----------
 
@@ -242,14 +277,13 @@
             $('#txTimelineSub').text(PFI18n.t(byDay ? 'GoogleDrive.Js.Tx.TimelineDaily' : 'GoogleDrive.Js.Tx.TimelineMonthly',
                 { label: peak.label, amount: formatMoney(peak.total) }));
 
-            txChart = new Chart(document.getElementById('txTimelineChart').getContext('2d'), {
+            const config = {
                 type: 'bar',
                 data: {
                     labels: buckets.map((b) => { return b.label; }),
                     datasets: [{
                         label: PFI18n.t('GoogleDrive.Js.Spending'),
                         data: buckets.map((b) => { return b.total; }),
-                        backgroundColor: TX_COLORS.spend,
                         borderRadius: 4,
                         borderSkipped: 'start',
                         maxBarThickness: 28,
@@ -264,7 +298,6 @@
                     plugins: {
                         legend: { display: false },
                         tooltip: {
-                            backgroundColor: '#0b0b0b',
                             padding: 10,
                             cornerRadius: 8,
                             callbacks: {
@@ -279,18 +312,20 @@
                     scales: {
                         x: {
                             grid: { display: false },
-                            border: { color: TX_COLORS.axis },
-                            ticks: { color: TX_COLORS.muted, maxRotation: 0, autoSkip: true, autoSkipPadding: 12 }
+                            border: {},
+                            ticks: { maxRotation: 0, autoSkip: true, autoSkipPadding: 12 }
                         },
                         y: {
                             beginAtZero: true,
-                            grid: { color: TX_COLORS.grid },
+                            grid: {},
                             border: { display: false },
-                            ticks: { color: TX_COLORS.muted, maxTicksLimit: 5, callback: function (v) { return formatCompactCurrency(v); } }
+                            ticks: { maxTicksLimit: 5, callback: function (v) { return formatCompactCurrency(v); } }
                         }
                     }
                 }
-            });
+            };
+            themeTimeline(config, txChartColours());
+            txChart = new Chart(document.getElementById('txTimelineChart').getContext('2d'), config);
         }
 
         // ---------- Table & filters ----------

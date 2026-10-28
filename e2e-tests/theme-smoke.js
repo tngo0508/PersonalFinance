@@ -3,8 +3,9 @@
  * by mouse and keyboard, checks that the root's theme attributes follow each choice, that System follows an emulated
  * device colour scheme, that the choice survives a reload and sign-in, and that the avatar menu holds no theme items.
  * In dark mode it checks key text against its effective background (4.5:1) on the Landing Page, a sign-in page,
- * Account settings and the Net Worth help modal (slice #482), and that the Investment Calculator's chart restyles on a
- * theme switch without a reload (slice #483). Run from ui-test.js as Test 9j.
+ * Account settings and the Net Worth help modal (slice #482), and the Google Drive sample-data notice and Budget report
+ * modal (slice #484); and that the Investment Calculator's and the Budget report's charts restyle on a theme switch
+ * without a reload (slices #483, #484). Run from ui-test.js as Test 9j.
  *
  * Expected labels are read from Resources/i18n/en.json, so a rewording does not break the test.
  */
@@ -28,8 +29,16 @@ const CONTRAST_PAGES = {
     accountSettings: ['.account-page__title', '.account-page__subtitle', '.account-nav__link[aria-current="page"]',
         '.account-nav__link:not([aria-current="page"])', '.account-page__content .form-label'],
     modal: ['#nwHelpModal .modal-title', '#nwHelpModal .nw-text', '#nwHelpModal .nw-help-note__title',
-        '#nwHelpModal .modal-footer .btn']
+        '#nwHelpModal .modal-footer .btn'],
+    // Google Drive on sample data (#484): the sample-data notice, then the Budget report modal
+    googleDriveNotice: ['.gd-notice strong', '.gd-notice .small', '.gd-section-header__title'],
+    googleDriveReport: ['#monthlyBudgetModal .bgt-modal-title', '#monthlyBudgetModal .bgt-period-btn.active',
+        '#monthlyBudgetModal .bgt-period-btn:not(.active)', '#budgetPeriodTitle', '#budgetInsight',
+        '#monthlyBudgetModal .bgt-tile-label', '#monthlyBudgetModal .bgt-tile-value', '#monthlyBudgetModal .bgt-card-title']
 };
+
+// A folder link with no API key: the Google Drive page connects it on sample data
+const SAMPLE_FOLDER_URL = 'https://drive.google.com/drive/folders/e2e-theme-sample';
 
 const PASSWORD = 'TestPass1!';
 const BUTTON = '[data-theme-button]';
@@ -312,6 +321,73 @@ async function checkChartRestyles(page, base, report) {
 }
 
 /**
+ * The Google Drive Budget report's income-vs-spending chart, next to the tokens it should show.
+ * @param {import('playwright').Page} page - The Google Drive page with the report open.
+ * @returns {Promise<{theme: string, marker: boolean, grid: string|null, gridToken: string, income: string|null,
+ *     incomeToken: string}>}
+ */
+async function budgetChartState(page) {
+    return page.evaluate(() => {
+        const root = document.documentElement;
+        const style = getComputedStyle(root);
+        const chart = window.Chart && window.Chart.getChart('budgetMainChart');
+        const grid = chart ? chart.options.scales.y.grid.color : null;
+        return {
+            theme: root.getAttribute('data-theme'),
+            marker: window.__chartThemeCheck === true,
+            grid: typeof grid === 'function' ? grid({tick: {value: 1}}) : grid,
+            gridToken: style.getPropertyValue('--app-chart-grid').trim(),
+            income: chart ? chart.data.datasets[0].backgroundColor : null,
+            incomeToken: style.getPropertyValue('--app-chart-1').trim()
+        };
+    });
+}
+
+/**
+ * Does the Budget report's chart carry the theme's gridline and income colours?
+ * @param {object} state - From budgetChartState.
+ * @returns {boolean}
+ */
+function budgetChartMatchesTokens(state) {
+    const same = (a, b) => {
+        const x = a && parseColour(a);
+        const y = b && parseColour(b);
+        return Boolean(x && y) && x.r === y.r && x.g === y.g && x.b === y.b;
+    };
+    return same(state.grid, state.gridToken) && same(state.income, state.incomeToken);
+}
+
+/**
+ * Google Drive on sample data (#484): the sample-data notice and the Budget report modal are readable in dark mode,
+ * and the report's chart restyles on a theme switch without a reload. Leaves the page in dark mode.
+ * @param {import('playwright').Page} page - A signed-in page in dark mode.
+ * @param {string} base - The Web app's base URL.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+async function checkGoogleDrive(page, base, report) {
+    await page.goto(`${base}/GoogleDrive?folderUrl=${encodeURIComponent(SAMPLE_FOLDER_URL)}`,
+        {waitUntil: 'networkidle', timeout: TIMEOUT});
+    await checkDarkContrast(page, 'Google Drive sample data', CONTRAST_PAGES.googleDriveNotice, report);
+
+    await page.locator('.btn-budget-report').first().click();
+    await page.locator('#budgetReportContent:not(.d-none) #budgetPeriodTitle').waitFor({state: 'visible', timeout: TIMEOUT});
+    await checkDarkContrast(page, 'Google Drive Budget report', CONTRAST_PAGES.googleDriveReport, report);
+
+    await page.evaluate(() => { window.__chartThemeCheck = true; });
+    const dark = await budgetChartState(page);
+    check(dark.theme === 'dark' && budgetChartMatchesTokens(dark), 'Budget report: the chart shows the dark palette',
+        JSON.stringify(dark), report);
+    // The theme control sits in the top bar, behind the open modal, so the switch goes through the theme module
+    await page.evaluate(() => window.ThemeMode.setChoice('light'));
+    await waitForTheme(page, 'light');
+    const light = await budgetChartState(page);
+    check(light.theme === 'light' && light.marker && budgetChartMatchesTokens(light) && light.grid !== dark.grid,
+        'Budget report: switching to Light restyles the chart without a reload', JSON.stringify(light), report);
+    await page.evaluate(() => window.ThemeMode.setChoice('dark'));
+    await waitForTheme(page, 'dark');
+}
+
+/**
  * Register a fresh Account and make sure it is signed in.
  * @param {import('playwright').Page} page - A page in a signed-out context.
  * @param {string} base - The Web app's base URL.
@@ -384,6 +460,8 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         await page.click('.nw-help-btn');
         await page.locator('#nwHelpModal.show .modal-title').waitFor({state: 'visible', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Net Worth help modal', CONTRAST_PAGES.modal, report);
+        // Google Drive on sample data, with the Budget report modal open (#484)
+        await checkGoogleDrive(page, base, report);
         // A chart restyles on a theme switch (#483); leaving the page also closes the modal before the avatar menu check
         await checkChartRestyles(page, base, report);
 

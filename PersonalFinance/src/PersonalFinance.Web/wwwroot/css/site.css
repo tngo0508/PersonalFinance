@@ -59,6 +59,9 @@
     --app-warning-fill: #D89B26;
     --app-on-warning: #000000;
     --app-neutral-fill: var(--lp-muted);
+    /* Info wash: a notice, an active or hovered row (#484); and a hairline border for cards on a modal's plane */
+    --app-info-bg: #DEECF9;
+    --app-border-subtle: rgba(20, 40, 59, 0.10);
 
     /* Overlays and the shadows of floating surfaces */
     --app-toast-bg: rgba(255, 255, 255, 0.85);
@@ -68,6 +71,7 @@
     --app-shadow-dialog: 0 12px 32px rgba(0, 0, 0, 0.18);
     --app-shadow-banner: 0 -4px 12px rgba(0, 0, 0, 0.08);
     --app-shadow-positive: 0 2px 6px rgba(5, 150, 105, 0.15);
+    --app-shadow-positive-hover: 0 4px 12px rgba(5, 150, 105, 0.25);
 
     /* Charts: gridlines, axis text, the tooltip, and the categorical series (3:1 on the page and on a card) */
     --app-chart-grid: var(--app-border);
@@ -81,6 +85,8 @@
     --app-chart-4: #B42318;
     --app-chart-5: #6B4C9A;
     --app-chart-6: #2B7A89;
+    /* A label on a series' fill (the first two series) */
+    --app-on-chart: #FFFFFF;
 
     /* Minimal shadows — rules over elevation */
     --app-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -173,6 +179,8 @@
     --app-warning-text: #EBC774;
     --app-warning-fill: #E0B24A;
     --app-neutral-fill: #4A5966;
+    --app-info-bg: #15283A;
+    --app-border-subtle: rgba(230, 236, 239, 0.12);
 
     --app-toast-bg: rgba(26, 40, 51, 0.95);
     --app-overlay: rgba(0, 0, 0, 0.6);
@@ -181,6 +189,7 @@
     --app-shadow-dialog: 0 12px 32px rgba(0, 0, 0, 0.55);
     --app-shadow-banner: 0 -4px 12px rgba(0, 0, 0, 0.4);
     --app-shadow-positive: 0 2px 6px rgba(0, 0, 0, 0.3);
+    --app-shadow-positive-hover: 0 4px 12px rgba(0, 0, 0, 0.4);
 
     --app-chart-grid: #2A3A47;
     --app-chart-tooltip-bg: var(--lp-raised);
@@ -192,6 +201,7 @@
     --app-chart-4: #F0796B;
     --app-chart-5: #A98BDD;
     --app-chart-6: #4FC1D0;
+    --app-on-chart: var(--lp-paper);
 
     --app-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.3);
     --app-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.35);
@@ -370,7 +380,7 @@ table .text-end,
   box-shadow: var(--app-shadow-positive);
 }
 .gd-page .btn-success:hover {
-  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+  box-shadow: var(--app-shadow-positive-hover);
   /* hover effect removed */;
 }
 .gd-page .btn-warning {
@@ -1074,12 +1084,14 @@ hr {
    ========================================================================== */
 
 :root {
-  /* Google Drive page — Fluent UI aligned palette */
-  --gdrive-primary: var(--app-brand);
+  /* Google Drive page — Fluent UI aligned palette, on the app tokens so it follows the theme (#484).
+     --gdrive-primary fills behind a white label; --gdrive-primary-text is the green as text. */
+  --gdrive-primary: var(--app-brand-fill);
+  --gdrive-primary-text: var(--app-brand-text);
   --gdrive-primary-hover: var(--app-brand-hover);
-  --gdrive-primary-light: #deecf9;
-  --gdrive-primary-glow: rgba(29, 106, 80, 0.15);
-  --gdrive-secondary: #5c2d91;
+  --gdrive-primary-light: var(--app-info-bg);
+  --gdrive-primary-glow: color-mix(in srgb, var(--app-brand) 15%, transparent);
+  --gdrive-on-primary: var(--app-text-on-brand);
   --gdrive-accent: var(--app-brand);
   --gdrive-surface: var(--app-bg);
   --gdrive-surface-soft: var(--app-surface);
@@ -1089,13 +1101,6 @@ hr {
   --gdrive-text-main: var(--app-text);
   --gdrive-text-muted: var(--app-text-soft);
   --gdrive-text-faint: var(--app-text-muted);
-  --gdrive-folder-color: #d97706;
-  --gdrive-doc-color: var(--app-brand);
-  --gdrive-sheet-color: var(--app-accent-positive);
-  --gdrive-slide-color: #d97706;
-  --gdrive-pdf-color: var(--app-accent-negative);
-  --gdrive-image-color: #5c2d91;
-  --gdrive-archive-color: var(--app-text-soft);
   --gdrive-shadow-sm: var(--app-shadow-2);
   --gdrive-shadow-md: var(--app-shadow-4);
   --gdrive-shadow-lg: var(--app-shadow-8);
@@ -1142,7 +1147,7 @@ hr {
   height: 44px;
   border-radius: var(--app-radius-m);
   background: var(--gdrive-primary);
-  color: #fff;
+  color: var(--gdrive-on-primary);
 }
 .gd-page-header__subtitle {
   color: var(--gdrive-text-muted);
@@ -1223,11 +1228,11 @@ hr {
 }
 .gd-drive-link.active {
   background: var(--gdrive-primary-light);
-  color: var(--gdrive-primary);
+  color: var(--gdrive-primary-text);
   font-weight: var(--app-font-weight-semibold);
 }
 .gd-drive-link.active .gd-drive-link__icon {
-  color: var(--gdrive-primary);
+  color: var(--gdrive-primary-text);
 }
 .gd-drive-count {
   font-size: 0.75rem;
@@ -1239,7 +1244,7 @@ hr {
   background: var(--gdrive-surface-soft);
 }
 .gd-drive-link.active .gd-drive-count {
-  color: var(--gdrive-primary);
+  color: var(--gdrive-primary-text);
   background: var(--gdrive-primary-light);
 }
 .gd-status-dot {
@@ -1250,7 +1255,7 @@ hr {
   box-shadow: 0 0 0 2px var(--gdrive-surface);
 }
 .gd-status-dot--warning {
-  background: #f59e0b;
+  background: var(--app-warning-fill);
   animation: gd-pulse 2s ease-in-out infinite;
 }
 @keyframes gd-pulse {
@@ -1277,13 +1282,13 @@ hr {
 .gd-connect-drive-btn:hover {
   background: var(--gdrive-surface-soft);
   border-color: var(--gdrive-primary);
-  color: var(--gdrive-primary);
+  color: var(--gdrive-primary-text);
 }
 .gd-connect-drive-btn.active {
   background: var(--gdrive-primary-light);
   border-color: var(--gdrive-primary);
   border-style: solid;
-  color: var(--gdrive-primary);
+  color: var(--gdrive-primary-text);
   font-weight: var(--app-font-weight-semibold);
 }
 
@@ -1314,12 +1319,12 @@ hr {
   margin-bottom: 1.25rem;
 }
 .gd-alert--danger {
-  background: #fde7e9;
+  background: var(--app-negative-bg);
   border: 1px solid var(--app-accent-negative);
-  color: #a02020;
+  color: var(--app-negative-text);
 }
 .gd-alert__icon {
-  color: #b91c1c;
+  color: var(--app-negative-text);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -1348,7 +1353,7 @@ hr {
   height: 48px;
   border-radius: var(--app-radius-m);
   background: var(--gdrive-primary);
-  color: #fff;
+  color: var(--gdrive-on-primary);
   flex-shrink: 0;
 }
 .gd-connect-card__title {
@@ -1378,7 +1383,7 @@ hr {
   color: var(--gdrive-text-muted) !important;
 }
 .gd-advanced-toggle:hover {
-  color: var(--gdrive-primary) !important;
+  color: var(--gdrive-primary-text) !important;
 }
 
 /* --- Omnibox --- */
@@ -1417,7 +1422,7 @@ hr {
   height: 2rem;
   border-radius: var(--app-radius-s);
   background: var(--gdrive-primary);
-  color: #fff;
+  color: var(--gdrive-on-primary);
   font-size: 0.85rem;
   font-weight: var(--app-font-weight-semibold);
   display: flex;
@@ -1525,7 +1530,7 @@ hr {
   padding: 0 8px;
   border-radius: var(--app-radius-s);
   background: var(--gdrive-primary);
-  color: #fff;
+  color: var(--gdrive-on-primary);
   font-size: 0.75rem;
   font-weight: var(--app-font-weight-semibold);
 }
@@ -1540,7 +1545,7 @@ hr {
   padding: 5px 14px;
   border: 1px solid var(--gdrive-border);
   background: var(--gdrive-surface);
-  color: var(--gdrive-primary);
+  color: var(--gdrive-primary-text);
   font-size: 0.875rem;
   font-weight: var(--app-font-weight-semibold);
   cursor: pointer;
@@ -1627,7 +1632,7 @@ hr {
   padding: 0 8px;
   border-radius: var(--app-radius-s);
   background: var(--gdrive-primary);
-  color: #fff;
+  color: var(--gdrive-on-primary);
   font-size: 0.75rem;
   font-weight: var(--app-font-weight-semibold);
 }
@@ -1657,7 +1662,7 @@ hr {
 }
 .gd-view-toggle .btn.active {
   background: var(--gdrive-primary);
-  color: #fff;
+  color: var(--gdrive-on-primary);
 }
 .gd-view-toggle .btn:hover:not(.active) {
   background: var(--gdrive-surface-soft);
@@ -1690,7 +1695,7 @@ hr {
 }
 .gdrive-filter-chip.active {
   background: var(--gdrive-primary);
-  color: #fff;
+  color: var(--gdrive-on-primary);
   border-color: transparent;
   font-weight: var(--app-font-weight-semibold);
 }
@@ -1698,13 +1703,13 @@ hr {
   font-size: 0.6875rem;
   padding: 2px 8px;
   border-radius: var(--app-radius-s);
-  background: rgba(0, 0, 0, 0.06);
+  background: color-mix(in srgb, var(--app-text) 6%, transparent);
   line-height: 1.6;
   font-weight: var(--app-font-weight-semibold);
 }
 .gdrive-filter-chip.active .chip-count {
-  background: rgba(255, 255, 255, 0.25);
-  color: #fff;
+  background: color-mix(in srgb, var(--gdrive-on-primary) 25%, transparent);
+  color: var(--gdrive-on-primary);
 }
 
 /* --- File Grid Cards --- */
@@ -1770,23 +1775,6 @@ hr {
 .gdrive-table tbody tr:hover {
   background-color: var(--gdrive-primary-light) !important;
 }
-
-/* --- Badges --- */
-.gdrive-badge-soft {
-  font-size: 0.75rem;
-  font-weight: var(--app-font-weight-semibold);
-  padding: 2px 8px;
-  border-radius: var(--app-radius-s);
-}
-.gdrive-badge-folder { background-color: #fef3c7; color: #92400e; }
-.gdrive-badge-doc { background-color: #dbeafe; color: #1d4ed8; }
-.gdrive-badge-sheet { background-color: #dcfce7; color: #166534; }
-.gdrive-badge-slide { background-color: #fef3c7; color: #92400e; }
-.gdrive-badge-pdf { background-color: #fee2e2; color: #991b1b; }
-.gdrive-badge-image { background-color: #f3e8ff; color: #6b21a8; }
-.gdrive-badge-video { background-color: #e0f2fe; color: #075985; }
-.gdrive-badge-archive { background-color: #f1f5f9; color: var(--app-text-soft); }
-.gdrive-badge-generic { background-color: #f1f5f9; color: var(--app-text-soft); }
 
 /* --- Empty State --- */
 .gd-empty-state {
@@ -1860,7 +1848,7 @@ hr {
 }
 .gd-search .form-control:focus + svg,
 .gd-search:focus-within svg {
-  color: var(--gdrive-primary);
+  color: var(--gdrive-primary-text);
 }
 
 /* --- Chip Row --- */
@@ -1906,8 +1894,8 @@ hr {
   gap: 4px;
   padding: 2px 8px;
   border-radius: var(--app-radius-s);
-  background: #dff6dd;
-  color: #006300;
+  background: var(--app-positive-bg);
+  color: var(--app-positive-text);
   font-size: 0.75rem;
   font-weight: var(--app-font-weight-semibold);
   flex-shrink: 0;
@@ -1916,14 +1904,14 @@ hr {
 
 /* --- Sync Status Badges --- */
 .gd-meta-badge--fresh {
-  color: #006300;
-  background: #dff6dd;
+  color: var(--app-positive-text);
+  background: var(--app-positive-bg);
   border-color: var(--app-accent-positive);
 }
 .gd-meta-badge--stale {
-  color: #8a5a00;
-  background: #fff4ce;
-  border-color: #d89b26;
+  color: var(--app-warning-text);
+  background: var(--app-warning-bg);
+  border-color: var(--app-warning-fill);
 }
 
 /* --- URL Hint --- */
@@ -1963,7 +1951,7 @@ hr {
   padding: 4px 0;
 }
 .gd-help-section__title:hover {
-  color: var(--gdrive-primary);
+  color: var(--gdrive-primary-text);
 }
 .gd-help-section__title svg {
   flex-shrink: 0;
@@ -1972,7 +1960,7 @@ hr {
   transition: color 0.1s ease, opacity 0.1s ease;
 }
 .gd-help-section__title:hover svg {
-  color: var(--gdrive-primary);
+  color: var(--gdrive-primary-text);
   opacity: 1;
 }
 .gd-help-section .accordion-collapse {
@@ -2064,26 +2052,30 @@ hr {
    Colors from the validated data-viz palette; status colors always ship with icon + label.
    ========================================== */
 .bgt-root {
-  /* Budget modal — Fluent UI aligned palette */
-  --bgt-surface: #ffffff;
+  /* Budget modal — Fluent UI aligned palette, on the app tokens so it follows the theme (#484). Income, spending
+     and overspent are the chart palette's colours (core/chart-palette.js), so the swatches match the charts. */
+  --bgt-surface: var(--app-surface-raised);
   --bgt-plane: var(--app-surface);
   --bgt-ink: var(--app-text);
   --bgt-ink-2: var(--app-text-soft);
   --bgt-muted: var(--app-text-muted);
   --bgt-grid: var(--app-border);
-  --bgt-border: rgba(20, 40, 59, 0.10);
+  --bgt-border: var(--app-border-subtle);
   --bgt-hover: var(--app-surface-secondary);
-  --bgt-income: var(--app-brand);
-  --bgt-spend: #d83b01;
-  --bgt-negative: var(--app-accent-negative);
+  --bgt-income: var(--app-chart-1);
+  --bgt-spend: var(--app-chart-2);
+  --bgt-on-series: var(--app-on-chart);
+  --bgt-negative: var(--app-negative-fill);
   --bgt-meter-track: var(--app-surface-secondary);
   --bgt-meter-ok: var(--app-text-soft);
   --bgt-good: var(--app-accent-positive);
-  --bgt-good-text: #006300;
-  --bgt-warning: #d89b26;
-  --bgt-warning-text: #8a5a00;
-  --bgt-critical: var(--app-accent-negative);
-  --bgt-critical-text: #a02020;
+  --bgt-good-text: var(--app-positive-text);
+  --bgt-warning: var(--app-warning-fill);
+  --bgt-warning-text: var(--app-warning-text);
+  --bgt-on-warning: var(--app-on-warning);
+  --bgt-critical: var(--app-negative-fill);
+  --bgt-critical-text: var(--app-negative-text);
+  --bgt-on-fill: var(--app-text-on-brand);
 }
 
 .bgt-ink { color: var(--bgt-ink); }
@@ -2132,7 +2124,7 @@ hr {
   justify-content: center;
   font-weight: 700;
   font-size: 1.25rem;
-  color: #fff;
+  color: var(--bgt-on-fill);
   background: var(--bgt-critical);
 }
 
@@ -2177,7 +2169,7 @@ hr {
 .bgt-nav-btn:disabled { opacity: 0.35; }
 .bgt-period-btn--year { font-weight: 600; }
 .bgt-period-btn.active,
-.bgt-period-btn.active:hover { background: var(--bgt-ink); color: #fff; }
+.bgt-period-btn.active:hover { background: var(--bgt-ink); color: var(--bgt-surface); }
 .bgt-period-btn:focus-visible,
 .bgt-nav-btn:focus-visible { outline: 2px solid var(--bgt-income); outline-offset: 1px; }
 
@@ -2297,7 +2289,7 @@ hr {
   align-items: center;
   min-width: 0;
   padding: 0 10px;
-  color: #fff;
+  color: var(--bgt-on-series);
   font-size: 0.8125rem;
   font-weight: 600;
   white-space: nowrap;
@@ -2308,12 +2300,12 @@ hr {
 }
 .bgt-alloc-seg--spend { background: var(--bgt-spend); }
 .bgt-alloc-seg--save { background: var(--bgt-income); }
-/* Hatched so "overspent" doesn't rely on color alone next to the orange segment */
+/* "Overspent" is labelled, so it doesn't rely on colour alone next to the spending segment */
 .bgt-alloc-seg--over,
 .bgt-swatch--over {
   background: var(--bgt-negative);
 }
-.bgt-alloc-seg--over { color: var(--bgt-ink); }
+.bgt-alloc-seg--over { color: var(--bgt-on-fill); }
 
 /* Highlights row */
 .bgt-facts {
@@ -2515,12 +2507,12 @@ hr {
   justify-content: center;
   font-size: 0.625rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--bgt-on-fill);
 }
 .bgt-status--good { color: var(--bgt-good-text); }
 .bgt-status--good .bgt-status-icon { background: var(--bgt-good); }
 .bgt-status--warning { color: var(--bgt-warning-text); }
-.bgt-status--warning .bgt-status-icon { background: var(--bgt-warning); color: var(--bgt-ink); }
+.bgt-status--warning .bgt-status-icon { background: var(--bgt-warning); color: var(--bgt-on-warning); }
 .bgt-status--critical { color: var(--bgt-critical-text); }
 .bgt-status--critical .bgt-status-icon { background: var(--bgt-critical); }
 
@@ -2600,7 +2592,7 @@ hr {
   body.bgt-printing .modal-dialog-scrollable .modal-content,
   body.bgt-printing .modal-dialog-scrollable .modal-body { max-height: none !important; overflow: visible !important; }
   body.bgt-printing .modal-backdrop { display: none !important; }
-  body.bgt-printing #budgetReportPrintArea { background: #fff; padding: 0 !important; }
+  body.bgt-printing #budgetReportPrintArea { background: var(--bgt-surface); padding: 0 !important; }
   body.bgt-printing .bgt-toolbar,
   body.bgt-printing #budgetKeyboardHint,
   body.bgt-printing #btnToggleBudgetTable { display: none !important; }
