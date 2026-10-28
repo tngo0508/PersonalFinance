@@ -94,6 +94,13 @@ late run's timeout is cut so that it ends by 19:00. Trigger it by hand at any ti
   as every check on its head commit has finished, none failed, and the release check and `claude-review` both passed.
   A failing check or a draft waits for a human. The merge deploys like any other. This needs the `AGENT_GH_TOKEN`
   secret, because a merge made with `GITHUB_TOKEN` would not trigger the deploy or the Release.
+- **Translates**: `.github/workflows/i18n-translate.yml` runs on every PR from a branch of this repository, drafts the
+  missing or stale Vietnamese with `npm run i18n:translate` and pushes it to the PR branch as `i18n: translate N keys
+  (vi)`, with `AGENT_GH_TOKEN` so the PR workflows re-run on that commit. Its `Translate (i18n)` check is required by
+  Agent Auto-Merge. The agent adds English keys only and never gets the Translator key (secret `AZURE_TRANSLATOR_KEY`,
+  variable `AZURE_TRANSLATOR_REGION`): the key goes to that one deterministic step, in no Claude step, so a malicious
+  issue cannot leak it. A fork PR gets no secrets and is skipped with a passing check. A placeholder mismatch fails
+  the check and waits for a hand correction to `vi.json`.
 - **Rebases first**: before picking a ticket, a run looks for an open, non-draft `agent/issue-*` PR that now
   conflicts with `main`. That usually happens because a sibling merged and both PRs touched `AppVersion` and
   `CHANGELOG.md`. Rebasing it is the whole run, even when the open-PR cap is full. The agent re-bumps to the next

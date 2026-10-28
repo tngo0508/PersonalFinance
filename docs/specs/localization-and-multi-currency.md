@@ -93,8 +93,10 @@ calculator feature.
   `AZURE_TRANSLATOR_REGION`, `AZURE_TRANSLATOR_ENDPOINT` in the git-ignored `.env` locally and as a GitHub Actions secret
   plus two variables. The running containers never see the key. OpenAI is not used for translation.
 - **Script:** `npm run i18n:translate`, a Node script in `PersonalFinance.Web/tools/` with a Node test (pattern:
-  `check-publish.js` / `check-publish.test.js`). Run by the author or agent inside the feature PR and committed as its own
-  commit, `i18n: translate N keys (vi)`. CI never writes translations.
+  `check-publish.js` / `check-publish.test.js`). The `i18n Translate` workflow (`.github/workflows/i18n-translate.yml`)
+  runs it on every PR from a branch of this repository and pushes the result to the PR branch as its own commit,
+  `i18n: translate N keys (vi)`, with `AGENT_GH_TOKEN`; Agent Auto-Merge requires its check. Authors may also run it
+  locally. The key is given to that one step only, never to a Claude step, and fork PRs are skipped.
 - **Stale detection:** `Resources/i18n/i18n.lock.json` records, per language and key, a hash of the English text it was
   translated from. The script sends keys that are missing or whose English hash changed, nothing else. Hand corrections
   survive until the English changes; then machine output overwrites and the PR diff is the safety net. No review pins.

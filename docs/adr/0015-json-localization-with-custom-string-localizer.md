@@ -22,7 +22,9 @@ JSON with a custom localizer. Decided in Wayfinder map #335 (tickets #338, #340,
    malformed JSON or a placeholder mismatch does fail CI.
 4. **Translations are machine-drafted in the feature PR** by `npm run i18n:translate`, which sends only missing or stale
    keys (tracked by a hash of the English source in `i18n.lock.json`) to Azure AI Translator and commits the result for
-   review. OpenAI is not used for this.
+   review. The `i18n Translate` workflow runs it on every PR from a branch of this repository and pushes the commit
+   itself, so authors and the ticket agent add English keys only and never hand-type Vietnamese; the Translator key
+   reaches that one step and no Claude step. OpenAI is not used for this.
 5. **JS receives its strings inline per page**, as a JSON island read by one core module, never a fetched bundle.
 
 ## Considered Options

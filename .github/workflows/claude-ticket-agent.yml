@@ -231,6 +231,10 @@ jobs:
               why on the issue, then `gh issue edit ${{ env.ISSUE }} --remove-label ready-for-agent --add-label ready-for-human`,
               and stop without opening a PR. With that label, generate the migration and inspect it, never apply it,
               and flag it in bold at the top of the PR body.
+            - User-facing text: add keys to `Resources/i18n/en.json` only. Never edit `vi.json` or `i18n.lock.json`,
+              never hand-type Vietnamese, and never run the translator (`i18n:translate`; this runner has no Translator
+              key). The i18n Translate workflow drafts the Vietnamese on your PR after you push, so never open a draft
+              or wait because of translation.
 
             Implement (pick -> implement -> code review -> open PR, in that order):
             1. Implement with the tdd and dotnet-feature-workflow skills. Commit to `${{ env.BRANCH }}`.
