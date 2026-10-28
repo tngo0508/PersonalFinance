@@ -3,6 +3,8 @@
 @{
     ViewData["Title"] = L["Account.ExternalLogin.Title"].Value;
     Func<object?, HelperResult> provider = @<strong>@Model.ProviderDisplayName</strong>;
+    Func<object?, HelperResult> termsLink = @<a asp-area="" asp-controller="Legal" asp-action="Terms" target="_blank" rel="noopener">@L["Account.Register.TermsLink"]</a>;
+    Func<object?, HelperResult> privacyLink = @<a asp-area="" asp-controller="Legal" asp-action="Privacy" target="_blank" rel="noopener">@L["Account.Register.PrivacyLink"]</a>;
 }
 
 <div class="auth-page__header mb-5">
@@ -12,7 +14,14 @@
 
 <div class="auth-page__form">
     <div class="alert alert-info small" role="alert">
-        @L.NamedHtml("Account.ExternalLogin.Authenticated", null, ("provider", provider(null)))
+        @if (Model.EmailFromProvider)
+        {
+            @L.NamedHtml("Account.ExternalLogin.AuthenticatedAcceptTerms", null, ("provider", provider(null)))
+        }
+        else
+        {
+            @L.NamedHtml("Account.ExternalLogin.Authenticated", null, ("provider", provider(null)))
+        }
     </div>
 
     <form asp-page-handler="Confirmation" asp-route-returnUrl="@Model.ReturnUrl" method="post">
@@ -20,9 +29,24 @@
 
         <div class="mb-4">
             <label asp-for="Input.Email" class="form-label">@L["Identity.Field.Email"]</label>
-            <input asp-for="Input.Email" class="form-control" autocomplete="email" aria-required="true"
-                   placeholder="name@example.com"/>
+            @if (Model.EmailFromProvider)
+            {
+                <input asp-for="Input.Email" class="form-control" autocomplete="email" readonly/>
+            }
+            else
+            {
+                <input asp-for="Input.Email" class="form-control" autocomplete="email" aria-required="true"
+                       placeholder="name@example.com"/>
+            }
             <span asp-validation-for="Input.Email" class="invalid-feedback"></span>
+        </div>
+
+        <div class="mb-4 form-check">
+            <input asp-for="Input.AcceptTerms" class="form-check-input" type="checkbox" required />
+            <label asp-for="Input.AcceptTerms" class="form-check-label">
+                @L.NamedHtml("Account.Register.AcceptTerms", null, ("termsLink", termsLink(null)), ("privacyLink", privacyLink(null)))
+            </label>
+            <span asp-validation-for="Input.AcceptTerms" class="invalid-feedback"></span>
         </div>
 
         <button type="submit" class="w-100 btn btn-primary btn-lg">@L["Account.ExternalLogin.Submit"]</button>

@@ -10,15 +10,18 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Web.Areas.Identity.Pages.Account;
+using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Tests.TestSupport;
 
 /// <summary>
 /// The real <see cref="ExternalLoginModel"/> over a real <see cref="UserManager{TUser}"/> on InMemory, receiving a
 /// Google sign-in callback for <see cref="Email"/>. The Account the callback meets is described by
-/// <see cref="Options"/>; sign-ins are counted instead of writing a cookie. Identity is registered with roles, as
+/// <see cref="Options"/>; sign-ins are counted instead of writing a cookie, and consent is recorded by the real
+/// <see cref="UserConsentService"/> in <see cref="Db"/>. Identity is registered with roles, as
 /// <c>Program.cs</c> does, and the default <see cref="AppRoles.User"/> role exists.
 /// </summary>
 public sealed class ExternalLoginCallbackHarness : IAsyncDisposable
@@ -47,6 +50,9 @@ public sealed class ExternalLoginCallbackHarness : IAsyncDisposable
     public UserManager<IdentityUser> UserManager { get; }
 
     public CallbackSignInManager SignInManager { get; }
+
+    /// <summary>The InMemory database behind Identity, holding the <c>UserConsent</c> rows.</summary>
+    public AppDbContext Db => _identity.Services.GetRequiredService<AppDbContext>();
 
     public ExternalLoginModel Page { get; }
 
@@ -111,7 +117,8 @@ public sealed class ExternalLoginCallbackHarness : IAsyncDisposable
         var page = new ExternalLoginModel(signInManager, userManager,
             sp.GetRequiredService<IUserStore<IdentityUser>>(),
             NullLogger<ExternalLoginModel>.Instance, new RecordingAccountEmailService(),
-            new InMemoryUserPreferenceService(), TestLocalization.Localizer)
+            new InMemoryUserPreferenceService(), new UserConsentService(sp.GetRequiredService<AppDbContext>()),
+            TestLocalization.Localizer)
         {
             PageContext = new PageContext { HttpContext = httpContext },
             Url = new ContentUrlHelper(new ActionContext(httpContext, new RouteData(), new ActionDescriptor()))
