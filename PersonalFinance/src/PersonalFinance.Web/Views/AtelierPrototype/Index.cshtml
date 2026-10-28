@@ -1,0 +1,443 @@
+@* PROTOTYPE (#496) - throwaway. Three structurally different Atelier looks on /AtelierPrototype?variant=A|B|C.
+   Stub content only (sample text, not reviewed), nothing persists, Development only. Do not merge to main.
+   State shown: Lesson 1 finished yesterday, Lesson 2 "Borrow wisely" open today, Lessons 3-6 locked. *@
+@model string
+
+@{
+    ViewData["Title"] = "Atelier (prototype)";
+    string variant = Model;
+
+    var lessons = new[]
+    {
+        new Lesson(1, "Build a cushion", "🫙", "Coin jar", "Savings Goals", "/SavingsGoals", new[] { "Emergency fund", "Compound interest" }),
+        new Lesson(2, "Borrow wisely", "📒", "Ledger", "Budget", "/Budget", new[] { "APR", "Credit score" }),
+        new Lesson(3, "Own a piece", "🌱", "Seedling", "Research", "/Research", new[] { "Stock", "Diversification" }),
+        new Lesson(4, "Invest the easy way", "🧺", "Basket", "Net Worth", "/Networth", new[] { "ETF", "Index fund" }),
+        new Lesson(5, "Keep more of it", "🔑", "Brass key", "Net Worth", "/Networth", new[] { "Capital gains tax", "Roth IRA" }),
+        new Lesson(6, "Know the sharp tools", "🧭", "Compass", "Research", "/Research", new[] { "Margin interest", "Short selling" }),
+    };
+    const int today = 2;
+
+    var apr = new Entry("Annual percentage rate", "APR", "lãi suất phần trăm hằng năm", "Borrowing & credit",
+        "The yearly cost of borrowing money, shown as a percent.",
+        new[]
+        {
+            "APR means annual percentage rate. It shows how much a loan or a credit card costs in one year.",
+            "It includes the interest and some fees. A lower APR means the loan costs less.",
+            "APR helps you compare two loans of the same type."
+        },
+        "Two loans can have the same monthly payment but a different APR. The one with the higher APR costs more in total. Credit cards often have a high APR, so a balance you do not repay grows fast.",
+        "You owe $1,000 on a card with a 24% APR. You repay nothing for a year. You pay about $240 in interest, or more.",
+        "Lenders must show the APR before you sign. This comes from the Truth in Lending rules.",
+        "Banks show a yearly interest rate (lãi suất năm). Ask if fees are included in it.",
+        new[] { "CFPB, What is APR? (accessed 27 Oct 2026)", "SBV, interest rate notices (accessed 27 Oct 2026)" },
+        new[] { "Credit score", "Compound interest", "Margin interest" });
+
+    var score = new Entry("Credit score", null, "điểm tín dụng", "Borrowing & credit",
+        "A number that shows lenders how well you repaid money before.",
+        new[]
+        {
+            "A credit score is a number based on your borrowing history.",
+            "A higher score means lenders see less risk. It goes up when you repay on time.",
+            "It goes down when you pay late or use too much of your credit limit."
+        },
+        "A good score can give you a lower APR. Over many years, a lower APR can save you a lot of money.",
+        "Two people borrow $20,000 for a car, for 5 years. One gets a 6% APR. The other gets 12%. The second person pays about $3,500 more in interest.",
+        "Many scores go from 300 to 850. You can see your credit report for free.",
+        "The National Credit Information Center (CIC) keeps credit reports and scores.",
+        new[] { "CFPB, What is a credit score? (accessed 27 Oct 2026)", "CIC, About us (accessed 27 Oct 2026)" },
+        new[] { "APR", "Emergency fund" });
+
+    var lessonEntries = new[] { apr, score };
+
+    var review = new[]
+    {
+        new Card("Emergency fund", "quỹ khẩn cấp", "Money you keep aside only for surprises, like losing your job."),
+        new Card("Compound interest", "lãi kép", "Interest you earn on your savings and on earlier interest."),
+    };
+
+    var check = new[]
+    {
+        new Question("Myth or fact", "A higher APR means a loan costs less.", new[] { "Myth", "Fact" }, 0,
+            "Myth. A higher APR means the loan costs more each year."),
+        new Question("What happens next", "Nam pays his card bill late three months in a row. What happens to his credit score?",
+            new[] { "It goes up", "It goes down", "It stays the same" }, 1,
+            "It goes down. Late payments are a common reason scores fall."),
+        new Question("Myth or fact", "Checking your own credit score lowers it.", new[] { "Myth", "Fact" }, 0,
+            "Myth. Checking your own score is a soft check. It does not change your score."),
+    };
+
+    var library = new[]
+    {
+        new Card("Emergency fund", "quỹ khẩn cấp", "Saving & banking"),
+        new Card("Compound interest", "lãi kép", "Saving & banking"),
+        new Card("APR", "lãi suất phần trăm hằng năm", "Borrowing & credit"),
+        new Card("Credit score", "điểm tín dụng", "Borrowing & credit"),
+        new Card("Margin interest", "lãi vay ký quỹ", "Borrowing & credit"),
+        new Card("Stock", "cổ phiếu", "Investing basics"),
+        new Card("ETF", "quỹ hoán đổi danh mục", "Investing basics"),
+        new Card("Index fund", "quỹ chỉ số", "Investing basics"),
+        new Card("Diversification", "đa dạng hóa", "Investing basics"),
+        new Card("Short selling", "bán khống", "Trading"),
+        new Card("Capital gains tax", "thuế lãi vốn", "Tax"),
+        new Card("Roth IRA", "tài khoản hưu trí Roth IRA", "Retirement"),
+    };
+    string[] topics = { "Saving & banking", "Borrowing & credit", "Investing basics", "Trading", "Tax", "Retirement" };
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/atelier-prototype.css" asp-append-version="true" />
+}
+
+@{
+    void Status(Lesson l)
+    {
+        if (l.Day < today)
+        {
+            <span class="atl-status is-done">Finished</span>
+        }
+        else if (l.Day == today)
+        {
+            <span class="atl-status is-today" data-atl-today-status>Today</span>
+        }
+        else if (l.Day == today + 1)
+        {
+            <span class="atl-status is-locked" data-atl-next-status>Opens after Lesson @today</span>
+        }
+        else
+        {
+            <span class="atl-status is-locked">Locked</span>
+        }
+    }
+
+    void Keepsakes(string css)
+    {
+        <ul class="atl-keepsakes @css" aria-label="Your desk">
+            @foreach (Lesson l in lessons)
+            {
+                bool done = l.Day < today;
+                <li class="atl-keepsake @(done ? "is-placed" : "")" data-atl-keepsake="@l.Day" title="@(done ? l.KeepsakeName : "Empty spot")">
+                    <span class="atl-keepsake-icon" aria-hidden="true">@(done ? l.Keepsake : "")</span>
+                    <span class="visually-hidden">@(done ? l.KeepsakeName : "Empty spot")</span>
+                </li>
+            }
+        </ul>
+    }
+
+    void Review()
+    {
+        <section class="atl-review" aria-labelledby="atl-review-h">
+            <h3 id="atl-review-h" class="atl-kicker">Review · from Lesson 1</h3>
+            <p class="atl-hint">Think of the meaning, then turn the card.</p>
+            <div class="atl-cards">
+                @foreach (Card c in review)
+                {
+                    <div class="atl-card" data-atl-card>
+                        <button type="button" class="atl-card-face" data-atl-flip aria-label="Turn the card for @c.Term">
+                            <span class="atl-card-front">@c.Term</span>
+                            <span class="atl-card-back">
+                                <span>@c.Detail</span>
+                                <span class="atl-vi">@c.Vi</span>
+                            </span>
+                        </button>
+                        <div class="atl-card-mark" hidden>
+                            <button type="button" class="atl-chip" data-atl-mark="Knew it">Knew it</button>
+                            <button type="button" class="atl-chip" data-atl-mark="Not yet">Not yet</button>
+                        </div>
+                    </div>
+                }
+            </div>
+            <button type="button" class="atl-link" data-atl-skip>Skip the review</button>
+        </section>
+    }
+
+    void TermEntry(Entry e)
+    {
+        <article class="atl-entry" id="entry-@e.Aka-@e.Term.Length">
+            <header>
+                <p class="atl-topic">@e.Topic</p>
+                <h3 class="atl-term">@e.Term @if (e.Aka is not null) { <span class="atl-aka">(@e.Aka)</span> }</h3>
+                <p class="atl-vi">@e.Vi</p>
+                <p class="atl-oneline">@e.OneLine</p>
+            </header>
+            @foreach (string p in e.Explanation)
+            {
+                <p>@p</p>
+            }
+            <h4>Why it matters</h4>
+            <p>@e.Why</p>
+            <h4>Example</h4>
+            <p class="atl-example">@e.Example</p>
+            <div class="atl-notes">
+                <div class="atl-note"><strong>In the US</strong><p>@e.Us</p></div>
+                <div class="atl-note"><strong>In Vietnam</strong><p>@e.Vn</p></div>
+            </div>
+            <footer class="atl-entry-foot">
+                <p><strong>Related:</strong> @string.Join(" · ", e.Related)</p>
+                <p><strong>Sources:</strong> @string.Join("; ", e.Sources)</p>
+                <p class="atl-small">Last reviewed 27 Oct 2026 · Educational only, not advice. <a href="/Legal/Disclaimer">Disclaimer</a></p>
+            </footer>
+        </article>
+    }
+
+    void Check()
+    {
+        <section class="atl-check" data-atl-check aria-labelledby="atl-check-h">
+            <h3 id="atl-check-h" class="atl-kicker">Check · 3 questions</h3>
+            <p class="atl-hint">No score. Answer each one to finish today's Lesson.</p>
+            @for (int i = 0; i < check.Length; i++)
+            {
+                Question q = check[i];
+                <div class="atl-q" data-atl-q data-correct="@q.Correct">
+                    <p class="atl-q-format">@q.Format</p>
+                    <p class="atl-q-prompt">@q.Prompt</p>
+                    <div class="atl-q-options">
+                        @for (int o = 0; o < q.Options.Length; o++)
+                        {
+                            <button type="button" class="atl-option" data-atl-option="@o">@q.Options[o]</button>
+                        }
+                    </div>
+                    <p class="atl-q-explain" hidden>@q.Explanation</p>
+                </div>
+            }
+        </section>
+    }
+
+    void TryIt(Lesson l)
+    {
+        <aside class="atl-tryit">
+            <p class="atl-kicker">Try it</p>
+            <p>See how repayments fit your month in <a href="@l.TryHref">@l.TryLabel</a>.</p>
+        </aside>
+    }
+
+    void Finished()
+    {
+        <div class="atl-finished" data-atl-finished hidden>
+            <p class="atl-kicker">Lesson 2 finished</p>
+            <p>A ledger is now on your desk. Lesson 3, <em>Own a piece</em>, opens tomorrow.</p>
+        </div>
+    }
+}
+
+<div class="atl atl-variant-@variant.ToLowerInvariant()" data-atl>
+    <p class="atl-proto-note">Prototype · sample text, not reviewed · state: Lesson 1 finished, Lesson 2 today</p>
+
+    @if (variant == "A")
+    {
+        @* A - Writing desk: Journey as index cards along the top of a desk, today's Lesson as an open notebook,
+           Library as a card-catalogue drawer with Topic tabs. *@
+        <header class="atl-a-head">
+            <div>
+                <h1 class="atl-title">The Atelier</h1>
+                <p class="atl-sub">A quiet desk for learning money words, one Lesson a day.</p>
+            </div>
+            @{ Keepsakes("atl-a-shelf"); }
+        </header>
+
+        <ol class="atl-a-journey" aria-label="Journey">
+            @foreach (Lesson l in lessons)
+            {
+                <li class="atl-a-index @(l.Day == today ? "is-today" : l.Day < today ? "is-done" : "is-locked")">
+                    <span class="atl-a-day">Day @l.Day</span>
+                    <span class="atl-a-name">@l.Title</span>
+                    @{ Status(l); }
+                </li>
+            }
+        </ol>
+
+        <section class="atl-a-notebook" aria-label="Today's Lesson">
+            <div class="atl-a-page atl-a-left">
+                <p class="atl-kicker">Lesson 2 · about 5 minutes</p>
+                <h2 class="atl-lesson-title">Borrow wisely</h2>
+                <p class="atl-intro">Borrowing is normal. What matters is the cost. Today you learn how lenders show that cost, and how they decide what to offer you.</p>
+                @{ Review(); }
+                @{ Check(); }
+                @{ TryIt(lessons[1]); }
+                @{ Finished(); }
+            </div>
+            <div class="atl-a-page atl-a-right">
+                @foreach (Entry e in lessonEntries)
+                {
+                    TermEntry(e);
+                }
+            </div>
+        </section>
+
+        <section class="atl-a-drawer" aria-labelledby="atl-a-lib">
+            <h2 id="atl-a-lib" class="atl-section-title">Library</h2>
+            <div class="atl-a-tabs" role="tablist">
+                @for (int t = 0; t < topics.Length; t++)
+                {
+                    <button type="button" role="tab" class="atl-a-tab" aria-selected="@(t == 1 ? "true" : "false")" data-atl-tab="@topics[t]">@topics[t]</button>
+                }
+            </div>
+            <div class="atl-a-catalogue">
+                @foreach (Card c in library)
+                {
+                    <div class="atl-a-catcard" data-atl-topic="@c.Detail" @(c.Detail == topics[1] ? "" : "hidden")>
+                        <span class="atl-a-catterm">@c.Term</span>
+                        <span class="atl-vi">@c.Vi</span>
+                    </div>
+                }
+            </div>
+        </section>
+    }
+    else if (variant == "B")
+    {
+        @* B - Reading journal: one calm, narrow column; the Lesson is walked step by step (Review, Read, Check, Try it);
+           Journey as a table of contents; Library as an A-Z index at the back. *@
+        <div class="atl-b-column">
+            <header class="atl-b-head">
+                <p class="atl-kicker">Your Journey · Day 2 of 6</p>
+                <h1 class="atl-title">Borrow wisely</h1>
+                <div class="atl-b-progress" aria-hidden="true">
+                    @foreach (Lesson l in lessons)
+                    {
+                        <span class="atl-b-dot @(l.Day < today ? "is-done" : l.Day == today ? "is-today" : "")" data-atl-dot="@l.Day"></span>
+                    }
+                </div>
+            </header>
+
+            <nav class="atl-b-steps" aria-label="Lesson steps">
+                <button type="button" class="atl-b-step is-current" data-atl-step-tab="0">1 Review</button>
+                <button type="button" class="atl-b-step" data-atl-step-tab="1">2 Read</button>
+                <button type="button" class="atl-b-step" data-atl-step-tab="2">3 Check</button>
+                <button type="button" class="atl-b-step" data-atl-step-tab="3">4 Try it</button>
+            </nav>
+
+            <div class="atl-b-stage" data-atl-step="0">
+                <p class="atl-intro">Borrowing is normal. What matters is the cost. First, a quick look back at yesterday.</p>
+                @{ Review(); }
+            </div>
+            <div class="atl-b-stage" data-atl-step="1" hidden>
+                @foreach (Entry e in lessonEntries)
+                {
+                    TermEntry(e);
+                }
+            </div>
+            <div class="atl-b-stage" data-atl-step="2" hidden>
+                @{ Check(); }
+            </div>
+            <div class="atl-b-stage" data-atl-step="3" hidden>
+                @{ TryIt(lessons[1]); }
+                @{ Finished(); }
+                @{ Keepsakes("atl-b-shelf"); }
+            </div>
+            <div class="atl-b-nav">
+                <button type="button" class="atl-btn atl-btn-quiet" data-atl-prev>Back</button>
+                <button type="button" class="atl-btn" data-atl-next>Next</button>
+            </div>
+
+            <section class="atl-b-contents" aria-labelledby="atl-b-toc">
+                <h2 id="atl-b-toc" class="atl-section-title">Contents</h2>
+                <ol>
+                    @foreach (Lesson l in lessons)
+                    {
+                        <li class="@(l.Day == today ? "is-today" : "")">
+                            <span class="atl-b-toc-day">@l.Day</span>
+                            <span class="atl-b-toc-title">@l.Title <small>@string.Join(", ", l.Terms)</small></span>
+                            @{ Status(l); }
+                        </li>
+                    }
+                </ol>
+            </section>
+
+            <section class="atl-b-index" aria-labelledby="atl-b-idx">
+                <h2 id="atl-b-idx" class="atl-section-title">Index of terms</h2>
+                @foreach (IGrouping<char, Card> g in library.OrderBy(c => c.Term).GroupBy(c => c.Term[0]))
+                {
+                    <div class="atl-b-letter">
+                        <span class="atl-b-letter-key">@g.Key</span>
+                        <ul>
+                            @foreach (Card c in g)
+                            {
+                                <li><span>@c.Term</span> <span class="atl-vi">@c.Vi</span> <span class="atl-topic">@c.Detail</span></li>
+                            }
+                        </ul>
+                    </div>
+                }
+            </section>
+        </div>
+    }
+    else
+    {
+        @* C - Road to wealth: the Journey as a winding path with a keepsake at each finished stop; today's Lesson as
+           stacked paper sheets below the path; Library as book spines on a shelf, one shelf per Topic. *@
+        <header class="atl-c-head">
+            <h1 class="atl-title">The road to wealth</h1>
+            <p class="atl-sub">Six stops. One a day. Pick up a keepsake at each one.</p>
+        </header>
+
+        <div class="atl-c-road" aria-label="Journey">
+            <svg class="atl-c-path" viewBox="0 0 1000 160" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M20,120 C150,20 250,20 360,90 S580,150 680,70 S880,10 980,60" />
+            </svg>
+            <ol class="atl-c-stops">
+                @foreach (Lesson l in lessons)
+                {
+                    <li class="atl-c-stop @(l.Day < today ? "is-done" : l.Day == today ? "is-today" : "is-locked")" data-atl-stop="@l.Day">
+                        <span class="atl-c-marker" aria-hidden="true">@(l.Day < today ? l.Keepsake : l.Day.ToString())</span>
+                        <span class="atl-c-name">@l.Title</span>
+                        @{ Status(l); }
+                    </li>
+                }
+            </ol>
+        </div>
+
+        <section class="atl-c-sheets" aria-label="Today's Lesson">
+            <div class="atl-c-sheet atl-c-sheet-intro">
+                <p class="atl-kicker">Stop 2 · about 5 minutes</p>
+                <h2 class="atl-lesson-title">Borrow wisely</h2>
+                <p class="atl-intro">Borrowing is normal. What matters is the cost. Today you learn how lenders show that cost, and how they decide what to offer you.</p>
+                @{ Review(); }
+            </div>
+            @foreach (Entry e in lessonEntries)
+            {
+                <div class="atl-c-sheet">@{ TermEntry(e); }</div>
+            }
+            <div class="atl-c-sheet">
+                @{ Check(); }
+                @{ TryIt(lessons[1]); }
+                @{ Finished(); }
+            </div>
+        </section>
+
+        <section class="atl-c-library" aria-labelledby="atl-c-lib">
+            <h2 id="atl-c-lib" class="atl-section-title">Library</h2>
+            @foreach (string topic in topics)
+            {
+                <div class="atl-c-shelf">
+                    <span class="atl-c-shelf-label">@topic</span>
+                    <div class="atl-c-books">
+                        @foreach (Card c in library.Where(x => x.Detail == topic))
+                        {
+                            <button type="button" class="atl-c-book" title="@c.Vi">@c.Term</button>
+                        }
+                    </div>
+                </div>
+            }
+        </section>
+    }
+</div>
+
+<div class="atl-switcher" role="toolbar" aria-label="Prototype variants">
+    <button type="button" data-atl-variant-step="-1" aria-label="Previous variant">←</button>
+    <span>@variant (@(variant == "A" ? "Writing desk" : variant == "B" ? "Reading journal" : "Road to wealth"))</span>
+    <button type="button" data-atl-variant-step="1" aria-label="Next variant">→</button>
+</div>
+
+@section Scripts {
+    <script src="~/js/atelier/atelier-prototype.js" asp-append-version="true"></script>
+}
+
+@functions {
+    private sealed record Lesson(int Day, string Title, string Keepsake, string KeepsakeName, string TryLabel, string TryHref, string[] Terms);
+
+    private sealed record Entry(string Term, string? Aka, string Vi, string Topic, string OneLine, string[] Explanation,
+        string Why, string Example, string Us, string Vn, string[] Sources, string[] Related);
+
+    private sealed record Card(string Term, string Vi, string Detail);
+
+    private sealed record Question(string Format, string Prompt, string[] Options, int Correct, string Explanation);
+}
