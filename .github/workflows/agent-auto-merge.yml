@@ -1,7 +1,7 @@
 name: Agent Auto-Merge
 
-# Merges a scheduled ticket agent PR (agent/issue-* branch, not a draft) as soon as every check on its head commit has
-# finished and none failed. Runs each time one of the PR workflows completes; the last one to finish does the merge.
+# Merges a scheduled ticket agent PR (agent/issue-* branch, not a draft) as soon as every PR workflow run and every
+# check on its head commit has finished and none failed. Runs each time one of the PR workflows completes; the last one to finish does the merge.
 # The i18n Translate check must have passed too: it pushes the Vietnamese as a new commit, so the checks of the
 # commit before it never merge (the head-SHA guard below), and the translated commit's own checks decide.
 #
@@ -17,6 +17,7 @@ on:
     types: [completed]
 
 permissions:
+  actions: read
   contents: read
   pull-requests: read
 
@@ -36,6 +37,8 @@ jobs:
       - name: Merge the PR if every check passed
         env:
           GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+          # Reads the workflow runs: AGENT_GH_TOKEN has no Actions permission.
+          ACTIONS_READ_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           BRANCH: ${{ github.event.workflow_run.head_branch }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
@@ -60,6 +63,25 @@ jobs:
           # A newer push re-runs the checks; its own completions decide.
           if [ "$(jq -r '.headRefOid' <<< "$pr_json")" != "$HEAD_SHA" ]; then
             echo "::notice::PR #$pr has a newer commit than this run checked."
+            exit 0
+          fi
+
+          # `gh pr checks` lists check runs only, and a workflow run whose jobs have not started yet has none: the
+          # build's jobs often start a minute after the review and release checks finish, and #535, #537 and #539
+          # merged red that way. So every PR workflow run on this commit must have finished and passed first. Only
+          # each workflow's latest run counts: a label change re-runs the Release Check and cancels the older one.
+          runs=$(GH_TOKEN="$ACTIONS_READ_TOKEN" gh api "repos/$GH_REPO/actions/runs?head_sha=$HEAD_SHA&event=pull_request&per_page=100" \
+            --jq '[.workflow_runs[] | {name, status, conclusion, created_at}]
+              | group_by(.name) | map(max_by(.created_at))')
+          unfinished=$(jq -r '[.[] | select(.status != "completed") | .name] | join(", ")' <<< "$runs")
+          if [ -n "$unfinished" ]; then
+            echo "::notice::PR #$pr still has workflows running ($unfinished)."
+            exit 0
+          fi
+          red=$(jq -r '[.[] | select(.conclusion | IN("success", "skipped", "neutral") | not)
+            | "\(.name) (\(.conclusion))"] | join(", ")' <<< "$runs")
+          if [ -n "$red" ]; then
+            echo "::notice::PR #$pr has workflows that did not pass ($red): it waits for a human."
             exit 0
           fi
 
