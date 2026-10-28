@@ -306,9 +306,13 @@ body:not(:has(#sidebar)) .topbar {
 
 /* Theme control (Views/Shared/_ThemeSwitcher.cshtml): one icon button opening a Light / Dark / System popover.
    theme.js shows the icon of the current choice and checks it. */
+/* A flex box centring the button, like .language-switcher: as a stretched block in the signed-out .topbar-auth row
+   the button sat at its top edge */
 .theme-switcher {
     position: relative;
     flex: none;
+    display: flex;
+    align-items: center;
 }
 
 .theme-switcher__button {
@@ -317,8 +321,11 @@ body:not(:has(#sidebar)) .topbar {
     justify-content: center;
 }
 
+/* One text line tall, so the icon button matches the height of the text buttons beside it */
 .theme-switcher__icon {
     display: inline-flex;
+    align-items: center;
+    height: calc(1em * var(--bs-btn-line-height));
 }
 
 .theme-switcher__icon[hidden],
