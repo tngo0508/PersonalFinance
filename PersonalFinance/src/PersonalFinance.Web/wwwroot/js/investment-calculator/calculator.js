@@ -1,4 +1,4 @@
-/* global PFI18n */
+/* global PFI18n, ChartPalette */
 /**
  * Investment Calculator — Compound growth projection.
  */
@@ -18,22 +18,17 @@
     }
 
     /**
-     * The chart's theme colours, read from the Ledger tokens so the canvas follows light and dark mode (issue #296).
-     * @returns {object} Colours for the chart background, grid, labels, tooltip and the value line.
+     * The chart's theme colours from the shared chart palette (core/chart-palette.js, issue #483). The series match
+     * the legend dots in investment-calculator.css: total value, contributions, then interest.
+     * @returns {object} The palette, plus value, contrib and interest: the colours of the three series.
      */
     function chartColors () {
-        const style = getComputedStyle(document.documentElement);
-        const token = (name, fallback) => style.getPropertyValue(name).trim() || fallback;
-        return {
-            surface: token('--app-surface', '#F8FAF9'),
-            paper: token('--app-bg', '#FFFFFF'),
-            grid: token('--app-border', '#E1E7E4'),
-            tick: token('--app-border-hover', '#D6DEDB'),
-            muted: token('--app-text-muted', '#5B6B78'),
-            ink: token('--app-text', '#14283B'),
-            inkSoft: token('--app-text-soft', '#3D4F5F'),
-            value: token('--app-brand', '#1D6A50')
-        };
+        const palette = ChartPalette.read();
+        return Object.assign(palette, {
+            value: palette.series[0],
+            contrib: palette.series[1],
+            interest: palette.series[2]
+        });
     }
 
     /**
@@ -111,8 +106,8 @@
         });
         observer.observe(container);
 
-        // The canvas reads the theme tokens when it draws (theme.js, issue #296)
-        document.addEventListener('themechange', calculateInvestment);
+        // The canvas reads the chart palette when it draws, so a theme switch only needs a redraw (issue #483)
+        ChartPalette.subscribe(redrawCalcChartWithTooltip);
     }
 
     /**
@@ -240,7 +235,7 @@
         const colors = chartColors();
 
         // Background
-        ctx.fillStyle = colors.surface;
+        ctx.fillStyle = colors.background;
         roundRect(ctx, 0, 0, w, h, 8);
         ctx.fill();
 
@@ -256,7 +251,7 @@
             ctx.stroke();
 
             const val = niceMax - (niceMax / gridLines) * i;
-            ctx.fillStyle = colors.muted;
+            ctx.fillStyle = colors.axis;
             ctx.font = '500 12px Inter, system-ui, -apple-system, sans-serif';
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
@@ -267,14 +262,14 @@
         // X-axis labels
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillStyle = colors.muted;
+        ctx.fillStyle = colors.axis;
         ctx.font = '500 12px Inter, system-ui, -apple-system, sans-serif';
         const xStep = Math.max(1, Math.floor(years / 7));
         for (let y = 0; y <= years; y += xStep) {
             const x = toCanvasX(y);
             const tickY = padding.top + chartH;
             ctx.beginPath();
-            ctx.strokeStyle = colors.tick;
+            ctx.strokeStyle = colors.grid;
             ctx.lineWidth = 1;
             ctx.moveTo(x, tickY);
             ctx.lineTo(x, tickY + 4);
@@ -307,8 +302,8 @@
 
         // Interest earned area fill (between contributions and total value lines)
         const interestGrad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
-        interestGrad.addColorStop(0, 'rgba(138, 106, 30, 0.25)');
-        interestGrad.addColorStop(1, 'rgba(138, 106, 30, 0.02)');
+        interestGrad.addColorStop(0, ChartPalette.withAlpha(colors.interest, 0.25));
+        interestGrad.addColorStop(1, ChartPalette.withAlpha(colors.interest, 0.02));
         ctx.beginPath();
         ctx.moveTo(toCanvasX(0), toCanvasY(contribPoints[0].y));
         contribPoints.forEach(p => {
@@ -323,8 +318,8 @@
 
         // Contributions area fill
         const contribGrad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
-        contribGrad.addColorStop(0, 'rgba(47, 102, 144, 0.15)');
-        contribGrad.addColorStop(1, 'rgba(47, 102, 144, 0.02)');
+        contribGrad.addColorStop(0, ChartPalette.withAlpha(colors.contrib, 0.15));
+        contribGrad.addColorStop(1, ChartPalette.withAlpha(colors.contrib, 0.02));
         ctx.beginPath();
         ctx.moveTo(toCanvasX(0), padding.top + chartH);
         contribPoints.forEach(p => {
@@ -337,7 +332,7 @@
 
         // Smooth lines
         drawSmoothCurve(contribPoints);
-        ctx.strokeStyle = '#2F6690';
+        ctx.strokeStyle = colors.contrib;
         ctx.lineWidth = 2.5;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
@@ -355,18 +350,18 @@
             const cy = toCanvasY(last.y);
             ctx.beginPath();
             ctx.arc(cx, cy, 7, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillStyle = ChartPalette.withAlpha(colors.background, 0.3);
             ctx.fill();
             ctx.beginPath();
             ctx.arc(cx, cy, 4, 0, Math.PI * 2);
             ctx.fillStyle = color;
             ctx.fill();
-            ctx.strokeStyle = colors.paper;
+            ctx.strokeStyle = colors.background;
             ctx.lineWidth = 2;
             ctx.stroke();
         }
 
-        drawDot(contribPoints, '#2F6690');
+        drawDot(contribPoints, colors.contrib);
         drawDot(points, colors.value);
 
         // Update HTML legend with final values
@@ -576,7 +571,7 @@
 
         // Vertical guide line
         ctx.beginPath();
-        ctx.strokeStyle = 'rgba(91, 107, 120, 0.3)';
+        ctx.strokeStyle = ChartPalette.withAlpha(colors.axis, 0.3);
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 3]);
         ctx.moveTo(cx, padding.top);
@@ -590,7 +585,7 @@
         ctx.arc(cx, vy, 5, 0, Math.PI * 2);
         ctx.fillStyle = colors.value;
         ctx.fill();
-        ctx.strokeStyle = colors.paper;
+        ctx.strokeStyle = colors.background;
         ctx.lineWidth = 2;
         ctx.stroke();
 
@@ -598,9 +593,9 @@
         const cy = toCanvasY(contribution);
         ctx.beginPath();
         ctx.arc(cx, cy, 5, 0, Math.PI * 2);
-        ctx.fillStyle = '#2F6690';
+        ctx.fillStyle = colors.contrib;
         ctx.fill();
-        ctx.strokeStyle = colors.paper;
+        ctx.strokeStyle = colors.background;
         ctx.lineWidth = 2;
         ctx.stroke();
 
@@ -639,7 +634,7 @@
         ctx.shadowOffsetY = 4;
 
         // Background
-        ctx.fillStyle = colors.paper;
+        ctx.fillStyle = colors.tooltip.background;
         roundRect(ctx, boxX, boxY, boxW, boxH, 8);
         ctx.fill();
 
@@ -649,20 +644,19 @@
         ctx.shadowOffsetY = 0;
 
         // Border
-        ctx.strokeStyle = colors.grid;
+        ctx.strokeStyle = colors.tooltip.border;
         ctx.lineWidth = 1;
         roundRect(ctx, boxX, boxY, boxW, boxH, 8);
         ctx.stroke();
 
         // Text
-        ctx.fillStyle = colors.inkSoft;
+        ctx.fillStyle = colors.tooltip.text;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
 
         lines.forEach((line, i) => {
             const isTitle = i === 0;
             ctx.font = isTitle ? '700 12px Inter, system-ui, -apple-system, sans-serif' : '500 12px Inter, system-ui, -apple-system, sans-serif';
-            ctx.fillStyle = isTitle ? colors.ink : colors.inkSoft;
             ctx.fillText(line, boxX + boxPad, boxY + boxPad + i * lineH);
         });
     }

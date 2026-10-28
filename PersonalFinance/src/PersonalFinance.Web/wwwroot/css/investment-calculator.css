@@ -298,16 +298,17 @@
     flex-shrink: 0;
 }
 
+/* The chart's series colours (calculator.js reads the same tokens through ChartPalette) */
 .calculator-chart-legend__dot--value {
-    background: var(--app-brand);
+    background: var(--app-chart-1);
 }
 
 .calculator-chart-legend__dot--contrib {
-    background: #2F6690;
+    background: var(--app-chart-2);
 }
 
 .calculator-chart-legend__dot--interest {
-    background: var(--app-accent-target);
+    background: var(--app-chart-3);
 }
 
 .calculator-chart-legend__label {

@@ -3,7 +3,8 @@
  * by mouse and keyboard, checks that the root's theme attributes follow each choice, that System follows an emulated
  * device colour scheme, that the choice survives a reload and sign-in, and that the avatar menu holds no theme items.
  * In dark mode it checks key text against its effective background (4.5:1) on the Landing Page, a sign-in page,
- * Account settings and the Net Worth help modal (slice #482). Run from ui-test.js as Test 9j.
+ * Account settings and the Net Worth help modal (slice #482), and that the Investment Calculator's chart restyles on a
+ * theme switch without a reload (slice #483). Run from ui-test.js as Test 9j.
  *
  * Expected labels are read from Resources/i18n/en.json, so a rewording does not break the test.
  */
@@ -14,7 +15,7 @@ const TIMEOUT = 15000;
 const WEB = path.join(__dirname, '..', 'PersonalFinance', 'src', 'PersonalFinance.Web');
 const en = require(path.join(WEB, 'Resources', 'i18n', 'en.json'));
 // Written in the repo, not axe-core (MPL-2.0 is not on the license policy's list)
-const {AA_TEXT, contrastRatio, flattenBackground} = require(path.join(WEB, 'tools', 'contrast.js'));
+const {AA_TEXT, contrastRatio, flattenBackground, parseColour} = require(path.join(WEB, 'tools', 'contrast.js'));
 
 /**
  * Key text on each page the dark contrast check visits (#482). Each selector's first visible element is measured.
@@ -208,6 +209,109 @@ async function checkDarkContrast(page, name, selectors, report) {
 }
 
 /**
+ * What the Investment Calculator's canvas shows, next to the tokens it should show: the background in the top padding,
+ * where only the background is drawn, and the first series at the centre of the total value's end dot.
+ * @param {import('playwright').Page} page - The Investment Calculator.
+ * @returns {Promise<{theme: string, marker: boolean, background: {token: string, pixel: number[]|null},
+ *     series: {token: string, pixel: number[]|null}}>} marker: the page has not reloaded since the check set it.
+ */
+async function chartState(page) {
+    return page.evaluate(() => {
+        const canvas = document.getElementById('calcChart');
+        const root = document.documentElement;
+        const style = getComputedStyle(root);
+        const dpr = window.devicePixelRatio || 1;
+        const meta = canvas ? canvas._chartMeta : null;
+        const pixelAt = (x, y) => (canvas && canvas.width > 0
+            ? Array.from(canvas.getContext('2d').getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data).slice(0, 3)
+            : null);
+        const last = meta && meta.points.length > 0 ? meta.points[meta.points.length - 1] : null;
+        return {
+            theme: root.getAttribute('data-theme'),
+            marker: window.__chartThemeCheck === true,
+            background: {
+                token: style.getPropertyValue('--app-surface').trim(),
+                pixel: canvas ? pixelAt(canvas.width / dpr / 2, 4) : null
+            },
+            series: {
+                token: style.getPropertyValue('--app-chart-1').trim(),
+                pixel: last ? pixelAt(meta.toCanvasX(last.x), meta.toCanvasY(last.y)) : null
+            }
+        };
+    });
+}
+
+/**
+ * Does a sampled canvas pixel show its token's colour?
+ * @param {{token: string, pixel: number[]|null}} sample - From chartState.
+ * @returns {boolean}
+ */
+function pixelMatchesToken(sample) {
+    if (!sample.pixel || !sample.token) {
+        return false;
+    }
+    const expected = parseColour(sample.token);
+    return [expected.r, expected.g, expected.b].every((channel, i) => Math.abs(channel - sample.pixel[i]) <= 2);
+}
+
+/**
+ * Does the canvas show the theme's chart background and first series?
+ * @param {object} state - From chartState.
+ * @returns {boolean}
+ */
+function chartMatchesTokens(state) {
+    return pixelMatchesToken(state.background) && pixelMatchesToken(state.series);
+}
+
+/**
+ * The sampled pixels, to tell two draws apart.
+ * @param {object} state - From chartState.
+ * @returns {string}
+ */
+function chartPixels(state) {
+    return JSON.stringify([state.background.pixel, state.series.pixel]);
+}
+
+/**
+ * Choose a theme through the top-bar control and wait for it to apply.
+ * @param {import('playwright').Page} page - The page.
+ * @param {string} theme - 'light' or 'dark'.
+ * @returns {Promise<void>}
+ */
+async function chooseTheme(page, theme) {
+    await page.click(BUTTON);
+    await page.click(`${POPOVER} [data-theme-choice="${theme}"]`);
+    await waitForTheme(page, theme);
+}
+
+/**
+ * The Investment Calculator's chart takes its colours from the chart palette (#483): switching the theme restyles the
+ * canvas without a reload. Leaves the page in dark mode, as it found it.
+ * @param {import('playwright').Page} page - A signed-in page in dark mode.
+ * @param {string} base - The Web app's base URL.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+async function checkChartRestyles(page, base, report) {
+    await page.goto(`${base}/InvestmentCalculator`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+    await page.locator('#calcChart').waitFor({state: 'visible', timeout: TIMEOUT});
+    await page.evaluate(() => { window.__chartThemeCheck = true; });
+
+    const dark = await chartState(page);
+    check(dark.theme === 'dark' && chartMatchesTokens(dark), 'Chart: the canvas shows the dark chart background and series',
+        JSON.stringify(dark), report);
+
+    await chooseTheme(page, 'light');
+    const light = await chartState(page);
+    check(light.theme === 'light' && light.marker && chartMatchesTokens(light) && chartPixels(light) !== chartPixels(dark),
+        'Chart: switching to Light restyles the canvas without a reload', JSON.stringify(light), report);
+
+    await chooseTheme(page, 'dark');
+    const back = await chartState(page);
+    check(back.theme === 'dark' && back.marker && chartMatchesTokens(back),
+        'Chart: switching back to Dark restyles it again', JSON.stringify(back), report);
+}
+
+/**
  * Register a fresh Account and make sure it is signed in.
  * @param {import('playwright').Page} page - A page in a signed-out context.
  * @param {string} base - The Web app's base URL.
@@ -254,8 +358,7 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         await driveControl(page, 'Signed out', report);
 
         // 2. The choice survives a reload.
-        await page.click(BUTTON);
-        await page.click(`${POPOVER} [data-theme-choice="dark"]`);
+        await chooseTheme(page, 'dark');
         await page.reload({waitUntil: 'networkidle', timeout: TIMEOUT});
         state = await themeState(page);
         check(state.theme === 'dark' && state.label === labelFor('dark') && state.checked.join() === 'dark',
@@ -281,8 +384,8 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         await page.click('.nw-help-btn');
         await page.locator('#nwHelpModal.show .modal-title').waitFor({state: 'visible', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Net Worth help modal', CONTRAST_PAGES.modal, report);
-        // Reload to close the modal before the avatar menu check
-        await page.reload({waitUntil: 'networkidle', timeout: TIMEOUT});
+        // A chart restyles on a theme switch (#483); leaving the page also closes the modal before the avatar menu check
+        await checkChartRestyles(page, base, report);
 
         // 4. The avatar menu holds no theme items.
         await page.click('.app-user-toggle');
