@@ -209,41 +209,67 @@ async function checkDarkContrast(page, name, selectors, report) {
 }
 
 /**
- * The theme in effect, the chart background token, and the colour the Investment Calculator's canvas shows in its top
- * padding, where only the background is drawn.
+ * What the Investment Calculator's canvas shows, next to the tokens it should show: the background in the top padding,
+ * where only the background is drawn, and the first series at the centre of the total value's end dot.
  * @param {import('playwright').Page} page - The Investment Calculator.
- * @returns {Promise<{theme: string, token: string, pixel: number[]|null, marker: boolean}>} marker: the page has not
- *     reloaded since the check set it.
+ * @returns {Promise<{theme: string, marker: boolean, background: {token: string, pixel: number[]|null},
+ *     series: {token: string, pixel: number[]|null}}>} marker: the page has not reloaded since the check set it.
  */
 async function chartState(page) {
     return page.evaluate(() => {
         const canvas = document.getElementById('calcChart');
         const root = document.documentElement;
-        const state = {
+        const style = getComputedStyle(root);
+        const dpr = window.devicePixelRatio || 1;
+        const meta = canvas ? canvas._chartMeta : null;
+        const pixelAt = (x, y) => (canvas && canvas.width > 0
+            ? Array.from(canvas.getContext('2d').getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data).slice(0, 3)
+            : null);
+        const last = meta && meta.points.length > 0 ? meta.points[meta.points.length - 1] : null;
+        return {
             theme: root.getAttribute('data-theme'),
-            token: getComputedStyle(root).getPropertyValue('--app-surface').trim(),
-            pixel: null,
-            marker: window.__chartThemeCheck === true
+            marker: window.__chartThemeCheck === true,
+            background: {
+                token: style.getPropertyValue('--app-surface').trim(),
+                pixel: canvas ? pixelAt(canvas.width / dpr / 2, 4) : null
+            },
+            series: {
+                token: style.getPropertyValue('--app-chart-1').trim(),
+                pixel: last ? pixelAt(meta.toCanvasX(last.x), meta.toCanvasY(last.y)) : null
+            }
         };
-        if (canvas && canvas.width > 0) {
-            const y = Math.round(4 * (window.devicePixelRatio || 1));
-            state.pixel = Array.from(canvas.getContext('2d').getImageData(Math.floor(canvas.width / 2), y, 1, 1).data).slice(0, 3);
-        }
-        return state;
     });
 }
 
 /**
- * Does the canvas pixel show the chart background token?
- * @param {{token: string, pixel: number[]|null}} state - From chartState.
+ * Does a sampled canvas pixel show its token's colour?
+ * @param {{token: string, pixel: number[]|null}} sample - From chartState.
  * @returns {boolean}
  */
-function pixelMatchesToken(state) {
-    if (!state.pixel || !state.token) {
+function pixelMatchesToken(sample) {
+    if (!sample.pixel || !sample.token) {
         return false;
     }
-    const expected = parseColour(state.token);
-    return [expected.r, expected.g, expected.b].every((channel, i) => Math.abs(channel - state.pixel[i]) <= 2);
+    const expected = parseColour(sample.token);
+    return [expected.r, expected.g, expected.b].every((channel, i) => Math.abs(channel - sample.pixel[i]) <= 2);
+}
+
+/**
+ * Does the canvas show the theme's chart background and first series?
+ * @param {object} state - From chartState.
+ * @returns {boolean}
+ */
+function chartMatchesTokens(state) {
+    return pixelMatchesToken(state.background) && pixelMatchesToken(state.series);
+}
+
+/**
+ * The sampled pixels, to tell two draws apart.
+ * @param {object} state - From chartState.
+ * @returns {string}
+ */
+function chartPixels(state) {
+    return JSON.stringify([state.background.pixel, state.series.pixel]);
 }
 
 /**
@@ -271,17 +297,17 @@ async function checkChartRestyles(page, base, report) {
     await page.evaluate(() => { window.__chartThemeCheck = true; });
 
     const dark = await chartState(page);
-    check(dark.theme === 'dark' && pixelMatchesToken(dark), 'Chart: the canvas shows the dark chart background',
+    check(dark.theme === 'dark' && chartMatchesTokens(dark), 'Chart: the canvas shows the dark chart background and series',
         JSON.stringify(dark), report);
 
     await chooseTheme(page, 'light');
     const light = await chartState(page);
-    check(light.theme === 'light' && light.marker && pixelMatchesToken(light) && light.pixel.join() !== dark.pixel.join(),
+    check(light.theme === 'light' && light.marker && chartMatchesTokens(light) && chartPixels(light) !== chartPixels(dark),
         'Chart: switching to Light restyles the canvas without a reload', JSON.stringify(light), report);
 
     await chooseTheme(page, 'dark');
     const back = await chartState(page);
-    check(back.marker && pixelMatchesToken(back) && back.pixel.join() === dark.pixel.join(),
+    check(back.theme === 'dark' && back.marker && chartMatchesTokens(back),
         'Chart: switching back to Dark restyles it again', JSON.stringify(back), report);
 }
 
@@ -332,8 +358,7 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         await driveControl(page, 'Signed out', report);
 
         // 2. The choice survives a reload.
-        await page.click(BUTTON);
-        await page.click(`${POPOVER} [data-theme-choice="dark"]`);
+        await chooseTheme(page, 'dark');
         await page.reload({waitUntil: 'networkidle', timeout: TIMEOUT});
         state = await themeState(page);
         check(state.theme === 'dark' && state.label === labelFor('dark') && state.checked.join() === 'dark',

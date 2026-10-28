@@ -29,7 +29,7 @@
             tooltipText: ['--app-chart-tooltip-text', '#FFFFFF'],
             tooltipBorder: ['--app-chart-tooltip-border', '#14283B'],
             positive: ['--app-accent-positive', '#1D6A50'],
-            negative: ['--app-accent-negative', '#B42318'],
+            negative: ['--app-negative-fill', '#B42318'],
             warning: ['--app-warning-fill', '#D89B26']
         };
         const SERIES = [
@@ -47,7 +47,8 @@
          *     tooltip: {background: string, text: string, border: string}, series: string[], positive: string,
          *     negative: string, warning: string}} background: the chart's surface; grid: gridlines and ticks; axis:
          *     axis text; tooltip: the hover box; series: the six categorical colours in order; positive, negative,
-         *     warning: gains, losses and over-budget marks.
+         *     warning: the mark colours for gains, losses and over-budget (the green accent and the negative and
+         *     warning fills, which meet 3:1 on the page and card in both themes).
          */
         function read () {
             const style = window.getComputedStyle(document.documentElement);
@@ -95,7 +96,7 @@
             const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value);
             if (hex) {
                 const digits = hex[1].length === 3 ? hex[1].replace(/./g, '$&$&') : hex[1];
-                channels = [0, 2, 4].map((start) => parseInt(digits.substr(start, 2), 16));
+                channels = [0, 2, 4].map((start) => parseInt(digits.slice(start, start + 2), 16));
             } else {
                 const rgb = /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/i.exec(value);
                 if (rgb) {

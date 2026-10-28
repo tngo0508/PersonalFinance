@@ -14,13 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Chart palette helper**: a core script, `js/core/chart-palette.js`, gives every chart its colours from the theme in effect and calls it back on a theme switch, so feature charts can restyle without a reload (#483).
   - `ChartPalette.read()` returns the chart background, gridline, axis text, tooltip surface, the six categorical series and the positive, negative and warning colours from the tokens added in #482; `subscribe()` calls a chart with the new palette on each `themechange`; `withAlpha()` makes a palette colour translucent for area fills.
   - Its JSDoc shows how to move a chart onto it; a Node test (`tools/chart-palette.test.js`) covers reading the tokens, the light fallbacks and the subscriptions.
-- **Chart check in the theme smoke**: the E2E theme smoke switches the theme on the Investment Calculator and checks that the chart restyles without a reload.
+- **Chart check in the theme smoke**: the E2E theme smoke switches the theme on the Investment Calculator and checks that the chart's background and first series restyle without a reload (#483).
 
 ### Changed
 
 - **The Investment Calculator's chart follows the theme through the helper**: its lines, area fills, end dots, gridlines, axis text and tooltip take their colours from the chart palette instead of its own token reads and fixed colours, and the legend dots use the same series tokens (#483).
-  - In dark mode the contributions line and the area fills now use the dark series colours.
-  - The hover tooltip uses the chart tooltip surface in both themes: navy with white text in light mode, the raised dark surface in dark mode.
+  - In dark mode the total value line and its legend dot use the lighter dark series green instead of the brand green, and the contributions line and the area fills use the dark series colours.
+  - The hover tooltip uses the chart tooltip surface in both themes: navy with white text in light mode, the raised dark surface in dark mode, with one text colour for every line.
+  - The halo around the end dots is the chart background at 30% instead of white, so it no longer glows in dark mode.
   - `investment-calculator.css` drops from 4 to 3 on the raw-colour allow-list.
 
 ## [13.4.0] - 2026-10-28

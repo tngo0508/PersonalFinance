@@ -16,14 +16,14 @@ const vm = require('vm');
 
 const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'wwwroot', 'js', 'core', 'chart-palette.js'), 'utf8');
 
-// What the dark theme's computed style returns for the chart tokens (site.css, #482), as a browser returns them.
+// The dark theme's chart tokens (site.css and ledger.css, #482), with the leading space a browser's computed value has.
 const DARK_TOKENS = {
-    '--app-surface': ' #16222D',
+    '--app-surface': ' #121E28',
     '--app-chart-grid': ' #2A3A47',
-    '--app-chart-axis': ' #9AA8B4',
-    '--app-chart-tooltip-bg': ' #1C2A36',
-    '--app-chart-tooltip-text': ' #E6ECF0',
-    '--app-chart-tooltip-border': ' #34495A',
+    '--app-chart-axis': ' #94A4B0',
+    '--app-chart-tooltip-bg': ' #1A2833',
+    '--app-chart-tooltip-text': ' #E6ECEF',
+    '--app-chart-tooltip-border': ' #2A3A47',
     '--app-chart-1': ' #3FB884',
     '--app-chart-2': ' #6FA8DC',
     '--app-chart-3': ' #D4B25C',
@@ -31,7 +31,7 @@ const DARK_TOKENS = {
     '--app-chart-5': ' #A98BDD',
     '--app-chart-6': ' #4FC1D0',
     '--app-accent-positive': ' #2C9168',
-    '--app-accent-negative': ' #F0796B',
+    '--app-negative-fill': ' #C4372B',
     '--app-warning-fill': ' #E0B24A'
 };
 
@@ -71,14 +71,14 @@ function load (tokens) {
 
 test('read takes each chart colour from its computed token, trimmed', () => {
     const colours = load(DARK_TOKENS).palette.read();
-    assert.strictEqual(colours.background, '#16222D');
+    assert.strictEqual(colours.background, '#121E28');
     assert.strictEqual(colours.grid, '#2A3A47');
-    assert.strictEqual(colours.axis, '#9AA8B4');
+    assert.strictEqual(colours.axis, '#94A4B0');
     assert.deepStrictEqual(JSON.parse(JSON.stringify(colours.tooltip)),
-        { background: '#1C2A36', text: '#E6ECF0', border: '#34495A' });
+        { background: '#1A2833', text: '#E6ECEF', border: '#2A3A47' });
     assert.deepStrictEqual(Array.from(colours.series), ['#3FB884', '#6FA8DC', '#D4B25C', '#F0796B', '#A98BDD', '#4FC1D0']);
     assert.strictEqual(colours.positive, '#2C9168');
-    assert.strictEqual(colours.negative, '#F0796B');
+    assert.strictEqual(colours.negative, '#C4372B');
     assert.strictEqual(colours.warning, '#E0B24A');
 });
 
