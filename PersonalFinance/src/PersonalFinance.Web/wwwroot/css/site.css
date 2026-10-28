@@ -381,7 +381,6 @@ table .text-end,
 }
 .gd-page .btn-success:hover {
   box-shadow: var(--app-shadow-positive-hover);
-  /* hover effect removed */;
 }
 .gd-page .btn-warning {
   border-radius: 10px;
@@ -2068,7 +2067,7 @@ hr {
   --bgt-negative: var(--app-negative-fill);
   --bgt-meter-track: var(--app-surface-secondary);
   --bgt-meter-ok: var(--app-text-soft);
-  --bgt-good: var(--app-accent-positive);
+  --bgt-good: var(--app-brand-fill);
   --bgt-good-text: var(--app-positive-text);
   --bgt-warning: var(--app-warning-fill);
   --bgt-warning-text: var(--app-warning-text);
@@ -2593,6 +2592,9 @@ hr {
   body.bgt-printing .modal-dialog-scrollable .modal-body { max-height: none !important; overflow: visible !important; }
   body.bgt-printing .modal-backdrop { display: none !important; }
   body.bgt-printing #budgetReportPrintArea { background: var(--bgt-surface); padding: 0 !important; }
+  /* Print the theme's surface too, so a dark-mode report does not print its light text on blank paper */
+  body.bgt-printing #budgetReportPrintArea,
+  body.bgt-printing #budgetReportPrintArea * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body.bgt-printing .bgt-toolbar,
   body.bgt-printing #budgetKeyboardHint,
   body.bgt-printing #btnToggleBudgetTable { display: none !important; }

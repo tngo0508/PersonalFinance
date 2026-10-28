@@ -31,7 +31,7 @@ const CONTRAST_PAGES = {
     modal: ['#nwHelpModal .modal-title', '#nwHelpModal .nw-text', '#nwHelpModal .nw-help-note__title',
         '#nwHelpModal .modal-footer .btn'],
     // Google Drive on sample data (#484): the sample-data notice, then the Budget report modal
-    googleDriveNotice: ['.gd-notice strong', '.gd-notice .small', '.gd-section-header__title'],
+    googleDriveNotice: ['.gd-notice strong', '.gd-notice .small', '.gd-notice .btn', '.gd-section-header__title'],
     googleDriveReport: ['#monthlyBudgetModal .bgt-modal-title', '#monthlyBudgetModal .bgt-period-btn.active',
         '#monthlyBudgetModal .bgt-period-btn:not(.active)', '#budgetPeriodTitle', '#budgetInsight',
         '#monthlyBudgetModal .bgt-tile-label', '#monthlyBudgetModal .bgt-tile-value', '#monthlyBudgetModal .bgt-card-title']
