@@ -37,7 +37,7 @@
     padding: 0.5rem 0.75rem;
     border-radius: 0.5rem;
     border: 1px solid var(--app-border);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--app-shadow-2);
 }
 
 .bt-month-nav .btn {
@@ -66,7 +66,7 @@
 .bt-init-prompt {
     background: var(--app-surface);
     border: 1px solid var(--bs-info-bg-subtle);
-    border-left: 4px solid #0dcaf0;
+    border-left: 4px solid var(--bs-info);
     border-radius: 0.5rem;
     padding: 1.25rem;
     margin-bottom: 1.5rem;
@@ -117,14 +117,15 @@
     gap: 0.4rem;
 }
 
+/* The active tab and hovers use the brand green, as the rest of the app does (#487) */
 .bt-tabs .nav-link:hover {
-    color: #0d6efd;
+    color: var(--app-brand-text);
     border-color: transparent;
 }
 
 .bt-tabs .nav-link.active {
-    color: #0d6efd;
-    border-bottom-color: #0d6efd;
+    color: var(--app-brand-text);
+    border-bottom-color: var(--app-brand-text);
     background: transparent;
 }
 
@@ -135,7 +136,7 @@
     border-radius: 0.5rem;
     padding: 1.25rem;
     margin-bottom: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--app-shadow-2);
 }
 
 .bt-bar-group {
@@ -178,16 +179,17 @@
     transition: width 0.3s ease-in-out;
 }
 
+/* Chart series colours, which meet 3:1 on the track in both themes */
 .bt-bar-fill--planned {
-    background-color: #0d6efd;
+    background-color: var(--app-chart-2);
 }
 
 .bt-bar-fill--actual-expense {
-    background-color: #fd7e14;
+    background-color: var(--app-chart-3);
 }
 
 .bt-bar-fill--actual-income {
-    background-color: #198754;
+    background-color: var(--app-chart-1);
 }
 
 /* Tables Layout & Cards */
@@ -196,7 +198,7 @@
     border: 1px solid var(--app-border);
     border-radius: 0.5rem;
     margin-bottom: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--app-shadow-2);
     overflow: hidden;
 }
 
@@ -276,8 +278,8 @@
 
 .bt-archived-badge {
     font-size: 0.7rem;
-    background-color: #6c757d;
-    color: #fff;
+    background-color: var(--app-neutral-fill);
+    color: var(--app-text-on-brand);
     padding: 0.15rem 0.4rem;
     border-radius: 0.25rem;
 }
@@ -307,9 +309,9 @@
 
 .bt-planned-btn:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--app-brand) 25%, transparent);
     background-color: var(--app-surface-secondary);
-    border-color: #86b7fe;
+    border-color: var(--app-brand);
 }
 
 .bt-planned-btn:disabled {
@@ -349,8 +351,8 @@
 
 .bt-manual-badge {
     font-size: 0.65rem;
-    background-color: #6f42c1;
-    color: #fff;
+    background-color: var(--app-brand-soft);
+    color: var(--app-brand-on-soft);
     padding: 0.1rem 0.35rem;
     border-radius: 0.2rem;
     font-weight: 600;
@@ -371,7 +373,7 @@
 }
 
 .bt-btn-icon:hover:not(:disabled) {
-    color: #0d6efd;
+    color: var(--app-brand-text);
     background-color: var(--bs-primary-bg-subtle);
 }
 
@@ -382,7 +384,7 @@
 
 .bt-btn-icon:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.25);
+    box-shadow: 0 0 0 0.15rem color-mix(in srgb, var(--app-brand) 25%, transparent);
 }
 
 .bt-btn-icon:disabled {
@@ -398,7 +400,7 @@
 
 /* Diff Styling Rules */
 .bt-diff-positive {
-    color: var(--app-accent-positive);
+    color: var(--app-brand-text);
     font-weight: 600;
 }
 
@@ -428,7 +430,7 @@
 }
 
 .bt-tx-amount--income {
-    color: var(--app-accent-positive);
+    color: var(--app-brand-text);
 }
 
 .bt-empty-state {
@@ -495,5 +497,5 @@
     display: block;
     font-size: 0.75rem;
     font-weight: 400;
-    color: var(--app-text-muted, #5b6b78);
+    color: var(--app-text-muted);
 }

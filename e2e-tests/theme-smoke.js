@@ -3,8 +3,9 @@
  * by mouse and keyboard, checks that the root's theme attributes follow each choice, that System follows an emulated
  * device colour scheme, that the choice survives a reload and sign-in, and that the avatar menu holds no theme items.
  * In dark mode it checks key text against its effective background (4.5:1) on the Landing Page, a sign-in page,
- * Account settings and the Net Worth help modal (slice #482), and that the Investment Calculator's chart restyles on a
- * theme switch without a reload (slice #483). Run from ui-test.js as Test 9j.
+ * Account settings and the Net Worth help modal (slice #482), and Budget, Budget Tracker and Savings Goals (slice #487),
+ * and that the Investment Calculator's and the Budget planner's charts restyle on a theme switch without a reload
+ * (slices #483 and #487). Run from ui-test.js as Test 9j.
  *
  * Expected labels are read from Resources/i18n/en.json, so a rewording does not break the test.
  */
@@ -28,7 +29,13 @@ const CONTRAST_PAGES = {
     accountSettings: ['.account-page__title', '.account-page__subtitle', '.account-nav__link[aria-current="page"]',
         '.account-nav__link:not([aria-current="page"])', '.account-page__content .form-label'],
     modal: ['#nwHelpModal .modal-title', '#nwHelpModal .nw-text', '#nwHelpModal .nw-help-note__title',
-        '#nwHelpModal .modal-footer .btn']
+        '#nwHelpModal .modal-footer .btn'],
+    // Budget, Budget Tracker and Savings Goals (#487); a fresh Account's Savings Goals shows its empty state
+    budget: ['.budget-title', '.budget-subtitle', '.budget-card__title', '.budget-category__label',
+        '.budget-remaining__label', '.budget-remaining__value'],
+    budgetTracker: ['.bt-page-header__title', '.bt-page-header__subtitle', '.bt-tabs .nav-link.active',
+        '.bt-tabs .nav-link:not(.active)', '.bt-bar-title'],
+    savingsGoals: ['.savings-title', '.savings-subtitle', '.savings-empty__title', '.savings-empty__text']
 };
 
 const PASSWORD = 'TestPass1!';
@@ -312,6 +319,63 @@ async function checkChartRestyles(page, base, report) {
 }
 
 /**
+ * The Budget planner's doughnut, next to the tokens it should show: its first slice's colour and the gaps between
+ * slices, read from the Chart.js chart, since a fresh Account's budget may have no slices to sample.
+ * @param {import('playwright').Page} page - The Budget page.
+ * @returns {Promise<{theme: string, marker: boolean, slice: {token: string, drawn: string|null},
+ *     gap: {token: string, drawn: string|null}}>} marker: the page has not reloaded since the check set it.
+ */
+async function budgetChartState(page) {
+    return page.evaluate(() => {
+        const root = document.documentElement;
+        const style = getComputedStyle(root);
+        const chart = window.Chart ? window.Chart.getChart('budgetPieChart') : null;
+        const dataset = chart ? chart.data.datasets[0] : null;
+        return {
+            theme: root.getAttribute('data-theme'),
+            marker: window.__chartThemeCheck === true,
+            slice: {token: style.getPropertyValue('--app-budget-category-1').trim(), drawn: dataset ? dataset.backgroundColor[0] : null},
+            gap: {token: style.getPropertyValue('--app-bg').trim(), drawn: dataset ? dataset.borderColor : null}
+        };
+    });
+}
+
+/**
+ * Whether the chart holds the tokens' colours.
+ * @param {object} state - From budgetChartState.
+ * @returns {boolean}
+ */
+function budgetChartMatchesTokens(state) {
+    const same = (entry) => entry.drawn !== null && entry.token !== '' && entry.drawn.toLowerCase() === entry.token.toLowerCase();
+    return same(state.slice) && same(state.gap);
+}
+
+/**
+ * The Budget planner's chart takes its colours from the chart palette (#487): switching the theme recolours it without
+ * a reload. Leaves the page in dark mode, as it found it.
+ * @param {import('playwright').Page} page - A signed-in page on the Budget page, in dark mode.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+async function checkBudgetChartRestyles(page, report) {
+    await page.locator('#budgetPieChart').waitFor({state: 'visible', timeout: TIMEOUT});
+    await page.evaluate(() => { window.__chartThemeCheck = true; });
+
+    const dark = await budgetChartState(page);
+    check(dark.theme === 'dark' && budgetChartMatchesTokens(dark), 'Budget chart: the doughnut holds the dark category colours',
+        JSON.stringify(dark), report);
+
+    await chooseTheme(page, 'light');
+    const light = await budgetChartState(page);
+    check(light.theme === 'light' && light.marker && budgetChartMatchesTokens(light) && light.slice.drawn !== dark.slice.drawn,
+        'Budget chart: switching to Light recolours the doughnut without a reload', JSON.stringify(light), report);
+
+    await chooseTheme(page, 'dark');
+    const back = await budgetChartState(page);
+    check(back.theme === 'dark' && back.marker && budgetChartMatchesTokens(back),
+        'Budget chart: switching back to Dark recolours it again', JSON.stringify(back), report);
+}
+
+/**
  * Register a fresh Account and make sure it is signed in.
  * @param {import('playwright').Page} page - A page in a signed-out context.
  * @param {string} base - The Web app's base URL.
@@ -386,6 +450,15 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         await checkDarkContrast(page, 'Net Worth help modal', CONTRAST_PAGES.modal, report);
         // A chart restyles on a theme switch (#483); leaving the page also closes the modal before the avatar menu check
         await checkChartRestyles(page, base, report);
+
+        // Budget, Budget Tracker and Savings Goals (#487): dark contrast, and the Budget chart recolours on a switch.
+        await page.goto(`${base}/Budget`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'Budget', CONTRAST_PAGES.budget, report);
+        await checkBudgetChartRestyles(page, report);
+        await page.goto(`${base}/BudgetTracker`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'Budget Tracker', CONTRAST_PAGES.budgetTracker, report);
+        await page.goto(`${base}/SavingsGoals`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'Savings Goals', CONTRAST_PAGES.savingsGoals, report);
 
         // 4. The avatar menu holds no theme items.
         await page.click('.app-user-toggle');

@@ -380,7 +380,7 @@ Keep controllers thin and consistent with the application's existing conventions
 - Ensure interactive features work with keyboard navigation and accessible labels.
 - Preserve responsive layouts and existing visual design conventions.
 - Colours in stylesheets come from the `--lp-*` (`ledger.css`) and `--app-*` (`site.css`) tokens, which switch with the theme. A new hex, `rgb()` or `hsl()` literal outside those token blocks fails `npm run test:i18n` (`tools/raw-colours.test.js`; see `docs/DEVELOPMENT.md`).
-- Charts take their colours from `ChartPalette` (`wwwroot/js/core/chart-palette.js`, loaded by `_Layout`): `read()` when drawing, `subscribe()` to redraw on a theme switch. Its JSDoc shows the pattern; keep no colour literals in chart code.
+- Charts take their colours from `ChartPalette` (`wwwroot/js/core/chart-palette.js`, loaded by `_Layout`): `read()` when drawing, `subscribe()` to redraw on a theme switch. A feature's own palette (e.g. the Budget planner's `--app-budget-category-*`) gets light and dark tokens in `site.css` and is read with `readTokens()`. Its JSDoc shows the pattern; keep no colour literals in chart code.
 - Remove obsolete JavaScript and event handlers when replacing existing behavior.
 
 ### 8. User Experience and Professional Design
