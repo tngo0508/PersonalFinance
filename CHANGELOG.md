@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [13.3.0] - 2026-10-28
+
+### Added
+
+- **Raw-colour guard for stylesheets**: a Node test in `npm run test:i18n` fails when a Web stylesheet adds a hex, `rgb()`/`rgba()` or `hsl()`/`hsla()` literal outside the first `:root` and `:root[data-theme="dark"]` token blocks of `ledger.css` and `site.css` (#480).
+  - `tools/raw-colours.allowlist.json` records the 15 stylesheets that are not clean yet with their current counts. The test fails if a count changes without the list following it, if an unlisted file has a literal, or if a clean file is still on the list.
+  - Site.css's Google Drive palette (`--gdrive-*`, a second `:root` block) counts against site.css, because it is not a token block.
+  - `npm run css:raw-colours` prints the current counts, for lowering the list after a file is cleaned.
+
 ## [13.2.2] - 2026-10-28
 
 ### Fixed
