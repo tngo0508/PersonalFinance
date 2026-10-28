@@ -16,7 +16,8 @@ internal static class TestCurrencyConverter
 
     /// <summary>A converter sharing <paramref name="cache"/>, for tests of caching and eviction.</summary>
     public static ICurrencyConverter Create(AppDbContext db, ExchangeRateCache cache, TimeProvider? timeProvider = null) =>
-        new CurrencyConverter(db, cache, timeProvider ?? TimeProvider.System);
+        // Qualified: the Currency Converter Feature's tests live in the PersonalFinance.Tests.CurrencyConverter namespace.
+        new ApiService.Infrastructure.CurrencyConverter(db, cache, timeProvider ?? TimeProvider.System);
 
     /// <summary>An empty rate cache.</summary>
     public static ExchangeRateCache NewCache() => new(new MemoryCache(new MemoryCacheOptions()));

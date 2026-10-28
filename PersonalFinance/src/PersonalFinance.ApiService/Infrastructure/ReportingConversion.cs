@@ -15,14 +15,14 @@ public sealed class ReportingConversion
     /// <summary>A rate more than this many days older than the day it stands in for is shown as "rate as of {date}".</summary>
     public const int StaleAfterDays = 3;
 
-    private readonly SupportedCurrency _reporting;
+    private readonly ConvertibleCurrency _reporting;
     private readonly DateOnly _today;
     private readonly IReadOnlyDictionary<RateKey, ExchangeRateRow?> _rates;
     private readonly Dictionary<string, RateUse> _uses = new(StringComparer.Ordinal);
     private bool _converted;
     private bool _unavailable;
 
-    internal ReportingConversion(SupportedCurrency reporting, DateOnly today,
+    internal ReportingConversion(ConvertibleCurrency reporting, DateOnly today,
         IReadOnlyDictionary<RateKey, ExchangeRateRow?> rates)
     {
         _reporting = reporting;
@@ -65,6 +65,53 @@ public sealed class ReportingConversion
     /// </summary>
     public decimal ConvertOrOriginal(decimal amount, string currencyCode, DateOnly? date) =>
         Convert(amount, currencyCode, date) ?? amount;
+
+    /// <summary>
+    /// The effective rate one unit of <paramref name="currencyCode"/> converts at into the Reporting Currency on
+    /// <paramref name="date"/> (the latest when null): rate(USD→Reporting) / rate(USD→currency), unrounded, with the
+    /// older of the two legs' days, their sources and whether that day is stale. <c>null</c> when a leg has no rate.
+    /// An amount already in the Reporting Currency quotes 1 with no day and no source.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The amount was not among those the conversion was prepared for.</exception>
+    public RateQuote? Quote(string currencyCode, DateOnly? date)
+    {
+        if (IsReporting(currencyCode))
+        {
+            return new RateQuote(1m, null, [], false);
+        }
+
+        var legs = new List<ExchangeRateRow>(2);
+        decimal fromRate = 1m;
+        decimal toRate = 1m;
+        if (!IsBase(currencyCode))
+        {
+            ExchangeRateRow? from = Lookup(currencyCode, date);
+            if (from is null)
+            {
+                return null;
+            }
+
+            fromRate = from.Rate;
+            legs.Add(from);
+        }
+
+        if (!IsBase(_reporting.Code))
+        {
+            ExchangeRateRow? to = Lookup(_reporting.Code, date);
+            if (to is null)
+            {
+                return null;
+            }
+
+            toRate = to.Rate;
+            legs.Add(to);
+        }
+
+        DateOnly rateDate = legs.Min(leg => leg.Date);
+        List<string> sources = legs.Select(leg => leg.Source).Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal).ToList();
+        return new RateQuote(toRate / fromRate, rateDate, sources, IsStale(rateDate, date));
+    }
 
     /// <summary><paramref name="amount"/> rounded to the Reporting Currency's minor units, halves away from zero.</summary>
     public decimal Round(decimal amount) => _reporting.Round(amount);
@@ -141,7 +188,7 @@ public sealed class ReportingConversion
     /// <summary>Records a rate's use: the most recent day per quote, and whether any use was stale or dated.</summary>
     private void Use(string quote, ExchangeRateRow row, DateOnly? date)
     {
-        bool stale = row.Date < (date ?? _today).AddDays(-StaleAfterDays);
+        bool stale = IsStale(row.Date, date);
         if (_uses.TryGetValue(quote, out RateUse? use))
         {
             use.IsStale |= stale;
@@ -158,6 +205,12 @@ public sealed class ReportingConversion
         _uses[quote] = new RateUse(quote) { Date = row.Date, Rate = row.Rate, IsStale = stale, IsDated = date is not null };
     }
 
+    /// <summary>Whether a rate of <paramref name="rateDate"/> is more than three days older than the day it stands in for.</summary>
+    private bool IsStale(DateOnly rateDate, DateOnly? date) => rateDate < (date ?? _today).AddDays(-StaleAfterDays);
+
+    private static bool IsBase(string currencyCode) =>
+        string.Equals(currencyCode, ExchangeRateCache.BaseCurrency, StringComparison.Ordinal);
+
     private sealed class RateUse(string quote)
     {
         public string Quote { get; } = quote;
@@ -171,5 +224,15 @@ public sealed class ReportingConversion
 /// <summary>A prepared rate lookup: the quote currency and the day asked for (<c>null</c> for the latest).</summary>
 public readonly record struct RateKey(string QuoteCurrency, DateOnly? Date);
 
-/// <summary>A stored USD rate: units of the quote currency per one US dollar on <see cref="Date"/>.</summary>
-public sealed record ExchangeRateRow(DateOnly Date, decimal Rate);
+/// <summary>
+/// A stored USD rate: units of the quote currency per one US dollar on <see cref="Date"/>, from <see cref="Source"/>
+/// (<c>frankfurter</c> or <c>currency-api</c>).
+/// </summary>
+public sealed record ExchangeRateRow(DateOnly Date, decimal Rate, string Source);
+
+/// <summary>
+/// The effective rate of one conversion (<see cref="ReportingConversion.Quote"/>): units of the target per one unit of
+/// the source, unrounded; the older leg's day (<c>null</c> when no rate was needed); the legs' sources; and whether that
+/// day is more than <see cref="ReportingConversion.StaleAfterDays"/> days older than the day asked for.
+/// </summary>
+public sealed record RateQuote(decimal Rate, DateOnly? RateDate, IReadOnlyList<string> Sources, bool IsStale);

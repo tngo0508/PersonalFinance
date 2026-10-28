@@ -59,6 +59,8 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
         "Investment growth chart", "Initial investment amount"
     ];
 
+    private static readonly string[] PresetKeys = ["fire", "coast", "traditional", "ultra", "conservative"];
+
     private WebApplication _app = null!;
     private HttpClient _client = null!;
     private ApiProxy<INetWorthApi> _netWorthProxy = null!;
@@ -171,7 +173,7 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
 
         string menu = MoreMenu(html);
         Assert.DoesNotContain("nw-preset-card", html, StringComparison.Ordinal);
-        Assert.All(new[] { "fire", "coast", "traditional", "ultra", "conservative" },
+        Assert.All(PresetKeys,
             preset => Assert.Contains($"data-preset=\"{preset}\"", menu, StringComparison.Ordinal));
         Assert.Single(FirePreset().Matches(html));
     }

@@ -15,9 +15,10 @@ public interface ICurrencyConverter
     /// <summary>
     /// A conversion into <paramref name="reportingCurrency"/> holding the rate for every amount in
     /// <paramref name="amounts"/>: a dated amount's own day (nearest prior rate), an undated one's latest rate. Amounts
-    /// already in the Reporting Currency need no rate.
+    /// already in the Reporting Currency need no rate. Features pass the Account's Reporting Currency, always a
+    /// supported one; the Currency Converter passes any convertible currency it converts into.
     /// </summary>
-    /// <exception cref="ArgumentException">The Reporting Currency is not supported.</exception>
+    /// <exception cref="ArgumentException">The currency is not convertible.</exception>
     Task<ReportingConversion> PrepareAsync(string reportingCurrency, IEnumerable<MoneyAt> amounts,
         CancellationToken cancellationToken = default);
 }

@@ -205,6 +205,7 @@ JavaScript paths are under `Web/wwwroot/js/`.
 | BudgetPlanner | `BudgetController` (`api/Budget`) | `IBudgetService` | `UserBudgetAllocation` | `IBudgetPlannerApi` | `Budget` | `budget/` | Raises Notifications; reads `IBudgetDataProvider` |
 | BudgetTracker | `BudgetTrackerController` (`api/budget-tracker`) | `IMonthlyBudgetService`, `IBudgetTrackerRemovalService` | `BudgetCategory`, `BudgetTransaction`, `MonthlyBudgetPlan`, `MonthlyBudgetLine` | `IBudgetTrackerApi` | `BudgetTracker` | `budget-tracker/`, `core/data-source-toggle.js` | Six Validators; the controller also injects `IBudgetDataSourceService` |
 | Community | `CommunityController` (`api/Community`; Strategy review RequireAdmin) | `ICommunityService` | `CommunityPseudonym`, `CommunityStrategy`, `CommunityComment`, `CommunityCommentLike`, `CommunityPoll`, `CommunityPollOption`, `CommunityPollVote` | `ICommunityApi` | `Community`; Strategy review in `Admin` | `community.js` | Two Validators (pinning and reviewing a Strategy); the Service throws keyed `ApiErrorException`s for votes and comments. `MoneyAmountRule` (Shared) is the no-amounts rule both the form's nudge and the Admin queue's flag use |
+| CurrencyConverter | `CurrencyConverterController` (`api/CurrencyConverter`) | `ICurrencyConversionService` | none (reads `ExchangeRate` only through Infrastructure's `ICurrencyConverter`) | `ICurrencyConverterApi` | `CurrencyConverter` (plain GET form) | none | Stateless calculator: no Entity, no rate lookup of its own, no rate limit; see [16](#16-localization) |
 | Dashboard | `DashboardController` (`api/Dashboard`) | `IDashboardService` | none (reads `NetWorthParameters`, `SavingsGoal`, `UserBudgetAllocation`, `GoogleDriveConnection`) | `IDashboardApi` | `Dashboard` | `dashboard/` | Read-only aggregator over four Features plus `IBudgetDataProvider` |
 | Feedback | `FeedbackController` (`api/Feedback`) | `IFeedbackService` | `Feedback` | `IFeedbackApi` | `Feedback`; inbox in `Admin` | none | The canonical example ([2](#2-anatomy-of-a-feature)) |
 | GoogleDrive | `GoogleDriveController` (`api/GoogleDrive`) | `IDriveConnectionService`, `ISpreadsheetReader`, `IGoogleDriveFileSource` (internal) | `GoogleDriveConnection`, `GoogleDriveCachedFile` | `IGoogleDriveApi` | `GoogleDrive` | `google-drive/` | Typed `HttpClient`s to Google Drive; a 1,450-line static parser; see [13](#13-google-drive-and-spreadsheet-analysis) |
@@ -1313,6 +1314,20 @@ flowchart LR
     rc --> dto["DTOs: Amount + CurrencyCode + ReportingAmount<br/>totals in the Reporting Currency<br/>ConversionDto: rates used, stale (over 3 days), unavailable"]
     dto --> web["Web: _ConversionCaption partial, PFCurrency.captionText<br/>converted at {rate} on {date} / rate as of / unavailable"]
     sel["Account settings › Currency<br/>per-row USD | VND selectors (currency-selector.js)"] --> pref
+```
+
+The Currency Converter Feature (#446) reuses the same converter with any Convertible Currency as the target: it
+prepares one `MoneyAt(From, date)` into To and asks `ReportingConversion.Quote` for the effective rate.
+
+```mermaid
+flowchart LR
+    page["Web CurrencyConverterController<br/>GET form: amount, from, to, date<br/>defaults from the Reporting Currency"] -- "ICurrencyConverterApi" --> api["CurrencyConverterController<br/>ConvertCurrencyRequestValidator<br/>(convertible codes, amount ≥ 0, 2015-01-01 to today)"]
+    api --> svc["ICurrencyConversionService<br/>From = To: amount, rate 1, no lookup"]
+    svc -- "PrepareAsync(To, MoneyAt(From, date))" --> conv["ICurrencyConverter"]
+    conv --> quote["ReportingConversion.Quote<br/>rate(USD→To) / rate(USD→From), unrounded<br/>rate date: the older leg; stale over 3 days<br/>sources; null when a leg has no rate"]
+    quote --> svc
+    svc -- "amount × rate, rounded once to To's minor units" --> dto["CurrencyConversionDto<br/>converted amount, rate, rate date, sources, stale, unavailable"]
+    dto --> page
 ```
 
 The Account's Language is stored, and the cookie only mirrors it:

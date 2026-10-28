@@ -29,7 +29,7 @@ internal sealed class FxRatesRefresher : IResearchDatasetRefresher
     /// <summary>
     /// The first day a quote with no rates yet is filled from, so older Budget Tracker and spreadsheet rows have a rate.
     /// </summary>
-    internal static readonly DateOnly FirstDate = new(2015, 1, 1);
+    internal static readonly DateOnly FirstDate = ConvertibleCurrencies.FirstRateDate;
 
     private readonly AppDbContext _db;
     private readonly IFrankfurterClient _frankfurter;

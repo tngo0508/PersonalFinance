@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Authorization;
@@ -136,7 +137,7 @@ public class NetworthController : Controller
     }
 
     /// <summary>Only real saved values count, not a blank DTO with all zeros.</summary>
-    private static bool IsSaved(NetWorthParametersDto? saved) =>
+    private static bool IsSaved([NotNullWhen(true)] NetWorthParametersDto? saved) =>
         saved != null && saved.CurrentAge > 0 && saved.RetirementAge > 0;
 
     /// <summary>
