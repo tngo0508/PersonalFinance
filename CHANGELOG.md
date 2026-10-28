@@ -21,6 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Sources: at least one; every citation and link under an allowlisted prefix and allowed by its usage rule; each country note cites its own country; IRS citations give the tax year.
   - References: slugs match file names and resolve; Terms and aliases are unique; 2–5 related terms; each Term Entry in at most one Lesson; Lesson days run from 1 with no gap.
   - Plain English: no advice phrasing or listed idioms, from `plain-english.json`. Each check has a fixture it rejects.
+## [13.10.1] - 2026-10-28
+
+### Changed
+
+- **The scheduled ticket agent runs the E2E suites**: `.github/scripts/e2e-inmemory.sh` starts both apps on the InMemory provider, as CI's E2E job does, and runs the UI and API suites, so the agent needs no database to run them; its prompt now requires the run whenever a ticket touches the Web project or `e2e-tests/`, and the rebase run does the same (#545).
+  - Before, the agent skipped E2E for want of a database and could open a PR whose new E2E check had never run; the Theme Smoke step of #545 failed in CI that way.
+  - The script also serves a local run when the dev database is paused: `bash .github/scripts/e2e-inmemory.sh [--no-build] [ui|api]`.
 
 ## [13.10.0] - 2026-10-28
 

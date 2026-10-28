@@ -6,7 +6,7 @@ Short, always-loaded rules for AI agents. The full detail lives in [`docs/CODING
 
 - **C#:** `dotnet test PersonalFinance.sln`
 - **JavaScript:** `npm run lint` (auto-fix: `npm run lint:fix`). Never call `eslint` directly: the repo pins ESLint 8 inside this script, and a bare `eslint` (v9+) cannot read `.eslintrc.js`.
-- **E2E (Playwright):** needs a running database, Web app and ApiService. Run `npm run e2e:preflight` first. Setup is in `docs/DEVELOPMENT.md` under "Running the E2E tests locally".
+- **E2E (Playwright):** needs a running Web app and ApiService. Without a database, `bash .github/scripts/e2e-inmemory.sh` starts both on the InMemory provider and runs both suites, as CI does. Against your own apps and database, run `npm run e2e:preflight` first. Setup is in `docs/DEVELOPMENT.md` under "Running the E2E tests locally".
 - Never claim something works unless you ran the check. If a check is blocked, say exactly why.
 
 ## Read first

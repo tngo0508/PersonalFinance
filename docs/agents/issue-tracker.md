@@ -88,8 +88,11 @@ late run's timeout is cut so that it ends by 19:00. Trigger it by hand at any ti
 - **Picks** the oldest open `ready-for-agent` issue with no assignee, no `agent:in-progress` or `wayfinder:map` label,
   no sub-issues, no open blockers and no open PR that closes it. It pauses while 5 PRs from `agent/issue-*` branches
   are open (drafts included).
-- **Claims** it with `agent:in-progress`, then runs `/implement` (tdd, code-review), `dotnet test` and `npm run lint`,
-  and opens a PR from `agent/issue-<n>` that requests the owner's review. The agent never merges.
+- **Claims** it with `agent:in-progress`, then runs `/implement` (tdd, code-review), `dotnet test`, `npm run lint` and,
+  when the change touches `e2e-tests/` or the Web project, the E2E suites through `.github/scripts/e2e-inmemory.sh`
+  (both apps on the InMemory provider, as CI's E2E job runs them, so the runner needs no database; #545 showed what an
+  E2E check nobody ran does in CI). Then it opens a PR from `agent/issue-<n>` that requests the owner's review. The
+  agent never merges.
 - **Checks the version before the PR**: right before pushing, the agent rebases onto `main` and runs
   `.github/scripts/agent-version-check.sh`. It applies the release check's rules: AppVersion is above `main` and every
   other open agent PR, and CHANGELOG.md's top section is that version and not empty. After the run, the workflow repeats

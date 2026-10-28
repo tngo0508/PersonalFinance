@@ -198,6 +198,21 @@ jobs:
       - name: Install npm packages
         run: npm ci
 
+      # Playwright's Chromium, for the E2E suites the agent runs with .github/scripts/e2e-inmemory.sh: both apps on the
+      # InMemory provider, as CI's E2E job runs them, so the runner needs no database.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
+
       - name: Create the agent branch
         run: git checkout -b "$BRANCH"
 
@@ -212,7 +227,7 @@ jobs:
           claude_args: >-
             --model claude-opus-5-5
             --max-turns 200
-            --allowedTools "Read,Edit,Write,Glob,Grep,Agent,Skill,TodoWrite,Bash(bash .github/scripts/agent-version-check.sh:*),Bash(dotnet:*),Bash(npm:*),Bash(git:*),Bash(gh:*),Bash(jq:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(find:*)"
+            --allowedTools "Read,Edit,Write,Glob,Grep,Agent,Skill,TodoWrite,Bash(bash .github/scripts/agent-version-check.sh:*),Bash(bash .github/scripts/e2e-inmemory.sh:*),Bash(dotnet:*),Bash(npm:*),Bash(git:*),Bash(gh:*),Bash(jq:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(find:*)"
           prompt: |
             /implement ${{ env.ISSUE }}
 
@@ -240,8 +255,12 @@ jobs:
             1. Implement with the tdd and dotnet-feature-workflow skills. Commit to `${{ env.BRANCH }}`.
             2. Run the code-review skill against `origin/main`. Fix every finding you agree is a real defect, then re-run
                the checks.
-            3. Checks, all must pass before the PR: `dotnet test PersonalFinance.sln` and "npm run lint". Skip E2E:
-               this runner has no database or app server. Say so in the PR.
+            3. Checks, all must pass before the PR: `dotnet test PersonalFinance.sln`, "npm run lint", and the E2E
+               suites: `bash .github/scripts/e2e-inmemory.sh` starts both apps on the InMemory provider (this runner
+               has no database and needs none for this) and runs "npm run test:e2e" and "npm run test:api" as CI's
+               E2E job does. Run it whenever you touched `e2e-tests/` or PersonalFinance.Web (views, JavaScript, CSS):
+               an E2E check you wrote but never ran fails in CI (#545 did). Fix what fails and list the result in
+               the PR. Skip it only for a change outside both, and say so in the PR.
             4. Done checklist from AGENTS.md: bump AppVersion (Current, Major, Minor, Patch together) and add the
                CHANGELOG.md section `## [x.y.z] - YYYY-MM-DD` at the top. Choose a version above both `main` and every
                open PR from an `agent/issue-*` branch, so parallel PRs never collide. Update docs/DIAGRAMS.md if you
@@ -250,8 +269,8 @@ jobs:
                `git fetch origin main && git rebase origin/main` (keep main's AppVersion.cs and CHANGELOG.md sections,
                re-apply yours on top), then `bash .github/scripts/agent-version-check.sh ${{ env.BRANCH }}`. It applies
                the release check's rules and lists every problem: re-bump or fix the CHANGELOG as it says, commit, and
-               re-run it until it prints OK. If the rebase brought in code, re-run `dotnet test PersonalFinance.sln`.
-               Never open a PR while it fails.
+               re-run it until it prints OK. If the rebase brought in code, re-run `dotnet test PersonalFinance.sln`
+               (and the E2E script, if step 3 called for it). Never open a PR while it fails.
             6. Push `${{ env.BRANCH }}` and open the PR with the pr skill: base `main`, `--reviewer tngo0508`, the body
                starts with `Closes #${{ env.ISSUE }}`, and lists the commands you ran with their results and the
                code-review findings with what you did about each.
@@ -347,6 +366,19 @@ jobs:
       - name: Install npm packages
         run: npm ci
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
+
       # The check below judges the rebase against main as it is now. Another agent PR can merge while Claude works;
       # the next run rebases onto that, so it must not count as a failed rebase (#536 was labelled that way).
       - name: Record main before the rebase
@@ -365,7 +397,7 @@ jobs:
           claude_args: >-
             --model claude-opus-5-5
             --max-turns 120
-            --allowedTools "Read,Edit,Write,Glob,Grep,TodoWrite,Bash(bash .github/scripts/agent-version-check.sh:*),Bash(dotnet:*),Bash(npm:*),Bash(git:*),Bash(gh:*),Bash(jq:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(find:*)"
+            --allowedTools "Read,Edit,Write,Glob,Grep,TodoWrite,Bash(bash .github/scripts/agent-version-check.sh:*),Bash(bash .github/scripts/e2e-inmemory.sh:*),Bash(dotnet:*),Bash(npm:*),Bash(git:*),Bash(gh:*),Bash(jq:*),Bash(ls:*),Bash(cat:*),Bash(grep:*),Bash(find:*)"
           prompt: |
             You are the unattended scheduled ticket agent for ${{ github.repository }}. No human is watching this run.
             Your only job: rebase PR #${{ env.PR }} (branch `${{ env.BRANCH }}`, already checked out) onto `origin/main`,
@@ -381,7 +413,10 @@ jobs:
                  version and dated today.
                - Code: keep main's changes and re-apply this PR's change on top. If a conflict needs a product or design
                  decision, do not guess: `git rebase --abort`, explain it in a PR comment, and stop.
-            3. Run `dotnet test PersonalFinance.sln` and "npm run lint", and fix only what the rebase broke. Then run
+            3. Run `dotnet test PersonalFinance.sln` and "npm run lint", and fix only what the rebase broke. When the
+               rebase touched `e2e-tests/` or PersonalFinance.Web (views, JavaScript, CSS), also run
+               `bash .github/scripts/e2e-inmemory.sh`: it starts both apps on the InMemory provider (no database
+               needed) and runs the E2E suites as CI does. Then run
                `bash .github/scripts/agent-version-check.sh ${{ env.BRANCH }}` and fix what it lists until it prints OK.
             4. `git push --force-with-lease origin ${{ env.BRANCH }}`. Then comment on the PR with the new version and
                anything you had to resolve by hand.
