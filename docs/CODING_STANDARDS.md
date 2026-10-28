@@ -379,6 +379,7 @@ Keep controllers thin and consistent with the application's existing conventions
 - Do not insert untrusted content using unsafe HTML APIs.
 - Ensure interactive features work with keyboard navigation and accessible labels.
 - Preserve responsive layouts and existing visual design conventions.
+- Colours in stylesheets come from the `--lp-*` (`ledger.css`) and `--app-*` (`site.css`) tokens, which switch with the theme. A new hex, `rgb()` or `hsl()` literal outside those token blocks fails `npm run test:i18n` (`tools/raw-colours.test.js`; see `docs/DEVELOPMENT.md`).
 - Remove obsolete JavaScript and event handlers when replacing existing behavior.
 
 ### 8. User Experience and Professional Design
