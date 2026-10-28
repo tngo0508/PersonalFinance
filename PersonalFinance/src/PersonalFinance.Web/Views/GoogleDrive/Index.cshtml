@@ -651,7 +651,7 @@
                         @if (otherCount > 0)
                         {
                             <button type="button" class="gdrive-filter-chip" data-filter="other" aria-pressed="false">
-                                <svg width="12" height="12" fill="#475569" viewBox="0 0 16 16" aria-hidden="true">
+                                <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                                     <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
                                 </svg>
                                 @L["GoogleDrive.Filter.Other"] <span class="chip-count">@otherCount</span>
@@ -1314,14 +1314,15 @@
             align-items: center;
             padding: 0.5rem 0;
         }
+        /* Colours come from the theme tokens (site.css), so the table's footer follows the dark theme (#484) */
         .dt-layout-row .dataTables_info {
-            color: #6c757d;
+            color: var(--app-text-muted);
             font-size: 0.85rem;
             white-space: nowrap;
             line-height: 1.5;
         }
         .dt-layout-row .dataTables_length {
-            color: #6c757d;
+            color: var(--app-text-muted);
             font-size: 0.85rem;
             line-height: 1.5;
         }
@@ -1338,17 +1339,17 @@
             margin-right: 0.5em;
             font-size: 0.85rem;
             padding: 0.25rem 1.75rem 0.25rem 0.5rem;
-            border: 1px solid #ced4da;
+            border: 1px solid var(--app-border-control);
             border-radius: 0.25rem;
-            background-color: #fff;
-            color: #495057;
+            background-color: var(--bs-body-bg);
+            color: var(--app-text);
             min-width: 65px;
             height: auto;
             line-height: 1.5;
             appearance: none;
             -webkit-appearance: none;
             -moz-appearance: none;
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+            background-image: var(--bs-form-select-bg-img);
             background-repeat: no-repeat;
             background-position: right 0.5rem center;
             background-size: 16px 12px;
@@ -1371,9 +1372,6 @@
             line-height: 1.5;
             min-width: 2rem;
             text-align: center;
-            color: #6c757d;
-            border-color: #dee2e6;
-            background-color: #fff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -1383,15 +1381,6 @@
         .dt-layout-row .dataTables_paginate .pagination .page-item .page-link span {
             vertical-align: middle;
             line-height: 1.5;
-        }
-        .dt-layout-row .dataTables_paginate .pagination .page-item.active .page-link {
-            color: #fff;
-            background-color: #0d6efd;
-            border-color: #0d6efd;
-        }
-        .dt-layout-row .dataTables_paginate .pagination .page-item.disabled .page-link {
-            color: #adb5bd;
-            background-color: #fff;
         }
     </style>
 }
