@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [12.5.0] - 2026-10-27
+
+### Added
+
+- **i18n Translate workflow**: every pull request from a branch of this repository gets its Vietnamese drafted by CI, which pushes `vi.json` and `i18n.lock.json` to the PR branch as its own commit, `i18n: translate N keys (vi)`, so nobody runs `npm run i18n:translate` by hand any more.
+  - The Translator key (secret `AZURE_TRANSLATOR_KEY`, variable `AZURE_TRANSLATOR_REGION`) goes to that one deterministic step and to no Claude step, and the workflow uses `pull_request`, never `pull_request_target`, so a fork PR gets no secrets and is skipped with a passing check.
+  - The commit is pushed with `AGENT_GH_TOKEN`, so the other PR workflows re-run on the translated commit. A translation whose placeholders differ from the English fails the check and waits for a hand correction.
+  - New `I18nTranslateWorkflowTests` pin these choices.
+
+### Changed
+
+- **Agent Auto-Merge**: waits for the `Translate (i18n)` check as well, so an agent PR is never merged untranslated.
+- **Ticket agent**: adds English keys only and never edits `vi.json` or `i18n.lock.json`, hand-types Vietnamese, runs the translator or opens a draft to wait for a translation; the AGENTS.md Done checklist and the PR template say the same for humans.
+- **Docs**: ADR 0015, the localization spec, DEVELOPMENT.md, ARCHITECTURE.md, the issue-tracker agent rules and the DIAGRAMS.md translation flow describe the workflow.
+
 ## [12.4.1] - 2026-10-27
 
 ### Changed

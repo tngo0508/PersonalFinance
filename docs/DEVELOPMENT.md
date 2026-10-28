@@ -797,17 +797,24 @@ dotnet test PersonalFinance.sln --logger "console;verbosity=normal"
 ### Translations
 
 User-facing text lives in `PersonalFinance/src/PersonalFinance.Web/Resources/i18n/en.json`; `vi.json` is machine-drafted
-([ADR 0015](adr/0015-json-localization-with-custom-string-localizer.md)). After adding or changing English keys:
+([ADR 0015](adr/0015-json-localization-with-custom-string-localizer.md)). Add or change English keys only and push:
+the `i18n Translate` workflow (`.github/workflows/i18n-translate.yml`) runs on every PR from a branch of this
+repository, sends the missing or stale keys to Azure AI Translator and pushes `vi.json` and `i18n.lock.json` to the
+PR branch as its own commit, `i18n: translate N keys (vi)`. Pull before you push again. It needs the repository
+secret `AZURE_TRANSLATOR_KEY` and the variable `AZURE_TRANSLATOR_REGION` (optionally `AZURE_TRANSLATOR_ENDPOINT`), and
+pushes with `AGENT_GH_TOKEN` so the other PR workflows re-run on the translated commit. A PR from a fork gets no
+secrets and is skipped. Never hand-type `vi.json` entries or lock hashes; a hand correction to an existing `vi.json`
+entry stays until its English changes.
+
+To draft locally instead (the result is the same commit):
 
 ```bash
 npm run i18n:translate
 ```
 
 It reads `AZURE_TRANSLATOR_KEY`, `AZURE_TRANSLATOR_REGION` and `AZURE_TRANSLATOR_ENDPOINT` from the environment or the
-repository's `.env`, sends only missing or stale keys, and updates `vi.json` and `i18n.lock.json`. Commit the result
-on its own as `i18n: translate N keys (vi)`; a hand correction to `vi.json` stays until its English changes.
-`npm run i18n:translate -- --dry-run` lists what would be sent. `npm run i18n:report` prints what CI's `i18n-report`
-step writes to the job summary, and `npm run test:i18n` runs the Node tests of both scripts.
+repository's `.env`. `npm run i18n:translate -- --dry-run` lists what would be sent. `npm run i18n:report` prints
+what CI's `i18n-report` step writes to the job summary, and `npm run test:i18n` runs the Node tests of both scripts.
 
 ### Running the E2E tests locally
 

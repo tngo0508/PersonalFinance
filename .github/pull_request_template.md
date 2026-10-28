@@ -16,7 +16,7 @@ Closes #
 - [ ] `AppVersion` bumped in `PersonalFinance/src/PersonalFinance.Shared/Constants/AppVersion.cs` (`Current`, `Major`, `Minor`, `Patch` together; patch = fix, minor = feature, major = breaking or schema migration).
 - [ ] `CHANGELOG.md` has a `## [x.y.z] - YYYY-MM-DD` section at the top for that version, entries in the right category (or the PR is docs-only or labelled `no-release`).
 - [ ] The change is focused: no unrelated refactoring, leftover TODOs or debug code.
-- [ ] New or changed user-facing strings are keys in `Resources/i18n/en.json`, and `npm run i18n:translate` ran and was committed as its own commit (`i18n: translate N keys (vi)`). Reviewing the Vietnamese is optional.
+- [ ] New or changed user-facing strings are keys in `Resources/i18n/en.json` only. The `Translate (i18n)` check drafts the Vietnamese and pushes it as `i18n: translate N keys (vi)` (or `npm run i18n:translate` ran locally). No hand-typed `vi.json` or `i18n.lock.json` entries. Reviewing the Vietnamese is optional.
 
 ## Evidence
 

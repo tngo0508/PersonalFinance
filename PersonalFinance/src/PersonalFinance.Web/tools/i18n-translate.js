@@ -3,8 +3,8 @@
 
 /**
  * npm run i18n:translate — machine-drafts the missing and stale translations with Azure AI Translator
- * (ADR 0015, spec §2.4). Run by the author inside the feature PR and committed as its own commit,
- * "i18n: translate N keys (vi)". CI never runs it.
+ * (ADR 0015, spec §2.4). The i18n Translate workflow runs it on every same-repository PR and pushes the result as its
+ * own commit, "i18n: translate N keys (vi)"; an author can run it locally too. The Claude agent never runs it.
  *
  * - Sends only keys that are missing from <lang>.json or whose English text changed since they were translated
  *   (i18n.lock.json holds a hash of that English text). A translation already in the file with no lock entry is kept

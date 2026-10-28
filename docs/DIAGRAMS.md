@@ -1347,12 +1347,14 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    en["en.json<br/>(written by hand)"] --> tr["npm run i18n:translate<br/>missing or stale keys only<br/>notranslate placeholders, glossary.vi.json"]
+    en["en.json<br/>(written by hand, pushed on a PR)"] --> wf["i18n Translate workflow<br/>pull_request, same-repo branches only<br/>the Translator key goes to this step alone"]
+    wf --> tr["npm run i18n:translate<br/>missing or stale keys only<br/>notranslate placeholders, glossary.vi.json"]
     lock["i18n.lock.json<br/>hash of the English per key"] <--> tr
     tr -- "textType=html, 429 back-off" --> az["Azure AI Translator F0"]
     az --> tr
-    tr -- "placeholders verified" --> vi["vi.json<br/>commit: i18n: translate N keys (vi)"]
+    tr -- "placeholders verified" --> vi["vi.json<br/>pushed to the PR branch with AGENT_GH_TOKEN<br/>commit: i18n: translate N keys (vi)"]
     vi --> ci["CI lint-js job: i18n-report<br/>missing, stale, unreferenced (reported)<br/>bad JSON, placeholder mismatch (fails)"]
+    vi --> am["Agent Auto-Merge<br/>requires the Translate (i18n) check"]
     en --> ci
 ```
 

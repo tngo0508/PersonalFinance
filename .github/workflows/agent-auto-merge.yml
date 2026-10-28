@@ -2,6 +2,8 @@ name: Agent Auto-Merge
 
 # Merges a scheduled ticket agent PR (agent/issue-* branch, not a draft) as soon as every check on its head commit has
 # finished and none failed. Runs each time one of the PR workflows completes; the last one to finish does the merge.
+# The i18n Translate check must have passed too: it pushes the Vietnamese as a new commit, so the checks of the
+# commit before it never merge (the head-SHA guard below), and the translated commit's own checks decide.
 #
 # Needs the AGENT_GH_TOKEN secret (fine-grained PAT: contents, pull requests, issues read/write). A merge made with
 # GITHUB_TOKEN does not trigger workflows, so the push to main would never deploy or publish its Release.
@@ -11,6 +13,7 @@ on:
       - Build, Test, and Deploy to Azure Container Apps
       - Release Check
       - Claude Code Review
+      - i18n Translate
     types: [completed]
 
 permissions:
@@ -71,8 +74,8 @@ jobs:
             echo "::notice::PR #$pr still has $pending checks running."
             exit 0
           fi
-          # The build workflow skips docs-only PRs, but the release check and the review always run.
-          for required in "Check AppVersion bump and CHANGELOG" "claude-review"; do
+          # The build workflow skips docs-only PRs, but the release check, the review and the translation always run.
+          for required in "Check AppVersion bump and CHANGELOG" "claude-review" "Translate (i18n)"; do
             if ! jq -e --arg n "$required" 'any(.[]; .name == $n and .bucket == "pass")' <<< "$checks" > /dev/null; then
               echo "::notice::PR #$pr has no passing '$required' check yet."
               exit 0

@@ -1,0 +1,108 @@
+name: i18n Translate
+
+# Machine-drafts the Vietnamese for every pull request from a branch of this repository (ADR 0015, spec §2.4): runs
+# "npm run i18n:translate", which sends only the keys that are missing from vi.json or whose English changed, and
+# pushes the result to the PR branch as its own commit, "i18n: translate N keys (vi)". Nobody has to run it by hand,
+# and the Claude ticket agent never needs the Translator key: it adds English keys only.
+#
+# Public repository, so:
+# - The trigger is the plain pull_request event, never its "_target" variant: a fork PR gets no secrets and is
+#   skipped here (English is the runtime fallback, so nothing breaks). The job still reports a passing check,
+#   because Agent Auto-Merge requires it.
+# - The Translator key is given to the one deterministic shell step below and to nothing else. No Claude step in
+#   any workflow receives it, so a prompt-injected issue cannot leak it.
+# - No path filter: the check must exist on every PR for Agent Auto-Merge to wait on it. With nothing pending the
+#   job finishes in seconds and the key is not needed.
+#
+# Needs: secret AZURE_TRANSLATOR_KEY, variable AZURE_TRANSLATOR_REGION (optionally AZURE_TRANSLATOR_ENDPOINT), and the
+# AGENT_GH_TOKEN secret (the owner's fine-grained PAT) for the push. A push made with GITHUB_TOKEN would not trigger
+# the PR workflows, so the translated commit would never be built, reviewed or auto-merged.
+#
+# Loop safety: the translated commit triggers this workflow again, finds nothing pending and pushes nothing.
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  translate:
+    name: Translate (i18n)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - name: Skip a fork
+        if: env.SAME_REPO != 'true'
+        run: |
+          echo "::notice::PR from a fork, so no secrets here and nothing is translated. English is the fallback."
+
+      - name: Check the push token
+        if: env.SAME_REPO == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::AGENT_GH_TOKEN is not set. Without it the translated commit could not be pushed."
+            exit 1
+          fi
+
+      - name: Checkout the PR branch
+        if: env.SAME_REPO == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.AGENT_GH_TOKEN }}
+          fetch-depth: 1
+
+      # The script needs only Node built-ins and the global fetch: no npm ci.
+      - name: Setup Node.js
+        if: env.SAME_REPO == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Translate missing and stale keys, then commit and push
+        if: env.SAME_REPO == 'true'
+        env:
+          AZURE_TRANSLATOR_KEY: ${{ secrets.AZURE_TRANSLATOR_KEY }}
+          AZURE_TRANSLATOR_REGION: ${{ vars.AZURE_TRANSLATOR_REGION }}
+          AZURE_TRANSLATOR_ENDPOINT: ${{ vars.AZURE_TRANSLATOR_ENDPOINT }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          I18N_DIR: PersonalFinance/src/PersonalFinance.Web/Resources/i18n
+        run: |
+          set -uo pipefail
+          # Never print the environment or a .env here: the key must not reach the public log.
+          # The script writes every verified translation and exits 1 only on a placeholder mismatch or a missing key
+          # while translations are pending; the commit below still carries what it could translate.
+          npm run i18n:translate 2>&1 | tee "$RUNNER_TEMP/i18n-translate.log"
+          status=${PIPESTATUS[0]}
+
+          if git diff --quiet -- "$I18N_DIR"; then
+            echo "::notice::Nothing to translate on $HEAD_REF."
+            exit "$status"
+          fi
+
+          message=$(grep -m1 -o 'i18n: translate [0-9]* keys ([a-z-]*)' "$RUNNER_TEMP/i18n-translate.log" || true)
+          if [ -z "$message" ]; then
+            message="i18n: sync translations with en.json"
+          fi
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit --quiet -m "$message" -- "$I18N_DIR"
+          git push origin "HEAD:$HEAD_REF"
+          echo "::notice::Pushed '$message' to $HEAD_REF. The PR workflows re-run on that commit."
+
+          if [ "$status" != "0" ]; then
+            echo "::error::A translation has a placeholder mismatch or the Translator credentials are missing; see the log. Fix vi.json by hand or set the secret, then push."
+          fi
+          exit "$status"
