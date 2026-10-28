@@ -61,6 +61,9 @@ public class ExternalLoginModel : PageModel
     /// <summary>Whether the provider supplied the email, so the form shows it read-only and asks only for consent.</summary>
     public bool EmailFromProvider { get; set; }
 
+    /// <summary>Whether an Account the callback could not link already holds the provider's email.</summary>
+    public bool ProviderEmailHasAccount { get; set; }
+
     public string? ReturnUrl { get; set; }
 
     [TempData]
@@ -168,6 +171,7 @@ public class ExternalLoginModel : PageModel
                 }
 
                 EmailFromProvider = true;
+                ProviderEmailHasAccount = true;
                 Input.Email = email;
                 return Page();
             }
@@ -219,6 +223,7 @@ public class ExternalLoginModel : PageModel
             IdentityUser? existingUser = await _userManager.FindByEmailAsync(Input.Email);
             if (existingUser != null)
             {
+                ProviderEmailHasAccount = EmailFromProvider;
                 ModelState.AddModelError(string.Empty, _localizer["Account.ExternalLogin.AccountExists"]);
                 return Page();
             }

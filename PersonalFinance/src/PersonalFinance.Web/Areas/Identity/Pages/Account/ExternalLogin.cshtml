@@ -14,7 +14,7 @@
 
 <div class="auth-page__form">
     <div class="alert alert-info small" role="alert">
-        @if (Model.EmailFromProvider)
+        @if (Model.EmailFromProvider && !Model.ProviderEmailHasAccount)
         {
             @L.NamedHtml("Account.ExternalLogin.AuthenticatedAcceptTerms", null, ("provider", provider(null)))
         }
