@@ -1,4 +1,4 @@
-/* global PFI18n */
+/* global PFI18n, ChartPalette */
 // Monthly Budget Summary modal on the Google Drive page.
 // Server values come from data- attributes on #monthlyBudgetModal (data-report-url, data-connection-id).
 (function ($) {
@@ -11,14 +11,6 @@
         // ==========================================
         // Monthly Budget Summary Report & Charts Logic
         // ==========================================
-        const BUDGET_COLORS = {
-            income: '#2a78d6',
-            spend: '#eb6834',
-            negative: '#e34948',
-            grid: '#e1e0d9',
-            axis: '#c3c2b7',
-            muted: '#898781'
-        };
         let budgetMainChartInstance = null;
         let budgetNetChartInstance = null;
         let currentBudgetData = null;
@@ -335,8 +327,61 @@
             if (budgetNetChartInstance) { budgetNetChartInstance.destroy(); budgetNetChartInstance = null; }
         }
 
-        function baseChartOptions (months) {
-            return {
+        /**
+         * The charts' colours from the shared chart palette (core/chart-palette.js, #484). Income, spending and
+         * overspent match the legend swatches (--bgt-income, --bgt-spend and --bgt-negative in site.css).
+         * @returns {object} The palette, plus income, spend and baseline (the x axis and the zero line).
+         */
+        function budgetChartColours () {
+            const palette = ChartPalette.read();
+            return Object.assign(palette, {
+                income: palette.series[0],
+                spend: palette.series[1],
+                baseline: ChartPalette.withAlpha(palette.axis, 0.5)
+            });
+        }
+
+        // Sets the theme colours on a chart's options: tooltip, axis text, gridlines and the zero line
+        function themeChartOptions (options, colours) {
+            const tooltip = options.plugins.tooltip;
+            tooltip.backgroundColor = colours.tooltip.background;
+            tooltip.titleColor = colours.tooltip.text;
+            tooltip.bodyColor = colours.tooltip.text;
+            tooltip.footerColor = colours.tooltip.text;
+            tooltip.borderColor = colours.tooltip.border;
+            tooltip.borderWidth = 1;
+            options.scales.x.border.color = colours.baseline;
+            options.scales.x.ticks.color = colours.axis;
+            options.scales.y.ticks.color = colours.axis;
+            options.scales.y.grid.color = function (ctx) { return ctx.tick && ctx.tick.value === 0 ? colours.baseline : colours.grid; };
+            return options;
+        }
+
+        // Saved months in the income colour, overspent months in the negative one
+        function netBarColours (values, colours) {
+            return values.map((v) => { return v >= 0 ? colours.income : colours.negative; });
+        }
+
+        // Restyles the charts in place when the theme changes, without a reload (#484)
+        function restyleYearCharts () {
+            const colours = budgetChartColours();
+            if (budgetMainChartInstance) {
+                themeChartOptions(budgetMainChartInstance.options, colours);
+                budgetMainChartInstance.data.datasets[0].backgroundColor = colours.income;
+                budgetMainChartInstance.data.datasets[1].backgroundColor = colours.spend;
+                budgetMainChartInstance.update('none');
+            }
+            if (budgetNetChartInstance) {
+                themeChartOptions(budgetNetChartInstance.options, colours);
+                const net = budgetNetChartInstance.data.datasets[0];
+                net.backgroundColor = netBarColours(net.data, colours);
+                budgetNetChartInstance.update('none');
+            }
+        }
+        ChartPalette.subscribe(restyleYearCharts);
+
+        function baseChartOptions (months, colours) {
+            return themeChartOptions({
                 responsive: true,
                 maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
@@ -352,7 +397,6 @@
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: '#0b0b0b',
                         padding: 10,
                         cornerRadius: 8,
                         boxPadding: 4,
@@ -365,17 +409,17 @@
                 scales: {
                     x: {
                         grid: { display: false },
-                        border: { color: BUDGET_COLORS.axis },
-                        ticks: { color: BUDGET_COLORS.muted }
+                        border: {},
+                        ticks: {}
                     },
                     y: {
                         beginAtZero: true,
-                        grid: { color: BUDGET_COLORS.grid },
+                        grid: {},
                         border: { display: false },
-                        ticks: { color: BUDGET_COLORS.muted, maxTicksLimit: 6, callback: function (val) { return formatCompactCurrency(val); } }
+                        ticks: { maxTicksLimit: 6, callback: function (val) { return formatCompactCurrency(val); } }
                     }
                 }
-            };
+            }, colours);
         }
 
         function renderYearCharts (months) {
@@ -383,7 +427,8 @@
             const labels = months.map((m) => { return monthName(m.monthNumber, 'short'); });
             const barStyle = { borderRadius: 4, borderSkipped: 'start', maxBarThickness: 24, categoryPercentage: 0.7, barPercentage: 0.9 };
 
-            const mainOptions = baseChartOptions(months);
+            const colours = budgetChartColours();
+            const mainOptions = baseChartOptions(months, colours);
             mainOptions.plugins.tooltip.callbacks.label = function (ctx) {
                 return ` ${ PFI18n.t('GoogleDrive.Js.LabelValue', { label: ctx.dataset.label, amount: formatCurrency(ctx.parsed.y) }) }`;
             };
@@ -396,14 +441,14 @@
                 data: {
                     labels: labels,
                     datasets: [
-                        $.extend({ label: PFI18n.t('GoogleDrive.Js.Income'), data: months.map((m) => { return m.actualIncome; }), backgroundColor: BUDGET_COLORS.income }, barStyle),
-                        $.extend({ label: PFI18n.t('GoogleDrive.Js.Spending'), data: months.map((m) => { return m.actualExpenses; }), backgroundColor: BUDGET_COLORS.spend }, barStyle)
+                        $.extend({ label: PFI18n.t('GoogleDrive.Js.Income'), data: months.map((m) => { return m.actualIncome; }), backgroundColor: colours.income }, barStyle),
+                        $.extend({ label: PFI18n.t('GoogleDrive.Js.Spending'), data: months.map((m) => { return m.actualExpenses; }), backgroundColor: colours.spend }, barStyle)
                     ]
                 },
                 options: mainOptions
             });
 
-            const netOptions = baseChartOptions(months);
+            const netOptions = baseChartOptions(months, colours);
             netOptions.plugins.tooltip.callbacks.label = function (ctx) {
                 const v = ctx.parsed.y;
                 return ` ${ v >= 0 ? t('TooltipSaved', { amount: formatCurrency(v) }) : t('TooltipOverspent', { amount: formatCurrency(-v) }) }`;
@@ -411,7 +456,6 @@
             netOptions.scales.y.beginAtZero = true;
             netOptions.scales.x.ticks.maxRotation = 0;
             netOptions.scales.x.ticks.autoSkipPadding = 6;
-            netOptions.scales.y.grid.color = function (ctx) { return ctx.tick && ctx.tick.value === 0 ? BUDGET_COLORS.axis : BUDGET_COLORS.grid; };
             const netValues = months.map((m) => { return m.netSavings; });
             budgetNetChartInstance = new Chart(document.getElementById('budgetNetChart').getContext('2d'), {
                 type: 'bar',
@@ -420,7 +464,7 @@
                     datasets: [$.extend({
                         label: t('NetSaved'),
                         data: netValues,
-                        backgroundColor: netValues.map((v) => { return v >= 0 ? BUDGET_COLORS.income : BUDGET_COLORS.negative; })
+                        backgroundColor: netBarColours(netValues, colours)
                     }, barStyle, { categoryPercentage: 0.6, barPercentage: 1 })]
                 },
                 options: netOptions
