@@ -125,7 +125,9 @@ async function driveControl(page, who, report) {
     check(!state.open && state.focusOnButton && state.stored === null, `${who}: Escape closes without a choice and returns focus`,
         JSON.stringify(state), report);
     await button.click();
-    await page.locator('#main-content').click({position: {x: 2, y: 2}});
+    // The top bar is fixed over the page's top edge, so the outside click lands just below it.
+    const bar = await page.locator('header.topbar').boundingBox();
+    await page.mouse.click(bar.x + 2, bar.y + bar.height + 2);
     state = await themeState(page);
     check(!state.open && state.stored === null && state.focusOnButton,
         `${who}: a click outside closes without a choice and returns focus`, JSON.stringify(state), report);

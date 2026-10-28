@@ -90,16 +90,11 @@ public class GoogleDriveController : Controller
 
                 model.SelectedConnectionId = selectedId;
 
-                // Load cached files from database (zero external API requests if fresh)
-                GoogleDriveFolderResponseDto cachedResponse = GoogleDriveText.Localize(_localizer,
+                // Load cached files from database (zero external API requests if fresh). When they cannot be loaded,
+                // the view's error state explains why; no page-level banner repeats it (#476).
+                model.Response = GoogleDriveText.Localize(_localizer,
                     await _googleDriveApi.GetConnectionFilesAsync(selectedId, forceRefresh: false, cancellationToken));
-                model.Response = cachedResponse;
                 model.HasQueried = true;
-
-                if (!cachedResponse.Success && !string.IsNullOrEmpty(cachedResponse.ErrorMessage))
-                {
-                    model.ErrorMessage = cachedResponse.ErrorMessage;
-                }
             }
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
@@ -154,7 +149,7 @@ public class GoogleDriveController : Controller
             {
                 TempData["StatusMessage"] = _localizer["GoogleDrive.Message.Synced"].Value;
             }
-            else
+            else if (!IsCredentialsInvalid(syncResponse.Error))
             {
                 TempData["ErrorMessage"] = syncResponse.ErrorMessage ?? _localizer["GoogleDrive.Message.SyncWarnings"].Value;
             }
@@ -200,7 +195,7 @@ public class GoogleDriveController : Controller
             {
                 TempData["StatusMessage"] = _localizer["GoogleDrive.Message.Reauthed"].Value;
             }
-            else
+            else if (!IsCredentialsInvalid(updated.Error))
             {
                 TempData["ErrorMessage"] = updated.ErrorMessage ?? _localizer["GoogleDrive.Message.ReauthUnverified"].Value;
             }
@@ -339,6 +334,13 @@ public class GoogleDriveController : Controller
 
         return View("Index", model);
     }
+
+    /// <summary>
+    /// Whether Google rejected the drive's API key. The redirected Index then renders the error state, which already
+    /// explains it with the connection's stored error, so no page-level banner repeats it (#476).
+    /// </summary>
+    private static bool IsCredentialsInvalid(ApiErrorEntryDto? error) =>
+        error?.Key == ResultMessageKeys.GoogleDrive.CredentialsInvalid;
 
     /// <summary>The connections with each error in the reader's language; empty when there are none.</summary>
     private List<GoogleDriveConnectionDto> Localize(List<GoogleDriveConnectionDto>? connections) =>
