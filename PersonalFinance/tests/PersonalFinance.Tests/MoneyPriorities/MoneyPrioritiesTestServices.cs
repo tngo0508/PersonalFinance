@@ -30,19 +30,4 @@ internal static class MoneyPrioritiesTestServices
 
     /// <summary>The tree Index loads before a submit: version 1, nothing highlighted.</summary>
     public static PriorityTreeDiagramDto TreeDiagramV1() => new() { TreeVersion = 1, Tree = TreeV1() };
-
-    private sealed class AllowAllRateLimiter : IRateLimiterService
-    {
-        public bool TryAllow(string userId) => true;
-
-        public bool TryReserve(string userId, out DateTime slot)
-        {
-            slot = default;
-            return true;
-        }
-
-        public void Release(string userId, DateTime slot)
-        {
-        }
-    }
 }
