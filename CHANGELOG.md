@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Sources: at least one; every citation and link under an allowlisted prefix and allowed by its usage rule; each country note cites its own country; IRS citations give the tax year.
   - References: slugs match file names and resolve; Terms and aliases are unique; 2–5 related terms; each Term Entry in at most one Lesson; Lesson days run from 1 with no gap.
   - Plain English: no advice phrasing or listed idioms, from `plain-english.json`. Each check has a fixture it rejects.
+
 ## [13.10.1] - 2026-10-28
 
 ### Changed
