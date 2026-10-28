@@ -257,7 +257,7 @@ jobs:
                the checks.
             3. Checks, all must pass before the PR: `dotnet test PersonalFinance.sln`, "npm run lint", and the E2E
                suites: `bash .github/scripts/e2e-inmemory.sh` starts both apps on the InMemory provider (this runner
-               has no database and needs none for this) and runs `npm run test:e2e` and `npm run test:api` as CI's
+               has no database and needs none for this) and runs "npm run test:e2e" and "npm run test:api" as CI's
                E2E job does. Run it whenever you touched `e2e-tests/` or PersonalFinance.Web (views, JavaScript, CSS):
                an E2E check you wrote but never ran fails in CI (#545 did). Fix what fails and list the result in
                the PR. Skip it only for a change outside both, and say so in the PR.
