@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [13.2.0] - 2026-10-28
+
+### Changed
+
+- **One theme control in the top bar for everyone**: signed-in and signed-out visitors get the same icon button beside the language switcher and before the avatar or sign-in buttons, opening a Light / Dark / System popover.
+  - The icon shows the mode in effect (sun, moon or monitor for System) and the button is named after it, for example "Theme: Dark".
+  - A choice applies at once and closes the popover; Escape or a click outside closes it without a choice. Enter or Space opens it, the arrow keys move between the choices, and focus returns to the button.
+  - The avatar menu no longer holds the theme items, and the signed-out sun/moon toggle is gone, so System can be chosen again at any time.
+  - The top-bar search now shrinks on narrow screens so the control, the bell and the avatar keep their room.
+
 ## [13.0.3] - 2026-10-28
 
 ### Changed

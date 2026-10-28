@@ -15,6 +15,7 @@
     var initial = string.IsNullOrEmpty(displayName) ? "?" : displayName[..1].ToUpperInvariant();
     var isAdmin = (await AuthorizationService.AuthorizeAsync(User, AppPolicies.RequireAdmin)).Succeeded;
 
+    <partial name="_ThemeSwitcher"/>
     <ul class="navbar-nav align-items-md-center">
         <li class="nav-item dropdown">
             <button type="button" class="btn app-user-toggle dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="@L.Named("Shell.Account.MenuFor", ("name", displayName))">
@@ -39,8 +40,6 @@
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <partial name="_LanguageSwitcher" model="@("menu")"/>
-                <li><hr class="dropdown-divider"></li>
-                <partial name="_ThemeSwitcher" model="@("menu")"/>
                 @if (isAdmin)
                 {
                     <li>
@@ -62,7 +61,7 @@ else
 {
     <div class="topbar-auth">
         <partial name="_LanguageSwitcher" model="@("inline")"/>
-        <partial name="_ThemeSwitcher" model="@("inline")"/>
+        <partial name="_ThemeSwitcher"/>
         <a class="btn btn-sm btn-outline-primary" asp-area="Identity" asp-page="/Account/Login">@L["Shell.Account.SignIn"]</a>
         <a class="btn btn-sm btn-primary" asp-area="Identity" asp-page="/Account/Register">@L["Shell.Account.CreateAccount"]</a>
     </div>

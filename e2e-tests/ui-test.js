@@ -6,6 +6,7 @@ const {runReportingCurrencySmoke} = require('./reporting-currency-smoke');
 const {runIdleSignOutSmoke} = require('./idle-sign-out-smoke');
 const {runCurrencyConverterSmoke} = require('./currency-converter-smoke');
 const {runMoneyBoundsSmoke} = require('./money-bounds-smoke');
+const {runThemeSmoke} = require('./theme-smoke');
 
 (async () => {
     const results = {passed: 0, failed: 0, errors: []};
@@ -968,6 +969,16 @@ const {runMoneyBoundsSmoke} = require('./money-bounds-smoke');
             await runMoneyBoundsSmoke({browser, base, pass, fail});
         } catch (error) {
             fail(`Money bounds smoke failed: ${error.message}`);
+        }
+
+        // =========================================================
+        // Test 9j: Theme smoke (#481): the top-bar theme control by mouse and keyboard, signed out and signed in
+        // =========================================================
+        console.log('\n--- Test 9j: Theme Smoke ---');
+        try {
+            await runThemeSmoke({browser, base, pass, fail});
+        } catch (error) {
+            fail(`Theme smoke failed: ${error.message}`);
         }
 
         // =========================================================

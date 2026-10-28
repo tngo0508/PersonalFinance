@@ -22,8 +22,7 @@
   "Common.Theme.Light": "Light",
   "Common.Theme.Dark": "Dark",
   "Common.Theme.System": "System",
-  "Common.Theme.SwitchToDark": "Switch to dark theme",
-  "Common.Theme.SwitchToLight": "Switch to light theme",
+  "Common.Theme.Current": "Theme: {mode}",
 
   "Validation.Required": "The {0} field is required.",
   "Validation.EmailAddress": "The {0} field is not a valid e-mail address.",
