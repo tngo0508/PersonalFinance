@@ -2594,6 +2594,7 @@
     "Learning.Entry.FurtherReading": "4082f515b2f4929c",
     "Learning.Entry.LastReviewed": "f7edd9b4ad0ac100",
     "Learning.Entry.EducationalOnly": "c3991373a56c30af",
-    "Learning.Entry.Disclaimer": "1ece43f84b152b71"
+    "Learning.Entry.Disclaimer": "1ece43f84b152b71",
+    "Learning.Error.LessonLocked": "bcf29e45b548f4c2"
   }
 }
