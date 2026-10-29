@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [13.15.1] - 2026-10-28
+
+### Fixed
+
+- **Actions cache over the free 10 GB limit**: the repository's Actions cache had reached 10.6 GB, so GitHub was evicting entries by age, the NuGet and Playwright caches among them.
+  - Every deploy leaves about 250 MB of image layers that no later build reads. `cache-cleanup.yml` now runs daily and deletes the Docker layer blobs idle for 24 hours of builds, instead of weekly with a 7-day window that never fired.
+  - It also deletes superseded `nuget-*`, `playwright-*` and `node-cache-*` entries, keeping the newest per ref: a csproj change left a stranded 1.1 GB NuGet cache on `main` beside the new one.
+  - The container builds on `main` export the Docker cache with `mode=max` again. `mode=min` kept only the final image's layers and dropped the `dotnet restore` layer, the one worth a cache hit; the daily prune now bounds what `mode=max` leaves behind.
+  - `CacheCleanupWorkflowTests` pins the schedule, the idle window and the dry-run guard around every delete.
+
 ## [13.15.0] - 2026-10-28
 
 ### Changed
