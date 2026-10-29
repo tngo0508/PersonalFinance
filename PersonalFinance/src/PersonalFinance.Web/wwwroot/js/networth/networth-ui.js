@@ -327,7 +327,8 @@
         const rows = base.filter((year) => view.density === 'all'
             || (year.age - data.currentAge) % 5 === 0 || year.age === lastAge || marked.has(year.age) || year.age === fiAges.Base)
             .map((year) => {
-                const index = year.age - data.currentAge;
+                // The scenarios share their ages, so a year's position in Base is its position in each.
+                const index = base.indexOf(year);
                 const row = el('tr', marked.has(year.age) ? 'nw-row--milestone' : '');
                 row.dataset.age = String(year.age);
 

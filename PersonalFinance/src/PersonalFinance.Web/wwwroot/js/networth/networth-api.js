@@ -32,17 +32,19 @@
             return;
         }
 
+        // Every value goes as typed, 0 included: a 0% return or nothing saved is what the user asked to see, never
+        // a default in its place. validateInputs has already kept the ages inside their ranges.
         const params = {
             startingBalance: NW.getSliderValue('nwStartingBalance'),
             annualSavings: NW.getSliderValue('nwAnnualSavings'),
             annualIncome: NW.getSliderValue('nwAnnualIncome'),
             annualSpending: NW.getSliderValue('nwAnnualSpending'),
-            currentAge: Math.round(NW.getSliderValue('nwCurrentAge')) || 33,
-            retirementAge: Math.round(NW.getSliderValue('nwRetirementAge')) || 65,
-            baseRoi: NW.getSliderValue('nwBaseRoi') || 7,
-            conservativeRoi: NW.getSliderValue('nwConservativeRoi') || 6,
-            aggressiveRoi: NW.getSliderValue('nwAggressiveRoi') || 10,
-            aggressiveSavings: NW.getSliderValue('nwAggressiveSavings') || 45000,
+            currentAge: Math.round(NW.getSliderValue('nwCurrentAge')),
+            retirementAge: Math.round(NW.getSliderValue('nwRetirementAge')),
+            baseRoi: NW.getSliderValue('nwBaseRoi'),
+            conservativeRoi: NW.getSliderValue('nwConservativeRoi'),
+            aggressiveRoi: NW.getSliderValue('nwAggressiveRoi'),
+            aggressiveSavings: NW.getSliderValue('nwAggressiveSavings'),
             inflationPercent: NW.getSliderValue('nwInflation'),
             currencyCode: NW.inputCurrency()
         };

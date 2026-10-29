@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [13.14.0] - 2026-10-28
+
+### Fixed
+
+- **Net Worth fields keep the exact number typed**: an amount such as $278,123.45 no longer comes back as $278,000, and a rate such as 7.25% no longer as 7.3%.
+  - The number typed in a field is what the page shows, projects and saves; the slider beside it only follows, snapped to its own step. Before, the page read the value back from the slider, which the browser had already snapped to the nearest step (1,000 for money, 0.1 for a rate) and clamped to the slider's range, so a starting balance above $1,000,000 could not be entered even though the field allows up to $1 billion.
+  - A field starts from its saved value exactly, cents included, instead of the slider's nearest step.
+  - A 0% return or $0 of aggressive savings is projected as entered; before, the page silently replaced a 0 with the default (7%, 6%, 10% or $45,000).
+
+### Changed
+
+- **Net Worth projection counts the years from today**: each row of the projection is one year of saving and growth, and its balance is the one held at that age.
+  - The rows run from the age after the current age to retirement age, so retiring at 65 from 34 is 31 years of saving, not 32. Before, the current age also got a full year, which put the age of financial independence a year early and gave the money at retirement an extra year of growth.
+  - The age of financial independence is the first age at which the balance reaches the FI target, the current age when today's balance already does, in both the projected and today's-money views.
+  - The runway chart and the Dashboard projection start at today's balance at the current age, then follow the projected ages.
+
 ## [13.13.0] - 2026-10-28
 
 ### Changed
