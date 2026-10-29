@@ -69,8 +69,8 @@ public class CacheCleanupWorkflowTests
     {
         string job = PruneJob();
 
-        int deletes = Regex.Matches(job, @"gh cache delete").Count;
-        int guards = Regex.Matches(job, @"if \[ ""\$DRY_RUN"" != ""true"" \]").Count;
+        int deletes = Regex.Count(job, @"gh cache delete");
+        int guards = Regex.Count(job, @"if \[ ""\$DRY_RUN"" != ""true"" \]");
         Assert.True(deletes >= 2, "Expected the Docker prune and the superseded-cache prune each to delete.");
         Assert.Equal(deletes, guards);
         Assert.Contains("actions/cache/usage", job);

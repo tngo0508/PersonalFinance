@@ -47,7 +47,7 @@ jobs:
           # The 24 hours count back from the newest Docker cache read, not from now: after a quiet week with no
           # builds every blob is idle, and deleting them all would leave the next build with no cache at all.
           jq -r '
-            def ts: sub("\.[0-9]+Z$"; "Z") | fromdateiso8601;
+            def ts: sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601;
             [.[] | select(.key | startswith("buildkit-") or startswith("index-"))] as $docker
             | if ($docker | length) == 0 then empty else
                 ($docker | map(.lastAccessedAt | ts) | max) as $newest
