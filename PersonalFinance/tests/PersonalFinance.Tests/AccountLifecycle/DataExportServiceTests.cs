@@ -64,6 +64,33 @@ public class DataExportServiceTests
     }
 
     [Fact]
+    public async Task Export_JourneyProgress_CarriesCompletionsCardsAndThePreference_WithoutDeletedRows()
+    {
+        await using AppDbContext db = CreateContext();
+        var first = new DateTime(2026, 10, 1, 22, 30, 0, DateTimeKind.Utc);
+        db.LessonCompletions.Add(new LessonCompletion
+        { UserId = UserId, LessonSlug = "borrow-wisely", FinishedAt = first.AddDays(1), TimeZoneId = "Asia/Ho_Chi_Minh" });
+        db.LessonCompletions.Add(new LessonCompletion
+        { UserId = UserId, LessonSlug = "build-a-cushion", FinishedAt = first, TimeZoneId = "Asia/Ho_Chi_Minh" });
+        db.LessonCompletions.Add(new LessonCompletion
+        { UserId = UserId, LessonSlug = "own-a-piece", FinishedAt = first.AddDays(2), IsDeleted = true });
+        db.ReviewCardStates.Add(new ReviewCardState
+        { UserId = UserId, TermSlug = "emergency-fund", KnewIt = false, KnewItStreak = 0, LastShownAt = first.AddDays(1) });
+        db.ReviewCardStates.Add(new ReviewCardState
+        { UserId = UserId, TermSlug = "apr", KnewIt = true, KnewItStreak = 2, LastShownAt = first.AddDays(2), IsDeleted = true });
+        db.UserPreferences.Add(new UserPreference { UserId = UserId, Language = "en", ShowJourneyOnDashboard = false });
+        await db.SaveChangesAsync();
+
+        DataExportDto export = await CreateService(db).ExportAsync(UserId);
+
+        Assert.Equal(["build-a-cushion", "borrow-wisely"], export.LessonCompletions.Select(c => c.LessonSlug));
+        Assert.Equal((first, "Asia/Ho_Chi_Minh"), (export.LessonCompletions[0].FinishedAtUtc, export.LessonCompletions[0].TimeZone));
+        DataExportReviewCardDto card = Assert.Single(export.ReviewCards);
+        Assert.Equal(("emergency-fund", false, 0), (card.TermSlug, card.KnewIt, card.KnewItStreak));
+        Assert.False(export.ShowJourneyOnDashboard);
+    }
+
+    [Fact]
     public async Task Export_NeverContainsAnotherAccountsRecords()
     {
         await using AppDbContext db = CreateContext();
@@ -188,6 +215,9 @@ public class DataExportServiceTests
         Assert.Single(export.BudgetAllocations);
         Assert.Equal("BudgetTracker", export.BudgetDataSource);
         Assert.Equal("vi", export.Language);
+        Assert.True(export.ShowJourneyOnDashboard);
+        Assert.Single(export.LessonCompletions);
+        Assert.Single(export.ReviewCards);
         Assert.Equal("Expense", Assert.Single(export.BudgetCategories).Kind);
         Assert.Single(export.BudgetMonthLines);
         Assert.Single(export.BudgetTransactions);

@@ -17,4 +17,10 @@ public class UserPreference : AuditableEntity
     /// default. Changing it never rewrites a stored amount.
     /// </summary>
     public string ReportingCurrency { get; set; } = SupportedCurrencies.DefaultCode;
+
+    /// <summary>
+    /// Whether the Dashboard shows the quiet Atelier card while a Lesson is open (#513); on by default. Its Hide link
+    /// clears it, and a switch on the Atelier page sets it again.
+    /// </summary>
+    public bool ShowJourneyOnDashboard { get; set; } = true;
 }

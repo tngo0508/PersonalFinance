@@ -168,6 +168,16 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<PriorityWalk> PriorityWalks => Set<PriorityWalk>();
 
     /// <summary>
+    /// Lesson completions — the Lessons of the Journey an Account has finished, one row each (the Atelier, #513).
+    /// </summary>
+    public DbSet<LessonCompletion> LessonCompletions => Set<LessonCompletion>();
+
+    /// <summary>
+    /// Review card states — what an Account last said about each Review flash card (the Atelier, #513).
+    /// </summary>
+    public DbSet<ReviewCardState> ReviewCardStates => Set<ReviewCardState>();
+
+    /// <summary>
     /// ASP.NET Core Data Protection keys table set for preserving cookie/token encryption across restarts.
     /// </summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
@@ -200,6 +210,8 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         builder.Entity<UserConsent>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Feedback>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<PriorityWalk>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<LessonCompletion>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<ReviewCardState>().HasQueryFilter(e => !e.IsDeleted);
 
         // Configure AiUsageRecord entity — usage records are never soft-deleted
         builder.Entity<AiUsageRecord>(entity =>
@@ -587,6 +599,36 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         ConfigureResearchSnapshot(builder);
         ConfigureExchangeRate(builder);
         ConfigurePriorityWalk(builder);
+        ConfigureJourneyProgress(builder);
+    }
+
+    /// <summary>
+    /// Journey progress (the Atelier, #513): one Lesson completion per Account and Lesson, and one Review card state
+    /// per Account and Term, each unique among non-deleted rows. Slugs are file names in the content folder
+    /// (ADR 0019), so they are ASCII and short.
+    /// </summary>
+    private static void ConfigureJourneyProgress(ModelBuilder builder)
+    {
+        builder.Entity<LessonCompletion>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.LessonSlug).IsRequired().HasMaxLength(80).IsUnicode(false);
+            entity.Property(e => e.TimeZoneId).IsRequired().HasMaxLength(64).IsUnicode(false);
+            entity.HasIndex(e => new { e.UserId, e.LessonSlug })
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
+        });
+
+        builder.Entity<ReviewCardState>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.TermSlug).IsRequired().HasMaxLength(80).IsUnicode(false);
+            entity.HasIndex(e => new { e.UserId, e.TermSlug })
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
+        });
     }
 
     /// <summary>
@@ -736,6 +778,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
                 .IsUnicode(false)
                 .IsFixedLength()
                 .HasDefaultValue(SupportedCurrencies.DefaultCode);
+            entity.Property(e => e.ShowJourneyOnDashboard).IsRequired().HasDefaultValue(true);
             entity.HasIndex(e => e.UserId)
                 .IsUnique()
                 .HasFilter("[IsDeleted] = 0");

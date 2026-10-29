@@ -56,5 +56,9 @@ public static class UserDataSeed
         db.Feedback.Add(new FeedbackEntity { UserId = userId, Category = FeedbackCategory.Idea, Message = $"{marker} idea" });
         db.Notifications.Add(new Notification { UserId = userId, Title = $"{marker} notice", Message = "m" });
         db.AiUsageRecords.Add(new AiUsageRecord { UserId = userId, Endpoint = $"{marker}-chat" });
+        db.LessonCompletions.Add(new LessonCompletion
+        { UserId = userId, LessonSlug = $"{marker}-lesson", FinishedAt = new DateTime(2026, 3, 3, 1, 0, 0, DateTimeKind.Utc) });
+        db.ReviewCardStates.Add(new ReviewCardState
+        { UserId = userId, TermSlug = $"{marker}-term", KnewIt = true, KnewItStreak = 1, LastShownAt = new DateTime(2026, 3, 4, 1, 0, 0, DateTimeKind.Utc) });
     }
 }

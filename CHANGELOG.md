@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [14.0.0] - 2026-10-28
+
+### Added
+
+- **Journey progress**: the Atelier's Journey (#513, slice 4 of 18, #518) now remembers which Lessons a signed-in Account has finished, and the ApiService works out which Lesson is open.
+  - Two new user-owned tables: `LessonCompletions` (the Lesson, when its Check was answered, and the IANA time zone the browser sent) and `ReviewCardStates` (what the Account last said about each Review flash card, and how many "Knew it" in a row). Check answers are never stored.
+  - `UserPreferences` gains `ShowJourneyOnDashboard`, on by default, for the quiet Dashboard card of a later slice.
+  - Lesson n+1 opens at the next local midnight after Lesson n's finish, in the stored zone; a missing or unknown zone means UTC, and a midnight the clocks skip opens at the first minute that exists. Only one Lesson is open at a time, finished Lessons stay open for re-reading, and a late return finds the next Lesson simply open.
+  - Review cards come from the finished Lessons' Term Entries, up to three, "Not yet" cards first and then the least recently marked; a card retires after two "Knew it" in a row. There is no Review on Day 1 and none once the Journey has ended.
+  - New signed-in endpoints under `api/learning/journey` (the Journey, finish a Lesson, today's Review, mark a card, show or hide the Dashboard card) and their `ILearningApi` methods. A finish posted for a locked Lesson gets 409 with the `Learning.Error.LessonLocked` key.
+  - Data Export includes the completions, the card states and the Dashboard preference; the Purge hard-deletes them with the Account (ADR 0005).
+
+### Changed
+
+- **Schema migration** `AddJourneyProgress`: adds the two tables with filtered unique indexes per Account and slug, and the defaulted column; nothing is dropped or rewritten.
+
 ## [13.17.1] - 2026-10-28
 
 ### Fixed
