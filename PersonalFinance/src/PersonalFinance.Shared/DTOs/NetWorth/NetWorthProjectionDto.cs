@@ -1,26 +1,27 @@
 namespace PersonalFinance.Shared.DTOs.NetWorth;
 
 /// <summary>
-/// Represents a single year's net worth projection data.
+/// One year of a net worth projection: a year of growth and saving that ends with the person at <see cref="Age"/>,
+/// so <see cref="EndingBalance"/> is the balance held at that age.
 /// </summary>
 public sealed class NetWorthYearDto
 {
-    /// <summary>Calendar year of the projection.</summary>
+    /// <summary>The calendar year the person turns <see cref="Age"/> in.</summary>
     public int Year { get; init; }
 
-    /// <summary>Age of the person in this year.</summary>
+    /// <summary>The age at which <see cref="EndingBalance"/> is held: one year after the previous row, or after today.</summary>
     public int Age { get; init; }
 
-    /// <summary>Balance at the start of the year.</summary>
+    /// <summary>Balance the year starts with: today's for the first row, the previous row's ending balance after.</summary>
     public decimal StartingBalance { get; init; }
 
-    /// <summary>Amount saved and contributed during the year.</summary>
+    /// <summary>Amount saved and contributed during the year, added at its end.</summary>
     public decimal Savings { get; init; }
 
-    /// <summary>Return on investment earned during the year.</summary>
+    /// <summary>Return on investment earned during the year on <see cref="StartingBalance"/>.</summary>
     public decimal Roi { get; init; }
 
-    /// <summary>Balance at the end of the year after savings and ROI.</summary>
+    /// <summary>Balance at <see cref="Age"/>: <see cref="StartingBalance"/> plus <see cref="Savings"/> and <see cref="Roi"/>.</summary>
     public decimal EndingBalance { get; init; }
 
     /// <summary>Everything put in by the end of the year: the starting balance plus each year's savings so far.</summary>
@@ -63,8 +64,10 @@ public sealed class NetWorthScenarioDto
     public decimal TotalInterestEarned { get; set; }
 
     /// <summary>
-    /// Age at the end of the first projected year whose balance reaches the FI Target; <c>null</c> when it is not
-    /// reached by retirement age, when there is no FI Target, or when retirement age is not after current age.
+    /// The first age at which the balance reaches the FI Target: the current age when the starting balance already
+    /// does, else the <see cref="NetWorthYearDto.Age"/> of the first projected year whose ending balance does;
+    /// <c>null</c> when it is not reached by retirement age, when there is no FI Target, or when retirement age is not
+    /// after current age.
     /// </summary>
     public int? FiReachedAge { get; set; }
 
@@ -77,7 +80,10 @@ public sealed class NetWorthScenarioDto
     /// </summary>
     public int? RealFiReachedAge { get; set; }
 
-    /// <summary>Year-by-year projection data.</summary>
+    /// <summary>
+    /// Year-by-year projection data, from the age after the current age to retirement age; empty when retirement age
+    /// is not after the current age. Today's balance is <see cref="StartingBalance"/> at <see cref="StartingAge"/>.
+    /// </summary>
     public List<NetWorthYearDto> Years { get; set; } = new();
 }
 

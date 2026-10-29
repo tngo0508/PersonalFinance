@@ -132,9 +132,12 @@ public static class NetWorthProjectionService
     };
 
     /// <summary>
-    /// Builds a single scenario by computing year-by-year compound interest growth, each year also in today's money at
-    /// <paramref name="inflationRate"/>. The FI ages are the first ages whose balance reaches <paramref name="fiTarget"/>;
-    /// a target of 0 leaves them unset.
+    /// Builds a single scenario by compounding year by year from today's balance, in decimal throughout: each year
+    /// earns <paramref name="roiRate"/> on the balance it starts with and adds the year's savings at its end, so the
+    /// balance a row carries is the one held at that row's age. The rows run from the age after
+    /// <paramref name="startAge"/> to <paramref name="retirementAge"/> (none when that is not later), each also in
+    /// today's money at <paramref name="inflationRate"/>. The FI ages are the first ages at which the balance reaches
+    /// <paramref name="fiTarget"/>: the start age when today's balance already does; a target of 0 leaves them unset.
     /// </summary>
     private static NetWorthScenarioDto BuildScenario(
         string name,
@@ -160,10 +163,11 @@ public static class NetWorthProjectionService
         decimal totalContributions = startingBalance;
         decimal inflationFactor = 1m;
         int year = startYear;
-        int age = startAge;
 
-        while (age <= retirementAge)
+        // One year of saving and growth per row: the balance at startAge is today's, so the first row is the age after.
+        for (int age = startAge + 1; age <= retirementAge; age++)
         {
+            year++;
             decimal roi = balance * roiRate;
             decimal endingBalance = balance + annualSavings + roi;
             totalContributions += annualSavings;
@@ -183,8 +187,6 @@ public static class NetWorthProjectionService
             });
 
             balance = endingBalance;
-            year++;
-            age++;
         }
 
         scenario.FinalNetWorth = balance;
@@ -193,8 +195,14 @@ public static class NetWorthProjectionService
         scenario.RealFinalNetWorth = balance / inflationFactor;
         if (fiTarget > 0m)
         {
-            scenario.FiReachedAge = scenario.Years.FirstOrDefault(y => y.EndingBalance >= fiTarget)?.Age;
-            scenario.RealFiReachedAge = scenario.Years.FirstOrDefault(y => y.RealEndingBalance >= fiTarget)?.Age;
+            // Today's balance is today's money too, so a balance already at the target is at it in both views.
+            bool alreadyThere = startingBalance >= fiTarget;
+            scenario.FiReachedAge = alreadyThere
+                ? startAge
+                : scenario.Years.FirstOrDefault(y => y.EndingBalance >= fiTarget)?.Age;
+            scenario.RealFiReachedAge = alreadyThere
+                ? startAge
+                : scenario.Years.FirstOrDefault(y => y.RealEndingBalance >= fiTarget)?.Age;
         }
 
         return scenario;

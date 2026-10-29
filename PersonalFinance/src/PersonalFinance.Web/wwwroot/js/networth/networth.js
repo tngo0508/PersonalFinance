@@ -35,9 +35,9 @@
         ];
         cachedSavedValues = {};
         fields.forEach((fieldId) => {
-            const rangeEl = document.getElementById(`${fieldId }Range`);
-            if (rangeEl) {
-                cachedSavedValues[fieldId] = parseFloat(rangeEl.value);
+            // The field holds the exact saved value; its slider only the nearest step.
+            if (document.getElementById(fieldId)) {
+                cachedSavedValues[fieldId] = NW.getSliderValue(fieldId);
             }
         });
     }

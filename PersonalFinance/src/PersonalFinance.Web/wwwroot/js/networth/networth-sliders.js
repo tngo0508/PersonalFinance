@@ -1,7 +1,9 @@
 /* global PFI18n */
 /**
  * Net Worth slider and input synchronization module.
- * Handles slider-input pairing, formatting, and the savings rate indicator.
+ * Handles slider-input pairing, formatting, and the savings rate indicator. The number typed in a field is the number
+ * kept, saved and projected; the slider beside it is a coarse control whose own position the browser snaps to its step
+ * and range, so nothing reads a value back from a slider while its field holds one.
  * Depends on: networth-utils.js (window.NW)
  */
 (function () {
@@ -10,7 +12,9 @@
     const NW = window.NW;
 
     /**
-     * Format a number for display in a slider field input.
+     * Format a number for display in a slider field input: an amount with the minor units that were typed (278,123.45,
+     * or 278,123 in a currency without them), a rate with its decimals (at least one, as the saved rate's four allow),
+     * an age whole.
      * @param {number} value - The numeric value.
      * @param {string} type - 'currency', 'percent', or 'number'.
      * @returns {string} Formatted string.
@@ -19,38 +23,40 @@
         const num = NW.PF.safeParseFloat(value, NaN);
         if (isNaN(num)) { return ''; }
         if (type === 'currency') {
-            return PFI18n.formatNumber(Math.round(num));
+            return PFI18n.formatInputAmount(num, NW.inputCurrency());
         }
         if (type === 'percent') {
-            return PFI18n.formatNumber(num, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+            return PFI18n.formatNumber(num, { minimumFractionDigits: 1, maximumFractionDigits: 4 });
         }
         return Math.round(num).toString();
     }
 
     /**
-     * Sync hidden save inputs with current slider values for form model binding.
-     * Ensures that when the form is submitted, the server receives the current slider values.
+     * Sync the hidden save inputs with the fields, so the form posts what the page shows: the number typed in each
+     * field, exactly, or the slider's position only when the field holds no number.
      */
     function syncSaveInputs () {
         const fields = [
-            { rangeId: 'nwStartingBalanceRange', saveId: 'nwSaveStartingBalance' },
-            { rangeId: 'nwAnnualSavingsRange', saveId: 'nwSaveAnnualSavings' },
-            { rangeId: 'nwAnnualIncomeRange', saveId: 'nwSaveAnnualIncome' },
-            { rangeId: 'nwAnnualSpendingRange', saveId: 'nwSaveAnnualSpending' },
-            { rangeId: 'nwCurrentAgeRange', saveId: 'nwSaveCurrentAge' },
-            { rangeId: 'nwRetirementAgeRange', saveId: 'nwSaveRetirementAge' },
-            { rangeId: 'nwBaseRoiRange', saveId: 'nwSaveBaseRoi' },
-            { rangeId: 'nwConservativeRoiRange', saveId: 'nwSaveConservativeRoi' },
-            { rangeId: 'nwAggressiveRoiRange', saveId: 'nwSaveAggressiveRoi' },
-            { rangeId: 'nwAggressiveSavingsRange', saveId: 'nwSaveAggressiveSavings' }
+            { id: 'nwStartingBalance', saveId: 'nwSaveStartingBalance' },
+            { id: 'nwAnnualSavings', saveId: 'nwSaveAnnualSavings' },
+            { id: 'nwAnnualIncome', saveId: 'nwSaveAnnualIncome' },
+            { id: 'nwAnnualSpending', saveId: 'nwSaveAnnualSpending' },
+            { id: 'nwCurrentAge', saveId: 'nwSaveCurrentAge' },
+            { id: 'nwRetirementAge', saveId: 'nwSaveRetirementAge' },
+            { id: 'nwBaseRoi', saveId: 'nwSaveBaseRoi' },
+            { id: 'nwConservativeRoi', saveId: 'nwSaveConservativeRoi' },
+            { id: 'nwAggressiveRoi', saveId: 'nwSaveAggressiveRoi' },
+            { id: 'nwAggressiveSavings', saveId: 'nwSaveAggressiveSavings' }
         ];
         fields.forEach((field) => {
-            const rangeEl = document.getElementById(field.rangeId);
+            const inputEl = document.getElementById(field.id);
+            const rangeEl = document.getElementById(`${field.id }Range`);
             const saveEl = document.getElementById(field.saveId);
-            if (rangeEl && saveEl) {
-                // The form posts in the page culture (7,5 in vi-VN); a range's own value is always invariant.
-                saveEl.value = PFI18n.formatNumber(Number(rangeEl.value), { useGrouping: false, maximumFractionDigits: 10 });
-            }
+            if (!rangeEl || !saveEl) { return; }
+            const typed = inputEl ? NW.parseTyped(inputEl.value) : NaN;
+            const value = Number.isNaN(typed) ? Number(rangeEl.value) : typed;
+            // The form posts in the page culture (7,5 in vi-VN).
+            saveEl.value = PFI18n.formatNumber(value, { useGrouping: false, maximumFractionDigits: 10 });
         });
         const currencySelect = document.getElementById('nwCurrency');
         const currencySave = document.getElementById('nwSaveCurrencyCode');
@@ -60,7 +66,9 @@
     }
 
     /**
-     * Sync a range slider with its paired text input.
+     * Sync a range slider with its paired text input. The field is the value; the slider follows it (pegged at an end
+     * when the value lies beyond the slider's range, which is narrower than the field's bound) and moves it when
+     * dragged.
      * @param {string} rangeId - The range input ID.
      * @param {string} inputId - The text input ID.
      * @param {string} formatType - 'currency', 'percent', or 'number'.
@@ -70,8 +78,22 @@
         const inputEl = document.getElementById(inputId);
         if (!rangeEl || !inputEl) { return; }
 
-        // Initialize display from range value
-        inputEl.value = formatSliderValue(rangeEl.value, formatType);
+        /**
+         * Put the slider where a number lies on its range; the browser snaps the slider to its step, the number stays.
+         * @param {number} num - The field's number.
+         */
+        function position (num) {
+            const min = NW.PF.safeParseFloat(rangeEl.min, 0);
+            const max = NW.PF.safeParseFloat(rangeEl.max, Infinity);
+            rangeEl.value = Math.max(min, Math.min(max, num));
+        }
+
+        // The field starts from its exact value (data-value, written by the view); the slider's own value is only
+        // where that lies, already snapped to its step.
+        const exact = inputEl.dataset ? NW.PF.safeParseFloat(inputEl.dataset.value, NaN) : NaN;
+        const initial = isNaN(exact) ? NW.PF.safeParseFloat(rangeEl.value, NaN) : exact;
+        if (!isNaN(initial)) { position(initial); }
+        inputEl.value = formatSliderValue(initial, formatType);
 
         // Range → Input
         rangeEl.addEventListener('input', () => {
@@ -81,14 +103,10 @@
             NW.triggerRecalculation();
         });
 
-        // Input → Range (on blur and Enter key)
+        // Input → Range (as typed, then tidied on blur and Enter)
         inputEl.addEventListener('input', () => {
             const num = NW.parseTyped(inputEl.value);
-            if (!isNaN(num)) {
-                const min = NW.PF.safeParseFloat(rangeEl.min, 0);
-                const max = NW.PF.safeParseFloat(rangeEl.max, Infinity);
-                rangeEl.value = Math.max(min, Math.min(max, num));
-            }
+            if (!isNaN(num)) { position(num); }
             updateSavingsIndicator();
             syncSaveInputs();
             NW.triggerRecalculation();
@@ -97,11 +115,8 @@
         inputEl.addEventListener('blur', () => {
             const num = NW.parseTyped(inputEl.value);
             if (!isNaN(num)) {
-                const min = NW.PF.safeParseFloat(rangeEl.min, 0);
-                const max = NW.PF.safeParseFloat(rangeEl.max, Infinity);
-                const clamped = Math.max(min, Math.min(max, num));
-                rangeEl.value = clamped;
-                inputEl.value = formatSliderValue(clamped, formatType);
+                position(num);
+                inputEl.value = formatSliderValue(num, formatType);
             }
             syncSaveInputs();
             NW.triggerRecalculation();
