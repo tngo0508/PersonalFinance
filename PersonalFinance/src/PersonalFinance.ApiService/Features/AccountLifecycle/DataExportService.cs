@@ -89,11 +89,13 @@ internal sealed class DataExportService : IDataExportService
             .Select(p => (Shared.Enums.BudgetDataSource?)p.Source)
             .FirstOrDefaultAsync(cancellationToken);
         export.BudgetDataSource = source?.ToString();
-        export.Language = await _db.UserPreferences.AsNoTracking()
+        var preference = await _db.UserPreferences.AsNoTracking()
             .Where(p => p.UserId == userId)
             .OrderByDescending(p => p.Id)
-            .Select(p => p.Language)
+            .Select(p => new { p.Language, p.ShowJourneyOnDashboard })
             .FirstOrDefaultAsync(cancellationToken);
+        export.Language = preference?.Language;
+        export.ShowJourneyOnDashboard = preference?.ShowJourneyOnDashboard;
 
         export.BudgetCategories = (await _db.BudgetCategories.AsNoTracking()
                 .Where(c => c.UserId == userId)
@@ -258,6 +260,29 @@ internal sealed class DataExportService : IDataExportService
                 CompletionTokens = r.CompletionTokens,
                 EstimatedCostUsd = r.EstimatedCostUsd,
                 CreatedAtUtc = r.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
+
+        export.LessonCompletions = await _db.LessonCompletions.AsNoTracking()
+            .Where(c => c.UserId == userId)
+            .OrderBy(c => c.FinishedAt).ThenBy(c => c.Id)
+            .Select(c => new DataExportLessonCompletionDto
+            {
+                LessonSlug = c.LessonSlug,
+                FinishedAtUtc = c.FinishedAt,
+                TimeZone = c.TimeZoneId
+            })
+            .ToListAsync(cancellationToken);
+
+        export.ReviewCards = await _db.ReviewCardStates.AsNoTracking()
+            .Where(s => s.UserId == userId)
+            .OrderBy(s => s.TermSlug).ThenBy(s => s.Id)
+            .Select(s => new DataExportReviewCardDto
+            {
+                TermSlug = s.TermSlug,
+                KnewIt = s.KnewIt,
+                KnewItStreak = s.KnewItStreak,
+                LastShownAtUtc = s.LastShownAt
             })
             .ToListAsync(cancellationToken);
 

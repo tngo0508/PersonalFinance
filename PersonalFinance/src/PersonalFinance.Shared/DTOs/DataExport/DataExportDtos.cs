@@ -57,6 +57,38 @@ public class DataExportDto
 
     /// <summary>AI Assistant usage: tokens and estimated cost per request, never the messages.</summary>
     public List<DataExportAiUsageDto> AiUsage { get; set; } = [];
+
+    /// <summary>The Lessons of the Journey the Account finished, oldest first; Check answers are never stored.</summary>
+    public List<DataExportLessonCompletionDto> LessonCompletions { get; set; } = [];
+
+    /// <summary>What the Account last said about each Review flash card.</summary>
+    public List<DataExportReviewCardDto> ReviewCards { get; set; } = [];
+
+    /// <summary>Whether the Dashboard shows the quiet Atelier card, or null when the Account has no preference row.</summary>
+    public bool? ShowJourneyOnDashboard { get; set; }
+}
+
+/// <summary>A finished Lesson of the Journey.</summary>
+public class DataExportLessonCompletionDto
+{
+    public string LessonSlug { get; set; } = string.Empty;
+
+    public DateTime FinishedAtUtc { get; set; }
+
+    /// <summary>The IANA time zone the finish was dated in.</summary>
+    public string TimeZone { get; set; } = string.Empty;
+}
+
+/// <summary>The state of one Review flash card.</summary>
+public class DataExportReviewCardDto
+{
+    public string TermSlug { get; set; } = string.Empty;
+
+    public bool KnewIt { get; set; }
+
+    public int KnewItStreak { get; set; }
+
+    public DateTime LastShownAtUtc { get; set; }
 }
 
 /// <summary>The Account's sign-in identity.</summary>

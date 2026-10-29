@@ -28,6 +28,7 @@ internal static class LearningFeature
         services.AddSingleton<ILearningContent>(LearningContent.Load(path));
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<ILearningLibraryService, LearningLibraryService>();
+        services.AddScoped<IJourneyService, JourneyService>();
         return services;
     }
 }

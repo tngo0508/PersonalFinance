@@ -1074,6 +1074,55 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.ToTable("GoogleDriveConnections");
                 });
 
+            modelBuilder.Entity("PersonalFinance.Data.Entities.LessonCompletion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FinishedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LessonSlug")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "LessonSlug")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("LessonCompletions");
+                });
+
             modelBuilder.Entity("PersonalFinance.Data.Entities.MonthlyBudgetLine", b =>
                 {
                     b.Property<int>("Id")
@@ -1466,6 +1515,55 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .IsUnique();
 
                     b.ToTable("ResearchSnapshots");
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.ReviewCardState", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("KnewIt")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("KnewItStreak")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("LastShownAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TermSlug")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "TermSlug")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("ReviewCardStates");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.SavedArticle", b =>
@@ -1987,6 +2085,11 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .HasColumnType("char(3)")
                         .HasDefaultValue("USD")
                         .IsFixedLength();
+
+                    b.Property<bool>("ShowJourneyOnDashboard")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");

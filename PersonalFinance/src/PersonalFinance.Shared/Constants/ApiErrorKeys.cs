@@ -483,4 +483,11 @@ public static class ApiErrorKeys
         /// <summary>A conversion's date was after today (UTC).</summary>
         public const string DateInFuture = "CurrencyConverter.Validation.DateInFuture";
     }
+
+    /// <summary>The keys of the Learning Feature's rejections (the Atelier, #513).</summary>
+    public static class Learning
+    {
+        /// <summary>A finish was posted for a Lesson that is not open yet.</summary>
+        public const string LessonLocked = "Learning.Error.LessonLocked";
+    }
 }

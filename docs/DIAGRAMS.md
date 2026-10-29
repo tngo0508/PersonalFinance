@@ -214,7 +214,7 @@ JavaScript paths are under `Web/wwwroot/js/`.
 | Dashboard | `DashboardController` (`api/Dashboard`) | `IDashboardService` | none (reads `NetWorthParameters`, `SavingsGoal`, `UserBudgetAllocation`, `GoogleDriveConnection`) | `IDashboardApi` | `Dashboard` | `dashboard/` | Read-only aggregator over four Features plus `IBudgetDataProvider` |
 | Feedback | `FeedbackController` (`api/Feedback`) | `IFeedbackService` | `Feedback` | `IFeedbackApi` | `Feedback`; inbox in `Admin` | none | The canonical example ([2](#2-anatomy-of-a-feature)) |
 | GoogleDrive | `GoogleDriveController` (`api/GoogleDrive`) | `IDriveConnectionService`, `ISpreadsheetReader`, `IGoogleDriveFileSource` (internal) | `GoogleDriveConnection`, `GoogleDriveCachedFile` | `IGoogleDriveApi` | `GoogleDrive` | `google-drive/` | Typed `HttpClient`s to Google Drive; a 1,450-line static parser; see [13](#13-google-drive-and-spreadsheet-analysis) |
-| Learning | `LearningController` (`api/learning`, `[AllowAnonymous]`) | `ILearningContent`, `ILearningLibraryService` | none (reads its JSON content folder, `Features/Learning/Content/`, at startup) | `ILearningApi` | `Learning` (public; also serves `/sitemap.xml` and `/robots.txt`) | `learning/` | Content is code (ADR 0019): Term Entries and Lessons are files loaded into memory, Vietnamese falling back to English per field; xUnit content checks (`tests/.../Learning/`) guard the files. Anonymous reads; the nav's "Learning" entry asks `ILearningLibraryStatus` (cached) and stays hidden while the Library is empty. Journey progress comes in later slices of #513 |
+| Learning | `LearningController` (`api/learning`, `[AllowAnonymous]`), `JourneyController` (`api/learning/journey`) | `ILearningContent`, `ILearningLibraryService`, `IJourneyService` | `LessonCompletion`, `ReviewCardState` (writes `UserPreference.ShowJourneyOnDashboard`; reads its JSON content folder, `Features/Learning/Content/`, at startup) | `ILearningApi` | `Learning` (public; also serves `/sitemap.xml` and `/robots.txt`) | `learning/` | Content is code (ADR 0019): Term Entries and Lessons are files loaded into memory, Vietnamese falling back to English per field; xUnit content checks (`tests/.../Learning/`) guard the files. Anonymous reads; the nav's "Learning" entry asks `ILearningLibraryStatus` (cached) and stays hidden while the Library is empty. The Journey's open Lesson is computed on read from the finishes and their time zones (`Domain/JourneyClock`), never stored; the road, Lesson and Review pages come in later slices of #513 |
 | NetWorth | `NetWorthController` (`api/NetWorth`) | `INetWorthParametersService` | `NetWorthParameters` | `INetWorthApi` | `Networth` | `networth/` | `calculate` is pure: a static Validator and the static `NetWorthProjectionService`, no Service, no database |
 | Research | `ResearchController` (`api/Research`), `CompaniesController` (`api/Research/companies`) | `IResearchService`, `ICompanyProfileService`, ten `IResearchDatasetRefresher` (one fills the exchange rates), `ResearchSnapshotStore` | `ResearchSnapshot`, `ExchangeRate` (not user-owned) | `IResearchApi` | `Research` | `research/` (12 files) | The largest Feature: five external adapters, `Domain/` with 56 pure types, a refresh job; see [10](#10-research-pipeline) |
 | SavingsGoals | `SavingsGoalsController` (`api/SavingsGoals`, Contributions under `{goalId}/contributions`) | `ISavingsGoalService` | `SavingsGoal`, `Contribution` | `ISavingsGoalsApi` | `SavingsGoals` | `savingsgoals/` | Validators for a new goal, a Contribution and a balance correction; the saved amount is the Contribution total, cached on the goal in the same save; each goal's Pace is worked out on read (`SavingsGoalPace`); raises each milestone Notification once |
@@ -516,6 +516,22 @@ erDiagram
         string UserId UK "among non-deleted rows"
         string Language "en or vi; the culture cookie mirrors it"
         string ReportingCurrency "char(3), default USD; changing it rewrites no amount"
+        bool ShowJourneyOnDashboard "default true; the Atelier's quiet Dashboard card"
+    }
+    LessonCompletion {
+        int Id PK
+        string UserId "unique with LessonSlug among non-deleted rows"
+        string LessonSlug "varchar(80), a Lesson file in the content folder"
+        DateTime FinishedAt "UTC, when the Check was answered"
+        string TimeZoneId "varchar(64), IANA; UTC when unknown; dates the next local midnight"
+    }
+    ReviewCardState {
+        int Id PK
+        string UserId "unique with TermSlug among non-deleted rows"
+        string TermSlug "varchar(80), a Term Entry file in the content folder"
+        bool KnewIt "the last mark"
+        int KnewItStreak "Knew it in a row; the card retires at 2"
+        DateTime LastShownAt "UTC, when last marked"
     }
     UserConsent {
         int Id PK
@@ -591,7 +607,13 @@ erDiagram
     AspNetUsers ||..o{ Notification : "UserId, logical"
     AspNetUsers ||..o{ AiUsageRecord : "UserId, logical"
     AspNetUsers ||..o{ SavedArticle : "UserId, logical"
+    AspNetUsers ||..o{ LessonCompletion : "UserId, logical"
+    AspNetUsers ||..o{ ReviewCardState : "UserId, logical"
 ```
+
+`LessonCompletion` and `ReviewCardState` are the Journey's progress (the Atelier, #513): the only rows the Learning
+Feature writes, since its Lessons and Term Entries are files (ADR 0019). Which Lesson is open is never stored; the
+`JourneyService` works it out on every read from the finishes and their time zones.
 
 `ResearchSnapshot` belongs to no Account: one row per dataset, replaced wholesale by the refresh job
 ([10](#10-research-pipeline)). `ExchangeRate` belongs to no Account either: one row per currency pair and day, added by

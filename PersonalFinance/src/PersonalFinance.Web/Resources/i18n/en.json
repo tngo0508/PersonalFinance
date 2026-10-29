@@ -2639,5 +2639,6 @@
   "Learning.Entry.FurtherReading": "Further reading",
   "Learning.Entry.LastReviewed": "Last reviewed {date}",
   "Learning.Entry.EducationalOnly": "For learning only. This is not personal financial advice.",
-  "Learning.Entry.Disclaimer": "Read the Disclaimer"
+  "Learning.Entry.Disclaimer": "Read the Disclaimer",
+  "Learning.Error.LessonLocked": "This Lesson is not open yet. Finish the one before it first, then come back after midnight."
 }
