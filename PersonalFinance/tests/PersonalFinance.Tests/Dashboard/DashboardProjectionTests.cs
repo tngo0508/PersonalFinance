@@ -74,30 +74,35 @@ public class DashboardProjectionTests
 
         NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, parameters);
 
+        // The first point is today; each later one is a projected year.
         List<ProjectionPointDto> points = netWorth!.ProjectionPoints;
-        Assert.Equal(expected.Base.Years.Count, points.Count);
-        for (int i = 0; i < points.Count; i++)
+        Assert.Equal(expected.Base.Years.Count + 1, points.Count);
+        for (int i = 0; i < expected.Base.Years.Count; i++)
         {
-            Assert.Equal(expected.Base.Years[i].Year, points[i].Year);
-            Assert.Equal(expected.Base.Years[i].Age, points[i].Age);
-            Assert.Equal(expected.Base.Years[i].EndingBalance, points[i].Base);
-            Assert.Equal(expected.Conservative.Years[i].EndingBalance, points[i].Conservative);
-            Assert.Equal(expected.Aggressive.Years[i].EndingBalance, points[i].Aggressive);
+            Assert.Equal(expected.Base.Years[i].Year, points[i + 1].Year);
+            Assert.Equal(expected.Base.Years[i].Age, points[i + 1].Age);
+            Assert.Equal(expected.Base.Years[i].EndingBalance, points[i + 1].Base);
+            Assert.Equal(expected.Conservative.Years[i].EndingBalance, points[i + 1].Conservative);
+            Assert.Equal(expected.Aggressive.Years[i].EndingBalance, points[i + 1].Aggressive);
         }
     }
 
     [Fact]
-    public async Task ProjectionPoints_RunFromCurrentAgeThroughRetirementAge()
+    public async Task ProjectionPoints_RunFromTodayAtCurrentAgeThroughRetirementAge()
     {
         await using AppDbContext db = CreateContext();
 
-        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(currentAge: 35, retirementAge: 60));
+        NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(balance: 100_000m, currentAge: 35, retirementAge: 60));
 
         List<ProjectionPointDto> points = netWorth!.ProjectionPoints;
         Assert.Equal(26, points.Count);
         Assert.Equal(35, points[0].Age);
-        Assert.Equal(60, points[^1].Age);
         Assert.Equal(DateTime.Now.Year, points[0].Year);
+        Assert.Equal(100_000m, points[0].Base);
+        Assert.Equal(100_000m, points[0].Conservative);
+        Assert.Equal(100_000m, points[0].Aggressive);
+        Assert.Equal(36, points[1].Age);
+        Assert.Equal(60, points[^1].Age);
     }
 
     [Fact]
@@ -108,7 +113,7 @@ public class DashboardProjectionTests
         NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(balance: 100_000m, savings: 20_000m, baseRoi: 7m,
             conservativeRoi: 4m, aggressiveRoi: 10m, aggressiveSavings: 30_000m));
 
-        ProjectionPointDto first = netWorth!.ProjectionPoints[0];
+        ProjectionPointDto first = netWorth!.ProjectionPoints[1];
         Assert.Equal(127_000m, first.Base);
         Assert.Equal(124_000m, first.Conservative);
         Assert.Equal(140_000m, first.Aggressive);
@@ -148,12 +153,12 @@ public class DashboardProjectionTests
     {
         await using AppDbContext db = CreateContext();
 
-        // FI Target 1,000,000; 0% return; 100,000 start + 100,000/yr → ending balance hits exactly 1,000,000 at age 43.
+        // FI Target 1,000,000; 0% return; 100,000 today at 35 + 100,000/yr → nine years of saving, exactly 1,000,000 at 44.
         NetWorthSummaryDto? netWorth = await GetNetWorthAsync(db, Parameters(balance: 100_000m, savings: 100_000m, spending: 40_000m,
             currentAge: 35, retirementAge: 60, baseRoi: 0m));
 
-        Assert.Equal(43, netWorth!.FiReachedAge);
-        Assert.Equal(8, netWorth.FiYears);
+        Assert.Equal(44, netWorth!.FiReachedAge);
+        Assert.Equal(9, netWorth.FiYears);
     }
 
     [Fact]

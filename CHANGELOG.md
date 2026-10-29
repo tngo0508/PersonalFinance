@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [13.15.1] - 2026-10-28
+## [13.17.1] - 2026-10-28
 
 ### Fixed
 
@@ -16,6 +16,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - It also deletes superseded `nuget-*`, `playwright-*` and `node-cache-*` entries, keeping the newest per ref: a csproj change left a stranded 1.1 GB NuGet cache on `main` beside the new one.
   - The container builds on `main` export the Docker cache with `mode=max` again. `mode=min` kept only the final image's layers and dropped the `dotnet restore` layer, the one worth a cache hit; the daily prune now bounds what `mode=max` leaves behind.
   - `CacheCleanupWorkflowTests` pins the schedule, the idle window and the dry-run guard around every delete.
+## [13.17.0] - 2026-10-28
+
+### Added
+
+- **Atelier content translation**: `npm run i18n:translate`, and so the i18n Translate workflow, also drafts the missing or stale Vietnamese counterpart of each Term Entry and Lesson in `Features/Learning/Content/`, field by field (#525).
+  - It keeps the `en.json` lock approach: the content folder's own `i18n.lock.json` records the English each field came from, so an unchanged field is never sent again and a hand-written one is adopted, not replaced.
+  - Each Term's Vietnamese name becomes a translator glossary entry, so every text naming the Term uses it.
+  - The owner-written fields are never overwritten once present: the Vietnamese name and the *In Vietnam* note. Slugs, Topics, URLs, numbers and sources are never sent.
+  - The workflow stages the content folder as well, so a new `{slug}.vi.json` is committed too, as `i18n: translate N keys (vi), M content fields (vi)`; with only one part pending the subject names that part alone. On a content PR the bot's commit is never an approval: the PR stays with the owner.
+## [13.16.0] - 2026-10-29
+
+### Fixed
+
+- **Net Worth fields keep the exact number typed**: an amount such as $278,123.45 no longer comes back as $278,000, and a rate such as 7.25% no longer as 7.3%.
+  - The number typed in a field is what the page shows, projects and saves; the slider beside it only follows, snapped to its own step. Before, the page read the value back from the slider, which the browser had already snapped to the nearest step (1,000 for money, 0.1 for a rate) and clamped to the slider's range, so a starting balance above $1,000,000 could not be entered even though the field allows up to $1 billion.
+  - A field starts from its saved value exactly, cents included, instead of the slider's nearest step.
+  - A 0% return or $0 of aggressive savings is projected as entered; before, the page silently replaced a 0 with the default (7%, 6%, 10% or $45,000).
+
+### Changed
+
+- **Net Worth projection counts the years from today**: each row of the projection is one year of saving and growth, and its balance is the one held at that age.
+  - The rows run from the age after the current age to retirement age, so retiring at 65 from 34 is 31 years of saving, not 32. Before, the current age also got a full year, which put the age of financial independence a year early and gave the money at retirement an extra year of growth.
+  - The age of financial independence is the first age at which the balance reaches the FI target, the current age when today's balance already does, in both the projected and today's-money views.
+  - The runway chart and the Dashboard projection start at today's balance at the current age, then follow the projected ages.
+
 
 ## [13.15.0] - 2026-10-28
 
@@ -27,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The privacy list adds the Idle Sign-out, reading its minutes from the configured limit, and sits beside a new "In English and Vietnamese, in dollars and đồng" list: the language switch, the Reporting Currency, and the light or dark theme.
   - On a phone each ledger line stacks its figure under the text; between phone and desktop the figure sits beside the text in a narrower column.
   - The E2E landing checks count six plan lines and seven resources, and the dark-mode theme smoke checks the ledger figures and both lists.
+
 ## [13.14.0] - 2026-10-29
 
 ### Added

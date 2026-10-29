@@ -13,6 +13,8 @@
     <ItemGroup>
         <!-- The Atelier content (ADR 0019), read from the output folder at startup -->
         <Content Update="Features\Learning\Content\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+        <!-- The translation lock only feeds Web/tools/i18n-translate.js -->
+        <Content Update="Features\Learning\Content\i18n.lock.json" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
     </ItemGroup>
 
     <ItemGroup>

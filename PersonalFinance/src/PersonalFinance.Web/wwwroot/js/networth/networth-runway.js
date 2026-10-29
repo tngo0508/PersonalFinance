@@ -38,18 +38,20 @@
     }
 
     /**
-     * The chart's points: each age's Base balance and the lowest and highest of the three scenarios.
+     * The chart's points: today's balance at the current age (the same in both views and all scenarios), then each
+     * projected age's Base balance and the lowest and highest of the three scenarios.
      * @param {Object} data - The projection.
      * @param {string} mode - 'projected' or 'real'.
-     * @returns {Array<{age: number, base: number, low: number, high: number}>} One point per projected year.
+     * @returns {Array<{age: number, base: number, low: number, high: number}>} Today, then one point per projected year.
      */
     function pointsOf (data, mode) {
-        return data.base.years.map((year, i) => {
+        const today = { age: data.currentAge, base: data.startingBalance, low: data.startingBalance, high: data.startingBalance };
+        return [today].concat(data.base.years.map((year, i) => {
             const values = [year, data.conservative.years[i], data.aggressive.years[i]]
                 .filter(Boolean)
                 .map((y) => balanceOf(y, mode));
             return { age: year.age, base: balanceOf(year, mode), low: Math.min(...values), high: Math.max(...values) };
-        });
+        }));
     }
 
     /**

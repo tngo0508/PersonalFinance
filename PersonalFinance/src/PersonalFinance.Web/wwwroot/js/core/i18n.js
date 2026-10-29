@@ -193,6 +193,21 @@
     }
 
     /**
+     * Format an amount as a field shows what was typed: grouped, and with the currency's full minor units only when
+     * the amount has any (278,000 and 278,123.50; 278,123 in VND), rounded half away from zero like the server.
+     * @param {number} amount - The amount.
+     * @param {string} [currencyCode='USD'] - ISO 4217 code of the amount's currency.
+     * @returns {string} The formatted amount, without a symbol.
+     */
+    function formatInputAmount (amount, currencyCode) {
+        const decimals = currencyOf(currencyCode || DEFAULT_CURRENCY).minorUnits;
+        const rounded = roundHalfAway(Number(amount) || 0, decimals);
+        const whole = Number.isInteger(rounded);
+        return new Intl.NumberFormat(culture, { minimumFractionDigits: whole ? 0 : decimals, maximumFractionDigits: decimals })
+            .format(rounded);
+    }
+
+    /**
      * Format a plain number (a count, a percentage's number) in the culture.
      * @param {number} value - The number.
      * @param {Intl.NumberFormatOptions} [options] - Intl options, e.g. maximumFractionDigits.
@@ -358,6 +373,7 @@
         formatMoney: formatMoney,
         formatCompactMoney: formatCompactMoney,
         formatAmount: formatAmount,
+        formatInputAmount: formatInputAmount,
         formatNumber: formatNumber,
         formatDate: formatDate,
         parseNumber: parseNumber,

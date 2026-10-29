@@ -47,10 +47,11 @@
     ];
 
     /// <summary>
-    /// One number in the story sentence: a text input the tuner's slider of the same id + "Range" adjusts. Money
-    /// fields carry the currency symbol and their bound (data-max, #444).
+    /// One number in the story sentence: a text input the tuner's slider of the same id + "Range" adjusts. The input
+    /// carries the exact value (data-value, invariant; networth-sliders.js formats it), since a slider's own value is
+    /// snapped to its step. Money fields carry the currency symbol and their bound (data-max, #444).
     /// </summary>
-    private IHtmlContent StoryField(string id, string name, string labelKey, string kind, long? dollarMax = null)
+    private IHtmlContent StoryField(string id, string name, string labelKey, string kind, decimal value, long? dollarMax = null)
     {
         var html = new HtmlContentBuilder();
         string currency = SupportedCurrencies.CodeOrDefault(Model.CurrencyCode);
@@ -64,7 +65,8 @@
         html.AppendHtml($"<input type=\"text\" class=\"nw-story__input\" id=\"{id}\" name=\"{name}\" required ")
             .AppendHtml(kind == "money" ? "inputmode=\"numeric\" " : "inputmode=\"numeric\" size=\"3\" ")
             .AppendHtml("aria-label=\"").Append(L[labelKey].Value).AppendHtml("\" ")
-            .AppendHtml($"aria-controls=\"{id}Range\" data-nw-story ");
+            .AppendHtml($"aria-controls=\"{id}Range\" data-nw-story ")
+            .AppendHtml($"data-value=\"{value.ToString(System.Globalization.CultureInfo.InvariantCulture)}\" ");
         if (dollarMax is long max)
         {
             html.AppendHtml($"data-max-usd=\"{max}\" data-max=\"{MoneyBounds.MaxInvariant(max, currency)}\" ");
@@ -140,14 +142,15 @@
     <section class="nw-story" aria-labelledby="nwStoryTitle">
         <h2 class="nw-section-title" id="nwStoryTitle">@L["NetWorth.Story.Title"]</h2>
         <p class="nw-story__sentence">@L.NamedHtml("NetWorth.Story.Sentence", null,
-            ("age", StoryField("nwCurrentAge", "CurrentAge", "NetWorth.Field.CurrentAge", "age")),
-            ("balance", StoryField("nwStartingBalance", "StartingBalance", "NetWorth.Field.StartingBalance", "money", NetWorthLimits.StartingBalanceMax)),
-            ("income", StoryField("nwAnnualIncome", "AnnualIncome", "NetWorth.Field.AnnualIncome", "money", NetWorthLimits.AnnualIncomeMax)),
-            ("savings", StoryField("nwAnnualSavings", "AnnualSavings", "NetWorth.Field.AnnualSavings", "money", NetWorthLimits.AnnualSavingsMax)),
-            ("spending", StoryField("nwAnnualSpending", "AnnualSpending", "NetWorth.Field.AnnualSpending", "money", NetWorthLimits.AnnualSpendingMax)),
-            ("retirementAge", StoryField("nwRetirementAge", "RetirementAge", "NetWorth.Field.RetirementAge", "age")))</p>
+            ("age", StoryField("nwCurrentAge", "CurrentAge", "NetWorth.Field.CurrentAge", "age", Model.CurrentAge)),
+            ("balance", StoryField("nwStartingBalance", "StartingBalance", "NetWorth.Field.StartingBalance", "money", Model.StartingBalance, NetWorthLimits.StartingBalanceMax)),
+            ("income", StoryField("nwAnnualIncome", "AnnualIncome", "NetWorth.Field.AnnualIncome", "money", Model.AnnualIncome, NetWorthLimits.AnnualIncomeMax)),
+            ("savings", StoryField("nwAnnualSavings", "AnnualSavings", "NetWorth.Field.AnnualSavings", "money", Model.AnnualSavings, NetWorthLimits.AnnualSavingsMax)),
+            ("spending", StoryField("nwAnnualSpending", "AnnualSpending", "NetWorth.Field.AnnualSpending", "money", Model.AnnualSpending, NetWorthLimits.AnnualSpendingMax)),
+            ("retirementAge", StoryField("nwRetirementAge", "RetirementAge", "NetWorth.Field.RetirementAge", "age", Model.RetirementAge)))</p>
 
-        @* One slider per number; networth-sliders.js shows the one whose number was picked last. *@
+        @* One slider per number; networth-sliders.js shows the one whose number was picked last. A slider's value is
+           its position: the browser snaps it to the step, so the exact number lives on the field's data-value. *@
         <div class="nw-tuner" id="nwTuner">
             <div class="nw-tuner__row" data-nw-tune="nwStartingBalance" hidden>
                 <label class="nw-tuner__label" for="nwStartingBalanceRange">@L["NetWorth.Field.StartingBalance"]</label>
@@ -208,7 +211,7 @@
                     <div class="nw-field">
                         <label class="nw-label" for="@id">@L[labelKey]</label>
                         <div class="nw-field__input">
-                            <input type="text" inputmode="decimal" required class="form-control form-control-sm" id="@id" aria-describedby="@(id)Hint" />
+                            <input type="text" inputmode="decimal" required class="form-control form-control-sm" id="@id" aria-describedby="@(id)Hint" data-value="@value.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                             <span class="nw-field__suffix" aria-hidden="true">%</span>
                         </div>
                         <input type="range" class="nw-range" id="@(id)Range" min="0" max="@(id == "nwInflation" ? 10 : 20)" step="0.1" value="@value.ToString(System.Globalization.CultureInfo.InvariantCulture)" aria-label="@L[labelKey]" />
@@ -220,6 +223,7 @@
                     <div class="nw-field__input">
                         <span class="nw-field__prefix" data-nw-currency-symbol aria-hidden="true">@inputSymbol</span>
                         <input type="text" inputmode="numeric" required class="form-control form-control-sm" id="nwAggressiveSavings" aria-describedby="nwAggressiveSavingsHint"
+                               data-value="@Model.AggressiveSavings.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                data-max-usd="@NetWorthLimits.AggressiveSavingsMax" data-max="@MoneyBounds.MaxInvariant(NetWorthLimits.AggressiveSavingsMax, inputCurrency)" />
                     </div>
                     <input type="range" class="nw-range" id="nwAggressiveSavingsRange" min="0" max="@MoneyBounds.MaxInvariant(200000, inputCurrency)" step="@MoneyBounds.MaxInvariant(1000, inputCurrency)" data-max-usd="200000" data-step-usd="1000" value="@Model.AggressiveSavings.ToString(System.Globalization.CultureInfo.InvariantCulture)" aria-label="@L["NetWorth.Field.AggressiveSavings"]" />

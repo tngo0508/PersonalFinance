@@ -45,7 +45,20 @@ public class I18nTranslateWorkflowTests
         Assert.Contains("git push origin \"HEAD:$HEAD_REF\"", workflow);
         Assert.Contains("ref: ${{ github.event.pull_request.head.ref }}", workflow);
         // The pushed commit keeps the name the docs and the script's own "Commit as:" line use.
-        Assert.Contains("i18n: translate [0-9]* keys", workflow);
+        Assert.Contains("i18n: translate [0-9]+ (keys|content fields)", workflow);
+    }
+
+    [Fact]
+    public void Workflow_CommitsTheAtelierContentCounterparts_IncludingNewFiles()
+    {
+        string workflow = TranslateWorkflow();
+
+        Assert.Contains("CONTENT_DIR: PersonalFinance/src/PersonalFinance.ApiService/Features/Learning/Content", workflow);
+        // A new {slug}.vi.json is untracked, so "git diff" alone would miss it and the PR would ship no Vietnamese.
+        Assert.Contains("git add -A -- \"$I18N_DIR\" \"$CONTENT_DIR\"", workflow);
+        Assert.Contains("git diff --cached --quiet", workflow);
+        Assert.True(Directory.Exists(Path.Combine(
+            RepositoryRoot.Find(), "PersonalFinance", "src", "PersonalFinance.ApiService", "Features", "Learning", "Content")));
     }
 
     [Fact]

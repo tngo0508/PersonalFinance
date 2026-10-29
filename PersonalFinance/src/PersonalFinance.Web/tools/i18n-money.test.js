@@ -89,6 +89,18 @@ test('formatAmount is the number without the symbol, as a money input shows it',
     assert.strictEqual(vi.formatAmount(1234567.5, 'VND'), '1.234.568');
 });
 
+test('formatInputAmount shows the minor units only when the amount has any, as a field shows what was typed', () => {
+    const en = load('en', 'en-US');
+    assert.strictEqual(en.formatInputAmount(278000, 'USD'), '278,000');
+    assert.strictEqual(en.formatInputAmount(278123.45, 'USD'), '278,123.45');
+    assert.strictEqual(en.formatInputAmount(278123.5, 'USD'), '278,123.50');
+    assert.strictEqual(en.formatInputAmount(2.345, 'USD'), '2.35');
+    assert.strictEqual(en.formatInputAmount(278123.45, 'VND'), '278,123');
+
+    const vi = load('vi', 'vi-VN');
+    assert.strictEqual(vi.formatInputAmount(278123.45, 'USD'), '278.123,45');
+});
+
 test('the culture comes from <html data-culture>, never from navigator.language', () => {
     const fallback = load('en');
     assert.strictEqual(fallback.culture, 'en-US');

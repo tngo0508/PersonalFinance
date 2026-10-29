@@ -13,6 +13,7 @@
  *   dynamic-dictionary markup; afterwards every English placeholder must be in the output, or nothing is written for
  *   that key and it is listed.
  * - Batches of at most 1,000 texts / 50,000 characters; backs off on 429 and 5xx.
+ * - Then drafts the Atelier content files' counterparts the same way, field by field (i18n-content.js, ADR 0019).
  *
  * Credentials: AZURE_TRANSLATOR_KEY, AZURE_TRANSLATOR_REGION and optionally AZURE_TRANSLATOR_ENDPOINT, from the
  * environment or the repository's .env. The key is sent only to the Translator and never printed.
@@ -34,82 +35,13 @@ const {
     targetLanguages,
     writeJson
 } = require('./i18n-common');
+const { CONTENT_DIR, translateContent } = require('./i18n-content');
+const { applyGlossary, protect, unprotect } = require('./i18n-markup');
 
 const DEFAULT_ENDPOINT = 'https://api.cognitive.microsofttranslator.com/';
 const MAX_TEXTS_PER_REQUEST = 1000;
 const MAX_CHARS_PER_REQUEST = 50000;
 const MAX_ATTEMPTS = 6;
-const PLACEHOLDER_TOKEN = /(\{[A-Za-z0-9]+\})/;
-
-/**
- * Escapes text for the html text type.
- * @param {string} text Plain text.
- * @returns {string} HTML-escaped text.
- */
-function escapeHtml (text) {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-/**
- * Reverses escapeHtml and the entities the Translator may emit.
- * @param {string} html Translated HTML text.
- * @returns {string} Plain text.
- */
-function unescapeHtml (html) {
-    return html
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;|&#x27;|&apos;/g, '\'')
-        .replace(/&amp;/g, '&');
-}
-
-/**
- * Wraps glossary terms in dynamic-dictionary markup, longest term first, whole words, ignoring case. The Translator
- * inserts the fixed translation verbatim, so it is capitalised when the English term is ("Savings Goals").
- * @param {string} escaped HTML-escaped literal text.
- * @param {Object<string, string>} glossary English term to its fixed translation.
- * @returns {string} The text with markup.
- */
-function applyGlossary (escaped, glossary) {
-    const terms = Object.keys(glossary).sort((a, b) => b.length - a.length);
-    if (terms.length === 0) {
-        return escaped;
-    }
-    const lookup = new Map(terms.map((term) => [term.toLowerCase(), glossary[term]]));
-    const pattern = new RegExp(`\\b(${terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi');
-    return escaped.replace(pattern, (match) => {
-        const fixed = lookup.get(match.toLowerCase());
-        const translation = /^\p{Lu}/u.test(match) ? fixed.charAt(0).toLocaleUpperCase() + fixed.slice(1) : fixed;
-        return `<mstrans:dictionary translation="${escapeHtml(translation)}">${match}</mstrans:dictionary>`;
-    });
-}
-
-/**
- * Prepares an English text for the Translator: literal text escaped and glossary-marked, each placeholder wrapped so
- * it is not translated.
- * @param {string} text The English text.
- * @param {Object<string, string>} glossary The language's glossary.
- * @returns {string} The HTML sent to the Translator.
- */
-function protect (text, glossary) {
-    return text.split(PLACEHOLDER_TOKEN).map((part, i) => {
-        // split with a capture group puts the placeholders at the odd indexes
-        return i % 2 === 1 ? `<span class="notranslate">${part}</span>` : applyGlossary(escapeHtml(part), glossary);
-    }).join('');
-}
-
-/**
- * Turns the Translator's HTML back into the plain text stored in <lang>.json.
- * @param {string} html The translated HTML.
- * @returns {string} Plain text.
- */
-function unprotect (html) {
-    const text = html
-        .replace(/<span\s+class\s*=\s*["']?notranslate["']?\s*>([\s\S]*?)<\/span>/gi, '$1')
-        .replace(/<\/?mstrans:dictionary[^>]*>/gi, '');
-    return unescapeHtml(text).trim();
-}
 
 /**
  * Splits texts into Translator requests within the per-request limits.
@@ -188,6 +120,22 @@ async function translateRequest (texts, options, attempt = 0) {
 }
 
 /**
+ * Translates any number of protected texts, one batch after another.
+ * @param {string[]} texts Protected texts.
+ * @param {object} options { endpoint, key, region, to, fetch, sleep, log }.
+ * @returns {Promise<string[]>} The translated HTML, in order.
+ */
+async function translateTexts (texts, options) {
+    const outputs = [];
+    for (const range of batches(texts)) {
+        // One request at a time keeps under the free tier's hourly burst cap.
+        // eslint-disable-next-line no-await-in-loop
+        outputs.push(...await translateRequest(range.map((i) => texts[i]), options));
+    }
+    return outputs;
+}
+
+/**
  * Brings one language up to date in memory.
  * @param {object} input { english, target, lock, glossary, language }.
  * @param {object} options Translator options plus dryRun.
@@ -218,23 +166,18 @@ async function translateLanguage (input, options) {
     const strings = {};
     if (!options.dryRun && pending.length > 0) {
         const texts = pending.map((key) => protect(english[expected.get(key)], glossary));
-        for (const range of batches(texts)) {
-            // One request at a time keeps under the free tier's hourly burst cap.
-            // eslint-disable-next-line no-await-in-loop
-            const outputs = await translateRequest(range.map((i) => texts[i]), { ...options, to: language });
-            range.forEach((textIndex, i) => {
-                const key = pending[textIndex];
-                const source = english[expected.get(key)];
-                const translation = unprotect(outputs[i]);
-                if (samePlaceholders(source, translation)) {
-                    strings[key] = translation;
-                    lock[key] = sourceHash(source);
-                    result.translated.push(key);
-                } else {
-                    result.mismatched.push({ key, source, translation });
-                }
-            });
-        }
+        const outputs = await translateTexts(texts, { ...options, to: language });
+        pending.forEach((key, i) => {
+            const source = english[expected.get(key)];
+            const translation = unprotect(outputs[i]);
+            if (samePlaceholders(source, translation)) {
+                strings[key] = translation;
+                lock[key] = sourceHash(source);
+                result.translated.push(key);
+            } else {
+                result.mismatched.push({ key, source, translation });
+            }
+        });
     }
 
     // English order; a key that failed verification keeps its previous translation, if any, and stays stale.
@@ -255,12 +198,14 @@ async function translateLanguage (input, options) {
 }
 
 /**
- * Translates every target language in the resource folder and writes the files and the lock.
- * @param {object} options { dir, languages, env, fetch, sleep, log, dryRun }.
- * @returns {Promise<Object<string, object>>} Per-language results.
+ * Translates every target language in the resource folder and writes the files and the lock, then the Atelier
+ * content counterparts in the content folder.
+ * @param {object} options { dir, contentDir (null skips the content), languages, env, fetch, sleep, log, dryRun }.
+ * @returns {Promise<Object<string, object>>} Per-language results, each with its content result as .content.
  */
 async function run (options) {
     const dir = options.dir || RESOURCES_DIR;
+    const contentDir = options.contentDir === undefined ? CONTENT_DIR : options.contentDir;
     const env = options.env || process.env;
     const log = options.log || console.log; // eslint-disable-line no-console
     const english = readStrings(path.join(dir, `${SOURCE_LANGUAGE}.json`));
@@ -276,23 +221,30 @@ async function run (options) {
         log,
         dryRun: Boolean(options.dryRun)
     };
+    const missingCredentials = !translator.dryRun && (!translator.key || !translator.region);
+    const sending = missingCredentials ? { ...translator, dryRun: true } : translator;
 
     const results = {};
     for (const language of languages) {
         const file = path.join(dir, `${language}.json`);
         const glossaryFile = path.join(dir, `glossary.${language}.json`);
+        const glossary = fs.existsSync(glossaryFile) ? readStrings(glossaryFile) : {};
         const input = {
             english,
             language,
             target: fs.existsSync(file) ? readStrings(file) : {},
             lock: lock[language],
-            glossary: fs.existsSync(glossaryFile) ? readStrings(glossaryFile) : {}
+            glossary
         };
-        const missingCredentials = !translator.dryRun && (!translator.key || !translator.region);
         // Languages run one after another, for the same burst cap.
         // eslint-disable-next-line no-await-in-loop
-        const result = await translateLanguage(input, missingCredentials ? { ...translator, dryRun: true } : translator);
-        if (missingCredentials && result.pending.length > 0) {
+        const result = await translateLanguage(input, sending);
+        // eslint-disable-next-line no-await-in-loop
+        result.content = await translateContent({ dir: contentDir, language, glossary }, {
+            dryRun: sending.dryRun,
+            translate: (texts) => translateTexts(texts, { ...translator, to: language })
+        });
+        if (missingCredentials && (result.pending.length > 0 || result.content.pending.length > 0)) {
             throw new Error('AZURE_TRANSLATOR_KEY and AZURE_TRANSLATOR_REGION must be set (environment or .env).');
         }
         results[language] = result;
@@ -337,9 +289,12 @@ function loadDotEnv (file, env) {
  */
 function report (language, result, dryRun) {
     /* eslint-disable no-console */
+    const content = result.content;
     if (dryRun) {
         console.log(`${language}: ${result.pending.length} key(s) would be sent, ${result.removed.length} removed.`);
         result.pending.forEach((key) => console.log(`  ${key}`));
+        console.log(`${language} content: ${content.pending.length} field(s) would be sent.`);
+        content.pending.forEach((field) => console.log(`  ${field}`));
         return;
     }
     console.log(`${language}: translated ${result.translated.length}, adopted ${result.adopted.length}, ` +
@@ -347,6 +302,12 @@ function report (language, result, dryRun) {
     result.mismatched.forEach((m) => console.log(`  MISMATCH ${m.key}\n    en: ${m.source}\n    ${language}: ${m.translation}`));
     if (result.translated.length > 0) {
         console.log(`  Commit as: i18n: translate ${result.translated.length} keys (${language})`);
+    }
+    console.log(`${language} content: translated ${content.translated.length} field(s) in ${content.written.length} ` +
+        `file(s), adopted ${content.adopted.length}, placeholder mismatches ${content.mismatched.length}.`);
+    content.mismatched.forEach((m) => console.log(`  MISMATCH ${m.key}\n    en: ${m.source}\n    ${language}: ${m.translation}`));
+    if (content.translated.length > 0) {
+        console.log(`  Commit as: i18n: translate ${content.translated.length} content fields (${language})`);
     }
     /* eslint-enable no-console */
 }
@@ -365,7 +326,8 @@ async function main (args, env) {
     try {
         const results = await run({ dryRun, languages, env });
         Object.entries(results).forEach(([language, result]) => report(language, result, dryRun));
-        exitCode = Object.values(results).some((result) => result.mismatched.length > 0) ? 1 : 0;
+        exitCode = Object.values(results)
+            .some((result) => result.mismatched.length > 0 || result.content.mismatched.length > 0) ? 1 : 0;
     } catch (error) {
         console.error(error.message); // eslint-disable-line no-console
         exitCode = 1;
