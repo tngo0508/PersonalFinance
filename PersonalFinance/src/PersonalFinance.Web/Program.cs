@@ -109,6 +109,9 @@ try
     // IEmailSender<IdentityUser> replaces Identity UI's English-only default.
     builder.Services.AddScoped<IUserPreferenceService, UserPreferenceService>();
     builder.Services.AddScoped<IAccountEmailService, AccountEmailService>();
+    // Whether the Library has Published Term Entries, which shows the "Learning" nav entry (cached: every page asks).
+    builder.Services.AddMemoryCache();
+    builder.Services.AddScoped<ILearningLibraryStatus, LearningLibraryStatus>();
     builder.Services.AddScoped<IEmailSender<IdentityUser>, IdentityEmailSender>();
 
     // The clock, injected so tests can fix the time (CODING_STANDARDS "Async and time").

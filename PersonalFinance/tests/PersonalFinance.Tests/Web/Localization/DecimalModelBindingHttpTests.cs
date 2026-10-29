@@ -39,6 +39,7 @@ public sealed class DecimalModelBindingHttpTests : IAsyncLifetime
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<IUserPreferenceService, InMemoryUserPreferenceService>();
         builder.Services.AddAppLocalization(builder.Environment);
+        builder.Services.AddSingleton<PersonalFinance.Web.Services.ILearningLibraryStatus>(new PersonalFinance.Tests.TestSupport.FixedLearningLibraryStatus(false));
         builder.Services.AddControllersWithViews()
             .AddApplicationPart(typeof(DecimalProbeController).Assembly);
 

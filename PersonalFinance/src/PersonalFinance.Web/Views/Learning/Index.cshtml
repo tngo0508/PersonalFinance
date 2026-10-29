@@ -1,0 +1,68 @@
+@using PersonalFinance.Web.Models.Learning
+@model LearningIndexViewModel
+@{
+    ViewData["Title"] = L["Learning.Title"];
+}
+
+@section Head {
+    <meta name="description" content="@L["Learning.Meta.Description"]"/>
+    <link rel="canonical" href="@Url.Action("Index", "Learning", null, Context.Request.Scheme)"/>
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/learning.css" asp-append-version="true"/>
+}
+
+<div class="atelier" data-test-id="atelier-library">
+    <header class="atelier-header">
+        <h1 class="atelier-title">@L["Learning.Library.Heading"]</h1>
+        <p class="atelier-lede">@L["Learning.Library.Lede"]</p>
+    </header>
+
+    @if (Model.IsEmpty)
+    {
+        <p class="atelier-empty" data-test-id="atelier-empty">@L["Learning.Library.BeingWritten"]</p>
+    }
+    else
+    {
+        <div class="atelier-filter">
+            <label class="atelier-filter-label" for="atelierFilter">@L["Learning.Filter.Label"]</label>
+            <input type="search" id="atelierFilter" class="atelier-filter-input" autocomplete="off"
+                   placeholder="@L["Learning.Filter.Placeholder"]" aria-describedby="atelierFilterStatus"
+                   data-test-id="atelier-filter"/>
+            <p id="atelierFilterStatus" class="atelier-filter-status" role="status" aria-live="polite"></p>
+            <p id="atelierFilterNone" class="atelier-filter-none" hidden>@L["Learning.Filter.NoMatch"]</p>
+        </div>
+
+        @foreach (var topic in Model.Topics.Where(t => t.Terms.Count > 0))
+        {
+            <section class="atelier-shelf" aria-labelledby="shelf-@topic.Slug" data-shelf>
+                <h2 class="atelier-shelf-title" id="shelf-@topic.Slug">@L[LearningTopicNames.KeyFor(topic.Slug)]</h2>
+                <ul class="atelier-spines">
+                    @foreach (var term in topic.Terms)
+                    {
+                        <li class="atelier-spine-item" data-spine
+                            data-search="@string.Join("|", new[] { term.Term, term.EnglishTerm, term.VietnameseName }.Concat(term.AlsoKnownAs))">
+                            <a class="atelier-spine" asp-action="Term" asp-route-slug="@term.Slug" data-test-id="spine-@term.Slug">
+                                <span class="atelier-spine-term">@term.Term</span>
+                                @if (term.AlsoKnownAs.Count > 0)
+                                {
+                                    <span class="atelier-spine-aka">@string.Join(", ", term.AlsoKnownAs)</span>
+                                }
+                                <span class="atelier-spine-vi" lang="vi">@term.VietnameseName</span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+    }
+</div>
+
+@section Scripts {
+    @if (!Model.IsEmpty)
+    {
+        <js-strings prefix="Learning.Js." />
+        <script src="~/js/learning/library-filter.js" asp-append-version="true"></script>
+    }
+}
