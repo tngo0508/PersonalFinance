@@ -121,8 +121,9 @@ internal sealed class DashboardService : IDashboardService
     }
 
     /// <summary>
-    /// Projection points from the same calculation the Net Worth page uses, so both pages always agree.
-    /// Each point is the end-of-year balance for that age. Empty when retirement age is at or below current age.
+    /// Projection points from the same calculation the Net Worth page uses, so both pages always agree: today's
+    /// balance at the current age, then the balance held at each later age up to retirement. Empty when retirement
+    /// age is at or below current age.
     /// </summary>
     private static List<ProjectionPointDto> BuildProjectionPoints(NetWorthParameters parameters,
         NetWorthProjectionDto projection)
@@ -132,8 +133,20 @@ internal sealed class DashboardService : IDashboardService
             return new List<ProjectionPointDto>();
         }
 
+        var points = new List<ProjectionPointDto>(projection.Base.Years.Count + 1)
+        {
+            new ProjectionPointDto
+            {
+                Year = projection.CurrentYear,
+                Age = projection.CurrentAge,
+                Base = projection.StartingBalance,
+                Conservative = projection.StartingBalance,
+                Aggressive = projection.StartingBalance
+            }
+        };
+
         // All three scenarios share the same years and ages; index-align them.
-        return projection.Base.Years
+        points.AddRange(projection.Base.Years
             .Select((year, i) => new ProjectionPointDto
             {
                 Year = year.Year,
@@ -141,8 +154,8 @@ internal sealed class DashboardService : IDashboardService
                 Base = year.EndingBalance,
                 Conservative = projection.Conservative.Years[i].EndingBalance,
                 Aggressive = projection.Aggressive.Years[i].EndingBalance
-            })
-            .ToList();
+            }));
+        return points;
     }
 
     private async Task<DashboardMonthlyBudgetDto?> GetMonthlyBudgetSummaryAsync(string userId,

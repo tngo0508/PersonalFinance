@@ -54,11 +54,22 @@ public class NetWorthProjectionTodaysMoneyAndLeversTests
     [Fact]
     public void RealFiReachedAge_WhenInflationErodesTheBalance_IsUnavailable()
     {
-        // Already at the 1,000,000 FI Target and saving nothing at 0%: reached now, but never in today's money.
+        // 990,000 today, 50,000 a year at 0%: 1,040,000 at 31 passes the 1,000,000 FI Target as projected, but at 10%
+        // inflation that is 945,454 in today's money, and every later year is worth less again.
+        NetWorthScenarioDto scenario = Project(balance: 990_000m, savings: 50_000m, inflation: 10m).Base;
+
+        Assert.Equal(31, scenario.FiReachedAge);
+        Assert.Null(scenario.RealFiReachedAge);
+    }
+
+    [Fact]
+    public void FiReachedAges_WhenAlreadyAtTheTargetToday_AreBothTheCurrentAge()
+    {
+        // Today's money is today's money: a balance at the target now is at the target in both views.
         NetWorthScenarioDto scenario = Project(balance: 1_000_000m, savings: 0m, inflation: 3m).Base;
 
         Assert.Equal(30, scenario.FiReachedAge);
-        Assert.Null(scenario.RealFiReachedAge);
+        Assert.Equal(30, scenario.RealFiReachedAge);
     }
 
     [Fact]
@@ -81,23 +92,23 @@ public class NetWorthProjectionTodaysMoneyAndLeversTests
     [Fact]
     public void SaveMore_ReachesTheTargetWithFiveThousandMoreEachYear()
     {
-        // 1,000,000 target at 95,000 a year is 11 years (age 40); at 100,000 it is 10 years (age 39).
+        // 1,000,000 target at 95,000 a year is 11 years from 30 (age 41); at 100,000 it is 10 years (age 40).
         NetWorthProjectionDto projection = Project();
         NetWorthLeverDto lever = projection.Levers.Single(l => l.Key == NetWorthLevers.SaveMore);
 
-        Assert.Equal(40, projection.Base.FiReachedAge);
+        Assert.Equal(41, projection.Base.FiReachedAge);
         Assert.Equal(5_000m, lever.Change);
-        Assert.Equal(39, lever.FiReachedAge);
-        Assert.Equal(projection.Base.FinalNetWorth + 5_000m * 31, lever.FinalNetWorth);
+        Assert.Equal(40, lever.FiReachedAge);
+        Assert.Equal(projection.Base.FinalNetWorth + 5_000m * 30, lever.FinalNetWorth);
     }
 
     [Fact]
     public void SpendLess_LowersTheFiTarget()
     {
-        // 35,000 a year needs 875,000: 10 years at 95,000 (age 39).
+        // 35,000 a year needs 875,000: 10 years at 95,000 (age 40).
         NetWorthLeverDto lever = Project().Levers.Single(l => l.Key == NetWorthLevers.SpendLess);
 
-        Assert.Equal(39, lever.FiReachedAge);
+        Assert.Equal(40, lever.FiReachedAge);
     }
 
     [Fact]

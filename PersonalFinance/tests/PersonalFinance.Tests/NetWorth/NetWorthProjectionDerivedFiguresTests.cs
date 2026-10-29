@@ -66,20 +66,56 @@ public class NetWorthProjectionDerivedFiguresTests
     }
 
     [Fact]
-    public void FiReachedAge_IsTheFirstAgeWhoseEndingBalanceReachesTheTarget()
+    public void Years_RunFromTheAgeAfterNowToRetirementAge_OneYearOfSavingAndGrowthEach()
     {
-        // FI Target 1,000,000; 0% return; 100,000 start + 100,000 a year → exactly 1,000,000 at the end of age 43.
-        NetWorthProjectionDto projection = Project(balance: 100_000m, savings: 100_000m, spending: 40_000m,
-            currentAge: 35, retirementAge: 60, baseRoi: 0m, conservativeRoi: 0m);
+        // 34 today, retiring at 65: 31 years of saving, the first ending at 35 next year and the last at 65.
+        NetWorthScenarioDto scenario = Project(currentAge: 34, retirementAge: 65).Base;
 
-        Assert.Equal(43, projection.Base.FiReachedAge);
-        Assert.Equal(43, projection.Conservative.FiReachedAge);
+        Assert.Equal(31, scenario.Years.Count);
+        Assert.Equal(35, scenario.Years[0].Age);
+        Assert.Equal(DateTime.Now.Year + 1, scenario.Years[0].Year);
+        Assert.Equal(65, scenario.Years[^1].Age);
+        Assert.Equal(scenario.Years[^1].EndingBalance, scenario.FinalNetWorth);
     }
 
     [Fact]
-    public void FiReachedAge_WhenAlreadyAboveTarget_IsCurrentAge()
+    public void Years_CompoundExactlyInDecimal_CentsAndAllAreKept()
+    {
+        // 195,033.14 at 7% earns 13,652.3198; with 32,000 saved that ends the first year at 240,685.4598, and the
+        // second year starts from exactly that.
+        List<NetWorthYearDto> years = Project(balance: 195_033.14m, savings: 32_000m, baseRoi: 7m).Base.Years;
+
+        Assert.Equal(195_033.14m, years[0].StartingBalance);
+        Assert.Equal(13_652.3198m, years[0].Roi);
+        Assert.Equal(240_685.4598m, years[0].EndingBalance);
+        Assert.Equal(240_685.4598m, years[1].StartingBalance);
+        Assert.Equal(240_685.4598m * 0.07m, years[1].Roi);
+    }
+
+    [Fact]
+    public void FiReachedAge_IsTheFirstAgeAtWhichTheBalanceReachesTheTarget()
+    {
+        // FI Target 1,000,000; 0% return; 100,000 today at 35 + 100,000 a year → nine years of saving, so exactly
+        // 1,000,000 at 44.
+        NetWorthProjectionDto projection = Project(balance: 100_000m, savings: 100_000m, spending: 40_000m,
+            currentAge: 35, retirementAge: 60, baseRoi: 0m, conservativeRoi: 0m);
+
+        Assert.Equal(44, projection.Base.FiReachedAge);
+        Assert.Equal(44, projection.Conservative.FiReachedAge);
+    }
+
+    [Fact]
+    public void FiReachedAge_WhenAlreadyAtOrAboveTarget_IsCurrentAge()
     {
         Assert.Equal(34, Project(balance: 2_000_000m).Base.FiReachedAge);
+        Assert.Equal(34, Project(balance: 1_200_000m).Base.FiReachedAge);
+    }
+
+    [Fact]
+    public void FiReachedAge_JustBelowTheTargetToday_IsNextYear()
+    {
+        // 1,199,999.99 today is short of the 1,200,000 target; a year of saving gets there at 35.
+        Assert.Equal(35, Project(balance: 1_199_999.99m).Base.FiReachedAge);
     }
 
     [Fact]
@@ -100,11 +136,12 @@ public class NetWorthProjectionDerivedFiguresTests
     [Fact]
     public void FiReachedAge_ForAggressive_UsesAggressiveSavings()
     {
-        // Base saves nothing at 0% and never gets there; Aggressive saves 200,000 a year: 300k, 500k, ... 1.1M at 39.
+        // Base saves nothing at 0% and never gets there; Aggressive saves 200,000 a year: 300k at 36, 500k at 37, ...
+        // 1.1M at 40.
         NetWorthProjectionDto projection = Project(balance: 100_000m, savings: 0m, spending: 40_000m, currentAge: 35,
             retirementAge: 60, baseRoi: 0m, aggressiveRoi: 0m, aggressiveSavings: 200_000m);
 
         Assert.Null(projection.Base.FiReachedAge);
-        Assert.Equal(39, projection.Aggressive.FiReachedAge);
+        Assert.Equal(40, projection.Aggressive.FiReachedAge);
     }
 }
