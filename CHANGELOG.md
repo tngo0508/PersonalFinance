@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [13.12.0] - 2026-10-29
+## [13.14.0] - 2026-10-29
 
 ### Added
 
@@ -23,6 +23,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **E2E fixture content**: `e2e-inmemory.sh` points ApiService at the test fixture content folder, so the new Atelier smoke can read Term Entries before real content ships; against the real, empty folder the smoke checks the empty state instead (#517).
+
+## [13.13.0] - 2026-10-28
+
+### Changed
+
+- **Budget Tracker redesign**: the page is one monthly account book instead of a card layout.
+  - The month is the title, with its neighbours on the page-turn buttons and the month and year selects beside them; one sentence per section says what was spent and earned against plan.
+  - Expenses and Income are two full-width ledger sheets with a variance column: Actual drawn as a bar against a brass tick at Planned, every row of a section on one scale, red past the tick for an expense and green for income. Totals sit under a double rule. The two summary bars are gone, since the column says it per row.
+  - Transactions are one dated journal for the month, income amounts with a plus sign, instead of two side-by-side lists.
+  - The page draws its own icons inline, so the month arrows and row actions show whether or not the cookie banner's "Accept All" has loaded the icon script.
+  - A narrow sheet hides the variance column first, then scrolls sideways; the type scale and spacing follow the app tokens, so dark mode needs no page rules of its own.
+
+## [13.12.0] - 2026-10-28
+
+### Changed
+
+- **Budget Planner redesign**: the page is a month divided on one strip and a ledger of ten rows, instead of a sidebar doughnut beside a grid of category cards.
+  - The Month Strip under the income shows every category as a segment in its colour, the unallocated rest as hatched paper, and an income line with a red overflow when the categories add up to more than the income. Segment names and shares appear when they fit.
+  - Each ledger row is a swatch, the category, a share slider whose track fills in the category colour, the share as a percentage, and the amount. Hovering or focusing a row lights its segment, and the other way round.
+  - The total closes the ledger under a double rule, and the remaining-to-allocate figure sits in the hero beside the income, in green when the budget is fully allocated and in red when it is over.
+  - Until a monthly income is entered, the share sliders and percentages are disabled and a hint says why; amounts can be typed at any time.
+  - Server-side validation messages under an amount now show.
+  - The Chart.js doughnut, its leader lines and the summary list are gone from this page; the Dashboard keeps its own donut.
 
 ## [13.11.1] - 2026-10-28
 
