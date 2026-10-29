@@ -14,12 +14,15 @@ namespace PersonalFinance.Tests.LandingPage;
 
 public class HomeControllerTests
 {
-    private static readonly string[] ExpectedCoreFeatureTitles = ["Net Worth", "Budget", "Savings Goals"];
+    private static readonly string[] ExpectedCoreFeatureTitles =
+    [
+        "Net Worth", "Budget Planner", "Budget Tracker", "Savings Goals", "Money Priorities", "Analysis"
+    ];
 
     private static readonly string[] ExpectedMoreFeatureTitles =
     [
-        "Spreadsheet Analysis", "Investment Calculator", "Google Drive Integration", "AI Assistant",
-        "Finance News", "Guild Hall"
+        "Investment Calculator", "Currency Converter", "Research", "Finance News", "Guild Hall", "Google Drive",
+        "AI Assistant"
     ];
 
     private static ControllerContext CreateAnonymousContext()
@@ -78,7 +81,10 @@ public class HomeControllerTests
 
         foreach (LandingFeature feature in model.CoreFeatures.Concat(model.MoreFeatures))
         {
-            foreach (string key in new[] { feature.TitleKey, feature.DescriptionKey })
+            IEnumerable<string> keys = feature.HasFigure
+                ? [feature.TitleKey, feature.DescriptionKey, feature.FigureKey]
+                : [feature.TitleKey, feature.DescriptionKey];
+            foreach (string key in keys)
             {
                 Assert.True(TestLocalization.Catalog.TryGet("en", key, out _), $"en.json has no {key}.");
                 Assert.True(TestLocalization.Catalog.TryGet("vi", key, out _), $"vi.json has no {key}.");
