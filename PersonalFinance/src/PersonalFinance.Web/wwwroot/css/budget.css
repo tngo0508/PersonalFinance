@@ -5,16 +5,12 @@
    ========================================================================== */
 
 .budget-page {
-    /* A name inside a coloured segment: white on the light set of category colours, ink on the lighter dark set */
-    --budget-strip-label: #FFFFFF;
+    /* A name inside a coloured segment: the label-on-a-series token, white in light and the page ink in dark */
+    --budget-strip-label: var(--app-on-chart);
     /* The hatch of income that has no category yet, and of the amount over the income */
     --budget-hatch: var(--app-border-hover);
     --budget-hatch-over: var(--app-accent-negative);
     padding: 0.5rem 0 2rem;
-}
-
-:root[data-theme="dark"] .budget-page {
-    --budget-strip-label: var(--app-bg);
 }
 
 /* ==========================================================================
