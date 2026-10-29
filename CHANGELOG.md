@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [13.15.0] - 2026-10-29
+## [13.16.0] - 2026-10-29
 
 ### Fixed
 
@@ -23,6 +23,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The age of financial independence is the first age at which the balance reaches the FI target, the current age when today's balance already does, in both the projected and today's-money views.
   - The runway chart and the Dashboard projection start at today's balance at the current age, then follow the projected ages.
 
+
+## [13.15.0] - 2026-10-28
+
+### Changed
+
+- **Landing Page refresh**: the page lists every tool shipped since it was last written, and the tools section is one ledger instead of three cards and a list.
+  - "One plan, kept like a ledger" shows the six tools of the plan (Net Worth, Budget Planner, Budget Tracker, Savings Goals, Money Priorities, Analysis) as ruled lines, with the sample plan's figure for each in the money face on the right: the FI target in brass, the monthly saving, the planned spending and a six-month emergency fund. The lines close under a double rule on "Financially independent: $1,041,000 at age 52", the same sample as the hero chart.
+  - The seven resources (Investment Calculator, Currency Converter, Research, Finance News, Guild Hall, Google Drive, AI Assistant) follow as a two-column register; Spreadsheet Analysis folds into Google Drive and Analysis.
+  - The privacy list adds the Idle Sign-out, reading its minutes from the configured limit, and sits beside a new "In English and Vietnamese, in dollars and đồng" list: the language switch, the Reporting Currency, and the light or dark theme.
+  - On a phone each ledger line stacks its figure under the text; between phone and desktop the figure sits beside the text in a narrower column.
+  - The E2E landing checks count six plan lines and seven resources, and the dark-mode theme smoke checks the ledger figures and both lists.
 ## [13.14.0] - 2026-10-29
 
 ### Added

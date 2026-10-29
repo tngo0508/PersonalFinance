@@ -251,10 +251,10 @@ const {runLearningSmoke} = require('./learning-smoke');
 
             const coreCount = await page.locator('.lp-tool').count().catch(() => 0);
             const moreCount = await page.locator('.lp-more__item').count().catch(() => 0);
-            if (coreCount === 3 && moreCount === 6) {
-                pass('Landing Page lists 3 core tools and 6 additional features');
+            if (coreCount === 6 && moreCount === 7) {
+                pass('Landing Page ledger lists 6 plan tools and 7 resources');
             } else {
-                fail(`Expected 3 core tools and 6 additional features, found ${coreCount} and ${moreCount}`);
+                fail(`Expected 6 plan tools and 7 resources, found ${coreCount} and ${moreCount}`);
             }
         } catch (error) {
             fail(`Default route failed: ${error.message}`);

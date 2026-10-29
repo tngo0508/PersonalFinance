@@ -1,5 +1,7 @@
 @using PersonalFinance.Shared.Constants
+@using PersonalFinance.Web.Infrastructure
 @model LandingPageViewModel
+@inject Microsoft.Extensions.Options.IOptions<IdleSignOutOptions> IdleSignOut
 @{
     string appName = AppVersion.ApplicationName;
     ViewData["DocumentTitle"] = L.Named("Landing.DocumentTitle", ("appName", appName));
@@ -12,6 +14,18 @@
     const string projected = "$1,041,000";
     const int returnRate = 5;
     const int fiAge = 52;
+
+    // The ledger's figures follow the same sample: spending of $40,000 a year is $3,333 a month, and an emergency fund
+    // of six months of spending is $20,000.
+    const string plannedMonthly = "$3,333";
+    const string emergencyFund = "$20,000";
+    var figures = new Dictionary<string, string>
+    {
+        ["NetWorth"] = L.Named("Landing.Feature.NetWorth.Figure", ("target", target)),
+        ["BudgetPlanner"] = L.Named("Landing.Feature.BudgetPlanner.Figure", ("monthly", monthlySaving)),
+        ["BudgetTracker"] = L.Named("Landing.Feature.BudgetTracker.Figure", ("planned", plannedMonthly)),
+        ["SavingsGoals"] = L.Named("Landing.Feature.SavingsGoals.Figure", ("fund", emergencyFund))
+    };
 }
 
 @section Styles {
@@ -113,31 +127,47 @@
         </dl>
     </section>
 
-    @* ---------- Tools ---------- *@
-    <section class="lp-section" aria-labelledby="lp-tools-title">
+    @* ---------- The ledger: every tool is a line of the same plan ---------- *@
+    <section class="lp-section" aria-labelledby="lp-ledger-title">
         <div class="lp-section__head">
-            <h2 id="lp-tools-title" class="lp-section__title">@L["Landing.Tools.Title"]</h2>
+            <h2 id="lp-ledger-title" class="lp-section__title">@L["Landing.Ledger.Title"]</h2>
+            <p class="lp-section__lead">@L["Landing.Ledger.Lead"]</p>
         </div>
-        <ul class="lp-tools">
-            @foreach (var feature in Model.CoreFeatures)
-            {
-                <li class="lp-tool">
-                    <h3 class="lp-tool__title">@L[feature.TitleKey]</h3>
-                    <p class="lp-tool__text">@L[feature.DescriptionKey]</p>
-                </li>
-            }
-        </ul>
 
-        <h3 class="lp-more__title">@L["Landing.Tools.MoreTitle"]</h3>
-        <ul class="lp-more">
-            @foreach (var feature in Model.MoreFeatures)
-            {
-                <li class="lp-more__item">
-                    <span class="lp-more__name">@L[feature.TitleKey]</span>
-                    <span class="lp-more__text">@L[feature.DescriptionKey]</span>
-                </li>
-            }
-        </ul>
+        <div class="lp-ledger">
+            <div class="lp-ledger__head">
+                <h3 class="lp-ledger__group">@L["Landing.Ledger.Finances"]</h3>
+                <p class="lp-ledger__column">@L["Landing.Ledger.Column"]</p>
+            </div>
+            <ul class="lp-tools">
+                @foreach (var feature in Model.CoreFeatures)
+                {
+                    <li class="lp-tool">
+                        <h4 class="lp-tool__title">@L[feature.TitleKey]</h4>
+                        <p class="lp-tool__text">@L[feature.DescriptionKey]</p>
+                        @if (feature.HasFigure && figures.TryGetValue(feature.Id, out string? figure))
+                        {
+                            <p class="lp-tool__figure">@figure</p>
+                        }
+                    </li>
+                }
+            </ul>
+            <p class="lp-ledger__total">
+                <span class="lp-ledger__total-label">@L["Landing.Ledger.Total"]</span>
+                <span class="lp-ledger__total-figure">@L.Named("Landing.Ledger.TotalFigure", ("projected", projected), ("age", fiAge))</span>
+            </p>
+
+            <h3 class="lp-ledger__group lp-ledger__group--more">@L["Landing.Ledger.Resources"]</h3>
+            <ul class="lp-more">
+                @foreach (var feature in Model.MoreFeatures)
+                {
+                    <li class="lp-more__item">
+                        <span class="lp-more__name">@L[feature.TitleKey]</span>
+                        <span class="lp-more__text">@L[feature.DescriptionKey]</span>
+                    </li>
+                }
+            </ul>
+        </div>
     </section>
 
     @* ---------- Getting started ---------- *@
@@ -161,16 +191,27 @@
         </ol>
     </section>
 
-    @* ---------- Privacy ---------- *@
+    @* ---------- Yours: privacy, and the two languages and currencies ---------- *@
     <section class="lp-section" aria-labelledby="lp-privacy-title">
-        <div class="lp-privacy">
-            <h2 id="lp-privacy-title" class="lp-privacy__title">@L["Landing.Privacy.Title"]</h2>
-            <ul class="lp-privacy__list">
-                <li>@L["Landing.Privacy.OnlyYou"]</li>
-                <li>@L["Landing.Privacy.Https"]</li>
-                <li>@L["Landing.Privacy.Drive"]</li>
-                <li>@L["Landing.Privacy.NoBankLogins"]</li>
-            </ul>
+        <div class="lp-yours">
+            <div class="lp-privacy">
+                <h2 id="lp-privacy-title" class="lp-yours__title">@L["Landing.Privacy.Title"]</h2>
+                <ul class="lp-privacy__list lp-yours__list">
+                    <li>@L["Landing.Privacy.OnlyYou"]</li>
+                    <li>@L["Landing.Privacy.NoBankLogins"]</li>
+                    <li>@L["Landing.Privacy.Https"]</li>
+                    <li>@L["Landing.Privacy.Drive"]</li>
+                    <li>@L.Named("Landing.Privacy.IdleSignOut", ("minutes", IdleSignOut.Value.TimeoutMinutes))</li>
+                </ul>
+            </div>
+            <div class="lp-everyday">
+                <h2 class="lp-yours__title">@L["Landing.Everyday.Title"]</h2>
+                <ul class="lp-everyday__list lp-yours__list">
+                    <li>@L["Landing.Everyday.Language"]</li>
+                    <li>@L["Landing.Everyday.Currency"]</li>
+                    <li>@L["Landing.Everyday.Theme"]</li>
+                </ul>
+            </div>
         </div>
     </section>
 
