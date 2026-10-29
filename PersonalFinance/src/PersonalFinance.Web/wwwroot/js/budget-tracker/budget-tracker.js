@@ -186,28 +186,34 @@
         }
     }
 
-    /**
-     * Initializes Lucide icon elements on the page.
-     * @returns {void}
-     */
-    function refreshIcons () {
-        if (window.lucide && typeof window.lucide.createIcons === 'function') {
-            window.lucide.createIcons();
-        }
-    }
+    // The page's icons as 24-unit stroke paths, drawn inline so the sheet does not depend on a script loaded after
+    // cookie consent (the layout's Lucide icons are).
+    const ICON_PATHS = {
+        'arrow-up': 'M12 19V5M5 12l7-7 7 7',
+        'arrow-down': 'M12 5v14M19 12l-7 7-7-7',
+        'pencil': 'M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z',
+        'pencil-line': 'M12 20h9M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z',
+        'rotate-ccw': 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5',
+        'archive': 'M3 8h18v12H3zM1 3h22v5H1zM10 12h4',
+        'trash': 'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6'
+    };
 
     /**
-     * Creates a Lucide icon placeholder that refreshIcons() turns into an SVG.
-     * @param {string} name - Lucide icon name.
-     * @param {number} size - Width and height in pixels.
-     * @returns {HTMLElement} The icon element.
+     * Creates an inline SVG icon from ICON_PATHS; CSS sizes it from the font size.
+     * @param {string} name - A key of ICON_PATHS.
+     * @returns {SVGElement} The icon element, hidden from assistive technology.
      */
-    function iconElement (name, size) {
-        const icon = document.createElement('i');
-        icon.dataset.lucide = name;
-        icon.style.width = `${size}px`;
-        icon.style.height = `${size}px`;
-        return icon;
+    function iconElement (name) {
+        const svgNs = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNs, 'svg');
+        svg.setAttribute('class', 'bt-icon');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('focusable', 'false');
+        const path = document.createElementNS(svgNs, 'path');
+        path.setAttribute('d', ICON_PATHS[name] || '');
+        svg.appendChild(path);
+        return svg;
     }
 
     /**
@@ -317,13 +323,12 @@
      */
     function renderSheet (sheet) {
         renderInitPrompt(sheet);
-        renderBars(sheet);
+        renderMasthead(sheet);
         renderSummaryTable('tbodyExpenses', sheet.expenses ? sheet.expenses.rows : [], 1);
         renderSummaryTable('tbodyIncome', sheet.income ? sheet.income.rows : [], 2);
         renderTotals(sheet);
         renderConversionCaption(sheet);
         renderTransactions(sheet.transactions || []);
-        refreshIcons();
     }
 
     /**
@@ -384,59 +389,105 @@
     }
 
     /**
-     * Renders the horizontal Planned vs Actual comparison bars.
+     * Renders the masthead: the month as the title, its neighbours on the page-turn buttons, and one sentence per
+     * section on where the month stands against its plan.
      * @param {Object} sheet - Monthly budget sheet.
      * @returns {void}
      */
-    function renderBars (sheet) {
-        const expPlanned = sheet.expenses ? sheet.expenses.totalPlanned : 0;
-        const expActual = sheet.expenses ? sheet.expenses.totalActual : 0;
-        const incPlanned = sheet.income ? sheet.income.totalPlanned : 0;
-        const incActual = sheet.income ? sheet.income.totalActual : 0;
+    function renderMasthead (sheet) {
+        const title = document.getElementById('btMonthTitle');
+        if (title) {
+            title.textContent = formatMonthYear(currentYear, currentMonth);
+        }
 
-        // Expenses Bar
-        const expNumbers = document.getElementById('expensesBarNumbers');
-        const expBarPlanned = document.getElementById('expensePlannedBar');
-        const expBarActual = document.getElementById('expenseActualBar');
+        const previous = new Date(currentYear, currentMonth - 2, 1);
+        const next = new Date(currentYear, currentMonth, 1);
+        const prevLabel = document.getElementById('btnPrevMonthText');
+        const nextLabel = document.getElementById('btnNextMonthText');
+        if (prevLabel) {
+            prevLabel.textContent = PFI18n.formatDate(previous, { month: 'short' });
+        }
+        if (nextLabel) {
+            nextLabel.textContent = PFI18n.formatDate(next, { month: 'short' });
+        }
 
-        if (expNumbers) {
-            expNumbers.textContent = PFI18n.t('BudgetTracker.Js.BarNumbers', {
-                planned: formatCurrency(expPlanned),
-                actual: formatCurrency(expActual)
+        const spent = document.getElementById('btSpentLine');
+        if (spent) {
+            spent.textContent = PFI18n.t('BudgetTracker.Js.SpentLine', {
+                actual: formatCurrency(sheet.expenses ? sheet.expenses.totalActual : 0),
+                planned: formatCurrency(sheet.expenses ? sheet.expenses.totalPlanned : 0)
             });
         }
-
-        const expMax = Math.max(expPlanned, expActual, 1);
-        if (expBarPlanned) {
-            const pct = Math.min(100, Math.max(0, (expPlanned / expMax) * 100));
-            expBarPlanned.style.width = `${pct.toFixed(1) }%`;
-        }
-        if (expBarActual) {
-            const pct = Math.min(100, Math.max(0, (expActual / expMax) * 100));
-            expBarActual.style.width = `${pct.toFixed(1) }%`;
-        }
-
-        // Income Bar
-        const incNumbers = document.getElementById('incomeBarNumbers');
-        const incBarPlanned = document.getElementById('incomePlannedBar');
-        const incBarActual = document.getElementById('incomeActualBar');
-
-        if (incNumbers) {
-            incNumbers.textContent = PFI18n.t('BudgetTracker.Js.BarNumbers', {
-                planned: formatCurrency(incPlanned),
-                actual: formatCurrency(incActual)
+        const earned = document.getElementById('btEarnedLine');
+        if (earned) {
+            earned.textContent = PFI18n.t('BudgetTracker.Js.EarnedLine', {
+                actual: formatCurrency(sheet.income ? sheet.income.totalActual : 0),
+                planned: formatCurrency(sheet.income ? sheet.income.totalPlanned : 0)
             });
         }
+    }
 
-        const incMax = Math.max(incPlanned, incActual, 1);
-        if (incBarPlanned) {
-            const pct = Math.min(100, Math.max(0, (incPlanned / incMax) * 100));
-            incBarPlanned.style.width = `${pct.toFixed(1) }%`;
+    /**
+     * The scale a section's variance marks share: its largest Planned or Actual, so every row is comparable.
+     * @param {Array} rows - The section's SheetRowDto rows.
+     * @returns {number} The amount at the right edge of the track, at least 1.
+     */
+    function varianceScale (rows) {
+        return (rows || []).reduce((max, row) => {
+            return Math.max(max, Number(row.planned) || 0, Number(row.actual) || 0);
+        }, 1);
+    }
+
+    /**
+     * Draws Actual as a bar against a brass tick at Planned. Past the tick, the bar turns red for an expense (over
+     * budget) and green for income (more than planned). The figures are in the aria-label, so the mark is never the
+     * only carrier of the comparison.
+     * @param {number} planned - The planned amount.
+     * @param {number} actual - The actual amount.
+     * @param {number} kind - 1 for Expense, 2 for Income.
+     * @param {number} scale - The amount at the right edge of the track.
+     * @returns {HTMLElement} The mark.
+     */
+    function varianceMark (planned, actual, kind, scale) {
+        const safePlanned = Math.max(0, Number(planned) || 0);
+        const safeActual = Math.max(0, Number(actual) || 0);
+        const pct = (amount) => {
+            return `${ Math.min(100, (amount / scale) * 100).toFixed(2) }%`;
+        };
+
+        const mark = document.createElement('div');
+        mark.className = 'bt-variance';
+        mark.setAttribute('role', 'img');
+        mark.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.VarianceAria', {
+            actual: formatCurrency(safeActual),
+            planned: formatCurrency(safePlanned)
+        }));
+
+        const track = document.createElement('div');
+        track.className = 'bt-variance__track';
+        mark.appendChild(track);
+
+        const bar = document.createElement('div');
+        bar.className = 'bt-variance__bar';
+        bar.style.width = pct(Math.min(safeActual, safePlanned));
+        mark.appendChild(bar);
+
+        if (safeActual > safePlanned) {
+            const over = document.createElement('div');
+            over.className = kind === 2 ? 'bt-variance__over bt-variance__over--ahead' : 'bt-variance__over';
+            over.style.left = pct(safePlanned);
+            over.style.width = pct(safeActual - safePlanned);
+            mark.appendChild(over);
         }
-        if (incBarActual) {
-            const pct = Math.min(100, Math.max(0, (incActual / incMax) * 100));
-            incBarActual.style.width = `${pct.toFixed(1) }%`;
+
+        if (safePlanned > 0) {
+            const tick = document.createElement('div');
+            tick.className = 'bt-variance__tick';
+            tick.style.left = pct(safePlanned);
+            mark.appendChild(tick);
         }
+
+        return mark;
     }
 
     /**
@@ -457,8 +508,8 @@
         if (!rows || rows.length === 0) {
             const tr = document.createElement('tr');
             const td = document.createElement('td');
-            td.colSpan = 5;
-            td.className = 'text-center text-muted py-3';
+            td.colSpan = 6;
+            td.className = 'bt-ledger__empty';
             td.textContent = PFI18n.t('BudgetTracker.Js.NoCategories');
             tr.appendChild(td);
             tbody.appendChild(tr);
@@ -469,6 +520,7 @@
         const activeRows = rows.filter((r) => {
             return !r.isArchived;
         });
+        const scale = varianceScale(rows);
 
         rows.forEach((row) => {
             const tr = document.createElement('tr');
@@ -491,7 +543,7 @@
 
             // Planned amount cell (interactive inline edit button)
             const tdPlanned = document.createElement('td');
-            tdPlanned.className = 'text-end bt-planned-cell';
+            tdPlanned.className = 'bt-ledger__num bt-planned-cell';
 
             const btnPlanned = document.createElement('button');
             btnPlanned.type = 'button';
@@ -520,7 +572,7 @@
 
             // Actual amount cell with Override badge and Revert button
             const tdActual = document.createElement('td');
-            tdActual.className = 'text-end';
+            tdActual.className = 'bt-ledger__num';
 
             const actualWrapper = document.createElement('div');
             actualWrapper.className = 'bt-actual-cell';
@@ -551,7 +603,7 @@
             btnOverride.setAttribute('aria-label', row.actualIsOverride
                 ? PFI18n.t('BudgetTracker.Js.OverrideEditAria', { name: row.name })
                 : PFI18n.t('BudgetTracker.Js.OverrideSetAria', { name: row.name }));
-            btnOverride.appendChild(iconElement('edit-3', 13));
+            btnOverride.appendChild(iconElement('pencil-line'));
             btnOverride.disabled = !isMonthInitialized;
             btnOverride.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -568,7 +620,7 @@
                 btnRevert.className = 'bt-btn-icon';
                 btnRevert.title = PFI18n.t('BudgetTracker.Js.RevertTitle');
                 btnRevert.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.RevertAria', { name: row.name }));
-                btnRevert.appendChild(iconElement('rotate-ccw', 13));
+                btnRevert.appendChild(iconElement('rotate-ccw'));
                 btnRevert.addEventListener('click', async (e) => {
                     e.stopPropagation();
                     await revertActualOverride(row.categoryId);
@@ -581,21 +633,20 @@
 
             // Diff cell
             const tdDiff = document.createElement('td');
-            tdDiff.className = 'text-end';
+            tdDiff.className = 'bt-ledger__num';
             tdDiff.textContent = formatCurrency(row.diff);
-
-            if (row.diff > 0) {
-                tdDiff.classList.add('bt-diff-positive');
-            } else if (row.diff < 0) {
-                tdDiff.classList.add('bt-diff-negative');
-            } else {
-                tdDiff.classList.add('bt-diff-neutral');
-            }
+            applyDiffClass(tdDiff, row.diff);
             tr.appendChild(tdDiff);
+
+            // Variance cell: Actual against Planned on the section's scale
+            const tdVariance = document.createElement('td');
+            tdVariance.className = 'bt-ledger__variance';
+            tdVariance.appendChild(varianceMark(row.planned, row.actual, kind, scale));
+            tr.appendChild(tdVariance);
 
             // Actions cell (Move Up, Move Down, Rename, Archive)
             const tdActions = document.createElement('td');
-            tdActions.className = 'text-end';
+            tdActions.className = 'bt-ledger__actions';
 
             const actionsWrapper = document.createElement('div');
             actionsWrapper.className = 'bt-category-actions';
@@ -609,7 +660,7 @@
                 btnMoveUp.className = 'bt-btn-icon bt-move-btn';
                 btnMoveUp.title = PFI18n.t('BudgetTracker.Js.MoveUpTitle');
                 btnMoveUp.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.MoveUpAria', { name: row.name }));
-                btnMoveUp.appendChild(iconElement('arrow-up', 13));
+                btnMoveUp.appendChild(iconElement('arrow-up'));
                 btnMoveUp.dataset.boundary = String(activeIndex === 0);
                 btnMoveUp.disabled = isReordering || activeIndex === 0;
                 btnMoveUp.addEventListener('click', async (e) => {
@@ -624,7 +675,7 @@
                 btnMoveDown.className = 'bt-btn-icon bt-move-btn';
                 btnMoveDown.title = PFI18n.t('BudgetTracker.Js.MoveDownTitle');
                 btnMoveDown.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.MoveDownAria', { name: row.name }));
-                btnMoveDown.appendChild(iconElement('arrow-down', 13));
+                btnMoveDown.appendChild(iconElement('arrow-down'));
                 btnMoveDown.dataset.boundary = String(activeIndex === activeRows.length - 1);
                 btnMoveDown.disabled = isReordering || activeIndex === activeRows.length - 1;
                 btnMoveDown.addEventListener('click', async (e) => {
@@ -636,10 +687,10 @@
                 // Rename button
                 const btnRename = document.createElement('button');
                 btnRename.type = 'button';
-                btnRename.className = 'bt-btn-icon text-primary';
+                btnRename.className = 'bt-btn-icon';
                 btnRename.title = PFI18n.t('BudgetTracker.Js.RenameTitle');
                 btnRename.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.RenameAria', { name: row.name }));
-                btnRename.appendChild(iconElement('edit-2', 13));
+                btnRename.appendChild(iconElement('pencil'));
                 btnRename.addEventListener('click', (e) => {
                     e.stopPropagation();
                     openEditCategoryModal(row, kind);
@@ -649,10 +700,10 @@
                 // Archive button
                 const btnDelCat = document.createElement('button');
                 btnDelCat.type = 'button';
-                btnDelCat.className = 'bt-btn-icon text-danger';
+                btnDelCat.className = 'bt-btn-icon bt-btn-icon--danger';
                 btnDelCat.title = PFI18n.t('BudgetTracker.Js.ArchiveTitle');
                 btnDelCat.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.ArchiveAria', { name: row.name }));
-                btnDelCat.appendChild(iconElement('trash-2', 13));
+                btnDelCat.appendChild(iconElement('archive'));
                 btnDelCat.addEventListener('click', (e) => {
                     e.stopPropagation();
                     confirmArchiveCategory(row);
@@ -708,6 +759,16 @@
         if (elTotIncDiff) {
             elTotIncDiff.textContent = formatCurrency(incDiff);
             applyDiffClass(elTotIncDiff, incDiff);
+        }
+
+        // The totals' marks are on their own scale: the section's total is far off its rows' scale.
+        const elTotExpVariance = document.getElementById('totalExpenseVariance');
+        if (elTotExpVariance) {
+            elTotExpVariance.replaceChildren(varianceMark(expPlanned, expActual, 1, Math.max(expPlanned, expActual, 1)));
+        }
+        const elTotIncVariance = document.getElementById('totalIncomeVariance');
+        if (elTotIncVariance) {
+            elTotIncVariance.replaceChildren(varianceMark(incPlanned, incActual, 2, Math.max(incPlanned, incActual, 1)));
         }
     }
 
@@ -830,79 +891,64 @@
     }
 
     /**
-     * Renders side-by-side expense and income transactions.
+     * Renders the month's transactions as one journal in date order, expenses and income together: an income
+     * amount carries a plus sign and the ledger green, an expense is set in ink.
      * @param {Array} transactions - List of BudgetTransactionDto objects.
      * @returns {void}
      */
     function renderTransactions (transactions) {
-        const txList = transactions || [];
-        const expenseTxs = txList.filter((t) => {
-            return t.kind === 1;
-        });
-        const incomeTxs = txList.filter((t) => {
-            return t.kind === 2;
+        const txList = (transactions || []).slice().sort((a, b) => {
+            const byDate = String(a.date || '').localeCompare(String(b.date || ''));
+            return byDate !== 0 ? byDate : (a.id || 0) - (b.id || 0);
         });
 
         const txCountBadge = document.getElementById('txCountBadge');
-        const expCountBadge = document.getElementById('expenseTxCountBadge');
-        const incCountBadge = document.getElementById('incomeTxCountBadge');
-
         if (txCountBadge) {
             txCountBadge.textContent = String(txList.length);
         }
-        if (expCountBadge) {
-            expCountBadge.textContent = String(expenseTxs.length);
-        }
-        if (incCountBadge) {
-            incCountBadge.textContent = String(incomeTxs.length);
-        }
 
-        renderTransactionTable('tbodyExpenseTx', 'emptyExpenseTx', expenseTxs, 1);
-        renderTransactionTable('tbodyIncomeTx', 'emptyIncomeTx', incomeTxs, 2);
-    }
-
-    /**
-     * Renders a specific transaction table (Expense or Income).
-     * @param {string} tbodyId - Tbody element ID.
-     * @param {string} emptyId - Empty state container ID.
-     * @param {Array} list - Filtered list of transactions.
-     * @param {number} kind - 1 for Expense, 2 for Income.
-     * @returns {void}
-     */
-    function renderTransactionTable (tbodyId, emptyId, list, kind) {
-        const tbody = document.getElementById(tbodyId);
-        const emptyState = document.getElementById(emptyId);
-
+        const tbody = document.getElementById('tbodyJournal');
+        const emptyState = document.getElementById('emptyJournal');
+        const table = document.getElementById('tableJournal');
         if (!tbody) {
             return;
         }
 
         tbody.textContent = '';
-
-        if (!list || list.length === 0) {
-            if (emptyState) {
-                emptyState.classList.remove('d-none');
-            }
+        const isEmpty = txList.length === 0;
+        if (emptyState) {
+            emptyState.hidden = !isEmpty;
+        }
+        if (table) {
+            table.hidden = isEmpty;
+        }
+        if (isEmpty) {
             return;
         }
 
-        if (emptyState) {
-            emptyState.classList.add('d-none');
-        }
-
-        list.forEach((tx) => {
+        txList.forEach((tx) => {
             const tr = document.createElement('tr');
+            const isIncome = tx.kind === 2;
 
-            // Date
             const tdDate = document.createElement('td');
+            tdDate.className = 'bt-journal__date';
             tdDate.textContent = formatTxDate(tx.date);
             tr.appendChild(tdDate);
 
-            // Amount
+            const tdDesc = document.createElement('td');
+            tdDesc.className = 'bt-journal__desc';
+            tdDesc.textContent = tx.description || '—';
+            tr.appendChild(tdDesc);
+
+            const tdCat = document.createElement('td');
+            tdCat.className = 'bt-journal__cat';
+            tdCat.textContent = tx.categoryName;
+            tr.appendChild(tdCat);
+
+            // The transaction's own amount and currency; its reporting amount under it when they differ.
             const tdAmount = document.createElement('td');
-            tdAmount.className = `text-end bt-tx-amount ${ kind === 1 ? 'bt-tx-amount--expense' : 'bt-tx-amount--income'}`;
-            // The transaction's own amount and currency; its reporting amount beside it when they differ.
-            tdAmount.textContent = formatOriginal(tx.amount, tx.currencyCode);
+            tdAmount.className = `bt-ledger__num bt-journal__amount${ isIncome ? ' bt-journal__amount--income' : '' }`;
+            tdAmount.textContent = (isIncome ? '+' : '') + formatOriginal(tx.amount, tx.currencyCode);
             if (tx.currencyCode && tx.currencyCode !== reportingCurrency()) {
                 const reportingNote = amountNote(tx.reportingAmount, reportingCurrency());
                 if (reportingNote) {
@@ -911,26 +957,15 @@
             }
             tr.appendChild(tdAmount);
 
-            // Description
-            const tdDesc = document.createElement('td');
-            tdDesc.textContent = tx.description || '—';
-            tr.appendChild(tdDesc);
-
-            // Category
-            const tdCat = document.createElement('td');
-            tdCat.textContent = tx.categoryName;
-            tr.appendChild(tdCat);
-
-            // Actions (Edit, Delete)
             const tdActions = document.createElement('td');
-            tdActions.className = 'text-end';
+            tdActions.className = 'bt-ledger__actions';
 
             const btnEdit = document.createElement('button');
             btnEdit.type = 'button';
-            btnEdit.className = 'bt-btn-icon text-primary me-1';
+            btnEdit.className = 'bt-btn-icon';
             btnEdit.title = PFI18n.t('BudgetTracker.Js.EditTransactionTitle');
             btnEdit.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.EditTransactionAria', { name: tx.description || tx.categoryName }));
-            btnEdit.appendChild(iconElement('edit-2', 14));
+            btnEdit.appendChild(iconElement('pencil'));
             btnEdit.addEventListener('click', () => {
                 openEditTransactionModal(tx);
             });
@@ -938,10 +973,10 @@
 
             const btnDel = document.createElement('button');
             btnDel.type = 'button';
-            btnDel.className = 'bt-btn-icon text-danger';
+            btnDel.className = 'bt-btn-icon bt-btn-icon--danger';
             btnDel.title = PFI18n.t('BudgetTracker.Js.DeleteTransactionTitle');
             btnDel.setAttribute('aria-label', PFI18n.t('BudgetTracker.Js.DeleteTransactionAria', { name: tx.description || tx.categoryName }));
-            btnDel.appendChild(iconElement('trash-2', 14));
+            btnDel.appendChild(iconElement('trash'));
             btnDel.addEventListener('click', () => {
                 confirmDeleteTransaction(tx);
             });

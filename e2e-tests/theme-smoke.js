@@ -36,7 +36,8 @@ const CONTRAST_PAGES = {
     budget: ['.budget-title', '.budget-subtitle', '.budget-card__title', '.budget-category__label',
         '.budget-remaining__label', '.budget-remaining__value'],
     budgetTracker: ['.bt-page-header__title', '.bt-page-header__subtitle', '.bt-tabs .nav-link.active',
-        '.bt-tabs .nav-link:not(.active)', '.bt-bar-title', '.bt-card-title--expense', '.bt-card-title--income'],
+        '.bt-tabs .nav-link:not(.active)', '.bt-init-prompt__title', '.bt-ledger thead th',
+        '.bt-section__title--expense', '.bt-section__title--income', '.bt-diff-neutral'],
     savingsGoals: ['.savings-title', '.savings-subtitle', '.savings-empty__title', '.savings-empty__text'],
     // The Dashboard and Money Priorities (#489), as a fresh Account sees them
     dashboard: ['.dash-header__eyebrow', '.dash-header__title', '.dash-header__lede'],
