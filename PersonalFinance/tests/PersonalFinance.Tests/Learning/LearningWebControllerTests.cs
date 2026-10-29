@@ -48,7 +48,7 @@ public class LearningWebControllerTests
             result = await Controller(api).Index();
         }
 
-        var model = Assert.IsType<LearningIndexViewModel>(Assert.IsType<ViewResult>(result).Model);
+        LearningIndexViewModel model = Assert.IsType<LearningIndexViewModel>(Assert.IsType<ViewResult>(result).Model);
         Assert.False(model.IsEmpty);
         Assert.Equal("vi", proxy.Arguments[0][0]);
     }
@@ -85,7 +85,7 @@ public class LearningWebControllerTests
 
         IActionResult result = await Controller(api).Term("apr");
 
-        var model = Assert.IsType<LearningTermViewModel>(Assert.IsType<ViewResult>(result).Model);
+        LearningTermViewModel model = Assert.IsType<LearningTermViewModel>(Assert.IsType<ViewResult>(result).Model);
         Assert.Equal("https://pf.test/Learning/Term/apr", model.CanonicalUrl);
         Assert.Equal(["apr", "en"], proxy.Arguments[0].Take(2));
     }
@@ -105,7 +105,7 @@ public class LearningWebControllerTests
         (ILearningApi api, ApiProxy<ILearningApi> proxy) = ApiProxy.Create<ILearningApi>();
         proxy.Returns(nameof(ILearningApi.GetLibraryAsync), Library);
 
-        var result = Assert.IsType<ContentResult>(await Controller(api).Sitemap());
+        ContentResult result = Assert.IsType<ContentResult>(await Controller(api).Sitemap());
 
         Assert.StartsWith("application/xml", result.ContentType);
         Assert.Equal(["https://pf.test/Learning/Index", "https://pf.test/Learning/Term/apr",
@@ -119,7 +119,7 @@ public class LearningWebControllerTests
     {
         (ILearningApi api, _) = ApiProxy.Create<ILearningApi>();
 
-        var result = Assert.IsType<ContentResult>(await Controller(api).Sitemap());
+        ContentResult result = Assert.IsType<ContentResult>(await Controller(api).Sitemap());
 
         Assert.Equal(["https://pf.test/Learning/Index"], Locations(result.Content!));
     }
@@ -129,7 +129,7 @@ public class LearningWebControllerTests
     {
         (ILearningApi api, _) = ApiProxy.Create<ILearningApi>();
 
-        var result = Assert.IsType<ContentResult>(Controller(api).Robots());
+        ContentResult result = Assert.IsType<ContentResult>(Controller(api).Robots());
 
         Assert.StartsWith("text/plain", result.ContentType);
         Assert.Contains("User-agent: *", result.Content);

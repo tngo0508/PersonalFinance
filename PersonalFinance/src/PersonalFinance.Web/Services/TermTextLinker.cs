@@ -33,10 +33,22 @@ public static class TermTextLinker
             @"(?<![\p{L}\p{N}])(?:" + string.Join("|", ordered.Select(m => Regex.Escape(m.Text))) + @")(?![\p{L}\p{N}])",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
 
+        MatchCollection matches;
+        try
+        {
+            matches = pattern.Matches(text);
+            _ = matches.Count; // Matches is lazy; a timeout surfaces here
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            // Links are a convenience: plain text beats a failed page.
+            return new HtmlString(encoder.Encode(text));
+        }
+
         var linked = new HashSet<string>(StringComparer.Ordinal);
         var html = new StringBuilder();
         int last = 0;
-        foreach (Match match in pattern.Matches(text))
+        foreach (Match match in matches)
         {
             TermMentionDto? mention = mentions.FirstOrDefault(m =>
                 string.Equals(m.Text, match.Value, StringComparison.OrdinalIgnoreCase));

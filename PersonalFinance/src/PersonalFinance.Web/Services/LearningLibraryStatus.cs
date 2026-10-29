@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Learning;
+using PersonalFinance.Web.Infrastructure.Localization;
 
 namespace PersonalFinance.Web.Services;
 
@@ -41,7 +42,7 @@ public sealed class LearningLibraryStatus : ILearningLibraryStatus
 
         try
         {
-            LearningLibraryDto library = await _learningApi.GetLibraryAsync("en", cancellationToken);
+            LearningLibraryDto library = await _learningApi.GetLibraryAsync(AppLanguages.Default, cancellationToken);
             bool hasEntries = library.Topics.Any(t => t.Terms.Count > 0);
             _cache.Set(CacheKey, hasEntries, CacheFor);
             return hasEntries;
