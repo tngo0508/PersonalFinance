@@ -6,7 +6,7 @@
  * Account settings and the Net Worth help modal (slice #482), the Google Drive sample-data notice and its Budget report
  * and Transactions modals (slice #484), Budget, Budget Tracker and Savings Goals (slice #487), and the Dashboard and
  * Money Priorities (slice #489), and that the Investment Calculator's, the Google Drive Transactions timeline's and the
- * Budget planner's charts restyle on a theme switch without a reload (slices #483, #484 and #487). Run from ui-test.js
+ * Budget planner's Month Strip restyles on a theme switch without a reload (slices #483, #484 and #487). Run from ui-test.js
  * as Test 9j.
  *
  * Expected labels are read from Resources/i18n/en.json, so a rewording does not break the test.
@@ -33,8 +33,8 @@ const CONTRAST_PAGES = {
     modal: ['#nwHelpModal .modal-title', '#nwHelpModal .nw-text', '#nwHelpModal .nw-help-note__title',
         '#nwHelpModal .modal-footer .btn'],
     // Budget, Budget Tracker and Savings Goals (#487); a fresh Account's Savings Goals shows its empty state
-    budget: ['.budget-title', '.budget-subtitle', '.budget-card__title', '.budget-category__label',
-        '.budget-remaining__label', '.budget-remaining__value'],
+    budget: ['.budget-title', '.budget-subtitle', '.budget-ledger__title', '.budget-category__label',
+        '.budget-remaining__label', '.budget-remaining__value', '.budget-total__label'],
     budgetTracker: ['.bt-page-header__title', '.bt-page-header__subtitle', '.bt-tabs .nav-link.active',
         '.bt-tabs .nav-link:not(.active)', '.bt-init-prompt__title', '.bt-ledger thead th',
         '.bt-section__title--expense', '.bt-section__title--income', '.bt-diff-neutral'],
@@ -336,60 +336,63 @@ async function checkChartRestyles(page, base, report) {
 }
 
 /**
- * The Budget planner's doughnut, next to the tokens it should show: its first slice's colour and the gaps between
- * slices, read from the Chart.js chart, since a fresh Account's budget may have no slices to sample.
+ * The Budget planner's Month Strip and ledger, next to the token they should show: the Housing segment's and
+ * swatch's colour as the browser paints them. A fresh Account's budget has no amounts, so the segment is sampled
+ * by its computed style, not its width.
  * @param {import('playwright').Page} page - The Budget page.
- * @returns {Promise<{theme: string, marker: boolean, slice: {token: string, drawn: string|null},
- *     gap: {token: string, drawn: string|null}}>} marker: the page has not reloaded since the check set it.
+ * @returns {Promise<{theme: string, marker: boolean, token: string, segment: string|null, swatch: string|null}>}
+ *     marker: the page has not reloaded since the check set it. Colours are rgb(r, g, b) strings.
  */
-async function budgetChartState(page) {
+async function budgetStripState(page) {
     return page.evaluate(() => {
         const root = document.documentElement;
-        const style = getComputedStyle(root);
-        const chart = window.Chart ? window.Chart.getChart('budgetPieChart') : null;
-        const dataset = chart ? chart.data.datasets[0] : null;
+        const hex = getComputedStyle(root).getPropertyValue('--app-budget-category-1').trim().replace('#', '');
+        const full = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex;
+        const n = parseInt(full, 16);
+        const segment = document.querySelector('.budget-strip__segment[data-category="Housing"]');
+        const swatch = document.querySelector('.budget-row[data-category="Housing"] .budget-row__swatch');
         return {
             theme: root.getAttribute('data-theme'),
             marker: window.__chartThemeCheck === true,
-            slice: {token: style.getPropertyValue('--app-budget-category-1').trim(), drawn: dataset ? dataset.backgroundColor[0] : null},
-            gap: {token: style.getPropertyValue('--app-bg').trim(), drawn: dataset ? dataset.borderColor : null}
+            token: Number.isNaN(n) ? '' : `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`,
+            segment: segment ? getComputedStyle(segment).backgroundColor : null,
+            swatch: swatch ? getComputedStyle(swatch).backgroundColor : null
         };
     });
 }
 
 /**
- * Whether the chart holds the tokens' colours.
- * @param {object} state - From budgetChartState.
+ * Whether the strip and the ledger paint the token's colour.
+ * @param {object} state - From budgetStripState.
  * @returns {boolean}
  */
-function budgetChartMatchesTokens(state) {
-    const same = (entry) => entry.drawn !== null && entry.token !== '' && entry.drawn.toLowerCase() === entry.token.toLowerCase();
-    return same(state.slice) && same(state.gap);
+function budgetStripMatchesToken(state) {
+    return state.token !== '' && state.segment === state.token && state.swatch === state.token;
 }
 
 /**
- * The Budget planner's chart takes its colours from the chart palette (#487): switching the theme recolours it without
- * a reload. Leaves the page in dark mode, as it found it.
+ * The Budget planner's Month Strip and swatches take their colours from the category tokens (#487): switching the
+ * theme recolours them without a reload. Leaves the page in dark mode, as it found it.
  * @param {import('playwright').Page} page - A signed-in page on the Budget page, in dark mode.
  * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
  */
 async function checkBudgetChartRestyles(page, report) {
-    await page.locator('#budgetPieChart').waitFor({state: 'visible', timeout: TIMEOUT});
+    await page.locator('#budgetStrip').waitFor({state: 'visible', timeout: TIMEOUT});
     await page.evaluate(() => { window.__chartThemeCheck = true; });
 
-    const dark = await budgetChartState(page);
-    check(dark.theme === 'dark' && budgetChartMatchesTokens(dark), 'Budget chart: the doughnut holds the dark category colours',
+    const dark = await budgetStripState(page);
+    check(dark.theme === 'dark' && budgetStripMatchesToken(dark), 'Budget strip: the segments hold the dark category colours',
         JSON.stringify(dark), report);
 
     await chooseTheme(page, 'light');
-    const light = await budgetChartState(page);
-    check(light.theme === 'light' && light.marker && budgetChartMatchesTokens(light) && light.slice.drawn !== dark.slice.drawn,
-        'Budget chart: switching to Light recolours the doughnut without a reload', JSON.stringify(light), report);
+    const light = await budgetStripState(page);
+    check(light.theme === 'light' && light.marker && budgetStripMatchesToken(light) && light.segment !== dark.segment,
+        'Budget strip: switching to Light recolours the segments without a reload', JSON.stringify(light), report);
 
     await chooseTheme(page, 'dark');
-    const back = await budgetChartState(page);
-    check(back.theme === 'dark' && back.marker && budgetChartMatchesTokens(back),
-        'Budget chart: switching back to Dark recolours it again', JSON.stringify(back), report);
+    const back = await budgetStripState(page);
+    check(back.theme === 'dark' && back.marker && budgetStripMatchesToken(back),
+        'Budget strip: switching back to Dark recolours them again', JSON.stringify(back), report);
 }
 
 /**
@@ -549,7 +552,7 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         // A chart restyles on a theme switch (#483); leaving the page also closes the modal before the avatar menu check
         await checkChartRestyles(page, base, report);
 
-        // Budget, Budget Tracker and Savings Goals (#487): dark contrast, and the Budget chart recolours on a switch.
+        // Budget, Budget Tracker and Savings Goals (#487): dark contrast, and the Month Strip recolours on a switch.
         await page.goto(`${base}/Budget`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Budget', CONTRAST_PAGES.budget, report);
         await checkBudgetChartRestyles(page, report);

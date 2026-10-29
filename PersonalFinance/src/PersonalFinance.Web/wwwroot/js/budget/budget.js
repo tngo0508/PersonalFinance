@@ -1,29 +1,19 @@
-/* global PFI18n, ChartPalette */
+/* global PFI18n */
 (function () {
     'use strict';
 
     /**
-     * Budget Planner interactive module.
-     * Manages pie chart, slider/input sync, dollar amount calculation, and summary table.
-     * All state is stored in integer cents to avoid floating-point drift.
+     * Budget Planner interactive module: keeps the income, the ten category amounts, the Month Strip, the ledger rows
+     * and the totals in step. All state is stored in integer cents to avoid floating-point drift.
      */
     const BudgetPlanner = {};
 
-    // Category definitions in order
+    // Category keys in ledger order; the PascalCase form (capitalize) is the form field and data-category value.
     const categories = [
         'housing', 'food', 'transportation', 'utilities', 'insurance',
         'healthcare', 'savings', 'debtRepayment', 'entertainment', 'miscellaneous'
     ];
 
-    // Display labels, filled by init from the page's translated category labels (<label for="DebtRepayment">).
-    const categoryLabels = {};
-
-    // Each category's colour token (site.css), in category order: the chart's slices and the swatches (#487)
-    const categoryColorTokens = categories.map((_, index) => {
-        return `--app-budget-category-${ index + 1 }`;
-    });
-
-    let chart = null;
     let incomeCents = 0;
     const amountCents = {};
 
@@ -31,8 +21,6 @@
      * Initialize the budget planner.
      */
     BudgetPlanner.init = function () {
-        readCategoryLabels();
-
         const initialData = window.budgetInitialData;
         if (initialData) {
             incomeCents = Math.round(parseFloat(initialData.monthlyIncome) * 100) || 0;
@@ -41,56 +29,12 @@
             });
         }
 
-        // Sync initial input values from data
         syncInputsFromData();
-
-        // Set color box backgrounds
-        setColorBoxes();
-
-        // Bind events
         bindEvents();
-
-        // Initialize chart
-        initChart();
-
-        // Recolour the chart and the swatches when the theme changes, without a reload
-        ChartPalette.subscribe(applyTheme);
-
-        // Initial update
+        bindHighlight();
+        watchStripSize();
         updateAll();
     };
-
-    /**
-     * Read each category's display label from its form label, which the server rendered in the page language.
-     */
-    function readCategoryLabels () {
-        categories.forEach((cat) => {
-            const label = document.querySelector(`.budget-category__label[for="${ capitalize(cat) }"]`);
-            categoryLabels[cat] = label ? label.textContent.trim() : capitalize(cat);
-        });
-    }
-
-    /**
-     * A category's colour as a CSS value that follows the theme, for the swatches and the summary list.
-     * @param {number} index - The category's position
-     * @returns {string} The var() of its colour token
-     */
-    function categoryColor (index) {
-        return `var(${ categoryColorTokens[index] })`;
-    }
-
-    /**
-     * Set background colors on category color boxes to match chart slice colors.
-     */
-    function setColorBoxes () {
-        const colorBoxes = document.querySelectorAll('.budget-category-color-box');
-        colorBoxes.forEach((box) => {
-            const index = parseInt(box.getAttribute('data-color-index'), 10);
-            if (index >= 0 && index < categoryColorTokens.length) {
-                box.style.backgroundColor = categoryColor(index);
-            }
-        });
-    }
 
     /**
      * Sync all input values from current state.
@@ -98,26 +42,24 @@
     function syncInputsFromData () {
         categories.forEach((cat) => {
             const cents = amountCents[cat] || 0;
-            const amount = cents / 100;
             const percent = toPercent(cents);
             const capitalized = capitalize(cat);
 
-            const slider = document.getElementById(`slider-${ capitalized}`);
+            const slider = document.getElementById(`slider-${ capitalized }`);
             const percentInput = document.querySelector(`.budget-percent-input[data-category="${ capitalized }"]`);
             const amountInput = document.querySelector(`.budget-amount-input[data-category="${ capitalized }"]`);
 
             if (slider) {
-                slider.value = percent;
+                setSlider(slider, percent);
             }
             if (percentInput) {
                 percentInput.value = percent > 0 ? percent.toFixed(2) : '';
             }
             if (amountInput) {
-                amountInput.value = amount > 0 ? PFI18n.formatAmount(amount, currency()) : '';
+                amountInput.value = cents > 0 ? PFI18n.formatAmount(cents / 100, currency()) : '';
             }
         });
 
-        // Sync income
         const incomeInput = document.querySelector('.budget-income-input');
         if (incomeInput && incomeCents > 0) {
             incomeInput.value = PFI18n.formatAmount(incomeCents / 100, currency());
@@ -128,7 +70,6 @@
      * Bind all event listeners.
      */
     function bindEvents () {
-        // Income input
         const incomeInput = document.querySelector('.budget-income-input');
         if (incomeInput) {
             incomeInput.addEventListener('input', function () {
@@ -138,59 +79,85 @@
             });
         }
 
-        // Sliders
-        const sliders = document.querySelectorAll('.budget-slider');
-        sliders.forEach((slider) => {
+        document.querySelectorAll('.budget-slider').forEach((slider) => {
             slider.addEventListener('input', function () {
-                const cat = this.getAttribute('data-category');
                 const pct = parseFloat(this.value) || 0;
-                const normalizedCat = normalizeCategory(cat);
-                setCategoryFromPercent(normalizedCat, pct);
+                setCategoryFromPercent(normalizeCategory(this.getAttribute('data-category')), pct);
                 updateAll();
             });
         });
 
-        // Percent inputs (unbound helper controls)
-        const percentInputs = document.querySelectorAll('.budget-percent-input');
-        percentInputs.forEach((input) => {
+        // Percent inputs are helper controls; the amount inputs are the form's fields
+        document.querySelectorAll('.budget-percent-input').forEach((input) => {
             input.addEventListener('input', function () {
-                const cat = this.getAttribute('data-category');
-                let pct = parseFloat(this.value) || 0;
-
-                // Clamp to 0-100
-                if (pct < 0) {
-                    pct = 0;
-                }
-                if (pct > 100) {
-                    pct = 100;
-                }
-
-                const normalizedCat = normalizeCategory(cat);
-                setCategoryFromPercent(normalizedCat, pct);
+                const pct = Math.min(100, Math.max(0, parseFloat(this.value) || 0));
+                setCategoryFromPercent(normalizeCategory(this.getAttribute('data-category')), pct);
                 updateAll();
             });
         });
 
-        // Dollar amount inputs (model-bound fields)
-        const amountInputs = document.querySelectorAll('.budget-amount-input');
-        amountInputs.forEach((amountInput) => {
+        document.querySelectorAll('.budget-amount-input').forEach((amountInput) => {
             amountInput.addEventListener('input', function () {
-                const cat = this.getAttribute('data-category');
                 const cents = Math.round(PFI18n.parseNumber(this.value) * 100) || 0;
                 markOverBound(this, cents / 100);
-                const normalizedCat = normalizeCategory(cat);
-                setCategoryFromCents(normalizedCat, cents);
+                setCategoryFromCents(normalizeCategory(this.getAttribute('data-category')), cents);
                 updateAll();
             });
         });
+
+        // The currency selector reformats the inputs in place; the figures around them follow
+        const currencySelect = document.getElementById('CurrencyCode');
+        if (currencySelect) {
+            currencySelect.addEventListener('change', updateAll);
+        }
 
         // Sync JS state to form inputs before form submission, so the POST carries current values
         const form = document.getElementById('budgetForm');
         if (form) {
-            form.addEventListener('submit', () => {
-                syncFormInputsFromData();
-            });
+            form.addEventListener('submit', syncFormInputsFromData);
         }
+    }
+
+    /**
+     * A row and its segment of the Month Strip light up together: hovering or focusing either marks both.
+     */
+    function bindHighlight () {
+        document.querySelectorAll('.budget-row').forEach((row) => {
+            const segment = segmentFor(row.getAttribute('data-category'));
+            if (!segment) {
+                return;
+            }
+            const on = () => {
+                segment.classList.add('budget-strip__segment--active');
+                row.classList.add('budget-row--active');
+            };
+            const off = () => {
+                segment.classList.remove('budget-strip__segment--active');
+                row.classList.remove('budget-row--active');
+            };
+            row.addEventListener('mouseenter', on);
+            row.addEventListener('mouseleave', off);
+            row.addEventListener('focusin', on);
+            row.addEventListener('focusout', off);
+            segment.addEventListener('mouseenter', on);
+            segment.addEventListener('mouseleave', off);
+        });
+    }
+
+    /**
+     * Re-fit the segment labels whenever a segment changes size (a share changes, its width eases, the window is
+     * resized), so a name shows only where it fits.
+     */
+    function watchStripSize () {
+        const strip = document.getElementById('budgetStrip');
+        if (!strip || typeof ResizeObserver === 'undefined') {
+            return;
+        }
+        const observer = new ResizeObserver(() => {
+            fitStripLabels();
+        });
+        observer.observe(strip);
+        strip.querySelectorAll('.budget-strip__segment').forEach((segment) => observer.observe(segment));
     }
 
     /**
@@ -205,50 +172,62 @@
     }
 
     /**
-     * Set a category's amount from a percentage value.
+     * Set a category's amount from a percentage of the income.
      * @param {string} cat - Normalized category key
      * @param {number} pct - Percentage value
      */
     function setCategoryFromPercent (cat, pct) {
-        const cents = Math.round((incomeCents * pct) / 100);
-        amountCents[cat] = cents;
-
-        // Sync slider
-        const capitalized = capitalize(cat);
-        const slider = document.getElementById(`slider-${ capitalized}`);
-        if (slider) {
-            slider.value = pct;
-        }
-
-        // Sync percent input
-        const percentInput = document.querySelector(`.budget-percent-input[data-category="${ capitalized }"]`);
-        if (percentInput && document.activeElement !== percentInput) {
-            percentInput.value = pct > 0 ? pct.toFixed(2) : '';
-        }
+        amountCents[cat] = Math.round((incomeCents * pct) / 100);
+        syncRowControls(cat, pct, true);
     }
 
     /**
-     * Set a category's amount from cents value.
+     * Set a category's amount in cents.
      * @param {string} cat - Normalized category key
      * @param {number} cents - Amount in cents
      */
     function setCategoryFromCents (cat, cents) {
         amountCents[cat] = cents;
+        syncRowControls(cat, toPercent(cents), false);
+    }
 
-        // Sync slider
+    /**
+     * Bring a row's slider and percent field to a share, leaving whichever field has focus alone.
+     * @param {string} cat - Normalized category key
+     * @param {number} pct - The share, 0-100 (over 100 when an amount exceeds the income)
+     * @param {boolean} fromPercent - Whether the change came from the slider or the percent field
+     */
+    function syncRowControls (cat, pct, fromPercent) {
         const capitalized = capitalize(cat);
-        const slider = document.getElementById(`slider-${ capitalized}`);
-        if (slider) {
-            const pct = toPercent(cents);
-            slider.value = pct;
+        const slider = document.getElementById(`slider-${ capitalized }`);
+        if (slider && document.activeElement !== slider) {
+            setSlider(slider, pct);
+        } else if (slider) {
+            slider.style.setProperty('--pct', `${ Math.min(100, Math.max(0, pct)) }%`);
         }
 
-        // Sync percent input
         const percentInput = document.querySelector(`.budget-percent-input[data-category="${ capitalized }"]`);
         if (percentInput && document.activeElement !== percentInput) {
-            const pct = toPercent(cents);
             percentInput.value = pct > 0 ? pct.toFixed(2) : '';
         }
+        if (!fromPercent) {
+            return;
+        }
+        const amountInput = document.querySelector(`.budget-amount-input[data-category="${ capitalized }"]`);
+        if (amountInput) {
+            markOverBound(amountInput, (amountCents[cat] || 0) / 100);
+        }
+    }
+
+    /**
+     * Move a slider to a share and fill its track up to the thumb.
+     * @param {HTMLInputElement} slider - The row's range input
+     * @param {number} pct - The share, 0-100
+     */
+    function setSlider (slider, pct) {
+        const clamped = Math.min(100, Math.max(0, pct));
+        slider.value = clamped;
+        slider.style.setProperty('--pct', `${ clamped }%`);
     }
 
     /**
@@ -267,475 +246,183 @@
      * Sync all form input values from current state so the form POST carries the latest values.
      */
     function syncFormInputsFromData () {
-        // Sync income
         const incomeInput = document.querySelector('.budget-income-input');
         if (incomeInput) {
             incomeInput.value = PFI18n.formatAmount(incomeCents / 100, currency());
         }
 
-        // Sync each category amount input (the asp-for bound field)
         categories.forEach((cat) => {
-            const cents = amountCents[cat] || 0;
-            const amount = cents / 100;
-            const capitalized = capitalize(cat);
-
-            // The asp-for input ID matches the PascalCase property name (e.g. "Housing")
-            const input = document.getElementById(capitalized);
+            // The form field's id is the PascalCase property name (e.g. "Housing")
+            const input = document.getElementById(capitalize(cat));
             if (input) {
-                input.value = PFI18n.formatAmount(amount, currency());
+                input.value = PFI18n.formatAmount((amountCents[cat] || 0) / 100, currency());
             }
         });
     }
 
     /**
-     * Update all UI components: chart, amounts, summary, remaining.
+     * Update every figure on the page: the amount fields, the remaining figure, the total, the strip and the hint.
      */
     function updateAll () {
         updateAmounts();
         updateRemaining();
-        updateTotalBadge();
-        updateSummaryTable();
-        updateChart();
+        updateTotal();
+        updateStrip();
+        updateIncomeState();
     }
 
     /**
-     * Update dollar amount displays for each category.
+     * Sync the editable amount inputs with the state (only the ones not being typed in).
      */
     function updateAmounts () {
         categories.forEach((cat) => {
             const cents = amountCents[cat] || 0;
-            const amount = cents / 100;
-            const capitalized = capitalize(cat);
-
-            const amountEl = document.querySelector(`.budget-category__amount[data-amount-for="${ capitalized }"] span`);
-            if (amountEl) {
-                amountEl.textContent = formatDollars(amount);
-            }
-
-            // Sync the editable amount input (only if not currently focused)
-            const amountInput = document.querySelector(`.budget-amount-input[data-category="${ capitalized }"]`);
+            const amountInput = document.querySelector(`.budget-amount-input[data-category="${ capitalize(cat) }"]`);
             if (amountInput && document.activeElement !== amountInput) {
-                amountInput.value = amount > 0 ? PFI18n.formatAmount(amount, currency()) : '';
+                amountInput.value = cents > 0 ? PFI18n.formatAmount(cents / 100, currency()) : '';
             }
         });
     }
 
     /**
-     * Update remaining allocation indicator.
+     * Update the remaining-to-allocate figure in the hero: plain, green when the budget is fully allocated, red when
+     * the categories add up to more than the income.
      */
     function updateRemaining () {
         const totalCents = getTotalCents();
         const remainingCents = incomeCents - totalCents;
-        const remainingAmount = remainingCents / 100;
         const remainingPct = incomeCents > 0 ? (remainingCents / incomeCents) * 100 : 0;
 
-        const remainingEl = document.getElementById('budgetRemainingValue');
-        const remainingContainer = document.getElementById('budgetRemaining');
-        const remainingLabelEl = document.querySelector('.budget-remaining__label');
+        const valueEl = document.getElementById('budgetRemainingValue');
+        const container = document.getElementById('budgetRemaining');
+        const labelEl = container ? container.querySelector('.budget-remaining__label') : null;
 
-        if (remainingEl) {
-            remainingEl.textContent = `${ formatDollars(Math.abs(remainingAmount)) } (${ formatPercent(Math.abs(remainingPct)) })`;
+        if (valueEl) {
+            valueEl.textContent = `${ formatMoney(Math.abs(remainingCents) / 100) } (${ formatPercent(Math.abs(remainingPct)) })`;
+        }
+        if (!container) {
+            return;
         }
 
-        if (remainingContainer) {
-            remainingContainer.classList.remove('budget-remaining--over', 'budget-remaining--exact');
-
-            if (totalCents > incomeCents) {
-                remainingContainer.classList.add('budget-remaining--over');
-                if (remainingLabelEl) {
-                    remainingLabelEl.textContent = PFI18n.t('BudgetPlanner.Js.OverBudgetLabel');
-                }
-            } else {
-                if (remainingCents === 0) {
-                    remainingContainer.classList.add('budget-remaining--exact');
-                }
-                if (remainingLabelEl) {
-                    remainingLabelEl.textContent = PFI18n.t('BudgetPlanner.Js.RemainingLabel');
-                }
-            }
+        container.classList.remove('budget-remaining--over', 'budget-remaining--exact');
+        let label = PFI18n.t('BudgetPlanner.Js.RemainingLabel');
+        if (totalCents > incomeCents) {
+            container.classList.add('budget-remaining--over');
+            label = PFI18n.t('BudgetPlanner.Js.OverBudgetLabel');
+        } else if (remainingCents === 0 && incomeCents > 0) {
+            container.classList.add('budget-remaining--exact');
+            label = PFI18n.t('BudgetPlanner.Js.BalancedLabel');
+        }
+        if (labelEl) {
+            labelEl.textContent = label;
         }
     }
 
     /**
-     * Update total allocation badge.
+     * Update the total row under the ledger.
      */
-    function updateTotalBadge () {
+    function updateTotal () {
         const totalCents = getTotalCents();
-        const totalAmount = totalCents / 100;
-        const incomeAmount = incomeCents / 100;
-
-        const badge = document.getElementById('budgetTotalBadge');
-        const totalSpan = document.getElementById('budgetTotalAmount');
-        const incomeSpan = document.getElementById('budgetIncomeAmount');
-
-        if (totalSpan) {
-            totalSpan.textContent = formatDollars(totalAmount);
+        const percentEl = document.getElementById('budgetSummaryTotalPercent');
+        const amountEl = document.getElementById('budgetSummaryTotalAmount');
+        if (percentEl) {
+            percentEl.textContent = formatPercent(toPercent(totalCents));
         }
-        if (incomeSpan) {
-            incomeSpan.textContent = formatDollars(incomeAmount);
-        }
-
-        if (badge) {
-            badge.classList.remove('budget-total-badge--over', 'budget-total-badge--exact');
-
-            if (totalCents > incomeCents) {
-                badge.classList.add('budget-total-badge--over');
-            } else if (totalCents === incomeCents && incomeCents > 0) {
-                badge.classList.add('budget-total-badge--exact');
-            }
+        if (amountEl) {
+            amountEl.textContent = formatMoney(totalCents / 100);
         }
     }
 
     /**
-     * Update the summary list using DOM APIs and textContent.
+     * Redraw the Month Strip: each segment's width is its share of the income, or of the total when the categories add
+     * up to more than the income. What is left of the income is the hatched tail; what is over it is hatched red.
      */
-    function updateSummaryTable () {
-        const list = document.getElementById('budgetSummaryList');
-        if (!list) {
+    function updateStrip () {
+        const strip = document.getElementById('budgetStrip');
+        if (!strip) {
             return;
         }
+        const totalCents = getTotalCents();
+        const basis = Math.max(incomeCents, totalCents);
 
-        // Find the max amount for scaling progress bars
-        let maxCents = 0;
         categories.forEach((cat) => {
+            const segment = segmentFor(capitalize(cat));
+            if (!segment) {
+                return;
+            }
             const cents = amountCents[cat] || 0;
-            if (cents > maxCents) {
-                maxCents = cents;
+            segment.style.width = `${ basis > 0 ? (cents / basis) * 100 : 0 }%`;
+            const pct = segment.querySelector('.budget-strip__pct');
+            if (pct) {
+                pct.textContent = cents > 0 && incomeCents > 0 ? formatPercent(toPercent(cents)) : '';
             }
         });
 
-        let totalCents = 0;
-
-        // Clear existing items
-        list.replaceChildren();
-
-        categories.forEach((cat, index) => {
-            const cents = amountCents[cat] || 0;
-            const amount = cents / 100;
-            const percent = toPercent(cents);
-            totalCents += cents;
-
-            const barWidth = maxCents > 0 ? (cents / maxCents) * 100 : 0;
-            const color = categoryColor(index);
-
-            // Build row with DOM APIs
-            const item = document.createElement('div');
-            item.className = 'budget-summary-item';
-
-            const dot = document.createElement('span');
-            dot.className = 'budget-summary-item__dot';
-            dot.style.background = color;
-            dot.setAttribute('aria-hidden', 'true');
-
-            const name = document.createElement('span');
-            name.className = 'budget-summary-item__name';
-            name.title = categoryLabels[cat];
-            name.textContent = categoryLabels[cat];
-
-            const barWrapper = document.createElement('div');
-            barWrapper.className = 'budget-summary-item__bar-wrapper';
-
-            const bar = document.createElement('div');
-            bar.className = 'budget-summary-item__bar';
-            bar.style.width = `${barWidth.toFixed(1) }%`;
-            bar.style.background = color;
-
-            barWrapper.appendChild(bar);
-
-            const values = document.createElement('div');
-            values.className = 'budget-summary-item__values';
-
-            const percentSpan = document.createElement('span');
-            percentSpan.className = 'budget-summary-item__percent';
-            percentSpan.textContent = formatPercent(percent);
-
-            const amountSpan = document.createElement('span');
-            amountSpan.className = 'budget-summary-item__amount';
-            amountSpan.textContent = formatDollars(amount);
-
-            values.appendChild(percentSpan);
-            values.appendChild(amountSpan);
-
-            item.appendChild(dot);
-            item.appendChild(name);
-            item.appendChild(barWrapper);
-            item.appendChild(values);
-
-            list.appendChild(item);
-        });
-
-        // Update totals
-        const totalAmount = totalCents / 100;
-        const totalPercent = toPercent(totalCents);
-
-        const totalPercentEl = document.getElementById('budgetSummaryTotalPercent');
-        const totalAmountEl = document.getElementById('budgetSummaryTotalAmount');
-
-        if (totalPercentEl) {
-            totalPercentEl.textContent = formatPercent(totalPercent);
+        const unallocated = document.getElementById('budgetStripUnallocated');
+        if (unallocated) {
+            const restCents = Math.max(0, incomeCents - totalCents);
+            unallocated.style.width = basis > 0 ? `${ (restCents / basis) * 100 }%` : '100%';
+            const pct = unallocated.querySelector('.budget-strip__pct');
+            if (pct) {
+                pct.textContent = restCents > 0 ? formatPercent(toPercent(restCents)) : '';
+            }
         }
-        if (totalAmountEl) {
-            totalAmountEl.textContent = formatDollars(totalAmount);
+
+        const overflow = document.getElementById('budgetStripOverflow');
+        if (overflow) {
+            const over = totalCents > incomeCents && incomeCents > 0;
+            overflow.hidden = !over;
+            overflow.style.width = over ? `${ ((totalCents - incomeCents) / basis) * 100 }%` : '0';
+        }
+
+        fitStripLabels();
+    }
+
+    /**
+     * Show each segment's name only where it fits, and its share only where both fit (the rows carry the figures).
+     */
+    function fitStripLabels () {
+        document.querySelectorAll('.budget-strip__segment').forEach((segment) => {
+            const label = segment.querySelector('.budget-strip__label');
+            if (!label) {
+                return;
+            }
+            // Bounding widths, not scrollWidth: the name and the share are inline spans, which scrollWidth reports as 0
+            const room = segment.getBoundingClientRect().width;
+            const padding = parseFloat(getComputedStyle(label).paddingLeft) * 2 || 0;
+            label.classList.remove('budget-strip__label--hidden', 'budget-strip__label--no-pct');
+            if (label.getBoundingClientRect().width <= room) {
+                return;
+            }
+            label.classList.add('budget-strip__label--no-pct');
+            const name = segment.querySelector('.budget-strip__name');
+            if (!name || name.getBoundingClientRect().width + padding > room) {
+                label.classList.add('budget-strip__label--hidden');
+            }
+        });
+    }
+
+    /**
+     * Without an income there is nothing to divide by share: the sliders and percent fields wait, and a hint says so.
+     */
+    function updateIncomeState () {
+        const hasIncome = incomeCents > 0;
+        document.querySelectorAll('.budget-slider, .budget-percent-input').forEach((input) => {
+            input.disabled = !hasIncome;
+        });
+        const hint = document.getElementById('budgetNoIncomeHint');
+        if (hint) {
+            hint.hidden = hasIncome;
         }
     }
 
     /**
-     * Custom Chart.js plugin that draws labels with leader lines around the doughnut chart.
-     * Scales label positions and adjusts layout padding based on chart size for responsiveness.
+     * The Month Strip segment of a category.
+     * @param {string} capitalized - The PascalCase category name (e.g. "Housing")
+     * @returns {HTMLElement|null} The segment
      */
-    const leaderLinePlugin = {
-        id: 'leaderLines',
-        beforeUpdate: function (chart) {
-            // Dynamically adjust layout padding based on chart canvas size
-            const canvasWidth = chart.width;
-            if (canvasWidth > 0) {
-                let sidePad, topPad;
-                if (canvasWidth >= 340) {
-                    sidePad = 55;
-                    topPad = 20;
-                } else if (canvasWidth >= 260) {
-                    sidePad = 40;
-                    topPad = 15;
-                } else if (canvasWidth >= 180) {
-                    sidePad = 30;
-                    topPad = 10;
-                } else {
-                    sidePad = 20;
-                    topPad = 5;
-                }
-                chart.options.layout.padding.top = topPad;
-                chart.options.layout.padding.bottom = topPad;
-                chart.options.layout.padding.left = sidePad;
-                chart.options.layout.padding.right = sidePad;
-            }
-        },
-        afterDatasetsDraw: function (chart) {
-            const ctx = chart.ctx;
-            const dataset = chart.data.datasets[0];
-            const meta = chart.getDatasetMeta(0);
-            if (!meta || !meta.data) {
-                return;
-            }
-
-            const total = dataset.data.reduce((sum, val) => {
-                return sum + val;
-            }, 0);
-            if (total === 0) {
-                return;
-            }
-
-            const centerX = (meta.data[0].x + meta.data[meta.data.length - 1].x) / 2;
-            const centerY = (meta.data[0].y + meta.data[meta.data.length - 1].y) / 2;
-            const outerRadius = meta.data[0].outerRadius;
-
-            // Scale label offsets based on chart size for responsiveness
-            let scale = outerRadius / 140; // 140 is the approximate radius at max chart size
-            scale = Math.max(0.5, Math.min(scale, 1.2)); // Clamp scale to reasonable range
-
-            // Hide labels on very small charts where they won't fit
-            if (outerRadius < 60) {
-                return;
-            }
-
-            // Label positioning constants (scaled)
-            const labelGap = 18 * scale;
-            const lineMidGap = 8 * scale;
-            const labelRadius = outerRadius + labelGap;
-            const lineMidRadius = outerRadius + lineMidGap;
-            const minLabelDist = 22 * scale;
-            const minAngleGap = 0.15; // Minimum radians between labels to avoid overlap
-
-            ctx.save();
-            const fontSize = Math.max(9, Math.round(11 * scale));
-            ctx.font = `${fontSize }px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-            // The percentage labels take the chart's axis text colour of the theme in effect
-            const labelColor = ChartPalette.read().axis;
-            ctx.fillStyle = labelColor;
-            ctx.textBaseline = 'middle';
-
-            const placedLabels = [];
-
-            dataset.data.forEach((value, index) => {
-                if (value === 0) {
-                    return;
-                }
-
-                const arc = meta.data[index];
-                const startAngle = arc.startAngle;
-                const endAngle = arc.endAngle;
-                const midAngle = (startAngle + endAngle) / 2;
-
-                // Point on outer edge of the slice
-                const outerX = centerX + Math.cos(midAngle) * outerRadius;
-                const outerY = centerY + Math.sin(midAngle) * outerRadius;
-
-                // Mid point for the leader line (perpendicular to the angle)
-                const midX = centerX + Math.cos(midAngle) * lineMidRadius;
-                const midY = centerY + Math.sin(midAngle) * lineMidRadius;
-
-                // Label position
-                const labelX = centerX + Math.cos(midAngle) * labelRadius;
-                const labelY = centerY + Math.sin(midAngle) * labelRadius;
-
-                // Check for overlap with already placed labels
-                let tooClose = false;
-                for (let i = 0; i < placedLabels.length; i++) {
-                    const dx = labelX - placedLabels[i].x;
-                    const dy = labelY - placedLabels[i].y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < minLabelDist) {
-                        tooClose = true;
-                        break;
-                    }
-                }
-
-                // Only draw if slice is significant enough and not overlapping
-                const sliceAngle = endAngle - startAngle;
-                if (sliceAngle < minAngleGap || tooClose) {
-                    return;
-                }
-
-                // Draw leader line
-                ctx.beginPath();
-                ctx.moveTo(outerX, outerY);
-                ctx.lineTo(midX, midY);
-                ctx.lineTo(labelX, labelY);
-                ctx.strokeStyle = dataset.backgroundColor[index];
-                ctx.lineWidth = 1.5 * scale;
-                ctx.globalAlpha = 0.6;
-                ctx.stroke();
-                ctx.globalAlpha = 1;
-
-                // Draw dot at the outer edge
-                ctx.beginPath();
-                ctx.arc(outerX, outerY, 2 * scale, 0, Math.PI * 2);
-                ctx.fillStyle = dataset.backgroundColor[index];
-                ctx.fill();
-
-                // Draw label text — percentage only
-                const displayText = formatPercent((value / total) * 100);
-
-                // Determine text alignment based on angle
-                let textX = labelX;
-                let textAlign = 'left';
-                const textOffset = 4 * scale;
-                if (midAngle > Math.PI / 2 && midAngle < Math.PI * 1.5) {
-                    textAlign = 'right';
-                    textX = labelX - textOffset;
-                } else {
-                    textX = labelX + textOffset;
-                }
-
-                ctx.textAlign = textAlign;
-                ctx.fillStyle = labelColor;
-                ctx.fillText(displayText, textX, labelY);
-
-                placedLabels.push({ x: labelX, y: labelY });
-            });
-
-            ctx.restore();
-        }
-    };
-
-    /**
-     * Initialize the pie chart.
-     */
-    function initChart () {
-        Chart.register(leaderLinePlugin);
-
-        const canvas = document.getElementById('budgetPieChart');
-        if (!canvas || typeof Chart === 'undefined') {
-            return;
-        }
-
-        const ctx = canvas.getContext('2d');
-
-        chart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: categories.map((c) => {
-                    return categoryLabels[c];
-                }),
-                datasets: [{
-                    data: categories.map((c) => {
-                        return toPercent(amountCents[c] || 0);
-                    }),
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                layout: {
-                    padding: {
-                        top: 20,
-                        right: 45,
-                        bottom: 20,
-                        left: 45
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        borderWidth: 1,
-                        callbacks: {
-                            label: function (context) {
-                                const label = context.label || '';
-                                const value = context.parsed || 0;
-                                const income = incomeCents / 100;
-                                const amount = (income * value) / 100;
-                                return PFI18n.t('BudgetPlanner.Js.ChartTooltip', {
-                                    category: label,
-                                    percent: formatPercent(value),
-                                    amount: formatDollars(amount)
-                                });
-                            }
-                        }
-                    }
-                },
-                cutout: '55%'
-            }
-        });
-        applyTheme(ChartPalette.read());
-    }
-
-    /**
-     * Colour the pie chart for the theme now in effect: when it is created, and on each theme switch. The swatches and
-     * the summary list follow their tokens in CSS.
-     * @param {object} colours - The chart palette, from ChartPalette.read()
-     */
-    function applyTheme (colours) {
-        if (!chart) {
-            return;
-        }
-
-        const dataset = chart.data.datasets[0];
-        dataset.backgroundColor = ChartPalette.readTokens(categoryColorTokens);
-        // The gaps between slices are the card behind the chart
-        dataset.borderColor = colours.page;
-
-        const tooltip = chart.options.plugins.tooltip;
-        tooltip.backgroundColor = colours.tooltip.background;
-        tooltip.titleColor = colours.tooltip.text;
-        tooltip.bodyColor = colours.tooltip.text;
-        tooltip.borderColor = colours.tooltip.border;
-        chart.update('none');
-    }
-
-    /**
-     * Update the pie chart with current data.
-     */
-    function updateChart () {
-        if (!chart) {
-            return;
-        }
-
-        chart.data.datasets[0].data = categories.map((c) => {
-            return toPercent(amountCents[c] || 0);
-        });
-        chart.update('none');
+    function segmentFor (capitalized) {
+        return document.querySelector(`.budget-strip__segment[data-category="${ capitalized }"]`);
     }
 
     /**
@@ -743,11 +430,7 @@
      * @returns {number} Total cents
      */
     function getTotalCents () {
-        let total = 0;
-        categories.forEach((cat) => {
-            total += amountCents[cat] || 0;
-        });
-        return total;
+        return categories.reduce((total, cat) => total + (amountCents[cat] || 0), 0);
     }
 
     /**
@@ -773,12 +456,12 @@
      * @param {number} value - The amount to format
      * @returns {string} Formatted amount
      */
-    function formatDollars (value) {
+    function formatMoney (value) {
         return PFI18n.formatMoney(value, currency(), { whole: value === Math.floor(value) });
     }
 
     /**
-     * Map a camelCase category key to the PascalCase property name used by asp-for inputs.
+     * Map a camelCase category key to the PascalCase property name used by the form fields.
      * @param {string} str - The camelCase category key (e.g., "debtRepayment")
      * @returns {string} PascalCase property name (e.g., "DebtRepayment")
      */
@@ -786,12 +469,11 @@
         if (!str) {
             return str;
         }
-        // camelCase JS key -> PascalCase C# property name ("debtRepayment" -> "DebtRepayment")
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
     /**
-     * Normalize category name to lowercase camelCase for data keys.
+     * Normalize a category name to the camelCase data key.
      * @param {string} cat - Category name (e.g., "DebtRepayment")
      * @returns {string} Normalized category (e.g., "debtRepayment")
      */
@@ -802,7 +484,6 @@
         return cat.charAt(0).toLowerCase() + cat.slice(1);
     }
 
-    // DOM ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', BudgetPlanner.init);
     } else {
@@ -810,5 +491,4 @@
     }
 
     window.BudgetPlanner = BudgetPlanner;
-
 })();
