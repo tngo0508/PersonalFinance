@@ -3,12 +3,15 @@ name: Cache Cleanup
 # Keeps the repo under the free 10 GB Actions cache limit without touching the caches that speed up every run.
 # Public repos pay nothing for the cache: past 10 GB GitHub evicts the least recently used entries, which can
 # evict the NuGet and Playwright caches too. This job removes the entries that are no longer worth keeping first:
-#   - Docker layer blobs (buildkit-*, index-*) that no deploy has read in the last 7 days of deploys
+#   - Docker layer blobs (buildkit-*, index-*) that no build has read in the last 24 hours of builds. A deploy's
+#     own publish layers are never read again (the next commit changes them), about 250 MB per deploy; the base
+#     image and restore layers are read by every build, so they stay.
+#   - superseded nuget-*, playwright-* and node-cache-* entries: their keys end in a hash of their inputs, so a
+#     csproj or package-lock change creates a new entry and strands the old one. Only the newest per ref stays.
 #   - every cache a pull request's branch left behind, once that PR closes
-# nuget-* and playwright-* are never deleted here.
 on:
   schedule:
-    - cron: '0 6 * * 1' # Mondays 06:00 UTC
+    - cron: '0 6 * * *' # daily 06:00 UTC
   pull_request:
     types: [closed]
   workflow_dispatch:
@@ -26,8 +29,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  prune-docker-cache:
-    name: Prune stale Docker layer cache
+  prune-stale-caches:
+    name: Prune stale caches
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -36,17 +39,19 @@ jobs:
       GH_REPO: ${{ github.repository }}
       DRY_RUN: ${{ inputs.dry_run == true }}
     steps:
-      - name: Delete Docker cache entries idle for 7 days of deploys
+      - name: List the caches
+        run: gh cache list --limit 1000 --json id,key,ref,sizeInBytes,createdAt,lastAccessedAt > caches.json
+
+      - name: Delete Docker cache entries idle for 24 hours of builds
         run: |
-          # The 7 days count back from the newest Docker cache read, not from now: after a quiet week with no
-          # deploys every blob is idle, and deleting them all would leave the next build with no cache at all.
-          gh cache list --limit 1000 --json id,key,sizeInBytes,lastAccessedAt > caches.json
+          # The 24 hours count back from the newest Docker cache read, not from now: after a quiet week with no
+          # builds every blob is idle, and deleting them all would leave the next build with no cache at all.
           jq -r '
             def ts: sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601;
             [.[] | select(.key | startswith("buildkit-") or startswith("index-"))] as $docker
             | if ($docker | length) == 0 then empty else
                 ($docker | map(.lastAccessedAt | ts) | max) as $newest
-                | $docker[] | select((.lastAccessedAt | ts) < $newest - 7 * 86400)
+                | $docker[] | select((.lastAccessedAt | ts) < $newest - 24 * 3600)
                 | "\(.id) \(.sizeInBytes) \(.key)"
               end' caches.json > stale.txt
 
@@ -59,6 +64,29 @@ jobs:
               gh cache delete "$id" < /dev/null
             fi
           done < stale.txt
+
+      - name: Delete superseded NuGet, Playwright and npm caches
+        run: |
+          # Per ref and prefix, every entry but the newest. A PR's entries live on its own merge ref, so a PR
+          # that restored main's cache through restore-keys and saved its own never deletes anything of main's.
+          jq -r '
+            [.[] | select(.key | test("^(nuget|playwright|node-cache)-"))]
+            | group_by([.ref, (.key | capture("^(?<prefix>nuget|playwright|node-cache)-") | .prefix)])
+            | .[] | sort_by(.createdAt) | .[:-1][]
+            | "\(.id) \(.sizeInBytes) \(.key) \(.ref)"' caches.json > superseded.txt
+
+          count=$(wc -l < superseded.txt | tr -d ' ')
+          bytes=$(awk '{ s += $2 } END { print s + 0 }' superseded.txt)
+          echo "Superseded cache entries: $count ($(numfmt --to=iec "$bytes"))"
+          while read -r id size key ref; do
+            echo "  $key on $ref ($(numfmt --to=iec "$size"))"
+            if [ "$DRY_RUN" != "true" ]; then
+              gh cache delete "$id" < /dev/null
+            fi
+          done < superseded.txt
+
+      - name: Report the cache usage
+        run: |
           if [ "$DRY_RUN" = "true" ]; then
             echo "::notice::Dry run: deleted nothing."
           fi

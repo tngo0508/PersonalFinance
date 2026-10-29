@@ -297,6 +297,24 @@ body:not(:has(#sidebar)) .topbar {
     white-space: nowrap;
 }
 
+/* A page link in the signed-out top bar ("Learning"), beside the auth buttons */
+.topbar-nav-link {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 8px;
+    color: var(--app-text-soft);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.topbar-nav-link:hover,
+.topbar-nav-link:focus-visible,
+.topbar-nav-link[aria-current="page"] {
+    color: var(--app-brand-text);
+    text-decoration: underline;
+}
+
 /* Language switcher (Views/Shared/_LanguageSwitcher.cshtml): a form holding an EN | VI button group */
 .language-switcher {
     display: flex;

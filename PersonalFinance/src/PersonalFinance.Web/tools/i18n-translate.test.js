@@ -204,7 +204,7 @@ test('run writes the language file in English order and the lock', async () => {
     const dir = folder({ 'en.json': { 'B.Two': 'Two', 'A.One': 'One' }, 'vi.json': {}, 'glossary.vi.json': {} });
     const fetch = fakeTranslator();
 
-    await run({ dir, env: { AZURE_TRANSLATOR_KEY: 'k', AZURE_TRANSLATOR_REGION: 'r' }, fetch, sleep: () => Promise.resolve(), log: () => {} });
+    await run({ dir, contentDir: null, env: { AZURE_TRANSLATOR_KEY: 'k', AZURE_TRANSLATOR_REGION: 'r' }, fetch, sleep: () => Promise.resolve(), log: () => {} });
 
     const vi = JSON.parse(fs.readFileSync(path.join(dir, 'vi.json'), 'utf8'));
     assert.deepStrictEqual(Object.keys(vi), ['B.Two', 'A.One']);
@@ -216,7 +216,7 @@ test('run writes the language file in English order and the lock', async () => {
 test('run without credentials fails when there is something to send, and writes nothing', async () => {
     const dir = folder({ 'en.json': { 'A.One': 'One' }, 'vi.json': {} });
 
-    await assert.rejects(run({ dir, env: {}, fetch: fakeTranslator(), log: () => {} }), /AZURE_TRANSLATOR_KEY/);
+    await assert.rejects(run({ dir, contentDir: null, env: {}, fetch: fakeTranslator(), log: () => {} }), /AZURE_TRANSLATOR_KEY/);
     assert.ok(!fs.existsSync(path.join(dir, 'i18n.lock.json')));
 });
 
@@ -224,7 +224,7 @@ test('a dry run calls nothing and writes nothing', async () => {
     const dir = folder({ 'en.json': { 'A.One': 'One' }, 'vi.json': {} });
     const fetch = fakeTranslator();
 
-    const results = await run({ dir, env: {}, fetch, dryRun: true, log: () => {} });
+    const results = await run({ dir, contentDir: null, env: {}, fetch, dryRun: true, log: () => {} });
 
     assert.deepStrictEqual(results.vi.pending, ['A.One']);
     assert.strictEqual(fetch.calls.length, 0);

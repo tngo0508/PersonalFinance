@@ -7,6 +7,7 @@ const {runIdleSignOutSmoke} = require('./idle-sign-out-smoke');
 const {runCurrencyConverterSmoke} = require('./currency-converter-smoke');
 const {runMoneyBoundsSmoke} = require('./money-bounds-smoke');
 const {runThemeSmoke} = require('./theme-smoke');
+const {runLearningSmoke} = require('./learning-smoke');
 
 (async () => {
     const results = {passed: 0, failed: 0, errors: []};
@@ -250,10 +251,10 @@ const {runThemeSmoke} = require('./theme-smoke');
 
             const coreCount = await page.locator('.lp-tool').count().catch(() => 0);
             const moreCount = await page.locator('.lp-more__item').count().catch(() => 0);
-            if (coreCount === 3 && moreCount === 6) {
-                pass('Landing Page lists 3 core tools and 6 additional features');
+            if (coreCount === 6 && moreCount === 7) {
+                pass('Landing Page ledger lists 6 plan tools and 7 resources');
             } else {
-                fail(`Expected 3 core tools and 6 additional features, found ${coreCount} and ${moreCount}`);
+                fail(`Expected 6 plan tools and 7 resources, found ${coreCount} and ${moreCount}`);
             }
         } catch (error) {
             fail(`Default route failed: ${error.message}`);
@@ -979,6 +980,16 @@ const {runThemeSmoke} = require('./theme-smoke');
             await runThemeSmoke({browser, base, pass, fail});
         } catch (error) {
             fail(`Theme smoke failed: ${error.message}`);
+        }
+
+        // =========================================================
+        // Test 9k: Atelier Library smoke (#517): a guest filters the Library, reads a Term Entry, and dark mode
+        // =========================================================
+        console.log('\n--- Test 9k: Atelier Library Smoke ---');
+        try {
+            await runLearningSmoke({browser, base, pass, fail});
+        } catch (error) {
+            fail(`Atelier Library smoke failed: ${error.message}`);
         }
 
         // =========================================================

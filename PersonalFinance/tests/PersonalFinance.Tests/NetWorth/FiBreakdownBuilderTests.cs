@@ -68,7 +68,7 @@ public sealed class FiBreakdownBuilderTests : IDisposable
     private static FiBreakdownCardViewModel Card(FiBreakdownViewModel breakdown, string key) =>
         breakdown.Cards.Single(c => c.Key == key);
 
-    // 0% returns keep the FI ages exact: 100,000 + 100,000 a year reaches 1,000,000 at 43; Aggressive at 39.
+    // 0% returns keep the FI ages exact: 100,000 today at 35 + 100,000 a year reaches 1,000,000 at 44; Aggressive at 40.
     private static NetWorthProjectionDto ZeroReturn(int retirementAge = 60, decimal balance = 100_000m) =>
         Project(balance: balance, savings: 100_000m, spending: 40_000m, currentAge: 35, retirementAge: retirementAge,
             baseRoi: 0m, conservativeRoi: 0m, aggressiveRoi: 0m, aggressiveSavings: 200_000m);
@@ -119,13 +119,13 @@ public sealed class FiBreakdownBuilderTests : IDisposable
         FiBreakdownCardViewModel card = Card(Breakdown(ZeroReturn()), "fi-age");
 
         Assert.Equal("FI age", card.Label);
-        Assert.Equal("43 (in 8 years)", card.Value);
+        Assert.Equal("44 (in 9 years)", card.Value);
         Assert.Equal(
             ["Starting Balance", "Annual Savings", "Base return", "Current Age", "Retirement Age", "FI Target"],
             card.Inputs.Select(i => i.Label));
         Assert.Equal("Grow $100,000 at 0% a year, adding $100,000 a year, until it reaches $1,000,000.", card.Formula);
         Assert.Equal(
-            ["Base (0%): age 43", "Conservative (0%): age 43", "Aggressive (0%, $200,000 a year): age 39"],
+            ["Base (0%): age 44", "Conservative (0%): age 44", "Aggressive (0%, $200,000 a year): age 40"],
             card.Scenarios);
     }
 
@@ -136,12 +136,12 @@ public sealed class FiBreakdownBuilderTests : IDisposable
 
         Assert.Equal("Not reached by age 40", card.Value);
         Assert.Equal("Base (0%): not reached by age 40", card.Scenarios[0]);
-        Assert.Equal("Aggressive (0%, $200,000 a year): age 39", card.Scenarios[2]);
+        Assert.Equal("Aggressive (0%, $200,000 a year): age 40", card.Scenarios[2]);
     }
 
     [Theory]
     [InlineData(2_000_000, "35 (this year)")]
-    [InlineData(800_000, "36 (in 1 year)")]
+    [InlineData(900_000, "36 (in 1 year)")]
     public void FiAge_UsesTheRightWordingForNowAndOneYear(int balance, string expected)
     {
         FiBreakdownCardViewModel card = Card(Breakdown(ZeroReturn(balance: balance)), "fi-age");
@@ -231,13 +231,13 @@ public sealed class FiBreakdownBuilderTests : IDisposable
         FiBreakdownCardViewModel card = Card(Breakdown(ZeroReturn()), "fi-age");
 
         Assert.Equal(TestLocalization.Vietnamese("NetWorth.Breakdown.FiAge"), card.Label);
-        Assert.Equal(Vi("NetWorth.Breakdown.AgeWhen", ("age", 43), ("when", Vi("NetWorth.Breakdown.InYears.other", ("count", 8)))),
+        Assert.Equal(Vi("NetWorth.Breakdown.AgeWhen", ("age", 44), ("when", Vi("NetWorth.Breakdown.InYears.other", ("count", 9)))),
             card.Value);
         Assert.Equal(Vi("NetWorth.Breakdown.FiAgeFormula", ("balance", $"100.000{Nbsp}$"), ("rate", "0%"),
             ("savings", $"100.000{Nbsp}$"), ("target", $"1.000.000{Nbsp}$")), card.Formula);
         Assert.Equal(Vi("NetWorth.Breakdown.Scenario", ("name", TestLocalization.Vietnamese("NetWorth.Js.Scenario.Aggressive")),
                 ("assumptions", Vi("NetWorth.Breakdown.RateAndSavings", ("rate", "0%"), ("savings", $"200.000{Nbsp}$"))),
-                ("outcome", Vi("NetWorth.Breakdown.ReachedAge", ("age", 39)))),
+                ("outcome", Vi("NetWorth.Breakdown.ReachedAge", ("age", 40)))),
             card.Scenarios[2]);
         Assert.DoesNotContain(card.Scenarios, line => line.Contains("age", StringComparison.Ordinal));
     }

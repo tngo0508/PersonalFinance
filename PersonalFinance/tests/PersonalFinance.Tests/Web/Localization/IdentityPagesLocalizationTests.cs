@@ -82,6 +82,7 @@ public sealed class IdentityPagesLocalizationTests : IAsyncLifetime
                 manager.ApplicationParts.Insert(i, parts[i]);
             }
         });
+        builder.Services.AddSingleton<PersonalFinance.Web.Services.ILearningLibraryStatus>(new PersonalFinance.Tests.TestSupport.FixedLearningLibraryStatus(false));
         builder.Services.AddControllersWithViews(options => options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
             .AddViewLocalization()
             .AddDataAnnotationsLocalization();

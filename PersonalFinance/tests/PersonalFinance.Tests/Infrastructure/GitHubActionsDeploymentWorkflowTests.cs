@@ -312,10 +312,14 @@ public class GitHubActionsDeploymentWorkflowTests
         Assert.Contains("paths-ignore:", workflow);
         Assert.Contains("'**/*.md'", workflow);
 
-        // Images build as parallel matrix legs with per-image cache scopes; PRs don't export cache
+        // Images build as parallel matrix legs with per-image cache scopes; PRs don't export cache.
+        // main exports every stage (mode=max): mode=min dropped the restore layers, the only ones worth a cache
+        // hit, and cache-cleanup.yml prunes the per-deploy layers that go dead after one day.
         Assert.Contains("matrix:", workflow);
         Assert.Contains("cache-from: type=gha,scope=${{ matrix.service }}", workflow);
         Assert.Contains("cache-to: ${{ env.PUSH_IMAGE == 'true' &&", workflow);
+        Assert.Contains("format('type=gha,scope={0},mode=max,ignore-error=true', matrix.service)", workflow);
+        Assert.DoesNotContain("mode=min,ignore-error", workflow);
 
         // Deployment still waits for tests, migrations on SQL Server, infra validation and both images
         Assert.Contains("needs: [build-and-test, sql-server-migrations, validate-infra, build-and-push-containers]",

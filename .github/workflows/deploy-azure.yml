@@ -205,6 +205,8 @@ jobs:
           ConnectionStrings__DefaultConnection: InMemory:E2ETestApi
           # Stores small Research fixture snapshots (Development only), so the walkthrough needs no SEC/World Bank.
           E2E_SEED_RESEARCH: "true"
+          # The Atelier smoke (e2e-tests/learning-smoke.js) reads the test fixture Term Entries until real content ships.
+          Learning__ContentPath: ${{ github.workspace }}/PersonalFinance/tests/PersonalFinance.Tests/Learning/Fixtures/Content
         run: |
           echo "Starting ApiService on port ${{ steps.ports.outputs.api_port }} (logs -> .api.log)"
           dotnet run --project PersonalFinance/src/PersonalFinance.ApiService \
@@ -292,6 +294,8 @@ jobs:
         env:
           WEB_URL: http://localhost:${{ steps.ports.outputs.web_port }}
           API_URL: http://localhost:${{ steps.ports.outputs.api_port }}
+          # ApiService reads the fixture content folder above, so the Atelier smoke expects Term Entries, not the empty state
+          LEARNING_FIXTURE: "true"
         run: npm run test:e2e
 
       - name: Run API endpoint E2E tests
@@ -524,10 +528,11 @@ jobs:
             type=sha,format=short,prefix=
 
       # Each image has its own cache scope so the two builds don't overwrite each other.
-      # PRs only read the cache: exporting it costs ~50s per image and a PR's cache can't be
-      # reused by other branches anyway. mode=min caches only the final image's layers: mode=max
-      # also stored every SDK and build-stage layer, which filled most of the repo's 10 GB
-      # Actions cache. cache-cleanup.yml prunes the blobs that later builds stop using.
+      # PRs only read the cache: exporting it costs time per image and a PR's cache can't be
+      # reused by other branches anyway. main exports every stage (mode=max): the restore layer
+      # is the one worth a cache hit, and mode=min, which keeps only the final image's layers,
+      # drops it. The per-deploy publish layers go dead after one day; cache-cleanup.yml prunes
+      # them daily so the cache stays under the repo's free 10 GB.
       - name: Build and push ${{ matrix.service }} container
         uses: docker/build-push-action@v6
         with:
@@ -539,7 +544,7 @@ jobs:
           build-args: |
             APP_VERSION=${{ steps.tags.outputs.app_version }}
           cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: ${{ env.PUSH_IMAGE == 'true' && format('type=gha,scope={0},mode=min,ignore-error=true', matrix.service) || '' }}
+          cache-to: ${{ env.PUSH_IMAGE == 'true' && format('type=gha,scope={0},mode=max,ignore-error=true', matrix.service) || '' }}
 
   # ============================================================================
   # 3. DEPLOY INFRASTRUCTURE & CONTAINER APPS (Bicep + Azure OIDC)

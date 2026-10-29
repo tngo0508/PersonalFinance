@@ -108,6 +108,18 @@ PAIRS.push(
 );
 NEW_TOKENS.push(...DASH_BUDGET, ...MONEY_FLOW, '--app-info-bg', '--app-info-text');
 
+// The Atelier (#517): ink and soft ink as text on the paper, a sheet and a book spine; clay (links, an overdue note)
+// and moss (the Vietnamese name) as text on the paper and a sheet, and as a spine's edge band
+const ATELIER_SURFACES = ['--app-atelier-paper', '--app-atelier-sheet'];
+const ATELIER = ['paper', 'sheet', 'ink', 'ink-soft', 'rule', 'clay', 'clay-hover', 'moss', 'spine', 'spine-edge', 'shelf',
+    'lamp', 'grain', 'grain-fine'].map(key => `--app-atelier-${key}`);
+PAIRS.push(
+    ...pairs(['--app-atelier-ink', '--app-atelier-ink-soft'], [...ATELIER_SURFACES, '--app-atelier-spine'], AA_TEXT, BOTH),
+    ...pairs(['--app-atelier-clay', '--app-atelier-clay-hover', '--app-atelier-moss'], ATELIER_SURFACES, AA_TEXT, BOTH),
+    ...pairs(['--app-atelier-clay', '--app-atelier-moss'], ['--app-atelier-spine'], AA_UI, BOTH)
+);
+NEW_TOKENS.push(...ATELIER);
+
 for (const theme of BOTH) {
     test(`the semantic tokens are defined in the ${theme} theme`, () => {
         const tokens = readThemeTokens(theme);

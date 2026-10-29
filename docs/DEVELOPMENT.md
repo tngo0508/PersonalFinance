@@ -808,6 +808,14 @@ pushes with `AGENT_GH_TOKEN` so the other PR workflows re-run on the translated 
 secrets and is skipped. Never hand-type `vi.json` entries or lock hashes; a hand correction to an existing `vi.json`
 entry stays until its English changes.
 
+The same run drafts the Atelier content ([ADR 0019](adr/0019-atelier-content-is-code.md)): for each
+`terms/{slug}.json` and `lessons/{slug}.json` in `ApiService/Features/Learning/Content/` it writes the missing or stale
+text fields of `{slug}.vi.json`, field by field, with its own `i18n.lock.json` in that folder. Slugs, Topics,
+references, URLs, numbers and sources are never sent. Each Term's `vietnameseName` is a glossary entry, so every text
+naming the Term uses it. The owner-written fields are never overwritten once present: the Vietnamese name (it lives in
+the English file, which the script never writes) and the *In Vietnam* note. It prints its own
+`Commit as: i18n: translate N content fields (vi)` line.
+
 To draft locally instead (the result is the same commit):
 
 ```bash
