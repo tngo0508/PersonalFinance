@@ -84,7 +84,7 @@ ASPNETCORE_ENVIRONMENT=Development DATABASE_PROVIDER=InMemory ConnectionStrings_
 WEB_PID=$!
 wait_for Web "$WEB_URL" .web.log || exit 1
 
-export WEB_URL API_URL DATABASE_PROVIDER=InMemory
+export WEB_URL API_URL DATABASE_PROVIDER=InMemory LEARNING_FIXTURE=true
 failed=0
 if [ "$SUITES" = "all" ] || [ "$SUITES" = "ui" ]; then
   echo "== UI suite (npm run test:e2e) against $WEB_URL"

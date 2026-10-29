@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **E2E fixture content**: the E2E job and `e2e-inmemory.sh` point ApiService at the test fixture content folder, so the new Atelier smoke can read Term Entries before real content ships (#517).
+- **E2E fixture content**: `e2e-inmemory.sh` points ApiService at the test fixture content folder, so the new Atelier smoke can read Term Entries before real content ships; against the real, empty folder the smoke checks the empty state instead (#517).
 
 ## [13.11.1] - 2026-10-28
 

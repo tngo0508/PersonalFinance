@@ -205,8 +205,6 @@ jobs:
           ConnectionStrings__DefaultConnection: InMemory:E2ETestApi
           # Stores small Research fixture snapshots (Development only), so the walkthrough needs no SEC/World Bank.
           E2E_SEED_RESEARCH: "true"
-          # The Atelier smoke reads the fixture Term Entries: the real content folder has none until the content slices.
-          Learning__ContentPath: ${{ github.workspace }}/PersonalFinance/tests/PersonalFinance.Tests/Learning/Fixtures/Content
         run: |
           echo "Starting ApiService on port ${{ steps.ports.outputs.api_port }} (logs -> .api.log)"
           dotnet run --project PersonalFinance/src/PersonalFinance.ApiService \
