@@ -84,6 +84,7 @@ public sealed partial class BudgetTrackerPageLanguageTests : IAsyncLifetime
         builder.Services.AddAuthorizationBuilder()
             .AddPolicy(AppPolicies.RequireAdmin, policy => policy.RequireAuthenticatedUser().RequireRole(AppRoles.Admin));
         builder.Services.AddAppLocalization(builder.Environment);
+        builder.Services.AddSingleton<PersonalFinance.Web.Services.ILearningLibraryStatus>(new PersonalFinance.Tests.TestSupport.FixedLearningLibraryStatus(false));
         builder.Services.AddControllersWithViews()
             .AddViewLocalization()
             .AddDataAnnotationsLocalization()
