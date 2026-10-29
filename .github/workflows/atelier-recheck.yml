@@ -1,6 +1,3 @@
-# DRAFT: move this file to .github/workflows/atelier-recheck.yml. The ticket agent's token has no `workflows`
-# permission, so it could not push it there (#526). Delete this comment block and the .github/workflow-drafts folder
-# when you move it.
 name: Atelier Re-check
 
 # The monthly country-note re-check (#510, #526). atelier-recheck.js lists the In the US / In Vietnam notes due for a
@@ -8,7 +5,10 @@ name: Atelier Re-check
 # the current year. This job keeps one open ready-for-human issue, "Atelier notes due for a re-check", listing them:
 #   - notes due: it updates the open issue, or opens one;
 #   - nothing due: it updates an open issue to say so, and opens none.
-# It reads the content folder only, changes no files and never fails a build.
+# It reads the content folder only and changes no files. It is in no build: a run that fails (a script error, a gh
+# error) shows red in Actions and nowhere else, so do not add continue-on-error, which would hide it.
+# GITHUB_TOKEN cannot add an issue to the owner's Roadmap project (docs/agents/issue-tracker.md), so the issue it
+# opens is not on the board: add it on triage.
 on:
   schedule:
     - cron: '0 7 1 * *' # 07:00 UTC on the 1st of each month
@@ -27,7 +27,6 @@ jobs:
     name: List Atelier notes due for a re-check
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    continue-on-error: true
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
