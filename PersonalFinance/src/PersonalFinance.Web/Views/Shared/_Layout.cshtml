@@ -4,6 +4,7 @@
 <!DOCTYPE html>
 @inject IAntiforgery Antiforgery
 @inject Microsoft.Extensions.Options.IOptions<IdleSignOutOptions> IdleSignOut
+@inject PersonalFinance.Web.Services.ILearningLibraryStatus LearningStatus
 @{
     var isSignedIn = User.Identity?.IsAuthenticated == true;
     var currentController = ViewContext.RouteData.Values["controller"] as string;
@@ -15,6 +16,8 @@
     // Idle Sign-out (#332) runs on pages for signed-in users only; the Landing Page, the legal pages and the
     // signed-out Identity pages never load it.
     var watchIdleSignOut = isSignedIn && currentController != "Legal";
+    // The Atelier's "Learning" entry stays hidden until the Library has a Published Term Entry (#517).
+    var showLearning = await LearningStatus.HasEntriesAsync(Context.RequestAborted);
 }
 <html lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName" data-culture="@System.Globalization.CultureInfo.CurrentCulture.Name">
 <head>
@@ -23,6 +26,7 @@
     <meta name="theme-color" content="#ffffff"/>
     <meta name="__RequestVerificationToken" content="@tokens.RequestToken" />
     <title>@documentTitle</title>
+    @await RenderSectionAsync("Head", required: false)
     <link rel="icon" href="~/favicon.ico" sizes="32x32"/>
     <link rel="icon" href="~/favicon.svg" type="image/svg+xml"/>
     <link rel="icon" href="~/favicon-32x32.png" type="image/png" sizes="32x32"/>
@@ -138,6 +142,14 @@
                     <span class="sidebar-link-icon"><i data-lucide="globe"></i></span>
                     <span class="sidebar-link-text">@L["Shell.Nav.Research"]</span>
                 </a>
+                @if (showLearning)
+                {
+                    <a class="sidebar-link @(currentController == "Learning" ? "active" : "")"
+                       asp-area="" asp-controller="Learning" asp-action="Index" data-test-id="nav-learning">
+                        <span class="sidebar-link-icon"><i data-lucide="book-open"></i></span>
+                        <span class="sidebar-link-text">@L["Shell.Nav.Learning"]</span>
+                    </a>
+                }
                 <a class="sidebar-link @(currentController == "News" ? "active" : "")"
                    asp-area="" asp-controller="News" asp-action="Index">
                     <span class="sidebar-link-icon"><i data-lucide="newspaper"></i></span>
@@ -209,6 +221,11 @@
                 <span class="sidebar-brand-name">@AppVersion.ApplicationName</span>
             </a>
             <div class="topbar-actions ms-auto">
+                @if (showLearning)
+                {
+                    <a class="topbar-nav-link" asp-area="" asp-controller="Learning" asp-action="Index"
+                       aria-current="@(currentController == "Learning" ? "page" : null)" data-test-id="nav-learning">@L["Shell.Nav.Learning"]</a>
+                }
                 <partial name="_LoginPartial"/>
             </div>
         }

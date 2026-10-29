@@ -1,0 +1,141 @@
+@using System.Globalization
+@using Microsoft.AspNetCore.Html
+@using PersonalFinance.Web.Models.Learning
+@using PersonalFinance.Web.Services
+@model LearningTermViewModel
+@{
+    var entry = Model.Entry;
+    ViewData["Title"] = entry.Term;
+    Func<string, string> termUrl = slug => Url.Action("Term", "Learning", new { slug })!;
+    IHtmlContent Linked(string text) => TermTextLinker.Link(text, entry.Mentions, termUrl);
+    string Day(DateOnly date) => date.ToString("D", CultureInfo.CurrentCulture);
+    // Only a privacy-enhanced embed is ever framed; autoplay stays off.
+    const string embedPrefix = "https://www.youtube-nocookie.com/embed/";
+    var videoUrl = entry.Video is { } video && video.Url.StartsWith(embedPrefix, StringComparison.Ordinal)
+        ? video.Url + (video.Url.Contains('?') ? "&" : "?") + "autoplay=0&rel=0"
+        : null;
+}
+
+@section Head {
+    <meta name="description" content="@entry.OneLine"/>
+    <link rel="canonical" href="@Model.CanonicalUrl"/>
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/learning.css" asp-append-version="true"/>
+}
+
+<article class="atelier atelier-entry" data-test-id="atelier-entry">
+    <nav class="atelier-breadcrumb" aria-label="@L["Learning.Entry.Breadcrumb"]">
+        <a asp-action="Index">@L["Learning.Library.Heading"]</a>
+        <span aria-hidden="true">/</span>
+        <span>@L[LearningTopicNames.KeyFor(entry.Topic)]</span>
+    </nav>
+
+    <header class="atelier-sheet atelier-entry-header">
+        <h1 class="atelier-title" data-test-id="atelier-term">@entry.Term</h1>
+        <p class="atelier-vi-name" lang="vi" data-test-id="atelier-vi-name">@entry.VietnameseName</p>
+        @if (entry.AlsoKnownAs.Count > 0)
+        {
+            <p class="atelier-aka">@L.Named("Learning.Entry.AlsoKnownAs", ("names", string.Join(", ", entry.AlsoKnownAs)))</p>
+        }
+        <p class="atelier-one-line" data-test-id="atelier-one-line">@entry.OneLine</p>
+    </header>
+
+    <div class="atelier-sheet atelier-reading">
+        @foreach (var paragraph in entry.Explanation)
+        {
+            <p>@Linked(paragraph)</p>
+        }
+
+        <h2>@L["Learning.Entry.WhyItMatters"]</h2>
+        <p>@Linked(entry.WhyItMatters)</p>
+
+        <h2>@L["Learning.Entry.WorkedExample"]</h2>
+        <p class="atelier-example">@Linked(entry.WorkedExample)</p>
+
+        @foreach (var (note, headingKey, testId) in new[] { (entry.InTheUs, "Learning.Entry.InTheUs", "note-us"), (entry.InVietnam, "Learning.Entry.InVietnam", "note-vn") })
+        {
+            if (note is null)
+            {
+                continue;
+            }
+
+            <aside class="atelier-note @(note.IsOverdue ? "atelier-note--overdue" : "")" data-test-id="@testId"
+                   aria-labelledby="@testId-heading">
+                <h2 class="atelier-note-heading" id="@testId-heading">@L[headingKey]</h2>
+                <p>@Linked(note.Text)</p>
+                <p class="atelier-note-rules">
+                    @(note.IsOverdue
+                        ? L.Named("Learning.Entry.RulesAsOfOverdue", ("year", note.RulesAsOf))
+                        : L.Named("Learning.Entry.RulesAsOf", ("year", note.RulesAsOf)))
+                </p>
+                @if (note.Sources.Count > 0)
+                {
+                    <ul class="atelier-note-sources">
+                        @foreach (var source in note.Sources)
+                        {
+                            <li><a href="@source.Url" rel="noopener noreferrer">@source.Name</a></li>
+                        }
+                    </ul>
+                }
+            </aside>
+        }
+    </div>
+
+    @if (videoUrl is not null)
+    {
+        <div class="atelier-sheet atelier-video">
+            <iframe src="@videoUrl" title="@entry.Video!.Title" loading="lazy"
+                    allow="encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"
+                    allowfullscreen></iframe>
+        </div>
+    }
+
+    <footer class="atelier-sheet atelier-entry-footer">
+        @if (entry.RelatedTerms.Count > 0)
+        {
+            <h2>@L["Learning.Entry.RelatedTerms"]</h2>
+            <ul class="atelier-related" data-test-id="atelier-related">
+                @foreach (var related in entry.RelatedTerms)
+                {
+                    <li><a asp-action="Term" asp-route-slug="@related.Slug">@related.Term</a></li>
+                }
+            </ul>
+        }
+
+        <h2>@L["Learning.Entry.Sources"]</h2>
+        <ul class="atelier-sources" data-test-id="atelier-sources">
+            @foreach (var source in entry.Sources)
+            {
+                <li>
+                    <a href="@source.Url" rel="noopener noreferrer">@source.Name</a>
+                    <span class="atelier-accessed">
+                        @L.Named("Learning.Entry.Accessed", ("date", Day(source.Accessed)))
+                        @if (source.TaxYear is { } taxYear)
+                        {
+                            @:· @L.Named("Learning.Entry.TaxYear", ("year", taxYear))
+                        }
+                    </span>
+                </li>
+            }
+        </ul>
+
+        @if (entry.FurtherReading.Count > 0)
+        {
+            <h2>@L["Learning.Entry.FurtherReading"]</h2>
+            <ul class="atelier-sources">
+                @foreach (var link in entry.FurtherReading)
+                {
+                    <li><a href="@link.Url" rel="noopener noreferrer">@link.Name</a></li>
+                }
+            </ul>
+        }
+
+        <p class="atelier-reviewed" data-test-id="atelier-reviewed">@L.Named("Learning.Entry.LastReviewed", ("date", Day(entry.LastReviewed)))</p>
+        <p class="atelier-disclaimer">
+            @L["Learning.Entry.EducationalOnly"]
+            <a asp-controller="Legal" asp-action="Disclaimer" data-test-id="atelier-disclaimer">@L["Learning.Entry.Disclaimer"]</a>
+        </p>
+    </footer>
+</article>

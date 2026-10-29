@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
 namespace PersonalFinance.ApiService.Features.Learning;
 
 /// <summary>
@@ -24,6 +26,8 @@ internal static class LearningFeature
         string path = Path.Combine(AppContext.BaseDirectory,
             configuration.GetValue<string>(ContentPathKey) ?? DefaultContentPath);
         services.AddSingleton<ILearningContent>(LearningContent.Load(path));
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<ILearningLibraryService, LearningLibraryService>();
         return services;
     }
 }
