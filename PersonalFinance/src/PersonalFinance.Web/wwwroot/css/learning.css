@@ -1,34 +1,23 @@
 /*
- * The Atelier (#513, look from #496, variant C "Road to wealth"): page-scoped tokens on top of the theme tokens.
- * Light: warm paper with grain, charcoal ink, clay and moss accents. Dark: a lamplit desk (warm dark wood, a soft
- * light at the top, cream ink), following the theme switch (#479). Never Georgia: it splits stacked Vietnamese accents.
+ * The Atelier (#513, look from #496, variant C "Road to wealth"). Its colours are the --app-atelier-* tokens in the
+ * site.css token blocks (#480): warm paper with grain, charcoal ink, clay and moss accents in the light theme, a
+ * lamplit desk (warm dark wood, a soft light at the top, cream ink) in the dark one, following the theme switch
+ * (#479). Never Georgia: it splits stacked Vietnamese accents.
  */
 .atelier {
-    --atelier-paper: #F6F0E4;
-    --atelier-sheet: #FBF7EF;
-    --atelier-ink: #2B2926;
-    --atelier-ink-soft: #57524B;
-    --atelier-rule: #DDD2BF;
-    --atelier-clay: #A4502F;
-    --atelier-clay-hover: #873F23;
-    --atelier-moss: #4F6B3A;
-    --atelier-spine: #E9DDC6;
-    --atelier-spine-edge: #C9B794;
-    --atelier-shelf: #8A6A45;
-    --atelier-lamp: transparent;
     --atelier-serif: "Iowan Old Style", "Charter", "Noto Serif", "Cambria", "Times New Roman", serif;
 
     position: relative;
     margin: 0 auto;
     max-width: 52rem;
     padding: 2rem clamp(1rem, 4vw, 2.5rem) 3rem;
-    color: var(--atelier-ink);
-    background-color: var(--atelier-paper);
+    color: var(--app-atelier-ink);
+    background-color: var(--app-atelier-paper);
     /* Grain: two faint offset dot patterns. */
     background-image:
-        radial-gradient(ellipse at top, var(--atelier-lamp), transparent 60%),
-        radial-gradient(rgba(60, 40, 20, 0.05) 1px, transparent 1px),
-        radial-gradient(rgba(60, 40, 20, 0.035) 1px, transparent 1px);
+        radial-gradient(ellipse at top, var(--app-atelier-lamp), transparent 60%),
+        radial-gradient(var(--app-atelier-grain) 1px, transparent 1px),
+        radial-gradient(var(--app-atelier-grain-fine) 1px, transparent 1px);
     background-size: 100% 100%, 5px 5px, 7px 7px;
     background-position: 0 0, 0 0, 2px 3px;
     border-radius: 0.5rem;
@@ -37,36 +26,21 @@
     line-height: 1.65;
 }
 
-[data-theme="dark"] .atelier {
-    --atelier-paper: #2A211A;
-    --atelier-sheet: #33291F;
-    --atelier-ink: #F1E7D4;
-    --atelier-ink-soft: #CDBFA6;
-    --atelier-rule: #4C3E30;
-    --atelier-clay: #E3A07F;
-    --atelier-clay-hover: #F0BB9F;
-    --atelier-moss: #A9C28F;
-    --atelier-spine: #4A3A2B;
-    --atelier-spine-edge: #6B5640;
-    --atelier-shelf: #1C1611;
-    --atelier-lamp: rgba(255, 214, 150, 0.12);
-}
-
 .atelier h1,
 .atelier h2 {
     font-family: var(--atelier-serif);
-    color: var(--atelier-ink);
+    color: var(--app-atelier-ink);
     font-weight: 600;
 }
 
 .atelier a {
-    color: var(--atelier-clay);
+    color: var(--app-atelier-clay);
     text-underline-offset: 0.18em;
 }
 
 .atelier a:hover,
 .atelier a:focus-visible {
-    color: var(--atelier-clay-hover);
+    color: var(--app-atelier-clay-hover);
 }
 
 .atelier-title {
@@ -80,15 +54,15 @@
 .atelier-accessed,
 .atelier-reviewed,
 .atelier-disclaimer {
-    color: var(--atelier-ink-soft);
+    color: var(--app-atelier-ink-soft);
 }
 
 .atelier-empty {
     margin-top: 2rem;
     padding: 1.5rem;
-    border: 1px dashed var(--atelier-rule);
+    border: 1px dashed var(--app-atelier-rule);
     border-radius: 0.5rem;
-    color: var(--atelier-ink-soft);
+    color: var(--app-atelier-ink-soft);
     font-style: italic;
     text-align: center;
 }
@@ -109,21 +83,21 @@
     max-width: 24rem;
     padding: 0.5rem 0.75rem;
     font: inherit;
-    color: var(--atelier-ink);
-    background: var(--atelier-sheet);
-    border: 1px solid var(--atelier-spine-edge);
+    color: var(--app-atelier-ink);
+    background: var(--app-atelier-sheet);
+    border: 1px solid var(--app-atelier-spine-edge);
     border-radius: 0.375rem;
 }
 
 .atelier-filter-input:focus-visible {
-    outline: 2px solid var(--atelier-clay);
+    outline: 2px solid var(--app-atelier-clay);
     outline-offset: 2px;
 }
 
 .atelier-filter-status,
 .atelier-filter-none {
     margin: 0.5rem 0 0;
-    color: var(--atelier-ink-soft);
+    color: var(--app-atelier-ink-soft);
     font-size: 0.95rem;
 }
 
@@ -151,7 +125,7 @@
     margin: 0;
     padding: 0 0.5rem;
     list-style: none;
-    border-bottom: 0.6rem solid var(--atelier-shelf);
+    border-bottom: 0.6rem solid var(--app-atelier-shelf);
     border-radius: 0 0 0.25rem 0.25rem;
 }
 
@@ -167,18 +141,18 @@
     min-height: 9rem;
     width: 9.5rem;
     padding: 0.75rem 0.65rem;
-    color: var(--atelier-ink) !important;
+    color: var(--app-atelier-ink) !important;
     text-decoration: none;
-    background: var(--atelier-spine);
-    border: 1px solid var(--atelier-spine-edge);
+    background: var(--app-atelier-spine);
+    border: 1px solid var(--app-atelier-spine-edge);
     border-left-width: 0.35rem;
-    border-left-color: var(--atelier-moss);
+    border-left-color: var(--app-atelier-moss);
     border-radius: 0.2rem 0.2rem 0 0;
     transition: transform 0.15s ease;
 }
 
 .atelier-spine-item:nth-child(3n + 2) .atelier-spine {
-    border-left-color: var(--atelier-clay);
+    border-left-color: var(--app-atelier-clay);
     min-height: 10rem;
 }
 
@@ -192,7 +166,7 @@
 }
 
 .atelier-spine:focus-visible {
-    outline: 2px solid var(--atelier-clay);
+    outline: 2px solid var(--app-atelier-clay);
     outline-offset: 2px;
 }
 
@@ -204,7 +178,7 @@
 .atelier-spine-aka,
 .atelier-spine-vi {
     font-size: 0.85rem;
-    color: var(--atelier-ink-soft);
+    color: var(--app-atelier-ink-soft);
     line-height: 1.3;
 }
 
@@ -225,22 +199,22 @@
     gap: 0.5rem;
     margin-bottom: 1rem;
     font-size: 0.95rem;
-    color: var(--atelier-ink-soft);
+    color: var(--app-atelier-ink-soft);
 }
 
 .atelier-sheet {
     margin-bottom: 1.25rem;
     padding: 1.25rem clamp(1rem, 3vw, 1.75rem);
-    background: var(--atelier-sheet);
-    border: 1px solid var(--atelier-rule);
+    background: var(--app-atelier-sheet);
+    border: 1px solid var(--app-atelier-rule);
     border-radius: 0.375rem;
-    box-shadow: 0 1px 0 var(--atelier-rule), 0 3px 0 -1px var(--atelier-sheet), 0 3px 0 0 var(--atelier-rule);
+    box-shadow: 0 1px 0 var(--app-atelier-rule), 0 3px 0 -1px var(--app-atelier-sheet), 0 3px 0 0 var(--app-atelier-rule);
 }
 
 .atelier-vi-name {
     margin: 0;
     font-style: italic;
-    color: var(--atelier-moss);
+    color: var(--app-atelier-moss);
 }
 
 .atelier-one-line {
@@ -260,14 +234,14 @@
 
 .atelier-example {
     padding-left: 1rem;
-    border-left: 3px solid var(--atelier-moss);
+    border-left: 3px solid var(--app-atelier-moss);
 }
 
 .atelier-note {
     margin-top: 1.5rem;
     padding: 1rem 1.25rem;
-    border: 1px solid var(--atelier-rule);
-    border-left: 4px solid var(--atelier-clay);
+    border: 1px solid var(--app-atelier-rule);
+    border-left: 4px solid var(--app-atelier-clay);
     border-radius: 0.25rem;
 }
 
@@ -279,11 +253,11 @@
 .atelier-note-rules {
     margin-bottom: 0.25rem;
     font-size: 0.95rem;
-    color: var(--atelier-ink-soft);
+    color: var(--app-atelier-ink-soft);
 }
 
 .atelier-note--overdue .atelier-note-rules {
-    color: var(--atelier-clay);
+    color: var(--app-atelier-clay);
     font-weight: 600;
 }
 
