@@ -1,0 +1,65 @@
+# DRAFT: move this file to .github/workflows/atelier-recheck.yml. The ticket agent's token has no `workflows`
+# permission, so it could not push it there (#526). Delete this comment block and the .github/workflow-drafts folder
+# when you move it.
+name: Atelier Re-check
+
+# The monthly country-note re-check (#510, #526). atelier-recheck.js lists the In the US / In Vietnam notes due for a
+# re-check: notes on Term Entries last reviewed more than 12 months ago, and Tax notes whose Rules-as-of year is before
+# the current year. This job keeps one open ready-for-human issue, "Atelier notes due for a re-check", listing them:
+#   - notes due: it updates the open issue, or opens one;
+#   - nothing due: it updates an open issue to say so, and opens none.
+# It reads the content folder only, changes no files and never fails a build.
+on:
+  schedule:
+    - cron: '0 7 1 * *' # 07:00 UTC on the 1st of each month
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  recheck:
+    name: List Atelier notes due for a re-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      ISSUE_TITLE: Atelier notes due for a re-check
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: List the due notes
+        id: list
+        run: |
+          node PersonalFinance/src/PersonalFinance.Web/tools/atelier-recheck.js > "$RUNNER_TEMP/recheck.md"
+          cat "$RUNNER_TEMP/recheck.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or update the re-check issue
+        env:
+          DUE: ${{ steps.list.outputs.due }}
+        run: |
+          # The search matches words, so keep only the issue with exactly this title (the oldest, if several).
+          issue=$(gh issue list --state open --search "\"$ISSUE_TITLE\" in:title" --json number,title |
+            jq -r --arg title "$ISSUE_TITLE" 'map(select(.title == $title)) | sort_by(.number) | .[0].number // empty')
+          if [ -n "$issue" ]; then
+            gh issue edit "$issue" --body-file "$RUNNER_TEMP/recheck.md" --add-label ready-for-human
+            echo "::notice::Updated #$issue: $DUE note(s) due."
+          elif [ "${DUE:-0}" -gt 0 ]; then
+            gh issue create --title "$ISSUE_TITLE" --label ready-for-human --body-file "$RUNNER_TEMP/recheck.md"
+            echo "::notice::Opened the re-check issue: $DUE note(s) due."
+          else
+            echo "::notice::Nothing due and no open re-check issue; opened none."
+          fi
