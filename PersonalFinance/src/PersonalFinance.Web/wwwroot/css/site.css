@@ -126,6 +126,23 @@
     /* A label on a series' fill (the first two series) */
     --app-on-chart: #FFFFFF;
 
+    /* The Atelier (#517, look from #496): warm paper with grain, charcoal ink, clay and moss accents, book spines on a
+       shelf. learning.css draws the pages from these; the dark set is a lamplit desk. */
+    --app-atelier-paper: #F6F0E4;
+    --app-atelier-sheet: #FBF7EF;
+    --app-atelier-ink: #2B2926;
+    --app-atelier-ink-soft: #57524B;
+    --app-atelier-rule: #DDD2BF;
+    --app-atelier-clay: #A4502F;
+    --app-atelier-clay-hover: #873F23;
+    --app-atelier-moss: #4F6B3A;
+    --app-atelier-spine: #E9DDC6;
+    --app-atelier-spine-edge: #C9B794;
+    --app-atelier-shelf: #8A6A45;
+    --app-atelier-lamp: transparent;
+    --app-atelier-grain: rgba(60, 40, 20, 0.05);
+    --app-atelier-grain-fine: rgba(60, 40, 20, 0.035);
+
     /* Minimal shadows — rules over elevation */
     --app-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.04);
     --app-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.06);
@@ -274,6 +291,22 @@
     --app-budget-category-9: #9BC765;
     --app-budget-category-10: #7F8E9A;
     --app-on-chart: var(--lp-paper);
+
+    /* The Atelier's lamplit desk: dark wood, a soft light at the top, cream ink */
+    --app-atelier-paper: #2A211A;
+    --app-atelier-sheet: #33291F;
+    --app-atelier-ink: #F1E7D4;
+    --app-atelier-ink-soft: #CDBFA6;
+    --app-atelier-rule: #4C3E30;
+    --app-atelier-clay: #E3A07F;
+    --app-atelier-clay-hover: #F0BB9F;
+    --app-atelier-moss: #A9C28F;
+    --app-atelier-spine: #4A3A2B;
+    --app-atelier-spine-edge: #6B5640;
+    --app-atelier-shelf: #1C1611;
+    --app-atelier-lamp: rgba(255, 214, 150, 0.12);
+    --app-atelier-grain: rgba(255, 230, 190, 0.04);
+    --app-atelier-grain-fine: rgba(255, 230, 190, 0.03);
 
     --app-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.3);
     --app-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.35);

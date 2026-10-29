@@ -1,3 +1,5 @@
+@using System.Globalization
+@using System.Linq.Expressions
 @model BudgetViewModel
 
 @{
@@ -7,6 +9,31 @@
     // selector rescales from the option's data-bound-scale (#444).
     string budgetCurrency = SupportedCurrencies.CodeOrDefault(Model.CurrencyCode);
     string symbol = SupportedCurrencies.Find(budgetCurrency)!.Symbol;
+    string maxInCurrency = MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency);
+    string zeroPercent = 0m.ToString("N1", CultureInfo.CurrentCulture) + "%";
+
+    // The ten categories in ledger order. The index is the category's colour token in site.css
+    // (--app-budget-category-1 to -10), which the Month Strip's segments and the rows' swatches share (#487).
+    (string Name, Expression<Func<BudgetViewModel, decimal>> Amount, decimal Value)[] categories =
+    {
+        ("Housing", m => m.Housing, Model.Housing),
+        ("Food", m => m.Food, Model.Food),
+        ("Transportation", m => m.Transportation, Model.Transportation),
+        ("Utilities", m => m.Utilities, Model.Utilities),
+        ("Insurance", m => m.Insurance, Model.Insurance),
+        ("Healthcare", m => m.Healthcare, Model.Healthcare),
+        ("Savings", m => m.Savings, Model.Savings),
+        ("DebtRepayment", m => m.DebtRepayment, Model.DebtRepayment),
+        ("Entertainment", m => m.Entertainment, Model.Entertainment),
+        ("Miscellaneous", m => m.Miscellaneous, Model.Miscellaneous)
+    };
+    decimal shareBasis = Math.Max(Model.MonthlyIncome, Model.TotalAllocated);
+
+    string ShareWidth(decimal amount)
+    {
+        decimal percent = shareBasis <= 0 ? 0m : amount * 100m / shareBasis;
+        return percent.ToString("0.##", CultureInfo.InvariantCulture);
+    }
 }
 
 @section Styles {
@@ -45,525 +72,148 @@
         <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
     }
 
-    <!-- Page Header -->
-    <div class="budget-header mb-4">
-        <div class="budget-header__content">
-            <div>
-                <h1 class="budget-title">
-                    <span class="budget-title__icon" aria-hidden="true">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path
-                                d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
-                    </span>
-                    @L["BudgetPlanner.Title"]
-                </h1>
-                <p class="budget-subtitle">@L["BudgetPlanner.Subtitle"]</p>
-            </div>
-        </div>
-    </div>
+    <header class="budget-header">
+        <h1 class="budget-title">@L["BudgetPlanner.Title"]</h1>
+        <p class="budget-subtitle">@L["BudgetPlanner.Subtitle"]</p>
+    </header>
 
     <form asp-action="Save" method="post" id="budgetForm">
         @Html.AntiForgeryToken()
 
-        <!-- Income Hero Card -->
-        <div class="card budget-income-card mb-4">
-            <div class="card-body">
-                <div class="budget-income-hero">
-                    <div class="budget-income-hero__icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 1v22"/>
-                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                        </svg>
-                    </div>
-                    <div class="budget-income-hero__content">
-                        <label asp-for="MonthlyIncome" class="budget-income-hero__label"></label>
-                        <div class="budget-income-hero__input-wrapper">
-                            <span class="budget-income-hero__prefix" data-budget-currency-symbol>@symbol</span>
-                            <input asp-for="MonthlyIncome" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)"
-                                   class="form-control budget-income-input" aria-describedby="incomeHelp"/>
-                            <span class="budget-income-hero__suffix" id="incomeHelp">@L["BudgetPlanner.Income.PerMonth"]</span>
-                        </div>
-                        <span asp-validation-for="MonthlyIncome" class="invalid-feedback"></span>
-                        <div class="budget-income-hero__currency">
-                            <label asp-for="CurrencyCode" class="form-label small mb-1"></label>
-                            <select asp-for="CurrencyCode" class="form-select form-select-sm" data-currency-selector
-                                    data-currency-targets=".budget-income-input, .budget-amount-input"
-                                    data-currency-symbols="[data-budget-currency-symbol]"
-                                    data-currency-bounds=".budget-income-input, .budget-amount-input">
-                                @foreach (var currency in SupportedCurrencies.All)
-                                {
-                                    <option value="@currency.Code" data-bound-scale="@currency.BoundScale" selected="@(currency.Code == budgetCurrency)">@currency.Code · @currency.DisplayName</option>
-                                }
-                            </select>
-                        </div>
-                    </div>
+        <!-- The month: income on the left, what is still unassigned on the right, and the Month Strip beneath both -->
+        <section class="budget-hero" aria-labelledby="budgetIncomeLabel">
+            <div class="budget-income">
+                <label asp-for="MonthlyIncome" class="budget-income__label" id="budgetIncomeLabel"></label>
+                <div class="budget-income__entry">
+                    <span class="budget-income__symbol" data-budget-currency-symbol aria-hidden="true">@symbol</span>
+                    <input asp-for="MonthlyIncome" type="text" inputmode="decimal" data-money-input
+                           data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount"
+                           data-max="@maxInCurrency" class="form-control budget-income-input"
+                           aria-describedby="incomeHelp"/>
+                    <span class="budget-income__per" id="incomeHelp">@L["BudgetPlanner.Income.PerMonth"]</span>
                 </div>
-            </div>
-        </div>
-
-        <!-- Two-Column Layout: Categories + Chart Sidebar -->
-        <div class="row g-3">
-            <!-- Left Column: Category Allocations -->
-            <div class="col-lg-8">
-                <div class="card budget-card">
-                    <div class="budget-card__header">
-                        <div class="budget-card__header-left">
-                            <div class="budget-card__icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                     stroke-linejoin="round">
-                                    <rect width="7" height="7" x="3" y="3" rx="1"/>
-                                    <rect width="7" height="7" x="14" y="3" rx="1"/>
-                                    <rect width="7" height="7" x="14" y="14" rx="1"/>
-                                    <rect width="7" height="7" x="3" y="14" rx="1"/>
-                                </svg>
-                            </div>
-                            <h2 class="budget-card__title">@L["BudgetPlanner.Allocations.Title"]</h2>
-                        </div>
-                        <span class="budget-total-badge" id="budgetTotalBadge">
-                            <span id="budgetTotalAmount">@MoneyFormatter.FormatWhole(0, budgetCurrency)</span> / <span id="budgetIncomeAmount">@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
-                        </span>
-                    </div>
-                    <div class="budget-card__body">
-                        <div class="budget-categories">
-                            <!-- Housing -->
-                            <div class="budget-category-card">
-                                <div class="budget-category-card__header">
-                                    <div class="budget-category-card__info">
-                                        <span class="budget-category-card__icon" aria-hidden="true">
-                                            <i class="bi bi-house"></i>
-                                        </span>
-                                        <span class="budget-category-color-box" data-color-index="0"
-                                              aria-hidden="true"></span>
-                                        <label class="budget-category__label" for="Housing">@L["BudgetPlanner.Category.Housing"]</label>
-                                    </div>
-                                    <div class="budget-category__amount" data-amount-for="Housing">
-                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
-                                    </div>
-                                </div>
-                                <div class="budget-category-card__controls">
-                                    <input type="range" class="form-range budget-slider"
-                                           id="slider-Housing" min="0" max="100" step="any"
-                                           data-category="Housing" value="@Model.PercentFor(Model.Housing).ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                           aria-label="@L.Named("BudgetPlanner.Category.SliderAria", ("category", L["BudgetPlanner.Category.Housing"].Value))"/>
-                                    <div class="budget-category__input-group">
-                                        <input type="number" class="form-control budget-percent-input"
-                                               min="0" max="100" step="any" data-category="Housing"
-                                               aria-label="@L.Named("BudgetPlanner.Category.PercentAria", ("category", L["BudgetPlanner.Category.Housing"].Value))"/>
-                                        <span class="budget-percent-input__suffix">%</span>
-                                    </div>
-                                    <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Housing" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
-                                               data-category="Housing"
-                                               aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Housing"].Value))"/>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Food -->
-                            <div class="budget-category-card">
-                                <div class="budget-category-card__header">
-                                    <div class="budget-category-card__info">
-                                        <span class="budget-category-card__icon" aria-hidden="true">
-                                            <i class="bi bi-egg-fried"></i>
-                                        </span>
-                                        <span class="budget-category-color-box" data-color-index="1"
-                                              aria-hidden="true"></span>
-                                        <label class="budget-category__label" for="Food">@L["BudgetPlanner.Category.Food"]</label>
-                                    </div>
-                                    <div class="budget-category__amount" data-amount-for="Food">
-                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
-                                    </div>
-                                </div>
-                                <div class="budget-category-card__controls">
-                                    <input type="range" class="form-range budget-slider"
-                                           id="slider-Food" min="0" max="100" step="any"
-                                           data-category="Food" value="@Model.PercentFor(Model.Food).ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                           aria-label="@L.Named("BudgetPlanner.Category.SliderAria", ("category", L["BudgetPlanner.Category.Food"].Value))"/>
-                                    <div class="budget-category__input-group">
-                                        <input type="number" class="form-control budget-percent-input"
-                                               min="0" max="100" step="any" data-category="Food"
-                                               aria-label="@L.Named("BudgetPlanner.Category.PercentAria", ("category", L["BudgetPlanner.Category.Food"].Value))"/>
-                                        <span class="budget-percent-input__suffix">%</span>
-                                    </div>
-                                    <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Food" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
-                                               data-category="Food"
-                                               aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Food"].Value))"/>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Transportation -->
-                            <div class="budget-category-card">
-                                <div class="budget-category-card__header">
-                                    <div class="budget-category-card__info">
-                                        <span class="budget-category-card__icon" aria-hidden="true">
-                                            <i class="bi bi-car-front"></i>
-                                        </span>
-                                        <span class="budget-category-color-box" data-color-index="2"
-                                              aria-hidden="true"></span>
-                                        <label class="budget-category__label"
-                                               for="Transportation">@L["BudgetPlanner.Category.Transportation"]</label>
-                                    </div>
-                                    <div class="budget-category__amount" data-amount-for="Transportation">
-                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
-                                    </div>
-                                </div>
-                                <div class="budget-category-card__controls">
-                                    <input type="range" class="form-range budget-slider"
-                                           id="slider-Transportation" min="0" max="100" step="any"
-                                           data-category="Transportation" value="@Model.PercentFor(Model.Transportation).ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                           aria-label="@L.Named("BudgetPlanner.Category.SliderAria", ("category", L["BudgetPlanner.Category.Transportation"].Value))"/>
-                                    <div class="budget-category__input-group">
-                                        <input type="number" class="form-control budget-percent-input"
-                                               min="0" max="100" step="any" data-category="Transportation"
-                                               aria-label="@L.Named("BudgetPlanner.Category.PercentAria", ("category", L["BudgetPlanner.Category.Transportation"].Value))"/>
-                                        <span class="budget-percent-input__suffix">%</span>
-                                    </div>
-                                    <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Transportation" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
-                                               data-category="Transportation"
-                                               aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Transportation"].Value))"/>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Utilities -->
-                            <div class="budget-category-card">
-                                <div class="budget-category-card__header">
-                                    <div class="budget-category-card__info">
-                                        <span class="budget-category-card__icon" aria-hidden="true">
-                                            <i class="bi bi-lightning"></i>
-                                        </span>
-                                        <span class="budget-category-color-box" data-color-index="3"
-                                              aria-hidden="true"></span>
-                                        <label class="budget-category__label" for="Utilities">@L["BudgetPlanner.Category.Utilities"]</label>
-                                    </div>
-                                    <div class="budget-category__amount" data-amount-for="Utilities">
-                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
-                                    </div>
-                                </div>
-                                <div class="budget-category-card__controls">
-                                    <input type="range" class="form-range budget-slider"
-                                           id="slider-Utilities" min="0" max="100" step="any"
-                                           data-category="Utilities" value="@Model.PercentFor(Model.Utilities).ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                           aria-label="@L.Named("BudgetPlanner.Category.SliderAria", ("category", L["BudgetPlanner.Category.Utilities"].Value))"/>
-                                    <div class="budget-category__input-group">
-                                        <input type="number"
-                                               class="form-control budget-percent-input"
-                                               min="0" max="100" step="any" data-category="Utilities"
-                                               aria-label="@L.Named("BudgetPlanner.Category.PercentAria", ("category", L["BudgetPlanner.Category.Utilities"].Value))"/>
-                                        <span class="budget-percent-input__suffix">%</span>
-                                    </div>
-                                    <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Utilities" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
-                                               data-category="Utilities"
-                                               aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Utilities"].Value))"/>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Insurance -->
-                            <div class="budget-category-card">
-                                <div class="budget-category-card__header">
-                                    <div class="budget-category-card__info">
-                                        <span class="budget-category-card__icon" aria-hidden="true">
-                                            <i class="bi bi-shield-check"></i>
-                                        </span>
-                                        <span class="budget-category-color-box" data-color-index="4"
-                                              aria-hidden="true"></span>
-                                        <label class="budget-category__label" for="Insurance">@L["BudgetPlanner.Category.Insurance"]</label>
-                                    </div>
-                                    <div class="budget-category__amount" data-amount-for="Insurance">
-                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
-                                    </div>
-                                </div>
-                                <div class="budget-category-card__controls">
-                                    <input type="range" class="form-range budget-slider"
-                                           id="slider-Insurance" min="0" max="100" step="any"
-                                           data-category="Insurance" value="@Model.PercentFor(Model.Insurance).ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                           aria-label="@L.Named("BudgetPlanner.Category.SliderAria", ("category", L["BudgetPlanner.Category.Insurance"].Value))"/>
-                                    <div class="budget-category__input-group">
-                                        <input type="number"
-                                               class="form-control budget-percent-input"
-                                               min="0" max="100" step="any" data-category="Insurance"
-                                               aria-label="@L.Named("BudgetPlanner.Category.PercentAria", ("category", L["BudgetPlanner.Category.Insurance"].Value))"/>
-                                        <span class="budget-percent-input__suffix">%</span>
-                                    </div>
-                                    <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Insurance" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
-                                               data-category="Insurance"
-                                               aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Insurance"].Value))"/>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Healthcare -->
-                            <div class="budget-category-card">
-                                <div class="budget-category-card__header">
-                                    <div class="budget-category-card__info">
-                                        <span class="budget-category-card__icon" aria-hidden="true">
-                                            <i class="bi bi-heart-pulse"></i>
-                                        </span>
-                                        <span class="budget-category-color-box" data-color-index="5"
-                                              aria-hidden="true"></span>
-                                        <label class="budget-category__label" for="Healthcare">@L["BudgetPlanner.Category.Healthcare"]</label>
-                                    </div>
-                                    <div class="budget-category__amount" data-amount-for="Healthcare">
-                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
-                                    </div>
-                                </div>
-                                <div class="budget-category-card__controls">
-                                    <input type="range" class="form-range budget-slider"
-                                           id="slider-Healthcare" min="0" max="100" step="any"
-                                           data-category="Healthcare" value="@Model.PercentFor(Model.Healthcare).ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                           aria-label="@L.Named("BudgetPlanner.Category.SliderAria", ("category", L["BudgetPlanner.Category.Healthcare"].Value))"/>
-                                    <div class="budget-category__input-group">
-                                        <input type="number"
-                                               class="form-control budget-percent-input"
-                                               min="0" max="100" step="any" data-category="Healthcare"
-                                               aria-label="@L.Named("BudgetPlanner.Category.PercentAria", ("category", L["BudgetPlanner.Category.Healthcare"].Value))"/>
-                                        <span class="budget-percent-input__suffix">%</span>
-                                    </div>
-                                    <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Healthcare" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
-                                               data-category="Healthcare"
-                                               aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Healthcare"].Value))"/>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Savings -->
-                            <div class="budget-category-card">
-                                <div class="budget-category-card__header">
-                                    <div class="budget-category-card__info">
-                                        <span class="budget-category-card__icon" aria-hidden="true">
-                                            <i class="bi bi-piggy-bank"></i>
-                                        </span>
-                                        <span class="budget-category-color-box" data-color-index="6"
-                                              aria-hidden="true"></span>
-                                        <label class="budget-category__label" for="Savings">@L["BudgetPlanner.Category.Savings"]</label>
-                                    </div>
-                                    <div class="budget-category__amount" data-amount-for="Savings">
-                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
-                                    </div>
-                                </div>
-                                <div class="budget-category-card__controls">
-                                    <input type="range" class="form-range budget-slider"
-                                           id="slider-Savings" min="0" max="100" step="any"
-                                           data-category="Savings" value="@Model.PercentFor(Model.Savings).ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                           aria-label="@L.Named("BudgetPlanner.Category.SliderAria", ("category", L["BudgetPlanner.Category.Savings"].Value))"/>
-                                    <div class="budget-category__input-group">
-                                        <input type="number" class="form-control budget-percent-input"
-                                               min="0" max="100" step="any" data-category="Savings"
-                                               aria-label="@L.Named("BudgetPlanner.Category.PercentAria", ("category", L["BudgetPlanner.Category.Savings"].Value))"/>
-                                        <span class="budget-percent-input__suffix">%</span>
-                                    </div>
-                                    <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Savings" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
-                                               data-category="Savings"
-                                               aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Savings"].Value))"/>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Debt Repayment -->
-                            <div class="budget-category-card">
-                                <div class="budget-category-card__header">
-                                    <div class="budget-category-card__info">
-                                        <span class="budget-category-card__icon" aria-hidden="true">
-                                            <i class="bi bi-credit-card"></i>
-                                        </span>
-                                        <span class="budget-category-color-box" data-color-index="7"
-                                              aria-hidden="true"></span>
-                                        <label class="budget-category__label" for="DebtRepayment">@L["BudgetPlanner.Category.DebtRepayment"]</label>
-                                    </div>
-                                    <div class="budget-category__amount" data-amount-for="DebtRepayment">
-                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
-                                    </div>
-                                </div>
-                                <div class="budget-category-card__controls">
-                                    <input type="range" class="form-range budget-slider"
-                                           id="slider-DebtRepayment" min="0" max="100" step="any"
-                                           data-category="DebtRepayment" value="@Model.PercentFor(Model.DebtRepayment).ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                           aria-label="@L.Named("BudgetPlanner.Category.SliderAria", ("category", L["BudgetPlanner.Category.DebtRepayment"].Value))"/>
-                                    <div class="budget-category__input-group">
-                                        <input type="number"
-                                               class="form-control budget-percent-input"
-                                               min="0" max="100" step="any" data-category="DebtRepayment"
-                                               aria-label="@L.Named("BudgetPlanner.Category.PercentAria", ("category", L["BudgetPlanner.Category.DebtRepayment"].Value))"/>
-                                        <span class="budget-percent-input__suffix">%</span>
-                                    </div>
-                                    <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="DebtRepayment" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
-                                               data-category="DebtRepayment"
-                                               aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.DebtRepayment"].Value))"/>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Entertainment -->
-                            <div class="budget-category-card">
-                                <div class="budget-category-card__header">
-                                    <div class="budget-category-card__info">
-                                        <span class="budget-category-card__icon" aria-hidden="true">
-                                            <i class="bi bi-controller"></i>
-                                        </span>
-                                        <span class="budget-category-color-box" data-color-index="8"
-                                              aria-hidden="true"></span>
-                                        <label class="budget-category__label" for="Entertainment">@L["BudgetPlanner.Category.Entertainment"]</label>
-                                    </div>
-                                    <div class="budget-category__amount" data-amount-for="Entertainment">
-                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
-                                    </div>
-                                </div>
-                                <div class="budget-category-card__controls">
-                                    <input type="range" class="form-range budget-slider"
-                                           id="slider-Entertainment" min="0" max="100" step="any"
-                                           data-category="Entertainment" value="@Model.PercentFor(Model.Entertainment).ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                           aria-label="@L.Named("BudgetPlanner.Category.SliderAria", ("category", L["BudgetPlanner.Category.Entertainment"].Value))"/>
-                                    <div class="budget-category__input-group">
-                                        <input type="number"
-                                               class="form-control budget-percent-input"
-                                               min="0" max="100" step="any" data-category="Entertainment"
-                                               aria-label="@L.Named("BudgetPlanner.Category.PercentAria", ("category", L["BudgetPlanner.Category.Entertainment"].Value))"/>
-                                        <span class="budget-percent-input__suffix">%</span>
-                                    </div>
-                                    <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Entertainment" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
-                                               data-category="Entertainment"
-                                               aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Entertainment"].Value))"/>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Miscellaneous -->
-                            <div class="budget-category-card">
-                                <div class="budget-category-card__header">
-                                    <div class="budget-category-card__info">
-                                        <span class="budget-category-card__icon" aria-hidden="true">
-                                            <i class="bi bi-three-dots"></i>
-                                        </span>
-                                        <span class="budget-category-color-box" data-color-index="9"
-                                              aria-hidden="true"></span>
-                                        <label class="budget-category__label" for="Miscellaneous">@L["BudgetPlanner.Category.Miscellaneous"]</label>
-                                    </div>
-                                    <div class="budget-category__amount" data-amount-for="Miscellaneous">
-                                        <span>@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
-                                    </div>
-                                </div>
-                                <div class="budget-category-card__controls">
-                                    <input type="range" class="form-range budget-slider"
-                                           id="slider-Miscellaneous" min="0" max="100" step="any"
-                                           data-category="Miscellaneous" value="@Model.PercentFor(Model.Miscellaneous).ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                           aria-label="@L.Named("BudgetPlanner.Category.SliderAria", ("category", L["BudgetPlanner.Category.Miscellaneous"].Value))"/>
-                                    <div class="budget-category__input-group">
-                                        <input type="number"
-                                               class="form-control budget-percent-input"
-                                               min="0" max="100" step="any" data-category="Miscellaneous"
-                                               aria-label="@L.Named("BudgetPlanner.Category.PercentAria", ("category", L["BudgetPlanner.Category.Miscellaneous"].Value))"/>
-                                        <span class="budget-percent-input__suffix">%</span>
-                                    </div>
-                                    <div class="budget-category__input-group budget-amount-input-group">
-                                        <span class="budget-amount-input__prefix" data-budget-currency-symbol>@symbol</span>
-                                        <input asp-for="Miscellaneous" type="text" inputmode="decimal" data-money-input data-currency="@budgetCurrency" data-max-usd="@BudgetPlannerLimits.MaxAmount" data-max="@MoneyBounds.MaxInvariant(BudgetPlannerLimits.MaxAmount, budgetCurrency)" class="form-control budget-amount-input"
-                                               data-category="Miscellaneous"
-                                               aria-label="@L.Named("BudgetPlanner.Category.AmountAria", ("category", L["BudgetPlanner.Category.Miscellaneous"].Value))"/>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Remaining Allocation Indicator -->
-                        <div class="budget-remaining" id="budgetRemaining">
-                            <span class="budget-remaining__label">@L["BudgetPlanner.Js.RemainingLabel"]</span>
-                            <span class="budget-remaining__value" id="budgetRemainingValue">@MoneyFormatter.FormatWhole(0, budgetCurrency) (@(0m.ToString("N1", System.Globalization.CultureInfo.CurrentCulture))%)</span>
-                        </div>
-                    </div>
-                    <div class="budget-card__footer">
-                        <button type="submit" class="btn btn-primary budget-save-btn" id="budgetSaveBtn">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                 stroke-linejoin="round" class="me-2">
-                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                                <polyline points="17 21 17 13 7 13 7 21"/>
-                                <polyline points="7 3 7 8 15 8"/>
-                            </svg>
-                            @L["BudgetPlanner.Save"]
-                        </button>
-                    </div>
+                <span asp-validation-for="MonthlyIncome" class="invalid-feedback"></span>
+                <div class="budget-income__currency">
+                    <label asp-for="CurrencyCode" class="budget-income__currency-label"></label>
+                    <select asp-for="CurrencyCode" class="form-select form-select-sm" data-currency-selector
+                            data-currency-targets=".budget-income-input, .budget-amount-input"
+                            data-currency-symbols="[data-budget-currency-symbol]"
+                            data-currency-bounds=".budget-income-input, .budget-amount-input">
+                        @foreach (var currency in SupportedCurrencies.All)
+                        {
+                            <option value="@currency.Code" data-bound-scale="@currency.BoundScale"
+                                    selected="@(currency.Code == budgetCurrency)">@currency.Code (@currency.DisplayName)</option>
+                        }
+                    </select>
                 </div>
             </div>
 
-            <!-- Right Column: Chart and Summary Sidebar -->
-            <div class="col-lg-4">
-                <div class="card budget-card budget-card--sticky">
-                    <div class="budget-card__header">
-                        <div class="budget-card__header-left">
-                            <div class="budget-card__icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                     stroke-linejoin="round">
-                                    <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
-                                    <path d="M22 12A10 10 0 0 0 12 2v10z"/>
-                                </svg>
-                            </div>
-                            <h2 class="budget-card__title">@L["BudgetPlanner.Breakdown.Title"]</h2>
-                        </div>
+            <div class="budget-remaining" id="budgetRemaining">
+                <span class="budget-remaining__label">@L["BudgetPlanner.Js.RemainingLabel"]</span>
+                <span class="budget-remaining__value" id="budgetRemainingValue">@MoneyFormatter.FormatWhole(0, budgetCurrency) (@zeroPercent)</span>
+            </div>
+
+            <div class="budget-strip" id="budgetStrip" role="img" aria-label="@L["BudgetPlanner.Strip.Aria"]">
+                @for (int i = 0; i < categories.Length; i++)
+                {
+                    <span class="budget-strip__segment" data-category="@categories[i].Name"
+                          style="--cat: var(--app-budget-category-@(i + 1)); width: @ShareWidth(categories[i].Value)%">
+                        <span class="budget-strip__label"><span class="budget-strip__name">@L["BudgetPlanner.Category." + categories[i].Name]</span><span class="budget-strip__pct"></span></span>
+                    </span>
+                }
+                <span class="budget-strip__segment budget-strip__segment--unallocated" id="budgetStripUnallocated"
+                      style="width: @ShareWidth(Math.Max(0m, Model.RemainingAmount))%">
+                    <span class="budget-strip__label"><span class="budget-strip__name">@L["BudgetPlanner.Js.Unallocated"]</span><span class="budget-strip__pct"></span></span>
+                </span>
+                <span class="budget-strip__overflow" id="budgetStripOverflow" hidden></span>
+            </div>
+        </section>
+
+        <!-- The ledger: one row per category, closed by the total under a double rule -->
+        <section class="budget-ledger" id="budgetLedger" aria-labelledby="budgetLedgerTitle">
+            <div class="budget-ledger__top">
+                <h2 class="budget-ledger__title" id="budgetLedgerTitle">@L["BudgetPlanner.Allocations.Title"]</h2>
+                <p class="budget-ledger__hint" id="budgetNoIncomeHint" hidden>@L["BudgetPlanner.Ledger.NoIncomeHint"]</p>
+            </div>
+
+            <div class="budget-ledger__head" aria-hidden="true">
+                <span></span>
+                <span>@L["BudgetPlanner.Ledger.Category"]</span>
+                <span class="budget-ledger__head-share">@L["BudgetPlanner.Ledger.Share"]</span>
+                <span class="budget-ledger__head-num">%</span>
+                <span class="budget-ledger__head-num">@L["BudgetPlanner.Ledger.Amount"]</span>
+            </div>
+
+            @for (int i = 0; i < categories.Length; i++)
+            {
+                string name = categories[i].Name;
+                string label = L["BudgetPlanner.Category." + name].Value;
+                
+                <div class="budget-row" data-category="@name" style="--cat: var(--app-budget-category-@(i + 1))">
+                    <span class="budget-row__swatch" aria-hidden="true"></span>
+                    <label class="budget-category__label" for="@name">@label</label>
+                    <div class="budget-row__share">
+                        <input type="range" class="budget-slider" id="slider-@name" min="0" max="100" step="any"
+                               data-category="@name" value="@Model.PercentFor(categories[i].Value).ToString(CultureInfo.InvariantCulture)"
+                               aria-label="@L.Named("BudgetPlanner.Category.SliderAria", ("category", label))"/>
                     </div>
-                    <div class="budget-card__body">
-                        <div class="budget-chart-container">
-                            <canvas id="budgetPieChart" aria-label="@L["BudgetPlanner.Breakdown.ChartAria"]" role="img"></canvas>
-                        </div>
-                        <div class="budget-summary-list-container">
-                            <div class="budget-summary-list" id="budgetSummaryList">
-                                <!-- Populated by JS -->
-                            </div>
-                            <div class="budget-summary-total" id="budgetSummaryTotal">
-                                <div class="budget-summary-total__label">@L["BudgetPlanner.Breakdown.Total"]</div>
-                                <div class="budget-summary-total__values">
-                                    <span id="budgetSummaryTotalPercent">@(0m.ToString("N1", System.Globalization.CultureInfo.CurrentCulture))%</span>
-                                    <span id="budgetSummaryTotalAmount">@MoneyFormatter.Format(0, SupportedCurrencies.Default.Code)</span>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="budget-row__percent">
+                        <input type="number" class="form-control budget-percent-input" min="0" max="100" step="any"
+                               data-category="@name"
+                               aria-label="@L.Named("BudgetPlanner.Category.PercentAria", ("category", label))"/>
+                        <span class="budget-percent-input__suffix" aria-hidden="true">%</span>
+                    </div>
+                    <div class="budget-row__amount">
+                        <span class="budget-amount-input__prefix" data-budget-currency-symbol aria-hidden="true">@symbol</span>
+                        @Html.TextBoxFor(categories[i].Amount, null, new
+                        {
+                            @class = "form-control budget-amount-input",
+                            inputmode = "decimal",
+                            data_money_input = "",
+                            data_currency = budgetCurrency,
+                            data_max_usd = BudgetPlannerLimits.MaxAmount,
+                            data_max = maxInCurrency,
+                            data_category = name,
+                            aria_label = L.Named("BudgetPlanner.Category.AmountAria", ("category", label))
+                        })
+                        @Html.ValidationMessageFor(categories[i].Amount, null, new { @class = "invalid-feedback" })
                     </div>
                 </div>
+            }
+
+            <div class="budget-total" id="budgetSummaryTotal">
+                <span></span>
+                <span class="budget-total__label">@L["BudgetPlanner.Breakdown.Total"]</span>
+                <span></span>
+                <span class="budget-total__value" id="budgetSummaryTotalPercent">@zeroPercent</span>
+                <span class="budget-total__value" id="budgetSummaryTotalAmount">@MoneyFormatter.FormatWhole(0, budgetCurrency)</span>
             </div>
-        </div>
+
+            <div class="budget-actions">
+                <button type="submit" class="btn btn-primary budget-save-btn" id="budgetSaveBtn">@L["BudgetPlanner.Save"]</button>
+            </div>
+        </section>
     </form>
 </div>
 
 @section Scripts {
     <js-strings prefix="BudgetPlanner.Js." />
-    <script src="~/lib/chartjs/chart.umd.min.js"></script>
     <script src="~/js/budget/budget.js" asp-append-version="true"></script>
     <script>
         (function () {
             'use strict';
             window.budgetInitialData = {
-                monthlyIncome: @Model.MonthlyIncome.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                housing: @Model.Housing.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                food: @Model.Food.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                transportation: @Model.Transportation.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                utilities: @Model.Utilities.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                insurance: @Model.Insurance.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                healthcare: @Model.Healthcare.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                savings: @Model.Savings.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                debtRepayment: @Model.DebtRepayment.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                entertainment: @Model.Entertainment.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                miscellaneous: @Model.Miscellaneous.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                monthlyIncome: @Model.MonthlyIncome.ToString(CultureInfo.InvariantCulture),
+                housing: @Model.Housing.ToString(CultureInfo.InvariantCulture),
+                food: @Model.Food.ToString(CultureInfo.InvariantCulture),
+                transportation: @Model.Transportation.ToString(CultureInfo.InvariantCulture),
+                utilities: @Model.Utilities.ToString(CultureInfo.InvariantCulture),
+                insurance: @Model.Insurance.ToString(CultureInfo.InvariantCulture),
+                healthcare: @Model.Healthcare.ToString(CultureInfo.InvariantCulture),
+                savings: @Model.Savings.ToString(CultureInfo.InvariantCulture),
+                debtRepayment: @Model.DebtRepayment.ToString(CultureInfo.InvariantCulture),
+                entertainment: @Model.Entertainment.ToString(CultureInfo.InvariantCulture),
+                miscellaneous: @Model.Miscellaneous.ToString(CultureInfo.InvariantCulture)
             };
         })();
     </script>

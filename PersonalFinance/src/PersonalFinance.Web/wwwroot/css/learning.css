@@ -1,0 +1,288 @@
+/*
+ * The Atelier (#513, look from #496, variant C "Road to wealth"). Its colours are the --app-atelier-* tokens in the
+ * site.css token blocks (#480): warm paper with grain, charcoal ink, clay and moss accents in the light theme, a
+ * lamplit desk (warm dark wood, a soft light at the top, cream ink) in the dark one, following the theme switch
+ * (#479). Never Georgia: it splits stacked Vietnamese accents.
+ */
+.atelier {
+    --atelier-serif: "Iowan Old Style", "Charter", "Noto Serif", "Cambria", "Times New Roman", serif;
+
+    position: relative;
+    margin: 0 auto;
+    max-width: 52rem;
+    padding: 2rem clamp(1rem, 4vw, 2.5rem) 3rem;
+    color: var(--app-atelier-ink);
+    background-color: var(--app-atelier-paper);
+    /* Grain: two faint offset dot patterns. */
+    background-image:
+        radial-gradient(ellipse at top, var(--app-atelier-lamp), transparent 60%),
+        radial-gradient(var(--app-atelier-grain) 1px, transparent 1px),
+        radial-gradient(var(--app-atelier-grain-fine) 1px, transparent 1px);
+    background-size: 100% 100%, 5px 5px, 7px 7px;
+    background-position: 0 0, 0 0, 2px 3px;
+    border-radius: 0.5rem;
+    font-family: var(--atelier-serif);
+    font-size: 1.0625rem; /* about 17px */
+    line-height: 1.65;
+}
+
+.atelier h1,
+.atelier h2 {
+    font-family: var(--atelier-serif);
+    color: var(--app-atelier-ink);
+    font-weight: 600;
+}
+
+.atelier a {
+    color: var(--app-atelier-clay);
+    text-underline-offset: 0.18em;
+}
+
+.atelier a:hover,
+.atelier a:focus-visible {
+    color: var(--app-atelier-clay-hover);
+}
+
+.atelier-title {
+    font-size: clamp(1.75rem, 4vw, 2.25rem);
+    line-height: 1.2;
+    margin-bottom: 0.25rem;
+}
+
+.atelier-lede,
+.atelier-aka,
+.atelier-accessed,
+.atelier-reviewed,
+.atelier-disclaimer {
+    color: var(--app-atelier-ink-soft);
+}
+
+.atelier-empty {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    border: 1px dashed var(--app-atelier-rule);
+    border-radius: 0.5rem;
+    color: var(--app-atelier-ink-soft);
+    font-style: italic;
+    text-align: center;
+}
+
+/* Filter */
+.atelier-filter {
+    margin: 1.5rem 0 2rem;
+}
+
+.atelier-filter-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.atelier-filter-input {
+    width: 100%;
+    max-width: 24rem;
+    padding: 0.5rem 0.75rem;
+    font: inherit;
+    color: var(--app-atelier-ink);
+    background: var(--app-atelier-sheet);
+    border: 1px solid var(--app-atelier-spine-edge);
+    border-radius: 0.375rem;
+}
+
+.atelier-filter-input:focus-visible {
+    outline: 2px solid var(--app-atelier-clay);
+    outline-offset: 2px;
+}
+
+.atelier-filter-status,
+.atelier-filter-none {
+    margin: 0.5rem 0 0;
+    color: var(--app-atelier-ink-soft);
+    font-size: 0.95rem;
+}
+
+.atelier-filter-none[hidden],
+.atelier-shelf[hidden],
+.atelier-spine-item[hidden] {
+    display: none;
+}
+
+/* Shelves of book spines */
+.atelier-shelf {
+    margin-bottom: 2.25rem;
+}
+
+.atelier-shelf-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+}
+
+.atelier-spines {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0 0.5rem;
+    list-style: none;
+    border-bottom: 0.6rem solid var(--app-atelier-shelf);
+    border-radius: 0 0 0.25rem 0.25rem;
+}
+
+.atelier-spine-item {
+    display: flex;
+}
+
+.atelier-spine {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    min-height: 9rem;
+    width: 9.5rem;
+    padding: 0.75rem 0.65rem;
+    color: var(--app-atelier-ink) !important;
+    text-decoration: none;
+    background: var(--app-atelier-spine);
+    border: 1px solid var(--app-atelier-spine-edge);
+    border-left-width: 0.35rem;
+    border-left-color: var(--app-atelier-moss);
+    border-radius: 0.2rem 0.2rem 0 0;
+    transition: transform 0.15s ease;
+}
+
+.atelier-spine-item:nth-child(3n + 2) .atelier-spine {
+    border-left-color: var(--app-atelier-clay);
+    min-height: 10rem;
+}
+
+.atelier-spine-item:nth-child(3n) .atelier-spine {
+    min-height: 8.5rem;
+}
+
+.atelier-spine:hover,
+.atelier-spine:focus-visible {
+    transform: translateY(-0.35rem);
+}
+
+.atelier-spine:focus-visible {
+    outline: 2px solid var(--app-atelier-clay);
+    outline-offset: 2px;
+}
+
+.atelier-spine-term {
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.atelier-spine-aka,
+.atelier-spine-vi {
+    font-size: 0.85rem;
+    color: var(--app-atelier-ink-soft);
+    line-height: 1.3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .atelier-spine {
+        transition: none;
+    }
+
+    .atelier-spine:hover,
+    .atelier-spine:focus-visible {
+        transform: none;
+    }
+}
+
+/* Term Entry: stacked paper sheets */
+.atelier-breadcrumb {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+    color: var(--app-atelier-ink-soft);
+}
+
+.atelier-sheet {
+    margin-bottom: 1.25rem;
+    padding: 1.25rem clamp(1rem, 3vw, 1.75rem);
+    background: var(--app-atelier-sheet);
+    border: 1px solid var(--app-atelier-rule);
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 0 var(--app-atelier-rule), 0 3px 0 -1px var(--app-atelier-sheet), 0 3px 0 0 var(--app-atelier-rule);
+}
+
+.atelier-vi-name {
+    margin: 0;
+    font-style: italic;
+    color: var(--app-atelier-moss);
+}
+
+.atelier-one-line {
+    margin: 0.75rem 0 0;
+    font-size: 1.15rem;
+}
+
+.atelier-reading h2,
+.atelier-entry-footer h2 {
+    font-size: 1.2rem;
+    margin: 1.5rem 0 0.5rem;
+}
+
+.atelier-entry-footer h2:first-child {
+    margin-top: 0;
+}
+
+.atelier-example {
+    padding-left: 1rem;
+    border-left: 3px solid var(--app-atelier-moss);
+}
+
+.atelier-note {
+    margin-top: 1.5rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--app-atelier-rule);
+    border-left: 4px solid var(--app-atelier-clay);
+    border-radius: 0.25rem;
+}
+
+.atelier-note .atelier-note-heading {
+    margin-top: 0;
+    font-size: 1.05rem;
+}
+
+.atelier-note-rules {
+    margin-bottom: 0.25rem;
+    font-size: 0.95rem;
+    color: var(--app-atelier-ink-soft);
+}
+
+.atelier-note--overdue .atelier-note-rules {
+    color: var(--app-atelier-clay);
+    font-weight: 600;
+}
+
+.atelier-note-sources,
+.atelier-sources,
+.atelier-related {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.atelier-accessed {
+    display: block;
+    font-size: 0.9rem;
+}
+
+.atelier-video iframe {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 0;
+    border-radius: 0.25rem;
+}
+
+.atelier-reviewed,
+.atelier-disclaimer {
+    margin: 1.25rem 0 0;
+    font-size: 0.95rem;
+}

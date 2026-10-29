@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [13.13.0] - 2026-10-29
+## [13.16.0] - 2026-10-28
 
 ### Added
 
@@ -15,7 +15,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - It keeps the `en.json` lock approach: the content folder's own `i18n.lock.json` records the English each field came from, so an unchanged field is never sent again and a hand-written one is adopted, not replaced.
   - Each Term's Vietnamese name becomes a translator glossary entry, so every text naming the Term uses it.
   - The owner-written fields are never overwritten once present: the Vietnamese name and the *In Vietnam* note. Slugs, Topics, URLs, numbers and sources are never sent.
-  - The script prints `Commit as: i18n: translate N content fields (vi)`. Committing the new `{slug}.vi.json` files from the workflow is a follow-up change to `i18n-translate.yml`, given in the PR.
+  - The workflow stages the content folder as well, so a new `{slug}.vi.json` is committed too, as `i18n: translate N keys (vi), M content fields (vi)`; with only one part pending the subject names that part alone. On a content PR the bot's commit is never an approval: the PR stays with the owner.
+
+## [13.15.0] - 2026-10-28
+
+### Changed
+
+- **Landing Page refresh**: the page lists every tool shipped since it was last written, and the tools section is one ledger instead of three cards and a list.
+  - "One plan, kept like a ledger" shows the six tools of the plan (Net Worth, Budget Planner, Budget Tracker, Savings Goals, Money Priorities, Analysis) as ruled lines, with the sample plan's figure for each in the money face on the right: the FI target in brass, the monthly saving, the planned spending and a six-month emergency fund. The lines close under a double rule on "Financially independent: $1,041,000 at age 52", the same sample as the hero chart.
+  - The seven resources (Investment Calculator, Currency Converter, Research, Finance News, Guild Hall, Google Drive, AI Assistant) follow as a two-column register; Spreadsheet Analysis folds into Google Drive and Analysis.
+  - The privacy list adds the Idle Sign-out, reading its minutes from the configured limit, and sits beside a new "In English and Vietnamese, in dollars and đồng" list: the language switch, the Reporting Currency, and the light or dark theme.
+  - On a phone each ledger line stacks its figure under the text; between phone and desktop the figure sits beside the text in a narrower column.
+  - The E2E landing checks count six plan lines and seven resources, and the dark-mode theme smoke checks the ledger figures and both lists.
+
+## [13.14.0] - 2026-10-29
+
+### Added
+
+- **Atelier Library and Term Entry pages**: guests and signed-in users can browse `/Learning` and read each Term Entry at `/Learning/Term/{slug}`, in their Language with English filling any missing field (#517).
+  - The Library shows book spines on a shelf per Topic. A filter in the browser finds an entry by English Term, abbreviation or Vietnamese name, with or without diacritics.
+  - An entry shows its Vietnamese name, one-liner, explanation, why it matters, worked example, *In the US* / *In Vietnam* notes with their Rules-as-of year, related terms, sources with access dates, further reading, an optional privacy-enhanced video, Last reviewed and a Disclaimer link. Terms named in the text link to their entries.
+  - A note reviewed more than 12 months ago, or a Tax note whose year has passed, says the rules may have changed. An unknown slug is a 404.
+  - The page has its own paper-desk look, with a lamplit desk in dark mode and a serif stack that keeps Vietnamese accents whole.
+- **Anonymous content endpoints**: `GET api/learning/library` and `GET api/learning/terms/{slug}` serve the Library and a Term Entry without an Account, through the new `ILearningApi` contract (#517).
+- **Sitemap and robots.txt**: the Web serves `/sitemap.xml`, listing `/Learning` and every Published Term Entry, and a `robots.txt` that points at it; each entry has a title, meta description and canonical link (#517).
+- **Learning nav entry**: "Learning" appears in the sidebar and the signed-out top bar once the Library has an entry; while it is empty the entry stays hidden and `/Learning` shows a quiet "being written" note (#517).
+
+### Changed
+
+- **E2E fixture content**: `e2e-inmemory.sh` points ApiService at the test fixture content folder, so the new Atelier smoke can read Term Entries before real content ships; against the real, empty folder the smoke checks the empty state instead (#517).
+
+## [13.13.0] - 2026-10-28
+
+### Changed
+
+- **Budget Tracker redesign**: the page is one monthly account book instead of a card layout.
+  - The month is the title, with its neighbours on the page-turn buttons and the month and year selects beside them; one sentence per section says what was spent and earned against plan.
+  - Expenses and Income are two full-width ledger sheets with a variance column: Actual drawn as a bar against a brass tick at Planned, every row of a section on one scale, red past the tick for an expense and green for income. Totals sit under a double rule. The two summary bars are gone, since the column says it per row.
+  - Transactions are one dated journal for the month, income amounts with a plus sign, instead of two side-by-side lists.
+  - The page draws its own icons inline, so the month arrows and row actions show whether or not the cookie banner's "Accept All" has loaded the icon script.
+  - A narrow sheet hides the variance column first, then scrolls sideways; the type scale and spacing follow the app tokens, so dark mode needs no page rules of its own.
+
+## [13.12.0] - 2026-10-28
+
+### Changed
+
+- **Budget Planner redesign**: the page is a month divided on one strip and a ledger of ten rows, instead of a sidebar doughnut beside a grid of category cards.
+  - The Month Strip under the income shows every category as a segment in its colour, the unallocated rest as hatched paper, and an income line with a red overflow when the categories add up to more than the income. Segment names and shares appear when they fit.
+  - Each ledger row is a swatch, the category, a share slider whose track fills in the category colour, the share as a percentage, and the amount. Hovering or focusing a row lights its segment, and the other way round.
+  - The total closes the ledger under a double rule, and the remaining-to-allocate figure sits in the hero beside the income, in green when the budget is fully allocated and in red when it is over.
+  - Until a monthly income is entered, the share sliders and percentages are disabled and a hint says why; amounts can be typed at any time.
+  - Server-side validation messages under an amount now show.
+  - The Chart.js doughnut, its leader lines and the summary list are gone from this page; the Dashboard keeps its own donut.
 
 ## [13.11.1] - 2026-10-28
 
