@@ -224,7 +224,7 @@ public class BudgetPlannerWebControllerTests
     }
 
     [Fact]
-    public void BudgetIndexView_ContainsAspForBindingsForAllCategories()
+    public void BudgetIndexView_BindsEveryCategoryToItsField()
     {
         string viewPath = Path.Combine(RepositoryRoot.SourceProject("PersonalFinance.Web"), "Views", "Budget",
             "Index.cshtml");
@@ -237,10 +237,13 @@ public class BudgetPlannerWebControllerTests
             "Healthcare", "Savings", "DebtRepayment", "Entertainment", "Miscellaneous"
         };
 
+        // The ledger renders its rows from this list: each category's field, bound by Html.TextBoxFor, and its value.
         foreach (string? category in expectedCategories)
         {
-            Assert.Contains($"asp-for=\"{category}\"", content);
+            Assert.Contains($"(\"{category}\", m => m.{category}, Model.{category})", content);
         }
+
+        Assert.Contains("@Html.TextBoxFor(categories[i].Amount", content);
     }
 }
 

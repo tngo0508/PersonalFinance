@@ -1,86 +1,37 @@
 /* ==========================================================================
-   Budget Planner Page Styles (budget-*)
-   "Indigo Ledger" design system — responsive, professional UI
-   ========================================================================== */
-
-:root {
-    /* On the app tokens, so the page follows the theme (#487). --budget-success is the green as text. */
-    --budget-primary: var(--app-brand);
-    --budget-primary-hover: var(--app-brand-hover);
-    --budget-primary-light: var(--app-brand-bg);
-    --budget-primary-glow: color-mix(in srgb, var(--app-brand) 15%, transparent);
-    --budget-surface: var(--app-bg);
-    --budget-surface-soft: var(--app-surface-soft);
-    --budget-border: var(--app-border);
-    --budget-border-hover: var(--app-border-hover);
-    --budget-text-main: var(--app-text);
-    --budget-text-muted: var(--app-text-muted);
-    --budget-text-faint: var(--app-text-disabled);
-    --budget-success: var(--app-brand-text);
-    --budget-success-light: var(--app-accent-positive-soft);
-    --budget-warning: var(--app-accent-warning);
-    --budget-warning-light: var(--app-accent-warning-soft);
-    --budget-danger: var(--app-accent-negative);
-    --budget-danger-light: var(--app-accent-negative-soft);
-    --budget-shadow-sm: var(--app-shadow-2);
-    --budget-shadow-md: var(--app-shadow-4);
-    --budget-radius: var(--app-radius-s);
-    --budget-radius-lg: var(--app-radius-m);
-}
-
-/* ==========================================================================
-   Page Container
+   Budget Planner (budget-*): a month divided on one strip, and a ledger of ten rows.
+   Every colour is an app token (site.css), so the page follows the theme (#487). Each row and its segment of the
+   Month Strip share one category colour through the --cat custom property the view sets inline.
    ========================================================================== */
 
 .budget-page {
-    background: transparent;
-    padding: 0.5rem 0;
+    /* A name inside a coloured segment: white on the light set of category colours, ink on the lighter dark set */
+    --budget-strip-label: #FFFFFF;
+    /* The hatch of income that has no category yet, and of the amount over the income */
+    --budget-hatch: var(--app-border-hover);
+    --budget-hatch-over: var(--app-accent-negative);
+    padding: 0.5rem 0 2rem;
+}
+
+:root[data-theme="dark"] .budget-page {
+    --budget-strip-label: var(--app-bg);
 }
 
 /* ==========================================================================
-   Page Header
+   Header: a quiet title; the figures below carry the page
    ========================================================================== */
 
 .budget-header {
-    margin-bottom: 0;
-    padding-bottom: 1.25rem;
+    padding-bottom: 1rem;
     border-bottom: 1px solid var(--app-border);
 }
 
-.budget-header__content {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
 .budget-title {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 1.5rem;
-    font-weight: var(--app-font-weight-bold);
-    margin: 0 0 0.25rem;
-    line-height: 1.3;
+    font-size: 1.25rem;
+    font-weight: var(--app-font-weight-semibold);
     color: var(--app-text);
-}
-
-.budget-title__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: var(--app-radius-m);
-    background: var(--app-brand-fill);
-    color: var(--app-text-on-brand);
-    flex-shrink: 0;
-}
-
-.budget-title__icon svg {
-    width: 20px;
-    height: 20px;
+    margin: 0 0 0.2rem;
+    line-height: 1.3;
 }
 
 .budget-subtitle {
@@ -88,11 +39,8 @@
     font-size: var(--app-font-size-base);
     margin: 0;
     line-height: 1.5;
+    max-width: 60ch;
 }
-
-/* ==========================================================================
-   Alert
-   ========================================================================== */
 
 .budget-alert {
     border-radius: var(--app-radius-m);
@@ -102,450 +50,488 @@
     gap: 0.5rem;
 }
 
-/* ==========================================================================
-   Income Hero Card
-   ========================================================================== */
-
-.budget-income-card {
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-m);
-    box-shadow: var(--app-shadow-2);
-}
-
-.budget-income-hero {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.budget-income-hero__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    border-radius: var(--app-radius-m);
-    background: var(--app-accent-positive-bg);
-    color: var(--app-brand-text);
-    flex-shrink: 0;
-}
-
-.budget-income-hero__icon svg {
-    width: 22px;
-    height: 22px;
-}
-
-.budget-income-hero__content {
-    flex: 1;
-    max-width: 400px;
-}
-
-.budget-income-hero__label {
+/* Server-side validation messages render with Bootstrap's invalid-feedback, which hides unless shown explicitly */
+.budget-page .invalid-feedback.field-validation-error {
     display: block;
     font-size: var(--app-font-size-small);
-    font-weight: var(--app-font-weight-semibold);
-    color: var(--app-text-muted);
-    margin-bottom: 0.35rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-.budget-income-hero__input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    border: 2px solid var(--app-border);
-    border-radius: var(--app-radius-m);
-    background: var(--app-surface-soft);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    overflow: hidden;
-    min-width: 0;
-    flex: 1 1 auto;
-}
-
-.budget-income-hero__input-wrapper:focus-within {
-    border-color: var(--app-brand);
-    box-shadow: 0 0 0 3px var(--app-brand-bg);
-    background: var(--app-bg);
-}
-
-.budget-income-hero__prefix {
-    display: flex;
-    align-items: center;
-    padding: 0 0.75rem 0 0.85rem;
-    font-size: 1.1rem;
-    font-weight: var(--app-font-weight-semibold);
-    color: var(--app-text-muted);
-    border-right: 1px solid var(--app-border);
-    height: 44px;
-}
-
-.budget-income-input {
-    flex: 1 1 auto;
-    min-width: 0;
-    border: none;
-    background: transparent;
-    font-size: 1.25rem;
-    font-weight: var(--app-font-weight-bold);
-    font-family: var(--app-font-mono);
-    color: var(--app-text);
-    padding: 0 0.5rem;
-    height: 44px;
-    box-shadow: none !important;
-    overflow-wrap: anywhere;
-}
-
-.budget-income-input:focus {
-    outline: none;
-}
-
-.budget-income-hero__suffix {
-    display: flex;
-    align-items: center;
-    padding: 0 0.85rem;
-    font-size: var(--app-font-size-small);
-    color: var(--app-text-muted);
-    border-left: 1px solid var(--app-border);
-    height: 44px;
-    white-space: nowrap;
 }
 
 /* ==========================================================================
-   Cards
+   The month: income, remaining, and the Month Strip
    ========================================================================== */
 
-.budget-card {
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-m);
-    box-shadow: var(--app-shadow-2);
-    overflow: hidden;
-}
-
-.budget-card__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.85rem 1.25rem;
-    border-bottom: 1px solid var(--app-border);
-    background: var(--app-surface-soft);
-}
-
-.budget-card__header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-}
-
-.budget-card__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: var(--app-radius-s);
-    background: var(--app-brand-bg);
-    color: var(--app-brand-text);
-    flex-shrink: 0;
-}
-
-.budget-card__icon svg {
-    width: 16px;
-    height: 16px;
-}
-
-.budget-card__title {
-    font-size: var(--app-font-size-base);
-    font-weight: var(--app-font-weight-semibold);
-    margin: 0;
-    color: var(--app-text);
-}
-
-.budget-card__body {
-    padding: 1.25rem;
-}
-
-.budget-card__footer {
-    padding: 1rem 1.25rem;
-    border-top: 1px solid var(--app-border);
-    background: var(--app-surface-soft);
-    display: flex;
-    justify-content: flex-end;
-}
-
-/* Sticky sidebar card */
-.budget-card--sticky {
-    position: sticky;
-    top: 1rem;
-    align-self: flex-start;
-}
-
-/* ==========================================================================
-   Total Badge
-   ========================================================================== */
-
-.budget-total-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: var(--app-font-size-small);
-    font-weight: var(--app-font-weight-semibold);
-    font-family: var(--app-font-mono);
-    background: var(--app-brand-bg);
-    color: var(--app-brand-text);
-    transition: background 0.15s ease, color 0.15s ease;
-    white-space: nowrap;
-}
-
-.budget-total-badge--over {
-    background: var(--budget-danger-light);
-    color: var(--budget-danger);
-}
-
-.budget-total-badge--exact {
-    background: var(--budget-success-light);
-    color: var(--budget-success);
-}
-
-/* ==========================================================================
-   Categories — 2-Column Grid
-   ========================================================================== */
-
-.budget-categories {
+.budget-hero {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 2rem;
+    row-gap: 1.25rem;
+    align-items: end;
+    padding: 1.5rem 0 1.5rem;
+    border-bottom: 1px solid var(--app-border);
 }
 
-/* ==========================================================================
-   Category Card
-   ========================================================================== */
-
-.budget-category-card {
-    background: var(--app-surface-soft);
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-m);
-    padding: 0.85rem;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.budget-category-card:hover {
-    border-color: var(--app-border-hover);
-    box-shadow: var(--app-shadow-2);
-}
-
-.budget-category-card__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-bottom: 0.6rem;
-}
-
-.budget-category-card__info {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+.budget-income {
     min-width: 0;
-    flex: 1 1 auto;
 }
 
-.budget-category-card__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: var(--app-radius-s);
-    background: var(--app-brand-bg);
-    color: var(--app-brand-text);
-    flex-shrink: 0;
-    font-size: 0.9rem;
-}
-
-.budget-category__label {
+.budget-income__label {
+    display: block;
     font-size: var(--app-font-size-small);
-    font-weight: var(--app-font-weight-semibold);
-    color: var(--app-text);
-    cursor: default;
-    margin: 0;
+    color: var(--app-text-muted);
+    margin-bottom: 0.25rem;
 }
 
-.budget-category-color-box {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-    flex-shrink: 0;
+/* The income is written on a ledger line, not boxed: the figure is the display element of the page */
+.budget-income__entry {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    max-width: 24rem;
+    border-bottom: 2px solid var(--app-text);
+    padding-bottom: 0.2rem;
+    transition: border-color 0.15s ease;
 }
 
-.budget-category__amount {
-    font-size: var(--app-font-size-base);
-    font-weight: var(--app-font-weight-bold);
+.budget-income__entry:focus-within {
+    border-bottom-color: var(--app-brand);
+}
+
+.budget-income__symbol {
     font-family: var(--app-font-mono);
-    color: var(--app-text);
-    overflow-wrap: anywhere;
-    word-break: break-all;
+    font-size: 1.25rem;
+    color: var(--app-text-muted);
     flex-shrink: 0;
 }
 
-.budget-category-card__controls {
+.budget-page .budget-income-input,
+.budget-page .budget-income-input:focus {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+    height: auto;
+    line-height: 1.2;
+    font-family: var(--app-font-mono);
+    font-size: 1.75rem;
+    font-weight: var(--app-font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+    color: var(--app-text);
+    box-shadow: none;
+    outline: none;
+}
+
+.budget-page .budget-income-input.is-invalid,
+.budget-page .budget-income-input.input-validation-error {
+    color: var(--app-accent-negative);
+    background-image: none;
+}
+
+.budget-income__per {
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-base);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.budget-income__currency {
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    flex-wrap: wrap;
+    margin-top: 0.75rem;
 }
 
-.budget-slider {
-    flex: 1 1 100%;
-    min-width: 0;
-    height: 6px;
-    cursor: pointer;
-    min-height: 44px;
-    margin: -9px 0;
-    order: 1;
-}
-
-.budget-category__input-group {
-    position: relative;
-    flex: 1 1 auto;
-    min-width: 5.5rem;
-    order: 0;
-}
-
-.budget-percent-input {
-    width: 100%;
-    padding: 0 2rem 0 0.5rem;
-    text-align: right;
-    font-size: var(--app-font-size-small);
-    font-family: var(--app-font-mono);
-    height: 32px;
-    box-sizing: border-box;
-    border-radius: var(--app-radius-s);
-    border: 1px solid var(--app-border);
-    background: var(--app-bg);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.budget-percent-input:focus {
-    border-color: var(--app-brand);
-    box-shadow: 0 0 0 2px var(--app-brand-bg);
-    outline: none;
-}
-
-.budget-percent-input__suffix {
-    position: absolute;
-    right: 0.5rem;
-    top: 50%;
-    transform: translateY(-50%);
+.budget-income__currency-label {
     font-size: var(--app-font-size-small);
     color: var(--app-text-muted);
-    pointer-events: none;
-    line-height: 1;
+    margin: 0;
 }
 
-.budget-amount-input-group {
-    position: relative;
-    flex: 1 1 auto;
-    min-width: 8rem;
-    order: 0;
+.budget-income__currency .form-select {
+    width: auto;
+    max-width: 16rem;
 }
-
-.budget-amount-input {
-    width: 100%;
-    padding-left: 1.4rem;
-    text-align: right;
-    font-size: var(--app-font-size-small);
-    font-family: var(--app-font-mono);
-    height: 32px;
-    border-radius: var(--app-radius-s);
-    border: 1px solid var(--app-border);
-    background: var(--app-bg);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.budget-amount-input:focus {
-    border-color: var(--app-brand);
-    box-shadow: 0 0 0 2px var(--app-brand-bg);
-    outline: none;
-}
-
-.budget-amount-input__prefix {
-    position: absolute;
-    left: 0.6rem;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: var(--app-font-size-small);
-    color: var(--app-text-muted);
-    pointer-events: none;
-}
-
-/* ==========================================================================
-   Remaining Allocation
-   ========================================================================== */
 
 .budget-remaining {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-top: 1rem;
-    padding: 0.6rem 0.75rem;
-    border-radius: var(--app-radius-m);
-    background: var(--app-surface-soft);
-    border: 1px solid var(--app-border);
-    font-size: var(--app-font-size-small);
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+    min-width: 0;
 }
 
 .budget-remaining__label {
+    font-size: var(--app-font-size-small);
     color: var(--app-text-muted);
+    margin-bottom: 0.25rem;
 }
 
 .budget-remaining__value {
-    font-weight: var(--app-font-weight-bold);
     font-family: var(--app-font-mono);
-    color: var(--app-brand-text);
-}
-
-.budget-remaining--over {
-    background: var(--budget-danger-light);
-    border-color: var(--budget-danger);
-}
-
-.budget-remaining--over .budget-remaining__value {
-    color: var(--budget-danger);
-}
-
-.budget-remaining--exact {
-    background: var(--budget-success-light);
-    border-color: var(--budget-success);
+    font-size: 1.5rem;
+    font-weight: var(--app-font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+    color: var(--app-text);
+    overflow-wrap: anywhere;
 }
 
 .budget-remaining--exact .budget-remaining__value {
-    color: var(--budget-success);
+    color: var(--app-brand-text);
+}
+
+.budget-remaining--over .budget-remaining__value {
+    color: var(--app-accent-negative);
+}
+
+/* --- The Month Strip: the income as one bar, each category a segment, the rest hatched paper --- */
+
+.budget-strip {
+    grid-column: 1 / -1;
+    position: relative;
+    display: flex;
+    height: 2.75rem;
+    border-radius: var(--app-radius-s);
+    overflow: hidden;
+    background-color: var(--app-surface-soft);
+    background-image: repeating-linear-gradient(135deg, var(--budget-hatch) 0 1px, transparent 1px 7px);
+    box-shadow: inset 0 0 0 1px var(--app-border);
+}
+
+.budget-strip__segment {
+    position: relative;
+    flex: 0 0 auto;
+    width: 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    white-space: nowrap;
+    background: var(--cat);
+    /* A hairline of page between two segments */
+    box-shadow: inset -1px 0 0 var(--app-bg);
+    transition: width 0.2s ease, filter 0.15s ease;
+}
+
+.budget-strip__segment--unallocated {
+    background: transparent;
+    box-shadow: none;
+    justify-content: flex-end;
+}
+
+.budget-strip__segment--active {
+    filter: brightness(1.12);
+    outline: 2px solid var(--app-text);
+    outline-offset: -2px;
+}
+
+.budget-strip__label {
+    padding: 0 0.5rem;
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--budget-strip-label);
+    line-height: 1;
+}
+
+.budget-strip__segment--unallocated .budget-strip__label {
+    color: var(--app-text-muted);
+}
+
+.budget-strip__pct {
+    font-family: var(--app-font-mono);
+    font-variant-numeric: tabular-nums;
+    margin-left: 0.4rem;
+    opacity: 0.9;
+}
+
+.budget-strip__pct:empty {
+    display: none;
+}
+
+.budget-strip__label--no-pct .budget-strip__pct,
+.budget-strip__label--hidden {
+    visibility: hidden;
+}
+
+/* Over the income: a red line where the income ends and a red hatch over the part beyond it */
+.budget-strip__overflow {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    border-left: 2px solid var(--app-accent-negative);
+    background-image: repeating-linear-gradient(135deg, var(--budget-hatch-over) 0 1px, transparent 1px 6px);
+    pointer-events: none;
+}
+
+.budget-strip__overflow[hidden] {
+    display: none;
 }
 
 /* ==========================================================================
-   Save Button
+   The ledger: a heading, a header rule in ink, hairlines between rows, the total under a double rule
    ========================================================================== */
+
+.budget-ledger {
+    margin-top: 1.5rem;
+}
+
+.budget-ledger__top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.budget-ledger__title {
+    font-size: var(--app-font-size-large);
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text);
+    margin: 0;
+}
+
+.budget-ledger__hint {
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+    margin: 0;
+}
+
+.budget-ledger__hint[hidden] {
+    display: none;
+}
+
+/* One column plan for the header, every row and the total: swatch, name, share slider, percent, amount */
+.budget-ledger__head,
+.budget-row,
+.budget-total {
+    display: grid;
+    grid-template-columns: 0.75rem minmax(7rem, 11rem) minmax(0, 1fr) 6.25rem 10.5rem;
+    grid-template-areas: "swatch name share pct amount";
+    column-gap: 1rem;
+    align-items: center;
+}
+
+.budget-ledger__head {
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--app-text);
+}
+
+.budget-ledger__head-num {
+    text-align: right;
+}
+
+.budget-row {
+    min-height: 3.25rem;
+    padding: 0.4rem 0.5rem;
+    margin: 0 -0.5rem;
+    border-bottom: 1px solid var(--app-border);
+    transition: background-color 0.15s ease;
+}
+
+.budget-row--active {
+    background-color: var(--app-surface-soft);
+}
+
+.budget-row__swatch {
+    grid-area: swatch;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 2px;
+    background: var(--cat);
+}
+
+.budget-category__label {
+    grid-area: name;
+    font-size: var(--app-font-size-base);
+    font-weight: var(--app-font-weight-medium);
+    color: var(--app-text);
+    margin: 0;
+    cursor: default;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.budget-row__share {
+    grid-area: share;
+    min-width: 0;
+}
+
+.budget-row__percent {
+    grid-area: pct;
+    position: relative;
+}
+
+.budget-row__amount {
+    grid-area: amount;
+    position: relative;
+}
+
+/* --- The share slider: a thin rule that fills in the category colour up to the thumb --- */
+
+.budget-slider {
+    --pct: 0%;
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    width: 100%;
+    height: 2.25rem;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.budget-slider:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.budget-slider::-webkit-slider-runnable-track {
+    height: 2px;
+    border-radius: 1px;
+    background: linear-gradient(to right, var(--cat) var(--pct), var(--app-border-hover) var(--pct));
+}
+
+.budget-slider::-moz-range-track {
+    height: 2px;
+    border-radius: 1px;
+    background: linear-gradient(to right, var(--cat) var(--pct), var(--app-border-hover) var(--pct));
+}
+
+.budget-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 0.875rem;
+    height: 0.875rem;
+    margin-top: calc(1px - 0.4375rem);
+    border-radius: 50%;
+    border: 2px solid var(--app-bg);
+    background: var(--cat);
+    box-shadow: 0 0 0 1px var(--cat);
+}
+
+.budget-slider::-moz-range-thumb {
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: 50%;
+    border: 2px solid var(--app-bg);
+    background: var(--cat);
+    box-shadow: 0 0 0 1px var(--cat);
+}
+
+.budget-slider:focus-visible {
+    outline: none;
+}
+
+.budget-slider:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 1px var(--cat), 0 0 0 4px var(--app-brand-soft);
+}
+
+.budget-slider:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 1px var(--cat), 0 0 0 4px var(--app-brand-soft);
+}
+
+/* --- The figures: tabular, right-aligned, in mono --- */
+
+.budget-page .budget-percent-input,
+.budget-page .budget-amount-input {
+    width: 100%;
+    height: 2.25rem;
+    padding: 0 0.5rem;
+    text-align: right;
+    font-family: var(--app-font-mono);
+    font-size: var(--app-font-size-small);
+    font-variant-numeric: tabular-nums;
+    border-radius: var(--app-radius-s);
+    background: var(--app-bg);
+    color: var(--app-text);
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.budget-page .budget-percent-input::-webkit-outer-spin-button,
+.budget-page .budget-percent-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.budget-page .budget-percent-input {
+    padding-right: 1.5rem;
+}
+
+.budget-page .budget-amount-input {
+    padding-left: 1.6rem;
+}
+
+.budget-percent-input__suffix,
+.budget-amount-input__prefix {
+    position: absolute;
+    top: 0;
+    height: 2.25rem;
+    display: flex;
+    align-items: center;
+    font-size: var(--app-font-size-small);
+    font-family: var(--app-font-mono);
+    color: var(--app-text-muted);
+    pointer-events: none;
+}
+
+.budget-percent-input__suffix {
+    right: 0.5rem;
+}
+
+.budget-amount-input__prefix {
+    left: 0.6rem;
+}
+
+/* --- The total: a rule above, the accountant's double rule under the figures --- */
+
+.budget-total {
+    padding: 0.6rem 0 0;
+    border-top: 1px solid var(--app-text);
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text);
+}
+
+.budget-total__label {
+    grid-area: name;
+    font-size: var(--app-font-size-base);
+}
+
+.budget-total__value {
+    font-family: var(--app-font-mono);
+    font-size: var(--app-font-size-base);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    padding: 0 0.5rem 0.35rem;
+    border-bottom: 3px double var(--app-text);
+    overflow-wrap: anywhere;
+}
+
+.budget-total__value:nth-child(4) {
+    grid-area: pct;
+}
+
+.budget-total__value:nth-child(5) {
+    grid-area: amount;
+}
+
+.budget-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+}
 
 .budget-save-btn {
     font-weight: var(--app-font-weight-semibold);
     padding: 0.5rem 1.5rem;
     min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-}
-
-.budget-save-btn svg {
-    width: 14px;
-    height: 14px;
-}
-
-.budget-save-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
 }
 
 .budget-save-btn:focus-visible {
@@ -554,286 +540,84 @@
 }
 
 /* ==========================================================================
-   Chart
+   Narrow layouts (the app's grid breakpoints): the hero stacks; a row puts its slider on its own line
    ========================================================================== */
 
-.budget-chart-container {
-    position: relative;
-    width: 100%;
-    max-width: 340px;
-    margin: 0 auto 1rem;
-}
-
-.budget-chart-container canvas {
-    max-height: 400px;
-    width: 100% !important;
-    height: 100% !important;
-}
-
-
-/* ==========================================================================
-   Summary List
-   ========================================================================== */
-
-.budget-summary-list-container {
-    max-height: 260px;
-    overflow-y: auto;
-    border-radius: var(--app-radius-s);
-    border: 1px solid var(--app-border);
-    background: var(--app-bg);
-}
-
-.budget-summary-list {
-    padding: 0.35rem 0;
-}
-
-.budget-summary-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.6rem;
-    transition: background 0.1s ease;
-}
-
-.budget-summary-item:hover {
-    background: var(--app-brand-bg);
-}
-
-.budget-summary-item__dot {
-    flex-shrink: 0;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-}
-
-.budget-summary-item__name {
-    flex: 1 1 auto;
-    min-width: 0;
-    font-size: var(--app-font-size-small);
-    font-weight: var(--app-font-weight-medium);
-    color: var(--app-text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.budget-summary-item__bar-wrapper {
-    flex: 1;
-    min-width: 0;
-    position: relative;
-    height: 6px;
-    background: var(--app-surface-soft);
-    border-radius: 3px;
-    overflow: hidden;
-}
-
-.budget-summary-item__bar {
-    height: 100%;
-    border-radius: 3px;
-    transition: width 0.2s ease;
-    min-width: 0;
-}
-
-.budget-summary-item__values {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-family: var(--app-font-mono);
-    font-size: var(--app-font-size-small);
-    flex-wrap: wrap;
-}
-
-.budget-summary-item__percent {
-    color: var(--app-text-muted);
-    min-width: 36px;
-    text-align: right;
-}
-
-.budget-summary-item__amount {
-    color: var(--app-text);
-    font-weight: var(--app-font-weight-semibold);
-    min-width: 60px;
-    text-align: right;
-}
-
-/* Total row */
-.budget-summary-total {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    padding: 0.5rem 0.6rem;
-    background: var(--app-surface-soft) !important;
-    border-top: 2px solid var(--app-border);
-    border-radius: 0 0 var(--app-radius-s) var(--app-radius-s);
-}
-
-.budget-summary-total__label {
-    font-size: var(--app-font-size-small);
-    font-weight: var(--app-font-weight-bold);
-    color: var(--app-text);
-}
-
-.budget-summary-total__values {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-family: var(--app-font-mono);
-    font-size: var(--app-font-size-small);
-}
-
-.budget-summary-total__values span {
-    font-weight: var(--app-font-weight-bold);
-    color: var(--app-text);
-}
-
-/* ==========================================================================
-  Responsive Breakpoints
-  ========================================================================== */
-
-/* Medium screens — tighten the two-column layout */
-@media (max-width: 1199px) {
-    .budget-categories {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.5rem;
+@media (max-width: 991.98px) {
+    .budget-ledger__head,
+    .budget-row,
+    .budget-total {
+        grid-template-columns: 0.75rem minmax(0, 1fr) 5.75rem 9.5rem;
+        grid-template-areas:
+            "swatch name pct amount"
+            "swatch share share share";
+        row-gap: 0.25rem;
     }
 
-    .budget-category-card {
-        padding: 0.65rem;
-    }
-
-    .budget-chart-container {
-        max-width: 300px;
-    }
-
-    .budget-chart-container canvas {
-        max-height: 360px;
-    }
-
-    .budget-summary-list-container {
-        max-height: 220px;
-    }
-}
-
-/* Tablet and below — single column categories */
-@media (max-width: 991px) {
-    .budget-categories {
-        grid-template-columns: 1fr;
-    }
-
-    .budget-card--sticky {
-        position: static;
-        margin-top: 0.5rem;
-    }
-
-    .budget-chart-container {
-        max-width: 280px;
-    }
-
-    .budget-chart-container canvas {
-        max-height: 340px;
-    }
-
-    .budget-summary-list-container {
-        max-height: 240px;
-    }
-}
-
-/* Mobile — smaller padding and font sizes */
-@media (max-width: 576px) {
-    .budget-title {
-        font-size: 1.25rem;
-    }
-
-    .budget-title__icon {
-        width: 32px;
-        height: 32px;
-    }
-
-    .budget-title__icon svg {
-        width: 18px;
-        height: 18px;
-    }
-
-    .budget-card__body {
-        padding: 1rem;
-    }
-
-    .budget-card__header {
-        padding: 0.75rem 1rem;
-    }
-
-    .budget-card__footer {
-        padding: 0.75rem 1rem;
-    }
-
-    .budget-income-hero {
-        flex-direction: column;
-        text-align: center;
-    }
-
-    .budget-income-hero__content {
-        max-width: 100%;
-        width: 100%;
-    }
-
-    .budget-income-hero__input-wrapper {
-        width: 100%;
-    }
-
-    .budget-income-hero__prefix {
-        padding: 0 0.5rem 0 0.6rem;
-    }
-
-    .budget-category-card {
-        padding: 0.75rem;
-    }
-
-    .budget-chart-container {
-        max-width: 100%;
-    }
-
-    .budget-chart-container canvas {
-        max-height: 300px;
-    }
-
-    .budget-summary-list-container {
-        max-height: 200px;
-    }
-
-    .budget-summary-item__bar-wrapper {
-        height: 4px;
-    }
-
-    .budget-summary-item__percent {
+    .budget-ledger__head-share {
         display: none;
+    }
+
+    /* The swatch sits on the name line, not across the slider line */
+    .budget-row__swatch {
+        grid-row: 1;
+        align-self: center;
+    }
+
+    .budget-total {
+        grid-template-areas: "swatch name pct amount";
+    }
+}
+
+@media (max-width: 575.98px) {
+    .budget-hero {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .budget-remaining {
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .budget-income__entry {
+        max-width: none;
+    }
+
+    .budget-ledger__head {
+        display: none;
+    }
+
+    .budget-row {
+        grid-template-columns: 0.75rem minmax(0, 2fr) minmax(0, 3fr);
+        grid-template-areas:
+            "swatch name name"
+            "swatch share share"
+            "swatch pct amount";
+        column-gap: 0.75rem;
+    }
+
+    .budget-total {
+        grid-template-areas: "swatch name amount";
+        grid-template-columns: 0.75rem minmax(0, 1fr) auto;
+    }
+
+    .budget-total__value:nth-child(4) {
+        display: none;
+    }
+
+    .budget-strip {
+        height: 2.25rem;
     }
 
     .budget-save-btn {
         width: 100%;
-        justify-content: center;
-    }
-
-    .budget-category-card__controls {
-        flex-wrap: wrap;
     }
 }
 
-/* Accessibility — reduced motion */
 @media (prefers-reduced-motion: reduce) {
-    .budget-category-card,
-    .budget-income-hero__input-wrapper,
-    .budget-percent-input,
-    .budget-amount-input,
-    .budget-total-badge {
+    .budget-strip__segment,
+    .budget-row,
+    .budget-income__entry {
         transition: none;
     }
-}
-
-/* The one currency of the whole budget (ADR 0016). */
-.budget-income-hero__currency {
-    margin-top: 0.5rem;
-    max-width: 14rem;
 }
