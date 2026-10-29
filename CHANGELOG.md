@@ -23,6 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Schema migration** `AddJourneyProgress`: adds the two tables with filtered unique indexes per Account and slug, and the defaulted column; nothing is dropped or rewritten.
 
+## [13.17.2] - 2026-10-28
+
+### Added
+
+- **Atelier monthly re-check**: a scheduled workflow lists the Atelier country notes due for a re-check in one `ready-for-human` issue, "Atelier notes due for a re-check" (#526).
+  - A note is due when its Term Entry was last reviewed more than 12 months ago, or when it is a Tax note whose Rules-as-of year is before the current year.
+  - It runs on the 1st of each month and on manual dispatch, and lists each note's entry, country, year and source link.
+  - It updates the open issue, or opens one; with nothing due it updates an open issue to say so and opens none. It changes no files and never fails a build.
+  - The selection lives in `Web/tools/atelier-recheck.js`, tested in `npm run test:i18n`; `npm run atelier:recheck` runs it locally.
+
 ## [13.17.1] - 2026-10-28
 
 ### Fixed

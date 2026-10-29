@@ -121,3 +121,13 @@ late run's timeout is cut so that it ends by 19:00. Trigger it by hand at any ti
   the ticket to `ready-for-human`.
 - Only label an issue `ready-for-agent` if you would hand it to a contractor as-is. Split large Specs into tickets
   first.
+
+## Monthly Atelier re-check
+
+`.github/workflows/atelier-recheck.yml` runs on the 1st of each month (and on dispatch) and keeps one open
+`ready-for-human` issue, "Atelier notes due for a re-check", listing the Atelier country notes due for a re-check:
+notes on Term Entries last reviewed more than 12 months ago, and Tax notes whose Rules-as-of year is before the
+current year. With nothing due it updates the open issue to say so and opens none. The selection is
+`PersonalFinance.Web/tools/atelier-recheck.js` (`npm run atelier:recheck` runs it locally). The workflow runs with
+`GITHUB_TOKEN`, which cannot add an issue to the Roadmap project, so add that issue to the board on triage. Close it
+once the notes are re-checked in a content PR; the next run opens a fresh one when something is due again.
