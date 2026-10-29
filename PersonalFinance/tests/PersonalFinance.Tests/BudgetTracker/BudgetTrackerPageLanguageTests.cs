@@ -43,13 +43,12 @@ public sealed partial class BudgetTrackerPageLanguageTests : IAsyncLifetime
     // Visible English chrome of the page. Each must render in English, and none may render in Vietnamese.
     private static readonly string[] PageEnglish =
     [
-        "Manage your monthly planned budget", "Month navigation", "Previous Month", "Next Month", ">Month<", ">Year<",
+        "Spent ", " planned.", "Earned ", "Month navigation", "Previous Month", "Next Month", ">Month<", ">Year<",
         "New Month Budget Plan", "This month has no budget plan yet", "Copy from Previous Month", "Start Blank",
-        "Expenses Comparison", "Income Comparison", "Planned: ", "Planned Expenses", "Actual Income",
         "Add Custom Expense Category", "Add Category", "Expenses Summary Table", ">Planned<", ">Actual<", ">Diff<",
-        ">Actions<", "Total Expenses", "Total Income", "Record and itemize", "Add Transaction",
-        "Expense Transactions Table", ">Amount<", ">Description<", "No expense transactions recorded",
-        "No income transactions recorded", "Add Budget Category", "Category Name", "e.g. Subscriptions",
+        ">Against plan<", ">Actions<", "Total Expenses", "Total Income", "Record and itemize", "Add Transaction",
+        ">Amount<", ">Description<", "No transactions this month yet", "Add Budget Category", "Category Name",
+        "e.g. Subscriptions",
         "Category Type", "Rename Category", "e.g. Groceries", "Category type cannot be changed", "Save Changes",
         "Set a manual Actual amount", "This overrides the sum of transactions", "Manual Actual Amount",
         "Revert to Transactions", "Save Override", "Select a category...", "Description (Optional)",
@@ -161,7 +160,7 @@ public sealed partial class BudgetTrackerPageLanguageTests : IAsyncLifetime
     {
         string html = NotShown().Replace(await GetAsync(vietnamese: false), string.Empty);
 
-        Assert.Equal(1, Regex.Count(html, "class=\"bt-month-nav\""));
+        Assert.Equal(1, Regex.Count(html, "class=\"bt-month-turn\""));
         Assert.Equal(1, Regex.Count(html, "id=\"btnPrevMonth\""));
         Assert.Equal(1, Regex.Count(html, "id=\"btnNextMonth\""));
         Assert.Equal(1, Regex.Count(html, "id=\"btnAddExpenseCategory\""));
