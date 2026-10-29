@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [13.14.0] - 2026-10-28
+## [13.15.0] - 2026-10-28
 
 ### Changed
 
@@ -17,6 +17,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The privacy list adds the Idle Sign-out, reading its minutes from the configured limit, and sits beside a new "In English and Vietnamese, in dollars and đồng" list: the language switch, the Reporting Currency, and the light or dark theme.
   - On a phone each ledger line stacks its figure under the text; between phone and desktop the figure sits beside the text in a narrower column.
   - The E2E landing checks count six plan lines and seven resources, and the dark-mode theme smoke checks the ledger figures and both lists.
+## [13.14.0] - 2026-10-29
+
+### Added
+
+- **Atelier Library and Term Entry pages**: guests and signed-in users can browse `/Learning` and read each Term Entry at `/Learning/Term/{slug}`, in their Language with English filling any missing field (#517).
+  - The Library shows book spines on a shelf per Topic. A filter in the browser finds an entry by English Term, abbreviation or Vietnamese name, with or without diacritics.
+  - An entry shows its Vietnamese name, one-liner, explanation, why it matters, worked example, *In the US* / *In Vietnam* notes with their Rules-as-of year, related terms, sources with access dates, further reading, an optional privacy-enhanced video, Last reviewed and a Disclaimer link. Terms named in the text link to their entries.
+  - A note reviewed more than 12 months ago, or a Tax note whose year has passed, says the rules may have changed. An unknown slug is a 404.
+  - The page has its own paper-desk look, with a lamplit desk in dark mode and a serif stack that keeps Vietnamese accents whole.
+- **Anonymous content endpoints**: `GET api/learning/library` and `GET api/learning/terms/{slug}` serve the Library and a Term Entry without an Account, through the new `ILearningApi` contract (#517).
+- **Sitemap and robots.txt**: the Web serves `/sitemap.xml`, listing `/Learning` and every Published Term Entry, and a `robots.txt` that points at it; each entry has a title, meta description and canonical link (#517).
+- **Learning nav entry**: "Learning" appears in the sidebar and the signed-out top bar once the Library has an entry; while it is empty the entry stays hidden and `/Learning` shows a quiet "being written" note (#517).
+
+### Changed
+
+- **E2E fixture content**: `e2e-inmemory.sh` points ApiService at the test fixture content folder, so the new Atelier smoke can read Term Entries before real content ships; against the real, empty folder the smoke checks the empty state instead (#517).
 
 ## [13.13.0] - 2026-10-28
 

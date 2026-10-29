@@ -7,6 +7,7 @@ const {runIdleSignOutSmoke} = require('./idle-sign-out-smoke');
 const {runCurrencyConverterSmoke} = require('./currency-converter-smoke');
 const {runMoneyBoundsSmoke} = require('./money-bounds-smoke');
 const {runThemeSmoke} = require('./theme-smoke');
+const {runLearningSmoke} = require('./learning-smoke');
 
 (async () => {
     const results = {passed: 0, failed: 0, errors: []};
@@ -979,6 +980,16 @@ const {runThemeSmoke} = require('./theme-smoke');
             await runThemeSmoke({browser, base, pass, fail});
         } catch (error) {
             fail(`Theme smoke failed: ${error.message}`);
+        }
+
+        // =========================================================
+        // Test 9k: Atelier Library smoke (#517): a guest filters the Library, reads a Term Entry, and dark mode
+        // =========================================================
+        console.log('\n--- Test 9k: Atelier Library Smoke ---');
+        try {
+            await runLearningSmoke({browser, base, pass, fail});
+        } catch (error) {
+            fail(`Atelier Library smoke failed: ${error.message}`);
         }
 
         // =========================================================
