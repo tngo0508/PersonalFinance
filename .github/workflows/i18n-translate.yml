@@ -3,7 +3,8 @@ name: i18n Translate
 # Machine-drafts the Vietnamese for every pull request from a branch of this repository (ADR 0015, spec §2.4): runs
 # "npm run i18n:translate", which sends only the keys that are missing from vi.json or whose English changed, and
 # pushes the result to the PR branch as its own commit, "i18n: translate N keys (vi)". Nobody has to run it by hand,
-# and the Claude ticket agent never needs the Translator key: it adds English keys only.
+# and the Claude ticket agent never needs the Translator key: it adds English keys only. The same run drafts the
+# missing or stale fields of each Atelier content file's Vietnamese counterpart (ADR 0019).
 #
 # Public repository, so:
 # - The trigger is the plain pull_request event, never its "_target" variant: a fork PR gets no secrets and is
@@ -79,6 +80,8 @@ jobs:
           AZURE_TRANSLATOR_ENDPOINT: ${{ vars.AZURE_TRANSLATOR_ENDPOINT }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           I18N_DIR: PersonalFinance/src/PersonalFinance.Web/Resources/i18n
+          # The Atelier content (ADR 0019): the script also drafts each Term Entry's and Lesson's {slug}.vi.json here.
+          CONTENT_DIR: PersonalFinance/src/PersonalFinance.ApiService/Features/Learning/Content
         run: |
           set -uo pipefail
           # Never print the environment or a .env here: the key must not reach the public log.
@@ -87,18 +90,26 @@ jobs:
           npm run i18n:translate 2>&1 | tee "$RUNNER_TEMP/i18n-translate.log"
           status=${PIPESTATUS[0]}
 
-          if git diff --quiet -- "$I18N_DIR"; then
+          # A new content counterpart is an untracked file, so stage both folders and look at the index.
+          git add -A -- "$I18N_DIR" "$CONTENT_DIR"
+          if git diff --cached --quiet; then
             echo "::notice::Nothing to translate on $HEAD_REF."
             exit "$status"
           fi
 
-          message=$(grep -m1 -o 'i18n: translate [0-9]* keys ([a-z-]*)' "$RUNNER_TEMP/i18n-translate.log" || true)
-          if [ -z "$message" ]; then
-            message="i18n: sync translations with en.json"
+          # One subject for both parts, e.g. "i18n: translate 3 keys (vi), 12 content fields (vi)".
+          parts=$(grep -oE 'i18n: translate [0-9]+ (keys|content fields) \([a-z-]+\)' "$RUNNER_TEMP/i18n-translate.log" \
+            | sed 's/^i18n: translate //' | paste -sd ',' - | sed 's/,/, /g' || true)
+          if [ -n "$parts" ]; then
+            message="i18n: translate $parts"
+          else
+            message="i18n: sync translations with the English"
           fi
+          # On a content PR this commit is the bot's, never an approval: the content guard on Agent Auto-Merge still
+          # keeps the PR for the owner, who reviews the Vietnamese with the rest of the content.
           git -c user.name="github-actions[bot]" \
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-              commit --quiet -m "$message" -- "$I18N_DIR"
+              commit --quiet -m "$message"
           git push origin "HEAD:$HEAD_REF"
           echo "::notice::Pushed '$message' to $HEAD_REF. The PR workflows re-run on that commit."
 

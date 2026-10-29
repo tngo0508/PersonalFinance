@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [13.17.0] - 2026-10-28
+
+### Added
+
+- **Atelier content translation**: `npm run i18n:translate`, and so the i18n Translate workflow, also drafts the missing or stale Vietnamese counterpart of each Term Entry and Lesson in `Features/Learning/Content/`, field by field (#525).
+  - It keeps the `en.json` lock approach: the content folder's own `i18n.lock.json` records the English each field came from, so an unchanged field is never sent again and a hand-written one is adopted, not replaced.
+  - Each Term's Vietnamese name becomes a translator glossary entry, so every text naming the Term uses it.
+  - The owner-written fields are never overwritten once present: the Vietnamese name and the *In Vietnam* note. Slugs, Topics, URLs, numbers and sources are never sent.
+  - The workflow stages the content folder as well, so a new `{slug}.vi.json` is committed too, as `i18n: translate N keys (vi), M content fields (vi)`; with only one part pending the subject names that part alone. On a content PR the bot's commit is never an approval: the PR stays with the owner.
 ## [13.16.0] - 2026-10-29
 
 ### Fixed
@@ -34,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The privacy list adds the Idle Sign-out, reading its minutes from the configured limit, and sits beside a new "In English and Vietnamese, in dollars and đồng" list: the language switch, the Reporting Currency, and the light or dark theme.
   - On a phone each ledger line stacks its figure under the text; between phone and desktop the figure sits beside the text in a narrower column.
   - The E2E landing checks count six plan lines and seven resources, and the dark-mode theme smoke checks the ledger figures and both lists.
+
 ## [13.14.0] - 2026-10-29
 
 ### Added
