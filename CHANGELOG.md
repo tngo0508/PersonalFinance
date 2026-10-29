@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [13.13.0] - 2026-10-29
+
+### Added
+
+- **Atelier content translation**: `npm run i18n:translate`, and so the i18n Translate workflow, also drafts the missing or stale Vietnamese counterpart of each Term Entry and Lesson in `Features/Learning/Content/`, field by field (#525).
+  - It keeps the `en.json` lock approach: the content folder's own `i18n.lock.json` records the English each field came from, so an unchanged field is never sent again and a hand-written one is adopted, not replaced.
+  - Each Term's Vietnamese name becomes a translator glossary entry, so every text naming the Term uses it.
+  - The owner-written fields are never overwritten once present: the Vietnamese name and the *In Vietnam* note. Slugs, Topics, URLs, numbers and sources are never sent.
+  - The script prints `Commit as: i18n: translate N content fields (vi)`. Committing the new `{slug}.vi.json` files from the workflow is a follow-up change to `i18n-translate.yml`, given in the PR.
+
 ## [13.11.1] - 2026-10-28
 
 ### Fixed
