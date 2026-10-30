@@ -4,6 +4,7 @@ name: Agent Auto-Merge
 # check on its head commit has finished and none failed. Runs each time one of the PR workflows completes; the last one to finish does the merge.
 # The i18n Translate check must have passed too: it pushes the Vietnamese as a new commit, so the checks of the
 # commit before it never merge (the head-SHA guard below), and the translated commit's own checks decide.
+# A PR that touches the Atelier content folder is never merged here: it gets one comment and waits for the owner.
 #
 # Needs the AGENT_GH_TOKEN secret (fine-grained PAT: contents, pull requests, issues read/write). A merge made with
 # GITHUB_TOKEN does not trigger workflows, so the push to main would never deploy or publish its Release.
@@ -42,6 +43,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           BRANCH: ${{ github.event.workflow_run.head_branch }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          CONTENT_DIR: PersonalFinance/src/PersonalFinance.ApiService/Features/Learning/Content
         run: |
           set -euo pipefail
           if [ -z "$GH_TOKEN" ]; then
@@ -63,6 +65,22 @@ jobs:
           # A newer push re-runs the checks; its own completions decide.
           if [ "$(jq -r '.headRefOid' <<< "$pr_json")" != "$HEAD_SHA" ]; then
             echo "::notice::PR #$pr has a newer commit than this run checked."
+            exit 0
+          fi
+
+          # Atelier content is reviewed by the owner (ADR 0019): a PR that adds, edits, deletes or renames anything in
+          # the content folder is never merged here, whatever its checks say. No commit on it counts as approval, the
+          # i18n bot's "i18n: translate N keys (vi)" included. The PR stays green and waits; the owner merges it.
+          files=$(gh api --paginate "repos/$GH_REPO/pulls/$pr/files?per_page=100" \
+            --jq '.[] | .filename, (.previous_filename // empty)')
+          content=$(grep -c "^$CONTENT_DIR/" <<< "$files" || true)
+          if [ "$content" != "0" ]; then
+            echo "::notice::PR #$pr touches Atelier content under $CONTENT_DIR ($content path(s)): the owner merges it."
+            marker='<!-- atelier-content-guard -->'
+            if ! gh api --paginate "repos/$GH_REPO/issues/$pr/comments" --jq '.[].body' | grep -qF "$marker"; then
+              gh pr comment "$pr" --body "$marker
+          This PR changes Atelier content (\`$CONTENT_DIR/\`), so Agent Auto-Merge will not merge it. The owner reviews and merges it (ADR 0019)."
+            fi
             exit 0
           fi
 
