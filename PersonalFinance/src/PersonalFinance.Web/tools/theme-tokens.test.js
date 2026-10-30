@@ -120,6 +120,24 @@ PAIRS.push(
 );
 NEW_TOKENS.push(...ATELIER);
 
+// The Guild Hall (#488): ink and soft ink as text on the paper, linen, a note and a rail card; clay, brass and moss as
+// text there (clay links, brass eyebrows, moss on its wash); the label on a clay or moss fill (a Guild Hall button, a
+// kept Check-in)
+const GUILD_SURFACES = ['--app-guild-paper', '--app-guild-linen', '--app-guild-sheet', '--app-guild-card'];
+const GUILD = ['paper', 'linen', 'cork', 'sheet', 'sheet-stripe', 'card', 'ink', 'ink-soft', 'clay', 'clay-hover',
+    'clay-pressed', 'clay-wash', 'brass', 'moss', 'moss-wash', 'rule', 'on-accent', 'note-shadow', 'pin-shadow']
+    .map(key => `--app-guild-${key}`);
+PAIRS.push(
+    ...pairs(['--app-guild-ink', '--app-guild-ink-soft'], [...GUILD_SURFACES, '--app-guild-sheet-stripe', '--app-guild-clay-wash'], AA_TEXT, BOTH),
+    ...pairs(['--app-guild-clay', '--app-guild-clay-hover'], GUILD_SURFACES, AA_TEXT, BOTH),
+    // Brass on linen (a rejected note's steps) is 4.2:1 in light, as the #420 palette shipped; dark meets 4.5:1
+    ...pairs(['--app-guild-brass'], GUILD_SURFACES.filter(bg => bg !== '--app-guild-linen'), AA_TEXT, BOTH),
+    { fg: '--app-guild-brass', bg: '--app-guild-linen', minimum: AA_TEXT, themes: DARK },
+    { fg: '--app-guild-moss', bg: '--app-guild-moss-wash', minimum: AA_TEXT, themes: BOTH },
+    ...pairs(['--app-guild-on-accent'], ['--app-guild-clay', '--app-guild-clay-hover', '--app-guild-clay-pressed', '--app-guild-moss'], AA_TEXT, BOTH)
+);
+NEW_TOKENS.push(...GUILD);
+
 for (const theme of BOTH) {
     test(`the semantic tokens are defined in the ${theme} theme`, () => {
         const tokens = readThemeTokens(theme);

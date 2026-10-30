@@ -8,17 +8,17 @@
     align-items: center;
     gap: 10px;
     padding: 13px 18px;
-    border: 1px solid var(--app-brand);
+    border: 1px solid var(--app-brand-fill);
     border-radius: 30px;
-    background: var(--app-brand);
-    color: #fff;
+    background: var(--app-brand-fill);
+    color: var(--app-text-on-brand);
     font: inherit;
     font-size: 14px;
     font-weight: 600;
-    box-shadow: 0 6px 20px #312e8126;
+    box-shadow: var(--app-shadow-popover);
     cursor: pointer;
 }
-.ai-chat-button:hover, .ai-chat-send-btn:hover:not(:disabled) { background: var(--app-brand-hover); }
+.ai-chat-button:hover, .ai-chat-send-btn:hover:not(:disabled) { background: var(--app-brand-fill-hover); }
 .ai-chat-spark { font-size: 22px; line-height: 1; }
 .ai-chat-panel {
     position: fixed;
@@ -37,7 +37,7 @@
     background: var(--app-bg);
     color: var(--app-text, var(--app-text));
     font-family: var(--app-font-family, sans-serif);
-    box-shadow: 0 24px 70px #11182724, 0 4px 16px #1118270a;
+    box-shadow: var(--app-shadow-dialog);
 }
 .ai-chat-panel[hidden] { display: none; }
 .ai-chat-header {
@@ -59,7 +59,7 @@
     border: 1px solid var(--app-brand-soft);
     border-radius: 12px;
     background: var(--app-brand-soft);
-    color: var(--app-brand);
+    color: var(--app-brand-text);
     font-size: 26px;
 }
 .ai-chat-header h2 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: -.02em; }
@@ -117,7 +117,7 @@
     transition: border-color .15s, background .15s;
 }
 .ai-chat-chip:hover { border-color: var(--app-brand); background: var(--app-brand-soft); }
-.ai-chat-chip-icon { color: var(--app-brand); font-size: 22px; line-height: 1; }
+.ai-chat-chip-icon { color: var(--app-brand-text); font-size: 22px; line-height: 1; }
 .ai-chat-message { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; flex-shrink: 0; min-width: 0; }
 .ai-chat-message-user { align-items: flex-end; }
 .ai-chat-message-label { font-size: 11px; font-weight: 600; color: var(--app-text-muted); }
@@ -132,14 +132,14 @@
 .ai-chat-status { flex-shrink: 0; margin: 0; padding: 0 24px 10px; color: var(--app-text-muted); font-size: 12px; }
 .ai-chat-status:empty { display: none; }
 .ai-chat-footer { padding: 12px 18px 16px; background: var(--app-bg); flex-shrink: 0; }
-.ai-chat-form { border: 1px solid var(--app-border-hover); border-radius: 14px; padding: 12px; box-shadow: 0 2px 4px #11182705; }
+.ai-chat-form { border: 1px solid var(--app-border-hover); border-radius: 14px; padding: 12px; box-shadow: var(--app-shadow-2); }
 .ai-chat-form:focus-within { border-color: var(--app-brand); box-shadow: 0 0 0 3px var(--app-brand-soft); }
 .ai-chat-input { display: block; width: 100%; min-height: 48px; max-height: 150px; padding: 0; border: 0; outline: none; resize: none; background: transparent; color: var(--app-text); font: inherit; font-size: 14px; line-height: 1.5; }
 .ai-chat-input::placeholder { color: var(--app-text-muted); }
 .ai-chat-input:disabled { opacity: .6; }
 .ai-chat-composer-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; }
 .ai-chat-composer-actions span { color: var(--app-text-muted); font-size: 10px; }
-.ai-chat-send-btn { flex-shrink: 0; display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 9px; background: var(--app-brand); color: #fff; font-size: 22px; cursor: pointer; }
+.ai-chat-send-btn { flex-shrink: 0; display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 9px; background: var(--app-brand-fill); color: var(--app-text-on-brand); font-size: 22px; cursor: pointer; }
 .ai-chat-send-btn:disabled { background: var(--app-surface-secondary); color: var(--app-text-faint); cursor: default; }
 .ai-chat-disclaimer { margin: 10px 0 0; color: var(--app-text-muted); text-align: center; font-size: 10px; line-height: 1.5; }
 @media (max-width: 600px) {
@@ -216,7 +216,7 @@
   border-radius: 3px;
   font-size: 0.82em;
   font-family: Consolas, 'Courier New', monospace;
-  color: #e83e8c;
+  color: var(--app-text);
 }
 
 .ai-chat-bubble pre {
@@ -264,7 +264,7 @@
 }
 
 .ai-chat-bubble a {
-  color: var(--app-brand);
+  color: var(--app-brand-text);
   text-decoration: underline;
 }
 

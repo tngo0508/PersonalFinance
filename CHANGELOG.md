@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.3.0] - 2026-10-30
+
+### Changed
+
+- **The Guild Hall, Finance News and the AI assistant in dark mode**: the three take their colours from the theme tokens, so they turn dark with the rest of the app (#488).
+  - The Guild Hall's paper, linen and cork palette moves into the app token sheet (`--app-guild-*`) with a dark set, the Atelier's lamplit desk: dark wood surfaces, cream ink, lifted clay, brass and moss. Before, the page stayed light in dark mode. Buttons on clay and moss take a dark label in dark.
+  - Finance News: green text (the active tab, badges, links) takes the brand text green, which meets 4.5:1 on the dark card (the active tab was 4.4:1); the Search button and the header icon take the brand fill, whose white label meets 4.5:1 (it was 3.9:1). The error alert and failed states take the negative tokens.
+  - The AI assistant's launcher and Send button take the brand fill (the launcher label was 3.9:1 in dark), its links and icons the brand text green, and its shadows the shared shadow tokens. Inline code is ink on its tinted background instead of pink.
+  - `community.css`, `news.css` and `ai-chat-widget.css` hold no raw colour, so they leave the raw-colour guard's allow-list.
+
+### Added
+
+- **Theme smoke: Community, News and the AI assistant**: the dark contrast check covers the Guild Hall, Finance News, and the assistant's launcher and open panel on the Dashboard.
+- **Guild Hall token pairs**: the theme token test checks the Guild Hall's text and labels on its surfaces in both themes. Brass on linen stays 4.2:1 in light, as the palette shipped, and is checked in dark only.
+
 ## [16.2.0] - 2026-10-30
 
 ### Changed

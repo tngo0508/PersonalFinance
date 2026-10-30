@@ -143,6 +143,29 @@
     --app-atelier-grain: rgba(60, 40, 20, 0.05);
     --app-atelier-grain-fine: rgba(60, 40, 20, 0.035);
 
+    /* The Guild Hall (#420, dark set #488): paper, linen and cork with clay, brass and moss accents. community.css
+       maps its --gh-* names onto these; the dark set is the Atelier's lamplit desk. On-accent: a label on a clay or
+       moss fill. */
+    --app-guild-paper: #FBF6EC;
+    --app-guild-linen: #F3EAD8;
+    --app-guild-cork: #E8D9BC;
+    --app-guild-sheet: #FFFDF7;
+    --app-guild-sheet-stripe: #F7EFDF;
+    --app-guild-card: #FFFFFF;
+    --app-guild-ink: #2B2420;
+    --app-guild-ink-soft: #5A4C42;
+    --app-guild-clay: #A4532F;
+    --app-guild-clay-hover: #8A4325;
+    --app-guild-clay-pressed: #74381F;
+    --app-guild-clay-wash: #F6E3D6;
+    --app-guild-brass: #8A6A1E;
+    --app-guild-moss: #3F6145;
+    --app-guild-moss-wash: #E3ECDF;
+    --app-guild-rule: #DCCDB2;
+    --app-guild-on-accent: #FFFFFF;
+    --app-guild-note-shadow: rgba(43, 36, 32, 0.08);
+    --app-guild-pin-shadow: rgba(0, 0, 0, 0.3);
+
     /* Minimal shadows — rules over elevation */
     --app-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.04);
     --app-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.06);
@@ -307,6 +330,27 @@
     --app-atelier-lamp: rgba(255, 214, 150, 0.12);
     --app-atelier-grain: rgba(255, 230, 190, 0.04);
     --app-atelier-grain-fine: rgba(255, 230, 190, 0.03);
+
+    /* The Guild Hall by lamplight (#488): the Atelier's desk, with dark labels on the lifted clay and moss */
+    --app-guild-paper: #2A211A;
+    --app-guild-linen: #33291F;
+    --app-guild-cork: #4A3A2B;
+    --app-guild-sheet: #3A2F24;
+    --app-guild-sheet-stripe: #43362A;
+    --app-guild-card: #33291F;
+    --app-guild-ink: #F1E7D4;
+    --app-guild-ink-soft: #CDBFA6;
+    --app-guild-clay: #E3A07F;
+    --app-guild-clay-hover: #F0BB9F;
+    --app-guild-clay-pressed: #F6CDB6;
+    --app-guild-clay-wash: #4A2E22;
+    --app-guild-brass: #D4B060;
+    --app-guild-moss: #A9C28F;
+    --app-guild-moss-wash: #2C3A25;
+    --app-guild-rule: #4C3E30;
+    --app-guild-on-accent: #2A211A;
+    --app-guild-note-shadow: rgba(0, 0, 0, 0.35);
+    --app-guild-pin-shadow: rgba(0, 0, 0, 0.6);
 
     --app-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.3);
     --app-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.35);

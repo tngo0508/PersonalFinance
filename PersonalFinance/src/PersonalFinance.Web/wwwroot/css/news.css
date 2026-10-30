@@ -34,8 +34,8 @@
   width: 48px;
   height: 48px;
   border-radius: var(--app-radius-m);
-  background: linear-gradient(135deg, var(--app-accent-positive) 0%, #0e6e0e 100%);
-  color: #fff;
+  background: linear-gradient(135deg, var(--app-brand-fill) 0%, var(--app-brand-fill-hover) 100%);
+  color: var(--app-text-on-brand);
   flex-shrink: 0;
 }
 
@@ -89,9 +89,9 @@
 }
 
 .finance-hub-tab-btn.active {
-  color: var(--app-accent-positive);
+  color: var(--app-brand-text);
   border-bottom-color: var(--app-accent-positive);
-  background: rgba(16, 124, 16, 0.06);
+  background: color-mix(in srgb, var(--app-brand) 6%, transparent);
 }
 
 .finance-hub-tab-btn svg {
@@ -117,10 +117,10 @@
 .finance-hub-alert {
   padding: 1rem 1.25rem;
   margin-bottom: 1.5rem;
-  background: #fde7e9;
-  border: 1px solid #c24f4f;
+  background: var(--app-negative-bg);
+  border: 1px solid var(--app-accent-negative);
   border-radius: var(--app-radius-m);
-  color: #5c1a1a;
+  color: var(--app-negative-text);
 }
 
 /* --- Filters --- */
@@ -205,15 +205,15 @@
   font-size: var(--app-font-size-base);
   font-weight: var(--app-font-weight-semibold);
   white-space: nowrap;
-  background: var(--app-accent-positive);
-  border-color: var(--app-accent-positive);
-  color: #fff;
+  background: var(--app-brand-fill);
+  border-color: var(--app-brand-fill);
+  color: var(--app-text-on-brand);
   transition: all 0.15s ease;
 }
 
 .finance-hub-search-btn:hover {
-  background: #0e6e0e;
-  border-color: #0e6e0e;
+  background: var(--app-brand-fill-hover);
+  border-color: var(--app-brand-fill-hover);
 }
 
 .finance-hub-clear-btn {
@@ -297,7 +297,7 @@
 .finance-hub-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid rgba(16, 124, 16, 0.15);
+  border: 3px solid color-mix(in srgb, var(--app-brand) 15%, transparent);
   border-top-color: var(--app-accent-positive);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -348,7 +348,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--app-accent-positive), #0e6e0e);
+  background: linear-gradient(90deg, var(--app-brand), var(--app-brand-fill-hover));
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.2s ease;
@@ -374,7 +374,7 @@
   width: 100%;
   height: 200px;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--app-bg) 0%, var(--app-surface-secondary, #f5f5f5) 100%);
+  background: linear-gradient(135deg, var(--app-bg) 0%, var(--app-surface-secondary) 100%);
 }
 
 .finance-hub-card-img img {
@@ -415,8 +415,8 @@
 }
 
 .source-badge {
-  color: var(--app-accent-positive);
-  background: rgba(16, 124, 16, 0.08);
+  color: var(--app-brand-text);
+  background: color-mix(in srgb, var(--app-brand) 8%, transparent);
 }
 
 .category-badge {
@@ -443,7 +443,7 @@
 }
 
 .finance-hub-card-title a:hover {
-  color: var(--app-accent-positive);
+  color: var(--app-brand-text);
 }
 
 .finance-hub-card-desc {
@@ -502,15 +502,15 @@
 }
 
 .finance-hub-save-btn:hover {
-  background: rgba(16, 124, 16, 0.06);
+  background: color-mix(in srgb, var(--app-brand) 6%, transparent);
   border-color: var(--app-accent-positive);
-  color: var(--app-accent-positive);
+  color: var(--app-brand-text);
 }
 
 .finance-hub-save-btn.saved {
-  background: rgba(16, 124, 16, 0.1);
+  background: color-mix(in srgb, var(--app-brand) 10%, transparent);
   border-color: var(--app-accent-positive);
-  color: var(--app-accent-positive);
+  color: var(--app-brand-text);
 }
 
 .finance-hub-save-btn.saved svg {
@@ -518,20 +518,20 @@
 }
 
 .finance-hub-save-btn.save-failed {
-  background: #fde7e9;
-  border-color: #c24f4f;
-  color: #5c1a1a;
+  background: var(--app-negative-bg);
+  border-color: var(--app-accent-negative);
+  color: var(--app-negative-text);
 }
 
 .finance-hub-read-more {
-  color: var(--app-accent-positive);
+  color: var(--app-brand-text);
   text-decoration: none;
   border: 1px solid var(--app-accent-positive);
 }
 
 .finance-hub-read-more:hover {
-  background: var(--app-accent-positive);
-  color: #fff;
+  background: var(--app-brand-fill);
+  color: var(--app-text-on-brand);
 }
 
 .finance-hub-read-more svg {
@@ -564,7 +564,7 @@
   height: 96px;
   border-radius: 50%;
   background: var(--app-bg);
-  color: var(--app-text-disabled, #a0a0a0);
+  color: var(--app-text-disabled);
   margin-bottom: 1.5rem;
 }
 
@@ -627,7 +627,7 @@
 }
 
 .watchlist-item:hover {
-  box-shadow: var(--app-shadow-4, 0 2px 8px rgba(0,0,0,0.08));
+  box-shadow: var(--app-shadow-4);
   border-color: var(--app-border-hover);
 }
 
@@ -668,7 +668,7 @@
 }
 
 .watchlist-item-title a:hover {
-  color: var(--app-accent-positive);
+  color: var(--app-brand-text);
 }
 
 .watchlist-item-meta {
@@ -704,8 +704,8 @@
 }
 
 .watchlist-item-actions button:hover {
-  border-color: #c24f4f;
-  color: #c24f4f;
+  border-color: var(--app-accent-negative);
+  color: var(--app-accent-negative);
 }
 
 .watchlist-empty {
@@ -825,7 +825,7 @@
   color: var(--app-text);
   line-height: 1.6;
   padding: 0.75rem 1rem;
-  background: rgba(16, 124, 16, 0.04);
+  background: color-mix(in srgb, var(--app-brand) 4%, transparent);
   border-left: 3px solid var(--app-accent-positive);
   border-radius: 0 var(--app-radius-s) var(--app-radius-s) 0;
   margin-bottom: 0.5rem;
@@ -856,9 +856,9 @@
 }
 
 .finance-hub-summarize-btn:hover {
-  background: rgba(16, 124, 16, 0.06);
+  background: color-mix(in srgb, var(--app-brand) 6%, transparent);
   border-color: var(--app-accent-positive);
-  color: var(--app-accent-positive);
+  color: var(--app-brand-text);
 }
 
 .finance-hub-summarize-btn:focus-visible {
@@ -872,11 +872,11 @@
 }
 
 .finance-hub-summarize-btn.finance-hub-summarize-error {
-  border-color: #c24f4f;
-  color: #c24f4f;
-  background: rgba(194, 79, 79, 0.06);
+  border-color: var(--app-accent-negative);
+  color: var(--app-accent-negative);
+  background: color-mix(in srgb, var(--app-accent-negative) 6%, transparent);
 }
 
 .finance-hub-summarize-btn.finance-hub-summarize-error:hover {
-  background: rgba(194, 79, 79, 0.12);
+  background: color-mix(in srgb, var(--app-accent-negative) 12%, transparent);
 }

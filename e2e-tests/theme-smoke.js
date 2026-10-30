@@ -5,9 +5,10 @@
  * In dark mode it checks key text against its effective background (4.5:1) on the Landing Page, a sign-in page,
  * Account settings and the Net Worth help modal (slice #482), the Net Worth page (slice #485), the Google Drive
  * sample-data notice and its Budget report and Transactions modals (slice #484), Budget, Budget Tracker and Savings
- * Goals (slice #487), and the Dashboard and Money Priorities (slice #489), and that the Investment Calculator's, the
- * Google Drive Transactions timeline's, the Budget planner's Month Strip and the Net Worth runway restyle on a theme
- * switch without a reload (slices #483, #484, #487 and #485). Run from ui-test.js as Test 9j.
+ * Goals (slice #487), the Dashboard and Money Priorities (slice #489), and Community, News and the AI chat widget
+ * (slice #488), and that the Investment Calculator's, the Google Drive Transactions timeline's, the Budget planner's
+ * Month Strip and the Net Worth runway restyle on a theme switch without a reload (slices #483, #484, #487 and #485).
+ * Run from ui-test.js as Test 9j.
  *
  * Expected labels are read from Resources/i18n/en.json, so a rewording does not break the test.
  */
@@ -47,6 +48,13 @@ const CONTRAST_PAGES = {
     // The Dashboard and Money Priorities (#489), as a fresh Account sees them
     dashboard: ['.dash-header__eyebrow', '.dash-header__title', '.dash-header__lede'],
     moneyPriorities: ['.mp-title', '.mp-intro', '.mp-card__title'],
+    // Community (the Guild Hall, seeded in E2E), News, and the AI chat widget open on the Dashboard (#488)
+    community: ['.community-title', '.community-subtitle', '.community-section-title', '.community-rail-title',
+        '.community-pin-guidance', '.community-btn', '.community-eyebrow', '.community-pseudonym-name'],
+    news: ['.finance-hub-title', '.finance-hub-subtitle', '.finance-hub-tab-btn.active',
+        '.finance-hub-tab-btn:not(.active)', '.finance-hub-search-btn'],
+    chatWidget: ['.ai-chat-header h2', '.ai-chat-header p', '.ai-chat-eyebrow', '.ai-chat-welcome-text', '.ai-chat-chip',
+        '.ai-chat-disclaimer'],
     // Google Drive on sample data (#484): the sample-data notice, then the Budget report and Transactions modals. The
     // sample spreadsheet holds one month, so the report shows its month view: one period chip, the active one.
     googleDriveNotice: ['.gd-notice strong', '.gd-notice .small', '.gd-notice .btn', '.gd-section-header__title'],
@@ -633,6 +641,23 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         await checkDarkContrast(page, 'Dashboard', CONTRAST_PAGES.dashboard, report);
         await page.goto(`${base}/MoneyPriorities`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Money Priorities', CONTRAST_PAGES.moneyPriorities, report);
+
+        // Community, News and the AI chat widget (#488): dark contrast, the widget open on the Dashboard.
+        await page.goto(`${base}/Community`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'Community', CONTRAST_PAGES.community, report);
+        await page.goto(`${base}/News`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'News', CONTRAST_PAGES.news, report);
+        await page.goto(`${base}/Dashboard`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'AI chat launcher', ['.ai-chat-launcher-label'], report);
+        // The cookie banner sits over the launcher in this fresh context; take the privacy-preserving choice
+        if (await page.locator('#cookieAcceptEssential').isVisible().catch(() => false)) {
+            await page.click('#cookieAcceptEssential');
+        }
+        await page.click('#ai-chat-button');
+        // The welcome and its chips render a frame after the panel opens
+        await page.locator('#ai-chat-panel .ai-chat-chip').first().waitFor({state: 'visible', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'AI chat widget', CONTRAST_PAGES.chatWidget, report);
+        await page.click('#ai-chat-close');
 
         // 4. The avatar menu holds no theme items.
         await page.click('.app-user-toggle');
