@@ -1,0 +1,41 @@
+{
+  "vi": {
+    "terms/compound-interest": {
+      "term": "bb96b3917d6eb2d1",
+      "oneLine": "798ca753762b4a05",
+      "explanation.0": "4f60629f25a1ba4a",
+      "explanation.1": "f7f24c23bb6b6dc3",
+      "explanation.2": "559f06752bbe3a87",
+      "whyItMatters": "10611f92cdc7ddc6",
+      "workedExample": "d83ce49ef7008b53"
+    },
+    "terms/emergency-fund": {
+      "term": "dc169cd74e67d43d",
+      "oneLine": "d75de16d9f3d509e",
+      "explanation.0": "c5f1b5a28ce7ea24",
+      "explanation.1": "c3a80f5e4f8ce169",
+      "explanation.2": "b0cd2e82cdd18d5a",
+      "whyItMatters": "5bcc35c8f83f4052",
+      "workedExample": "765ef5c7838dd116"
+    },
+    "lessons/build-a-cushion": {
+      "title": "90615cdf0a055f91",
+      "intro": "137b173c05051733",
+      "check.0.prompt": "5440445abc2079ea",
+      "check.0.options.0": "e50ea2d7737ee25a",
+      "check.0.options.1": "2558566c5e58d4c6",
+      "check.0.explanation": "8ece21be6fd30ef8",
+      "check.1.prompt": "160c93e2268ea9d7",
+      "check.1.options.0": "9f0e4ab4d63e80f8",
+      "check.1.options.1": "595084968471c5ac",
+      "check.1.options.2": "d799b14a8a8fea1e",
+      "check.1.explanation": "f832fbe8a51d074c",
+      "check.2.prompt": "c5ce13708038ce29",
+      "check.2.options.0": "e50ea2d7737ee25a",
+      "check.2.options.1": "2558566c5e58d4c6",
+      "check.2.explanation": "220afef3ad06c9dc",
+      "tryIt.label": "48b398ee2df71e67",
+      "keepsake.name": "a7b2013393048245"
+    }
+  }
+}
