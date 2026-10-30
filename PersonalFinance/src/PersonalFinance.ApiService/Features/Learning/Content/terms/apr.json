@@ -1,0 +1,46 @@
+{
+  "slug": "apr",
+  "term": "Annual percentage rate",
+  "vietnameseName": "lãi suất phần trăm hằng năm",
+  "alsoKnownAs": [
+    "APR"
+  ],
+  "topic": "borrowing-credit",
+  "oneLine": "The yearly cost of borrowing money, including fees, shown as a percent.",
+  "explanation": [
+    "APR means annual percentage rate. It shows the yearly cost of a loan or a credit card as a percent.",
+    "An interest rate is the price you pay a lender for borrowing money. The APR is the interest rate plus the extra fees the lender charges, such as fees for making the loan.",
+    "So the APR and the interest rate are not the same. To compare two loans, compare the APR of one with the APR of the other."
+  ],
+  "whyItMatters": "The higher the rate, the more you pay over the life of a loan. Lenders do not have to offer you their best rate, so comparing APRs from several lenders can lower your cost. On most credit cards, you pay no interest on purchases if you pay the full balance by the due date each month.",
+  "workedExample": "Two lenders offer a $10,000 car loan. Lender A has a 6% interest rate and a 7% APR. Lender B has a 6.5% interest rate and a 6.8% APR. Compare 7% with 6.8%: Lender B's loan costs less, even though its interest rate is higher.",
+  "inTheUs": {
+    "text": "A federal law, the Truth in Lending Act, says lenders must tell you the APR and other key loan terms. They must do this before you finalize the loan.",
+    "rulesAsOf": 2026,
+    "sources": [
+      {
+        "name": "CFPB, What is the difference between a loan interest rate and the APR?",
+        "url": "https://www.consumerfinance.gov/ask-cfpb/what-is-the-difference-between-a-loan-interest-rate-and-the-apr-en-733/",
+        "accessed": "2026-10-30"
+      }
+    ]
+  },
+  "relatedTerms": [
+    "credit-score",
+    "compound-interest"
+  ],
+  "sources": [
+    {
+      "name": "CFPB, What is the difference between a loan interest rate and the APR?",
+      "url": "https://www.consumerfinance.gov/ask-cfpb/what-is-the-difference-between-a-loan-interest-rate-and-the-apr-en-733/",
+      "accessed": "2026-10-30"
+    },
+    {
+      "name": "CFPB, What is a credit card interest rate? What does APR mean?",
+      "url": "https://www.consumerfinance.gov/ask-cfpb/what-is-a-credit-card-interest-rate-what-does-apr-mean-en-44/",
+      "accessed": "2026-10-30"
+    }
+  ],
+  "furtherReading": [],
+  "lastReviewed": "2026-10-30"
+}

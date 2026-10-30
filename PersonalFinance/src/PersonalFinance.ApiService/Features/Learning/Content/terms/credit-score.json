@@ -1,0 +1,32 @@
+{
+  "slug": "credit-score",
+  "term": "Credit score",
+  "vietnameseName": "điểm tín dụng",
+  "alsoKnownAs": [],
+  "topic": "borrowing-credit",
+  "oneLine": "A number that predicts how likely you are to repay a loan on time.",
+  "explanation": [
+    "A credit score is a number that predicts how you will handle credit. Credit is money you borrow and pay back later. The score comes from the information in your credit reports.",
+    "A formula, called a scoring model, turns that information into the score. It looks at your bill-paying history and your unpaid debt. It also looks at how long your accounts have been open and how much of your credit you use.",
+    "You do not have just one score. It can differ by the model, the data and even the day it is calculated. Most credit scores are between 300 and 850."
+  ],
+  "whyItMatters": "Companies use your credit score to decide whether to give you a credit card, a car loan or a home loan. They also use it to set your interest rate and how much you can borrow. Landlords and insurers may use it too. A higher score usually makes a loan easier to get and its rate lower.",
+  "workedExample": "Mai and Tuan each ask for a car loan. Mai's score is 780, and Tuan's is 600. Mai is more likely to get the loan at a lower rate. Lenders do not all offer the same rate, so both can still compare offers.",
+  "relatedTerms": [
+    "apr"
+  ],
+  "sources": [
+    {
+      "name": "CFPB, What is a credit score?",
+      "url": "https://www.consumerfinance.gov/ask-cfpb/what-is-a-credit-score-en-315/",
+      "accessed": "2026-10-30"
+    },
+    {
+      "name": "CFPB, What is the difference between a loan interest rate and the APR?",
+      "url": "https://www.consumerfinance.gov/ask-cfpb/what-is-the-difference-between-a-loan-interest-rate-and-the-apr-en-733/",
+      "accessed": "2026-10-30"
+    }
+  ],
+  "furtherReading": [],
+  "lastReviewed": "2026-10-30"
+}
