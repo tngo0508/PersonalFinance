@@ -580,7 +580,7 @@
 
 /* Days already behind you this month: a shaded run, like ticked-off ledger lines. */
 .dash-today__day.is-past {
-    color: var(--app-brand-hover);
+    color: var(--app-brand-on-soft);
     background: var(--app-brand-soft);
 }
 

@@ -29,7 +29,9 @@ const {AA_TEXT, contrastRatio, flattenBackground, parseColour} = require(path.jo
 const CONTRAST_PAGES = {
     landing: ['.lp-hero__title', '.lp-hero__lead', '.lp-hero__note a', '.lp-section__title', '.lp-tool__text',
         '.lp-tool__figure', '.lp-kpi__value', '.lp-strip__text', '.lp-more__text', '.lp-step__text', '.lp-privacy__list',
-        '.lp-everyday__list', '.lp-closing__lead', '.lp-btn--primary', '.app-footer__links a'],
+        '.lp-everyday__list', '.lp-closing__lead', '.lp-btn--primary', '.app-footer__links a',
+        // The audit (#542): Bootstrap's grey outline buttons, in the signed-out language switcher and the cookie banner
+        '.language-switcher .btn[aria-pressed="false"]', '#cookieAcceptEssential'],
     signIn: ['.auth-page__title', '.auth-page__subtitle', '.auth-page .form-label', '#forgot-password', '#login-submit'],
     accountSettings: ['.account-page__title', '.account-page__subtitle', '.account-nav__link[aria-current="page"]',
         '.account-nav__link:not([aria-current="page"])', '.account-page__content .form-label'],
@@ -47,7 +49,8 @@ const CONTRAST_PAGES = {
         '.bt-section__title--expense', '.bt-section__title--income', '.bt-diff-neutral'],
     savingsGoals: ['.savings-title', '.savings-subtitle', '.savings-empty__title', '.savings-empty__text'],
     // The Dashboard and Money Priorities (#489), as a fresh Account sees them
-    dashboard: ['.dash-header__eyebrow', '.dash-header__title', '.dash-header__lede'],
+    dashboard: ['.dash-header__eyebrow', '.dash-header__title', '.dash-header__lede', '.dash-today__day.is-past',
+        '.data-source-btn.btn-outline-secondary'],
     moneyPriorities: ['.mp-title', '.mp-intro', '.mp-card__title'],
     // Community (the Guild Hall, seeded in E2E), News, and the AI chat widget open on the Dashboard (#488)
     community: ['.community-title', '.community-subtitle', '.community-section-title', '.community-rail-title',

@@ -549,6 +549,23 @@ table .text-end,
   color: var(--app-text-on-brand);
 }
 
+/* Bootstrap's grey and red text colours are fixed values that fall under 4.5:1 on the dark surfaces (#542): the
+   outline buttons and the text utilities take the tokens instead. Hover and active keep Bootstrap's filled look. */
+:root[data-theme="dark"] .btn-outline-secondary {
+  --bs-btn-color: var(--app-text-soft);
+  --bs-btn-border-color: var(--app-border-control);
+}
+:root[data-theme="dark"] .btn-outline-danger {
+  --bs-btn-color: var(--app-negative-text);
+  --bs-btn-border-color: var(--app-negative-text);
+}
+:root[data-theme="dark"] .text-secondary {
+  color: var(--app-text-muted) !important;
+}
+:root[data-theme="dark"] .text-danger {
+  color: var(--app-negative-text) !important;
+}
+
 /* Secondary buttons */
 .btn-secondary {
     border-radius: var(--app-radius-s);
