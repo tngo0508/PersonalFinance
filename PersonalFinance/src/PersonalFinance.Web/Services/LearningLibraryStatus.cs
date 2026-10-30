@@ -47,9 +47,11 @@ public sealed class LearningLibraryStatus : ILearningLibraryStatus
             _cache.Set(CacheKey, hasEntries, CacheFor);
             return hasEntries;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            // The nav must render whatever ApiService does; hide the entry and ask again soon.
+            // The nav must render whatever ApiService does; hide the entry and ask again soon. That includes the
+            // HttpClient.Timeout a cold ApiService hits, which surfaces as a TaskCanceledException; only the
+            // caller's own cancellation (the browser went away) propagates.
             _logger.LogWarning(ex, "Failed to read whether the Library has entries; hiding the Learning nav entry.");
             _cache.Set(CacheKey, false, RetryAfterFailure);
             return false;
