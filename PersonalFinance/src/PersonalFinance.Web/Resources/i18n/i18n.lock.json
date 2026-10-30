@@ -978,6 +978,11 @@
     "Shell.Js.Ai.Thinking": "a1d3e512126d8c3c",
     "Shell.Js.Ai.Status.Thinking": "245aa6bc83477abd",
     "Shell.Js.Ai.Status.UsageLimit": "1e816fab8370bebe",
+    "Shell.Js.Ai.Term.About": "7ea26b81aa5e41c0",
+    "Shell.Js.Ai.Term.Hint": "c1b6d0f91684179e",
+    "Shell.Js.Ai.Term.Starter.Simpler": "be94b46683650b67",
+    "Shell.Js.Ai.Term.Starter.Difference": "843daf2d423a2240",
+    "Shell.Js.Ai.Term.Unreviewed": "84e0617e7054663f",
     "Shell.Js.Ai.Status.Failed": "eff9b3f8ceb866a7",
     "Feedback.Title": "8235980b80addfc7",
     "Feedback.Intro": "3cfc1f968ac8fa61",
@@ -2651,6 +2656,11 @@
     "Learning.Entry.LastReviewed": "f7edd9b4ad0ac100",
     "Learning.Entry.EducationalOnly": "c3991373a56c30af",
     "Learning.Entry.Disclaimer": "1ece43f84b152b71",
+    "Learning.Entry.AskAi.Heading": "aca032c9707ef4a3",
+    "Learning.Entry.AskAi.Lede": "62b34067a1c6bde8",
+    "Learning.Entry.AskAi.Button": "aca032c9707ef4a3",
+    "Learning.Entry.AskAi.SignIn": "4c9c17c4be53118d",
+    "Learning.Entry.AskAi.SignInLink": "bfd402b2f6f38125",
     "Learning.Error.LessonLocked": "bcf29e45b548f4c2"
   }
 }
