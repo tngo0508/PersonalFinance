@@ -1460,3 +1460,71 @@
         background: CanvasText;
     }
 }
+
+/* ==========================================================================
+   Atelier — the quiet card while a Lesson is open mid-Journey (#523)
+   ========================================================================== */
+
+.dash-atelier {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--app-spacing-m);
+    margin-bottom: var(--app-spacing-l);
+    padding: var(--app-spacing-m) var(--app-spacing-l);
+    background: var(--app-bg);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+}
+
+.dash-atelier__title {
+    margin: 0;
+    font-size: var(--app-font-size-base);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.dash-atelier__keepsakes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-xs);
+    margin: var(--app-spacing-xs) 0 0;
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+}
+
+.dash-atelier__keepsake {
+    font-size: 1.125rem;
+    line-height: 1;
+}
+
+.dash-atelier__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--app-spacing-m);
+}
+
+.dash-atelier__hide-form {
+    margin: 0;
+}
+
+.dash-atelier__hide {
+    padding: 0;
+    font: inherit;
+    font-size: var(--app-font-size-small);
+    color: var(--app-text-muted);
+    text-decoration: underline;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.dash-atelier__hide:hover {
+    color: var(--app-text);
+}
+
+.dash-atelier__hide:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}

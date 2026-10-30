@@ -47,11 +47,17 @@ public sealed class LearningController : Controller
         {
             string language = AppLanguages.Current().Code;
             LearningLibraryDto library = await _learningApi.GetLibraryAsync(language, cancellationToken);
-            bool signedIn = IsSignedIn;
-            IReadOnlyList<LearningRoadStop> road = signedIn
-                ? LearningRoadStop.ForJourney(await _learningApi.GetJourneyAsync(language, cancellationToken))
+            JourneyStateDto? journey = IsSignedIn ? await _learningApi.GetJourneyAsync(language, cancellationToken) : null;
+            IReadOnlyList<LearningRoadStop> road = journey is not null
+                ? LearningRoadStop.ForJourney(journey)
                 : LearningRoadStop.Outline(await _learningApi.GetLessonsAsync(language, cancellationToken));
-            return View(new LearningIndexViewModel { Topics = library.Topics, Road = road, IsSignedIn = signedIn });
+            return View(new LearningIndexViewModel
+            {
+                Topics = library.Topics,
+                Road = road,
+                IsSignedIn = journey is not null,
+                ShowOnDashboard = journey?.ShowOnDashboard ?? false
+            });
         }
         catch (Exception ex) when (ex is ApiException or HttpRequestException or TaskCanceledException
                                        && !cancellationToken.IsCancellationRequested)
@@ -145,6 +151,31 @@ public sealed class LearningController : Controller
         {
             return StatusCode((int)ex.StatusCode);
         }
+    }
+
+    /// <summary>
+    /// Shows or hides the quiet Atelier card on the Dashboard (#523): the card's Hide button and the Atelier page's
+    /// switch post here, then go back where they came from. A failure leaves the preference as it was.
+    /// </summary>
+    [Authorize]
+    [HttpPost("/Learning/Dashboard")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ShowOnDashboard([FromForm] bool show, [FromForm] string? returnUrl,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _learningApi.SetShowOnDashboardAsync(new ShowOnDashboardRequest { Show = show }, cancellationToken);
+        }
+        catch (Exception ex) when (ex is ApiException or HttpRequestException or TaskCanceledException
+                                       && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to save the Atelier Dashboard preference; it stays as it was.");
+        }
+
+        return Url.IsLocalUrl(returnUrl)
+            ? LocalRedirect(returnUrl)
+            : RedirectToAction(nameof(Index), "Learning", null, "journey");
     }
 
     /// <summary>

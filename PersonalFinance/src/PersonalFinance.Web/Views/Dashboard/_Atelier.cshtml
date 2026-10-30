@@ -1,0 +1,38 @@
+@using Microsoft.AspNetCore.Html
+@model PersonalFinance.Shared.DTOs.Dashboard.DashboardSummaryDto
+@* The quiet Atelier card (#523): only while a Lesson is open mid-Journey. Hide clears the Show on Dashboard preference;
+   the switch on the Atelier page sets it again. No Notification and no email. *@
+@if (Model.Atelier is { } atelier)
+{
+    // Append encodes the title; only the <em> around it is markup.
+    var title = new HtmlContentBuilder().AppendHtml("<em>").Append(atelier.Title).AppendHtml("</em>");
+    <section class="dash-atelier" aria-labelledby="dash-atelier-title" data-test-id="dash-atelier"
+             data-lesson="@atelier.LessonSlug">
+        <div class="dash-atelier__body">
+            <h2 id="dash-atelier-title" class="dash-atelier__title">
+                @L.NamedHtml("Dashboard.Atelier.Open", null,
+                    ("day", new HtmlString(atelier.Day.ToString(System.Globalization.CultureInfo.CurrentCulture))),
+                    ("title", title))
+            </h2>
+            @if (atelier.Keepsakes.Count > 0)
+            {
+                <p class="dash-atelier__keepsakes">
+                    <span class="dash-atelier__keepsakes-label">@L["Dashboard.Atelier.Keepsakes"]</span>
+                    @foreach (var keepsake in atelier.Keepsakes)
+                    {
+                        <span class="dash-atelier__keepsake" role="img" aria-label="@keepsake.Name" title="@keepsake.Name">@keepsake.Symbol</span>
+                    }
+                </p>
+            }
+        </div>
+        <div class="dash-atelier__actions">
+            <a class="btn btn-primary btn-sm" asp-controller="Learning" asp-action="Lesson"
+               asp-route-slug="@atelier.LessonSlug" data-test-id="dash-atelier-open">@L["Dashboard.Atelier.OpenLink"]</a>
+            <form method="post" asp-controller="Learning" asp-action="ShowOnDashboard" class="dash-atelier__hide-form">
+                <input type="hidden" name="show" value="false"/>
+                <input type="hidden" name="returnUrl" value="@Url.Action("Index", "Dashboard")"/>
+                <button type="submit" class="dash-atelier__hide" data-test-id="dash-atelier-hide">@L["Dashboard.Atelier.Hide"]</button>
+            </form>
+        </div>
+    </section>
+}

@@ -15,6 +15,9 @@ public sealed class LearningIndexViewModel
     /// <summary>The reader is signed in, so the road shows their progress rather than a Start the Journey link.</summary>
     public bool IsSignedIn { get; init; }
 
+    /// <summary>The Account shows the quiet Atelier card on the Dashboard; the page's switch turns it off or on.</summary>
+    public bool ShowOnDashboard { get; init; }
+
     /// <summary>No Term Entry is Published yet: the page shows a quiet "being written" note instead of the shelves.</summary>
     public bool IsEmpty => Topics.All(t => t.Terms.Count == 0);
 

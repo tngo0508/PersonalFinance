@@ -89,6 +89,59 @@ public class LearningWebControllerTests
     }
 
     [Fact]
+    public async Task Index_SignedIn_CarriesTheDashboardPreference_ForTheSwitch()
+    {
+        (ILearningApi api, ApiProxy<ILearningApi> proxy) = ApiProxy.Create<ILearningApi>();
+        proxy.Returns(nameof(ILearningApi.GetLibraryAsync), Library);
+        proxy.Returns(nameof(ILearningApi.GetJourneyAsync),
+            new JourneyStateDto { Started = true, ShowOnDashboard = true, Lessons = DayTwoOpen.Lessons });
+
+        LearningIndexViewModel model = Model<LearningIndexViewModel>(await Controller(api, signedIn: true).Index());
+
+        Assert.True(model.ShowOnDashboard);
+    }
+
+    [Theory]
+    [InlineData(false, "/Dashboard", "/Dashboard")]
+    [InlineData(true, "/Learning#journey", "/Learning#journey")]
+    public async Task ShowOnDashboard_SavesThePreference_AndGoesBack(bool show, string returnUrl, string expected)
+    {
+        (ILearningApi api, ApiProxy<ILearningApi> proxy) = ApiProxy.Create<ILearningApi>();
+        proxy.Returns(nameof(ILearningApi.SetShowOnDashboardAsync), null);
+
+        IActionResult result = await Controller(api, signedIn: true).ShowOnDashboard(show, returnUrl);
+
+        Assert.Equal(expected, Assert.IsType<LocalRedirectResult>(result).Url);
+        Assert.Equal(show, Assert.IsType<ShowOnDashboardRequest>(proxy.Arguments.Single()[0]).Show);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("https://evil.example/")]
+    [InlineData("//evil.example/")]
+    public async Task ShowOnDashboard_WithoutALocalReturnUrl_GoesToTheJourney(string? returnUrl)
+    {
+        (ILearningApi api, ApiProxy<ILearningApi> proxy) = ApiProxy.Create<ILearningApi>();
+        proxy.Returns(nameof(ILearningApi.SetShowOnDashboardAsync), null);
+
+        IActionResult result = await Controller(api, signedIn: true).ShowOnDashboard(true, returnUrl);
+
+        RedirectToActionResult redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(("Index", "Learning", "journey"), (redirect.ActionName, redirect.ControllerName, redirect.Fragment));
+    }
+
+    [Fact]
+    public async Task ShowOnDashboard_WhenApiServiceFails_StillGoesBack()
+    {
+        (ILearningApi api, ApiProxy<ILearningApi> proxy) = ApiProxy.Create<ILearningApi>();
+        proxy.Throws(nameof(ILearningApi.SetShowOnDashboardAsync), new HttpRequestException("connection refused"));
+
+        IActionResult result = await Controller(api, signedIn: true).ShowOnDashboard(false, "/Dashboard");
+
+        Assert.Equal("/Dashboard", Assert.IsType<LocalRedirectResult>(result).Url);
+    }
+
+    [Fact]
     public async Task Lesson_ForAGuest_AsksToSignIn()
     {
         (ILearningApi api, ApiProxy<ILearningApi> proxy) = ApiProxy.Create<ILearningApi>();
@@ -384,7 +437,8 @@ public class LearningWebControllerTests
         }
 
         public string? Content(string? contentPath) => contentPath;
-        public bool IsLocalUrl(string? url) => true;
+        public bool IsLocalUrl(string? url) =>
+            url is not null && url.StartsWith('/') && !url.StartsWith("//", StringComparison.Ordinal);
         public string? Link(string? routeName, object? values) => null;
         public string? RouteUrl(UrlRouteContext routeContext) => null;
     }

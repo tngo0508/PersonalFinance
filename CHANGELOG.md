@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.10.0] - 2026-10-30
+
+### Added
+
+- **The Atelier: a quiet Dashboard card**: while a Lesson is open mid-Journey, the Dashboard says "Atelier: Lesson n, *Title*, is open today", with an Open link and the keepsakes so far (#523, part of #513).
+  - The card shows only after the first Lesson is finished, while today's Lesson is open, and until the Journey ends. It is gone while the next Lesson is still locked.
+  - Its Hide button turns the card off. A switch on the Atelier page turns it off or back on. No Notification and no email go with it.
+  - The Lesson title follows the reader's Language, and the card follows the light and dark themes.
+
 ## [16.9.0] - 2026-10-30
 
 ### Added

@@ -9,7 +9,8 @@
  * faked in the browser (no AI key in E2E); the request is checked to carry only the Term's slug. Last, the fixture
  * learner (E2E_SEED_LEARNING=true on both apps), past Lesson 1 since two days ago, opens Lesson 2 in dark mode: the
  * Review (#520) shows Lesson 1's cards, a card turns with Enter and takes a mark, its text is readable, and Skip goes
- * to the Lesson. Run from ui-test.js as Test 9k.
+ * to the Lesson. The same learner, mid-Journey with Lesson 2 open, finds the quiet Atelier card on the Dashboard
+ * (#523), hides it, and brings it back with the switch on the Atelier page. Run from ui-test.js as Test 9k.
  *
  * ApiService must read the fixture content folder (Learning__ContentPath, set by e2e-inmemory.sh and CI's E2E job):
  * the real one holds no Term Entries until the content slices. Expected labels are read from Resources/i18n/en.json.
@@ -314,9 +315,53 @@ async function checkReview(browser, base, report) {
         const focused = await page.evaluate(() => document.activeElement && document.activeElement.id);
         check(!(await review.isVisible()) && focused === 'lessonStart',
             'Atelier: Skip hides the Review and moves to today\'s Lesson', `focused=${focused}`, report);
+
+        await checkDashboardCard(page, base, report);
     } finally {
         await context.close();
     }
+}
+
+/**
+ * The signed-in fixture learner, mid-Journey with Lesson 2 open: the Dashboard shows the quiet Atelier card with an
+ * Open link and Lesson 1's keepsake, readable in dark mode; Hide removes it; the Atelier page's switch, now off, turns
+ * it back on and the card returns. It ends with the card on, so a kept database starts the next run the same way.
+ * @param {import('playwright').Page} page - A page signed in as the fixture learner.
+ * @param {string} base - The Web app's base URL.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+async function checkDashboardCard(page, base, report) {
+    const card = page.locator('[data-test-id="dash-atelier"]');
+    await page.goto(`${base}/Dashboard`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+    if (!(await card.isVisible())) {
+        report.fail('Atelier: the Dashboard shows the card while Lesson 2 is open');
+        return;
+    }
+    const lesson = await card.getAttribute('data-lesson');
+    const keepsakes = await card.locator('.dash-atelier__keepsake').count();
+    check(lesson === 'borrow-wisely' && keepsakes === 1,
+        'Atelier: the Dashboard shows the card while Lesson 2 is open, with Lesson 1\'s keepsake',
+        `lesson=${lesson}, keepsakes=${keepsakes}`, report);
+    const href = await card.locator('[data-test-id="dash-atelier-open"]').getAttribute('href');
+    check(href === '/Learning/Lesson/borrow-wisely', 'Atelier: the card\'s Open link goes to Lesson 2', href, report);
+    await checkContrast(page, ['.dash-atelier__title', '.dash-atelier__keepsakes-label', '.dash-atelier__hide'], report);
+
+    await card.locator('[data-test-id="dash-atelier-hide"]').click();
+    await page.waitForLoadState('networkidle', {timeout: TIMEOUT});
+    check(new URL(page.url()).pathname === '/Dashboard' && !(await card.isVisible()),
+        'Atelier: Hide removes the card and stays on the Dashboard', page.url(), report);
+
+    await page.goto(`${base}/Learning`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+    const toggle = page.locator('[data-test-id="atelier-dashboard-switch"]');
+    const off = await toggle.getAttribute('aria-checked');
+    check(off === 'false', 'Atelier: the switch on the Atelier page shows the card is off', `aria-checked=${off}`, report);
+    await toggle.click();
+    await page.waitForLoadState('networkidle', {timeout: TIMEOUT});
+    const on = await toggle.getAttribute('aria-checked');
+    check(on === 'true', 'Atelier: the switch turns the card back on', `aria-checked=${on}`, report);
+
+    await page.goto(`${base}/Dashboard`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+    check(await card.isVisible(), 'Atelier: the card is back on the Dashboard', 'not visible', report);
 }
 
 /**

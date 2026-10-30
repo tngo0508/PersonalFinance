@@ -1,4 +1,5 @@
 using PersonalFinance.Shared.DTOs.Currency;
+using PersonalFinance.Shared.DTOs.Learning;
 using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.Shared.DTOs.Dashboard;
@@ -225,4 +226,26 @@ public class DashboardSummaryDto
 
     /// <summary>The latest rates that brought the Dashboard's "now" figures into the Reporting Currency.</summary>
     public ConversionDto? Conversion { get; set; }
+
+    /// <summary>The quiet Atelier card (#523); null unless a Lesson is open mid-Journey and the card is not hidden.</summary>
+    public DashboardAtelierDto? Atelier { get; set; }
+}
+
+/// <summary>
+/// The quiet Atelier card: today's open Lesson, mid-Journey, with the keepsakes so far. Titles are in the Language
+/// asked for.
+/// </summary>
+public class DashboardAtelierDto
+{
+    /// <summary>The open Lesson's permanent slug, for its Open link.</summary>
+    public string LessonSlug { get; set; } = string.Empty;
+
+    /// <summary>Its day on the Journey, from 1.</summary>
+    public int Day { get; set; }
+
+    /// <summary>Its title.</summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>The finished Lessons' keepsakes, by day.</summary>
+    public List<KeepsakeDto> Keepsakes { get; set; } = [];
 }

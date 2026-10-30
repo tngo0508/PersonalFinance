@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Dashboard;
+using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
 using Xunit;
 
@@ -66,6 +67,19 @@ public class DashboardWebControllerTests
     }
 
     [Fact]
+    public async Task Index_AsksInTheReadersLanguage_SoTheAtelierCardTitleIsTranslated()
+    {
+        var api = new FakeDashboardApi();
+
+        using (new UiCultureScope("vi"))
+        {
+            await CreateController(api, new RecordingLogger<DashboardController>()).Index();
+        }
+
+        Assert.Equal("vi", api.Language);
+    }
+
+    [Fact]
     public async Task Index_WhenRequestIsCancelled_DoesNotSwallowCancellation()
     {
         using var cts = new CancellationTokenSource();
@@ -98,8 +112,12 @@ public class FakeDashboardApi : IDashboardApi
     public DashboardSummaryDto Summary { get; set; } = new();
     public Exception? Failure { get; set; }
 
-    public Task<DashboardSummaryDto> GetSummaryAsync(CancellationToken cancellationToken = default)
+    /// <summary>The Language the last call asked for.</summary>
+    public string? Language { get; private set; }
+
+    public Task<DashboardSummaryDto> GetSummaryAsync(string? language = null, CancellationToken cancellationToken = default)
     {
+        Language = language;
         return Failure is null ? Task.FromResult(Summary) : Task.FromException<DashboardSummaryDto>(Failure);
     }
 }
