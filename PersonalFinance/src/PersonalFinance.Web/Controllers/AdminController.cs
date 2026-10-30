@@ -224,6 +224,82 @@ public class AdminController : Controller
     }
 
     /// <summary>
+    /// Displays every Guild Hall Poll, open and closed, with the form for writing a new one. A failed load shows the
+    /// Unavailable State, never an empty list.
+    /// </summary>
+    [HttpGet]
+    public Task<IActionResult> Polls(CancellationToken cancellationToken = default) =>
+        PollsViewAsync(new AdminPollForm(), cancellationToken);
+
+    /// <summary>
+    /// Writes a new Poll, stored closed. A rejected form is shown again as typed, with the reason.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreatePoll(AdminPollForm form, CancellationToken cancellationToken = default)
+    {
+        List<string> options = form.FilledOptions();
+        if (options.Count < CommunityPollLimits.MinOptions)
+        {
+            ModelState.AddModelError(nameof(AdminPollForm.Options),
+                $"Give at least {CommunityPollLimits.MinOptions} options.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return await PollsViewAsync(form, cancellationToken);
+        }
+
+        try
+        {
+            await _communityApi.CreatePollAsync(new CommunityPollRequestDto
+            {
+                Question = form.Question,
+                Description = form.Description,
+                Category = form.Category,
+                Options = options,
+            }, cancellationToken);
+            TempData["AdminMessage"] = "Poll saved. It stays closed until you open it.";
+            return RedirectToAction(nameof(Polls));
+        }
+        catch (Exception ex) when ((ex is ApiException or HttpRequestException or TaskCanceledException)
+                                   && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to write a Poll.");
+            ModelState.AddModelError(string.Empty,
+                ApiErrorMessages.ForUser(_localizer, ex, "The Poll could not be saved. Try again later."));
+            return await PollsViewAsync(form, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Opens a Poll for voting or closes it, then returns to the Poll list.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetPollStatus(int id, bool open, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _communityApi.SetPollStatusAsync(id, new CommunityPollStatusRequestDto { IsOpen = open },
+                cancellationToken);
+            TempData["AdminMessage"] = open ? "Poll opened." : "Poll closed.";
+        }
+        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            TempData["AdminError"] = "That Poll no longer exists.";
+        }
+        catch (Exception ex) when ((ex is ApiException or HttpRequestException or TaskCanceledException)
+                                   && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to open or close a Poll.");
+            TempData["AdminError"] = ApiErrorMessages.ForUser(_localizer, ex, "The Poll could not be updated. Try again later.");
+        }
+
+        return RedirectToAction(nameof(Polls));
+    }
+
+    /// <summary>
     /// Assigns a role to an account.
     /// </summary>
     [HttpPost]
@@ -269,6 +345,21 @@ public class AdminController : Controller
         return RunAsync(
             () => _adminApi.DeleteRoleAsync(roleName, cancellationToken),
             $"Role '{roleName}' deleted.");
+    }
+
+    private async Task<IActionResult> PollsViewAsync(AdminPollForm form, CancellationToken cancellationToken)
+    {
+        try
+        {
+            List<CommunityPollAdminItemDto> items = await _communityApi.ListPollsAsync(cancellationToken);
+            return View(nameof(Polls), new AdminPollListViewModel { Items = items, Form = form });
+        }
+        catch (Exception ex) when ((ex is ApiException or HttpRequestException or TaskCanceledException)
+                                   && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to load the Poll list.");
+            return this.UnavailableView("Polls", "We couldn't load the Polls", "Admin", nameof(Polls));
+        }
     }
 
     private async Task<IActionResult> RunAsync(Func<Task> action, string successMessage)

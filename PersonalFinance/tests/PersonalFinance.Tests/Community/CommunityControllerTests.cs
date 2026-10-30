@@ -164,6 +164,7 @@ public class CommunityControllerTests
     [InlineData(nameof(CommunityController.SubmitStrategy))]
     [InlineData(nameof(CommunityController.AddComment))]
     [InlineData(nameof(CommunityController.React))]
+    [InlineData(nameof(CommunityController.Vote))]
     public void PostingActions_ValidateTheAntiforgeryToken(string action)
     {
         Assert.NotNull(typeof(CommunityController).GetMethod(action)!

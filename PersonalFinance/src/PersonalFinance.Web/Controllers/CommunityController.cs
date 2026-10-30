@@ -81,6 +81,7 @@ public sealed class CommunityController : Controller
     /// Handles a poll vote submission via AJAX.
     /// </summary>
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Produces("application/json")]
     public async Task<IActionResult> Vote([FromBody] VoteRequest request, CancellationToken cancellationToken = default)
     {
@@ -275,7 +276,6 @@ public sealed class CommunityController : Controller
             Question = dto.Question,
             Description = dto.Description,
             Category = dto.Category,
-            TotalVotes = dto.TotalVotes,
             IsActive = dto.IsActive,
             HasVoted = dto.HasVoted,
             VotedOptionId = dto.VotedOptionId,
@@ -283,7 +283,6 @@ public sealed class CommunityController : Controller
             {
                 Id = o.Id,
                 Text = o.Text,
-                Votes = o.Votes,
                 Percentage = o.Percentage,
             }).ToList(),
             Comments = dto.Comments.Select(MapComment).ToList(),

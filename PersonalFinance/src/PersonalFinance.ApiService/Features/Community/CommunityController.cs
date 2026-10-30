@@ -14,7 +14,7 @@ namespace PersonalFinance.ApiService.Features.Community;
 /// RESTful API controller for the Guild Hall (the Community Feature): the Pseudonym, polls, Comments, Strategies and
 /// Reactions. All endpoints are scoped to the current user identified by the authenticated Account (see
 /// XUserIdAuthenticationHandler); the author of a post is always that Account. Reviewing Strategies and moderating
-/// Comments require the Admin Policy.
+/// Comments and writing, opening and closing Polls require the Admin Policy.
 /// </summary>
 [Authorize]
 [ApiController]
@@ -26,16 +26,19 @@ public class CommunityController : ControllerBase
     private readonly IValidator<CommunityStrategyRequestDto> _strategyValidator;
     private readonly IValidator<CommunityStrategyReviewRequestDto> _reviewValidator;
     private readonly IValidator<CommunityReactionRequestDto> _reactionValidator;
+    private readonly IValidator<CommunityPollRequestDto> _pollValidator;
 
     public CommunityController(ICommunityService communityService,
         IValidator<CommunityStrategyRequestDto> strategyValidator,
         IValidator<CommunityStrategyReviewRequestDto> reviewValidator,
-        IValidator<CommunityReactionRequestDto> reactionValidator)
+        IValidator<CommunityReactionRequestDto> reactionValidator,
+        IValidator<CommunityPollRequestDto> pollValidator)
     {
         _communityService = communityService;
         _strategyValidator = strategyValidator;
         _reviewValidator = reviewValidator;
         _reactionValidator = reactionValidator;
+        _pollValidator = pollValidator;
     }
 
     /// <summary>
@@ -206,6 +209,55 @@ public class CommunityController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         return await _communityService.SetCommentHiddenAsync(commentId, request.IsHidden, cancellationToken)
+            ? NoContent()
+            : NotFound();
+    }
+
+    /// <summary>
+    /// Lists every Poll for the Admin, open and closed, newest first.
+    /// </summary>
+    [HttpGet("polls")]
+    [Authorize(Policy = AppPolicies.RequireAdmin)]
+    [ProducesResponseType(typeof(List<CommunityPollAdminItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<List<CommunityPollAdminItemDto>>> ListPolls(CancellationToken cancellationToken = default)
+    {
+        return Ok(await _communityService.ListPollsAsync(cancellationToken));
+    }
+
+    /// <summary>
+    /// Writes a new Poll. It is stored closed, for the Admin to open when it is ready.
+    /// </summary>
+    [HttpPost("polls")]
+    [Authorize(Policy = AppPolicies.RequireAdmin)]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<CommunityPollAdminItemDto>> CreatePoll([FromBody] CommunityPollRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        ValidationResult validation = await _pollValidator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
+        {
+            return BadRequest(validation.ToApiError());
+        }
+
+        CommunityPollAdminItemDto poll = await _communityService.CreatePollAsync(request, cancellationToken);
+        return CreatedAtAction(nameof(ListPolls), poll);
+    }
+
+    /// <summary>
+    /// Opens a Poll for voting or closes it. Unknown Polls return 404.
+    /// </summary>
+    [HttpPut("polls/{pollId:int}/status")]
+    [Authorize(Policy = AppPolicies.RequireAdmin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetPollStatus(int pollId, [FromBody] CommunityPollStatusRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        return await _communityService.SetPollOpenAsync(pollId, request.IsOpen, cancellationToken)
             ? NoContent()
             : NotFound();
     }

@@ -10,7 +10,7 @@ using PersonalFinance.Shared.Helpers;
 namespace PersonalFinance.ApiService.Features.Community;
 
 /// <summary>
-/// Service implementation of the Guild Hall (the Community Feature): Pseudonyms, polls, Comments, Strategies and
+/// Service implementation of the Guild Hall (the Community Feature): Pseudonyms, Polls, Comments, Strategies and
 /// Reactions.
 /// An author is shown by its Pseudonym, resolved from the Account at read time, so a re-roll shows on every past post
 /// and no DTO carries a display name or email (ADR 0018). A post whose author has no Pseudonym any more (a Former
@@ -42,7 +42,7 @@ internal sealed class CommunityService : ICommunityService
         CancellationToken cancellationToken = default)
     {
         CommunityPseudonym pseudonym = await GetOrCreatePseudonymAsync(userId, cancellationToken);
-        List<CommunityPoll> polls = await ActivePollsAsync(cancellationToken);
+        List<OpenPollRow> polls = await OpenPollsQuery(userId).ToListAsync(cancellationToken);
         List<CommunityStrategyDto> strategies = await BoardStrategiesQuery(userId, category)
             .Take(CommunityStrategyLimits.BoardSize)
             .ToListAsync(cancellationToken);
@@ -71,7 +71,7 @@ internal sealed class CommunityService : ICommunityService
             Pseudonym = pseudonym.Name,
             ActivePolls = polls.Select(p =>
             {
-                CommunityPollDto dto = MapPollToDto(p, userId);
+                CommunityPollDto dto = MapPollToDto(p);
                 dto.Comments = byPoll[p.Id].ToList();
                 return dto;
             }).ToList(),
@@ -170,10 +170,10 @@ internal sealed class CommunityService : ICommunityService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         // Return the updated polls only; the page re-reads the rest when it reloads.
-        List<CommunityPoll> updatedPolls = await ActivePollsAsync(cancellationToken);
+        List<OpenPollRow> updatedPolls = await OpenPollsQuery(userId).ToListAsync(cancellationToken);
         return new CommunityResponseDto
         {
-            ActivePolls = updatedPolls.Select(p => MapPollToDto(p, userId)).ToList(),
+            ActivePolls = updatedPolls.Select(MapPollToDto).ToList(),
         };
     }
 
@@ -434,9 +434,120 @@ internal sealed class CommunityService : ICommunityService
         return true;
     }
 
+    public Task<List<CommunityPollAdminItemDto>> ListPollsAsync(CancellationToken cancellationToken = default) =>
+        PollAdminQuery().ToListAsync(cancellationToken);
+
+    public async Task<CommunityPollAdminItemDto> CreatePollAsync(CommunityPollRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        string? description = request.Description?.Trim();
+        var poll = new CommunityPoll
+        {
+            PollCode = Guid.NewGuid().ToString("N"),
+            Question = request.Question.Trim(),
+            Description = string.IsNullOrEmpty(description) ? null : description,
+            Category = request.Category.Trim(),
+            IsActive = false,
+            CreatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime,
+        };
+        List<string> options = request.Options
+            .Select(o => o.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        for (int i = 0; i < options.Count; i++)
+        {
+            poll.Options.Add(new CommunityPollOption { Text = options[i], Order = i + 1 });
+        }
+
+        _dbContext.CommunityPolls.Add(poll);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Poll written: PollId={PollId}", poll.Id);
+        }
+
+        return new CommunityPollAdminItemDto
+        {
+            Id = poll.Id,
+            Question = poll.Question,
+            Description = poll.Description,
+            Category = poll.Category,
+            IsOpen = poll.IsActive,
+            CreatedAtUtc = poll.CreatedAtUtc,
+            Options = options,
+        };
+    }
+
+    public async Task<bool> SetPollOpenAsync(int pollId, bool isOpen, CancellationToken cancellationToken = default)
+    {
+        CommunityPoll? poll = await _dbContext.CommunityPolls.FirstOrDefaultAsync(p => p.Id == pollId, cancellationToken);
+        if (poll is null)
+        {
+            return false;
+        }
+
+        poll.IsActive = isOpen;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Poll status changed: PollId={PollId}, IsOpen={IsOpen}", pollId, isOpen);
+        }
+
+        return true;
+    }
+
     // =========================================================================
     // Queries (internal so tests can check they translate to Azure SQL)
     // =========================================================================
+
+    /// <summary>
+    /// The open Polls, newest first, each with its options in order, every option's number of votes and the option
+    /// <paramref name="userId"/> voted for. The counts never leave the service: <see cref="MapPollToDto"/> turns them
+    /// into shares, and only for a viewer who voted.
+    /// </summary>
+    internal IQueryable<OpenPollRow> OpenPollsQuery(string userId) =>
+        _dbContext.CommunityPolls.AsNoTracking()
+            .Where(p => p.IsActive)
+            .OrderByDescending(p => p.CreatedAtUtc)
+            .ThenByDescending(p => p.Id)
+            .Select(p => new OpenPollRow
+            {
+                Id = p.Id,
+                PollCode = p.PollCode,
+                Question = p.Question,
+                Description = p.Description,
+                Category = p.Category,
+                VotedOptionId = _dbContext.CommunityPollVotes
+                    .Where(v => v.PollId == p.Id && v.UserId == userId)
+                    .Select(v => v.OptionId)
+                    .FirstOrDefault(),
+                Options = p.Options
+                    .OrderBy(o => o.Order)
+                    .ThenBy(o => o.Id)
+                    .Select(o => new OpenPollOptionRow { Id = o.Id, Text = o.Text, Votes = o.Votes.Count })
+                    .ToList(),
+            });
+
+    /// <summary>
+    /// Every Poll for the Admin list, open and closed, newest first, with its options in order and its number of votes.
+    /// </summary>
+    internal IQueryable<CommunityPollAdminItemDto> PollAdminQuery() =>
+        _dbContext.CommunityPolls.AsNoTracking()
+            .OrderByDescending(p => p.CreatedAtUtc)
+            .ThenByDescending(p => p.Id)
+            .Select(p => new CommunityPollAdminItemDto
+            {
+                Id = p.Id,
+                Question = p.Question,
+                Description = p.Description,
+                Category = p.Category,
+                IsOpen = p.IsActive,
+                CreatedAtUtc = p.CreatedAtUtc,
+                Options = p.Options.OrderBy(o => o.Order).ThenBy(o => o.Id).Select(o => o.Text).ToList(),
+                VoteCount = p.Votes.Count,
+            });
 
     /// <summary>
     /// The board as <paramref name="userId"/> sees it: Approved Strategies and the viewer's own in any status, only in
@@ -625,20 +736,26 @@ internal sealed class CommunityService : ICommunityService
         return PseudonymGenerator.Pick(taken, Random.Shared);
     }
 
-    private Task<List<CommunityPoll>> ActivePollsAsync(CancellationToken cancellationToken) =>
-        _dbContext.CommunityPolls
-            .AsNoTracking()
-            .Include(p => p.Options)
-                .ThenInclude(o => o.Votes)
-            .Include(p => p.Votes)
-            .Where(p => p.IsActive)
-            .OrderByDescending(p => p.CreatedAtUtc)
-            .ToListAsync(cancellationToken);
-
-    private static CommunityPollDto MapPollToDto(CommunityPoll p, string userId)
+    /// <summary>
+    /// An open Poll as the viewer sees it. Each option's share is a whole percentage, the shares adding up to 100 by
+    /// the largest remainder (ties go to the earlier option); before the viewer votes, no option has one.
+    /// </summary>
+    private static CommunityPollDto MapPollToDto(OpenPollRow p)
     {
-        int totalVotes = p.Votes.Count;
-        CommunityPollVote? userVote = userId != null ? p.Votes.FirstOrDefault(v => v.UserId == userId) : null;
+        bool hasVoted = p.VotedOptionId is not null;
+        int total = p.Options.Sum(o => o.Votes);
+        int[] shares = p.Options.Select(o => total == 0 ? 0 : o.Votes * 100 / total).ToArray();
+        if (total > 0)
+        {
+            IEnumerable<int> byRemainder = Enumerable.Range(0, shares.Length)
+                .OrderByDescending(i => p.Options[i].Votes * 100 % total)
+                .ThenBy(i => i)
+                .Take(100 - shares.Sum());
+            foreach (int i in byRemainder)
+            {
+                shares[i]++;
+            }
+        }
 
         return new CommunityPollDto
         {
@@ -646,17 +763,35 @@ internal sealed class CommunityService : ICommunityService
             Question = p.Question,
             Description = p.Description ?? string.Empty,
             Category = p.Category,
-            TotalVotes = totalVotes,
-            IsActive = p.IsActive,
-            HasVoted = userVote != null,
-            VotedOptionId = userVote?.OptionId,
-            Options = p.Options.OrderBy(o => o.Order).Select(o => new CommunityPollOptionDto
+            IsActive = true,
+            HasVoted = hasVoted,
+            VotedOptionId = p.VotedOptionId,
+            Options = p.Options.Select((o, i) => new CommunityPollOptionDto
             {
                 Id = o.Id,
                 Text = o.Text,
-                Votes = o.Votes.Count,
-                Percentage = totalVotes > 0 ? Math.Round((double)o.Votes.Count / totalVotes * 100, 1) : 0,
+                Percentage = hasVoted ? shares[i] : null,
             }).ToList(),
         };
+    }
+
+    /// <summary>An open Poll read by <see cref="OpenPollsQuery"/>, before its counts become shares.</summary>
+    internal sealed class OpenPollRow
+    {
+        public int Id { get; init; }
+        public string PollCode { get; init; } = string.Empty;
+        public string Question { get; init; } = string.Empty;
+        public string? Description { get; init; }
+        public string Category { get; init; } = string.Empty;
+        public int? VotedOptionId { get; init; }
+        public List<OpenPollOptionRow> Options { get; init; } = new();
+    }
+
+    /// <summary>An option of an <see cref="OpenPollRow"/> with its number of votes.</summary>
+    internal sealed class OpenPollOptionRow
+    {
+        public int Id { get; init; }
+        public string Text { get; init; } = string.Empty;
+        public int Votes { get; init; }
     }
 }

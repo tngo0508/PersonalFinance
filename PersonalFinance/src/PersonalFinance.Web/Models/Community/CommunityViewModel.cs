@@ -14,7 +14,7 @@ public sealed class CommunityViewModel
     public string Pseudonym { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the list of active polls for community engagement.
+    /// Gets or sets the open Polls, newest first.
     /// </summary>
     public List<CommunityPoll> ActivePolls { get; set; } = new();
 
@@ -30,7 +30,7 @@ public sealed class CommunityViewModel
 }
 
 /// <summary>
-/// Represents a community poll with open-ended questions.
+/// An open Poll. It carries no vote totals: results are shares only, shown once the viewer has voted.
 /// </summary>
 public sealed class CommunityPoll
 {
@@ -53,11 +53,6 @@ public sealed class CommunityPoll
     /// Gets or sets the list of poll options.
     /// </summary>
     public List<PollOption> Options { get; set; } = new();
-
-    /// <summary>
-    /// Gets or sets the total number of votes cast.
-    /// </summary>
-    public int TotalVotes { get; set; }
 
     /// <summary>
     /// Gets or sets whether the poll is still active.
@@ -86,7 +81,7 @@ public sealed class CommunityPoll
 }
 
 /// <summary>
-/// Represents a single poll option with its vote count.
+/// An option of a Poll, with its share of the votes once the viewer has voted.
 /// </summary>
 public sealed class PollOption
 {
@@ -101,14 +96,9 @@ public sealed class PollOption
     public string Text { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the number of votes for this option.
+    /// Gets or sets its share of the votes as a whole percentage, or null until the viewer has voted.
     /// </summary>
-    public int Votes { get; set; }
-
-    /// <summary>
-    /// Gets or sets the percentage of total votes.
-    /// </summary>
-    public double Percentage { get; set; }
+    public int? Percentage { get; set; }
 }
 
 /// <summary>
