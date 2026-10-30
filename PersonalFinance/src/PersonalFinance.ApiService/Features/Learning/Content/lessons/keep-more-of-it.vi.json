@@ -1,0 +1,38 @@
+{
+  "slug": "keep-more-of-it",
+  "title": "Giữ lại nhiều hơn",
+  "intro": "Thuế chiếm một phần lợi nhuận từ các khoản đầu tư của bạn. Bài học này cho thấy cách thuế trên lợi nhuận hoạt động. Nó cũng cho thấy một tài khoản mà một phần tăng trưởng không bao giờ bị đánh thuế.",
+  "check": [
+    {
+      "prompt": "Tuan bán cổ phần giữ hai năm, với giá cao hơn số tiền bỏ ra. Đó là loại lợi nhuận nào?",
+      "options": [
+        "Lợi nhuận dài hạn",
+        "Lợi nhuận ngắn hạn",
+        "Không có lợi nhuận"
+      ],
+      "explanation": "Lợi nhuận dài hạn. Anh ấy nắm giữ cổ phần hơn một năm."
+    },
+    {
+      "prompt": "Lỗ khi bán xe của bạn sẽ làm giảm thuế.",
+      "options": [
+        "Lầm tưởng",
+        "Sự thật"
+      ],
+      "explanation": "Lầm tưởng. Tổn thất vì các vật dụng cá nhân, như nhà cửa hoặc xe hơi, không được tính."
+    },
+    {
+      "prompt": "Việc rút tiền đủ điều kiện từ Tài khoản hưu trí cá nhân Roth được miễn thuế.",
+      "options": [
+        "Lầm tưởng",
+        "Sự thật"
+      ],
+      "explanation": "Sự thật. Bạn phải nộp thuế trước khi tiền được chuyển vào, không phải khi rút tiền đủ điều kiện."
+    }
+  ],
+  "tryIt": {
+    "label": "Giá trị tài sản ròng"
+  },
+  "keepsake": {
+    "name": "Heo đất"
+  }
+}

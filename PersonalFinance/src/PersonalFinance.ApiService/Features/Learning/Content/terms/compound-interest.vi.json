@@ -1,0 +1,12 @@
+{
+  "slug": "compound-interest",
+  "term": "Lãi kép",
+  "oneLine": "Lãi bạn kiếm được từ tiền của mình và từ lãi suất mà nó đã thu.",
+  "explanation": [
+    "Lãi kép là lãi suất trả trên tiền của bạn và trên số tiền lãi mà nó đã thu. Lãi suất là số tiền thêm mà ngân hàng hoặc một khoản đầu tư trả cho bạn.",
+    "Mỗi năm, lãi suất sẽ gia nhập vào tiền của bạn. Năm tiếp theo, bạn sẽ nhận lãi trên số tiền lớn hơn. Vì vậy, tiền của bạn tăng nhanh hơn theo thời gian.",
+    "Quy tắc 72 cung cấp một ước lượng nhanh. Chia 72 cho tỷ lệ hàng năm. Câu trả lời là về số năm tiền của bạn mất để nhân đôi."
+  ],
+  "whyItMatters": "Tiền càng ở lại lâu, lãi kép càng tăng thêm. Bắt đầu sớm sẽ cho nó nhiều năm hơn để làm việc, ngay cả với số tiền nhỏ. Với lợi nhuận 9% hàng năm, tiền tăng gấp đôi khoảng mỗi 8 năm, vì 72 chia cho 9 là 8.",
+  "workedExample": "Bạn tiết kiệm được $100 với lãi suất 5% mỗi năm. Sau một năm, bạn có $105. Sau hai năm, bạn có $110.25: $5 cho $100, và $0.25 cho lãi suất năm đầu. Sau 10 năm, bạn có hơn $162, và bạn chưa từng thêm tiền nào."
+}
