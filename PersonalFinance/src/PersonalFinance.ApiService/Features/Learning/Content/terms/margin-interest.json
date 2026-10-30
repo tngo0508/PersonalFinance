@@ -1,0 +1,53 @@
+{
+  "slug": "margin-interest",
+  "term": "Margin interest",
+  "vietnameseName": "lãi vay ký quỹ",
+  "alsoKnownAs": [
+    "margin loan",
+    "margin call"
+  ],
+  "topic": "trading",
+  "oneLine": "The interest a broker charges when it lends you money to buy investments.",
+  "explanation": [
+    "In a margin account, your broker lends you cash to buy more investments. A broker is the firm that buys and sells investments for you. Your investments and cash in the account back the loan.",
+    "Like any loan, a margin loan has interest. This is margin interest. Rates can be very different from one firm to another.",
+    "Your equity is the value of your investments minus what you owe the firm. If your equity falls below the firm's minimum, the firm makes a margin call. You must add cash or investments, or the firm sells your investments."
+  ],
+  "whyItMatters": "Margin lets you buy more, but it can also make your losses bigger. The interest lowers your return, so your investments must earn more just to break even. In a margin call, the firm can sell your investments, even at a low price.",
+  "workedExample": "You borrow $50,000 on margin at 7% interest a year. The interest is $3,500 a year, or about $9.59 a day. Your investments must gain at least $3,500 a year just to cover it.",
+  "inTheUs": {
+    "text": "FINRA rules say your equity must stay at least 25% of the value of your margin investments. Many firms ask for more, often 30% to 40%.",
+    "rulesAsOf": 2026,
+    "sources": [
+      {
+        "name": "U.S. SEC, Investor.gov, Investor bulletin: Understanding margin accounts",
+        "url": "https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/investor-bulletins-29",
+        "accessed": "2026-10-30"
+      }
+    ]
+  },
+  "relatedTerms": [
+    "short-selling",
+    "apr",
+    "stock"
+  ],
+  "sources": [
+    {
+      "name": "U.S. SEC, Investor.gov, Investor bulletin: Interested in margin? Understand interest",
+      "url": "https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/investor-bulletins/investor-bulletin-interested-margin-understand-interest",
+      "accessed": "2026-10-30"
+    },
+    {
+      "name": "U.S. SEC, Investor.gov, Investor bulletin: Understanding margin accounts",
+      "url": "https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/investor-bulletins-29",
+      "accessed": "2026-10-30"
+    }
+  ],
+  "furtherReading": [
+    {
+      "name": "FINRA, Know what triggers a margin call",
+      "url": "https://www.finra.org/investors/insights/margin-calls"
+    }
+  ],
+  "lastReviewed": "2026-10-30"
+}

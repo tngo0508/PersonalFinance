@@ -1,0 +1,52 @@
+{
+  "slug": "know-the-sharp-tools",
+  "day": 6,
+  "title": "Know the sharp tools",
+  "intro": "Some tools can make gains bigger, and losses bigger too. This Lesson shows borrowing to invest and selling stock you do not own. It ends the Journey.",
+  "terms": [
+    "margin-interest",
+    "short-selling"
+  ],
+  "check": [
+    {
+      "format": "what-happens-next",
+      "prompt": "Your margin account falls below the firm's minimum, and you add no cash. What happens next?",
+      "options": [
+        "The firm sells your investments",
+        "Nothing happens",
+        "The loan is forgiven"
+      ],
+      "correctOption": 0,
+      "explanation": "The firm sells your investments. It does this to bring your equity back up."
+    },
+    {
+      "format": "myth-or-fact",
+      "prompt": "When you sell a stock short, your losses have a limit.",
+      "options": [
+        "Myth",
+        "Fact"
+      ],
+      "correctOption": 0,
+      "explanation": "Myth. A price can keep rising, so short-selling losses have no limit."
+    },
+    {
+      "format": "what-happens-next",
+      "prompt": "You sell short at $60, and the price rises to $80. What happens when you buy back?",
+      "options": [
+        "You lose $20 a share",
+        "You make $20 a share",
+        "You break even"
+      ],
+      "correctOption": 0,
+      "explanation": "You lose $20 a share. You must buy back at a higher price."
+    }
+  ],
+  "tryIt": {
+    "label": "Research",
+    "url": "/Research"
+  },
+  "keepsake": {
+    "symbol": "🧰",
+    "name": "Toolbox"
+  }
+}
