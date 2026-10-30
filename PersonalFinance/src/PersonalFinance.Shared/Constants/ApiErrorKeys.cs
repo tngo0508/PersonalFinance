@@ -140,6 +140,30 @@ public static class ApiErrorKeys
 
         /// <summary>One of an Admin's Poll options was empty or longer than the <c>max</c> argument.</summary>
         public const string PollOptionText = "Community.Validation.PollOptionText";
+
+        /// <summary>The Challenge does not exist, or has ended.</summary>
+        public const string ChallengeNotFound = "Community.Error.ChallengeNotFound";
+
+        /// <summary>A Check-in on a Challenge the Account has not joined.</summary>
+        public const string ChallengeNotJoined = "Community.Error.ChallengeNotJoined";
+
+        /// <summary>A Check-in on a Challenge that has not started yet in the Account's time zone.</summary>
+        public const string ChallengeNotStarted = "Community.Error.ChallengeNotStarted";
+
+        /// <summary>An Admin's Challenge had no title, or one longer than the <c>max</c> argument.</summary>
+        public const string ChallengeTitle = "Community.Validation.ChallengeTitle";
+
+        /// <summary>An Admin's Challenge had no habit, or one longer than the <c>max</c> argument.</summary>
+        public const string ChallengeHabit = "Community.Validation.ChallengeHabit";
+
+        /// <summary>An Admin's Challenge named a money amount: a Challenge is about behavior, never money.</summary>
+        public const string ChallengeAmount = "Community.Validation.ChallengeAmount";
+
+        /// <summary>An Admin's Challenge had a period other than Daily or Weekly.</summary>
+        public const string ChallengePeriod = "Community.Validation.ChallengePeriod";
+
+        /// <summary>An Admin's Challenge ended before it started, or ran longer than the <c>max</c> days argument.</summary>
+        public const string ChallengeDates = "Community.Validation.ChallengeDates";
     }
 
     /// <summary>The keys of the Budget Tracker Feature's rejections.</summary>

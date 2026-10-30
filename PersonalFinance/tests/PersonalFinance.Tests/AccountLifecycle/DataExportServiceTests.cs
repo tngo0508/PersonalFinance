@@ -231,6 +231,10 @@ public class DataExportServiceTests
         Assert.Single(export.Community.Comments);
         Assert.Equal("CheeringYouOn", Assert.Single(export.Community.Reactions).Kind);
         Assert.Equal("Yes", Assert.Single(export.Community.PollVotes).Answer);
+        DataExportChallengeDto challenge = Assert.Single(export.Community.Challenges);
+        Assert.Equal("Daily", challenge.Period);
+        Assert.Equal("Asia/Ho_Chi_Minh", challenge.TimeZone);
+        Assert.Equal([new DateOnly(2026, 3, 2)], challenge.CheckIns);
         Assert.Equal("Idea", Assert.Single(export.Feedback).Category);
         Assert.Single(export.Notifications);
         Assert.Single(export.AiUsage);

@@ -163,6 +163,10 @@
         </section>
 
         <aside class="community-rail" aria-label="@L["Community.Rail.Aria"]">
+            @foreach (var challenge in Model.Challenges)
+            {
+                <partial name="_Challenge" model="challenge" />
+            }
             <section class="community-rail-card" aria-labelledby="pin-heading">
                 <p class="community-eyebrow">@L["Community.Pin.Eyebrow"]</p>
                 <h2 class="community-rail-title" id="pin-heading">@L["Community.Pin.Heading"]</h2>

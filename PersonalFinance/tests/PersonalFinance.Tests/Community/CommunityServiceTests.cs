@@ -183,6 +183,10 @@ public partial class CommunityServiceTests
         AzureSqlTranslation.AssertTranslates(service.CommentReviewQuery().Take(CommunityCommentLimits.ReviewListSize));
         AzureSqlTranslation.AssertTranslates(service.OpenPollsQuery(UserId));
         AzureSqlTranslation.AssertTranslates(service.PollAdminQuery());
+        AzureSqlTranslation.AssertTranslates(service.ListedChallengesQuery());
+        AzureSqlTranslation.AssertTranslates(service.CheckInCountsQuery([1, 2], new DateOnly(2026, 10, 26)));
+        AzureSqlTranslation.AssertTranslates(service.MemberCountsQuery([1, 2]));
+        AzureSqlTranslation.AssertTranslates(service.ChallengeAdminQuery());
     }
 
     [Fact]
@@ -294,7 +298,7 @@ public partial class CommunityServiceTests
                 .Select(f => (string)f.GetRawConstantValue()!)
                 .ToList();
 
-            Assert.Equal(22, keys.Count);
+            Assert.Equal(30, keys.Count);
             foreach (string key in keys)
             {
                 var entry = new ApiErrorEntryDto { Key = key, Message = key, Args = ArgsOf(key) };
@@ -323,6 +327,9 @@ public partial class CommunityServiceTests
             ApiErrorKeys.Community.PollOptionText => ErrorArgs.Number("max", CommunityPollLimits.OptionTextMaxLength),
             ApiErrorKeys.Community.PollOptions => ErrorArgs.NumberRange(CommunityPollLimits.MinOptions,
                 CommunityPollLimits.MaxOptions),
+            ApiErrorKeys.Community.ChallengeTitle => ErrorArgs.Number("max", CommunityChallengeLimits.TitleMaxLength),
+            ApiErrorKeys.Community.ChallengeHabit => ErrorArgs.Number("max", CommunityChallengeLimits.HabitMaxLength),
+            ApiErrorKeys.Community.ChallengeDates => ErrorArgs.Number("max", CommunityChallengeLimits.MaxDays),
             _ => null,
         };
         return args?.ToDictionary(pair => pair.Key, pair => pair.Value);

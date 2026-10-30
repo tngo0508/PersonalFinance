@@ -196,7 +196,8 @@ public sealed class CommunityPseudonymDto
 }
 
 /// <summary>
-/// Full Guild Hall response DTO: the viewer's Pseudonym, the polls and the board's Strategies, each with its Comments.
+/// Full Guild Hall response DTO: the viewer's Pseudonym, the polls, the board's Strategies, each with its Comments,
+/// and the Challenges.
 /// </summary>
 public sealed class CommunityResponseDto
 {
@@ -210,6 +211,9 @@ public sealed class CommunityResponseDto
     /// requested category if one was given.
     /// </summary>
     public List<CommunityStrategyDto> Strategies { get; set; } = new();
+
+    /// <summary>The Challenges running or about to start, running ones first.</summary>
+    public List<CommunityChallengeDto> Challenges { get; set; } = new();
 }
 
 /// <summary>
@@ -290,4 +294,74 @@ public sealed class CommunityPollAdminItemDto
 public sealed class CommunityPollStatusRequestDto
 {
     public bool IsOpen { get; set; }
+}
+
+/// <summary>
+/// A Challenge as the viewing Account sees it: running or about to start. Its Check-ins are the viewer's own and stay
+/// private (ADR 0018); of everyone else it shows only how many checked in this period, never who.
+/// </summary>
+public sealed class CommunityChallengeDto
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Habit { get; set; } = string.Empty;
+    public CommunityChallengePeriod Period { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly EndDate { get; set; }
+
+    /// <summary>
+    /// The first day of the period the viewer is in, in its own time zone; null until the Challenge starts.
+    /// </summary>
+    public DateOnly? CurrentPeriodStart { get; set; }
+
+    /// <summary>Whether the viewer has joined it.</summary>
+    public bool IsMember { get; set; }
+
+    /// <summary>Whether the viewer has checked in for the current period.</summary>
+    public bool CheckedInThisPeriod { get; set; }
+
+    /// <summary>How many periods in a row the viewer kept, up to the current one; only the viewer sees it.</summary>
+    public int Streak { get; set; }
+
+    /// <summary>How many Accounts checked in for the current period, the viewer included.</summary>
+    public int CheckedInCount { get; set; }
+
+    /// <summary>How many Accounts joined it, the viewer included.</summary>
+    public int MemberCount { get; set; }
+}
+
+/// <summary>
+/// Request to join a Challenge or check in to it, with the browser's time zone, which decides the viewer's local day.
+/// </summary>
+public sealed class CommunityChallengeActionRequestDto
+{
+    /// <summary>The IANA time zone (<c>Intl.DateTimeFormat().resolvedOptions().timeZone</c>); UTC when missing or unknown.</summary>
+    public string? TimeZone { get; set; }
+}
+
+/// <summary>
+/// An Admin's new Challenge: a habit, never an amount of money (ADR 0018), over a span of local days.
+/// </summary>
+public sealed class CommunityChallengeRequestDto
+{
+    public string Title { get; set; } = string.Empty;
+    public string Habit { get; set; } = string.Empty;
+    public CommunityChallengePeriod Period { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly EndDate { get; set; }
+}
+
+/// <summary>
+/// A Challenge in the Admin list, with how many Accounts joined it.
+/// </summary>
+public sealed class CommunityChallengeAdminItemDto
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Habit { get; set; } = string.Empty;
+    public CommunityChallengePeriod Period { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly EndDate { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public int MemberCount { get; set; }
 }

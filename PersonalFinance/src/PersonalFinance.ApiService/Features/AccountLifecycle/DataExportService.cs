@@ -391,6 +391,24 @@ internal sealed class DataExportService : IDataExportService
 
     private async Task<DataExportCommunityDto> CommunityAsync(string userId, CancellationToken cancellationToken)
     {
+        ILookup<int, DateOnly> checkIns = (await _db.CommunityCheckIns.AsNoTracking()
+                .Where(c => c.UserId == userId)
+                .OrderBy(c => c.PeriodStart).ThenBy(c => c.Id)
+                .Select(c => new { c.ChallengeId, c.PeriodStart })
+                .ToListAsync(cancellationToken))
+            .ToLookup(c => c.ChallengeId, c => c.PeriodStart);
+        var memberships = await (
+                from member in _db.CommunityChallengeMembers.AsNoTracking()
+                where member.UserId == userId
+                join challenge in _db.CommunityChallenges.AsNoTracking() on member.ChallengeId equals challenge.Id
+                orderby member.CreatedAt, member.Id
+                select new
+                {
+                    challenge.Id, challenge.Title, challenge.Habit, challenge.Period, challenge.StartDate,
+                    challenge.EndDate, member.CreatedAt, member.TimeZoneId
+                })
+            .ToListAsync(cancellationToken);
+
         return new DataExportCommunityDto
         {
             Pseudonym = await _db.CommunityPseudonyms.AsNoTracking()
@@ -438,7 +456,18 @@ internal sealed class DataExportService : IDataExportService
                     CreatedAtUtc = r.CreatedAt
                 })
                 .ToList(),
-            PollVotes = await PollVotesQuery(userId).ToListAsync(cancellationToken)
+            PollVotes = await PollVotesQuery(userId).ToListAsync(cancellationToken),
+            Challenges = memberships.Select(m => new DataExportChallengeDto
+            {
+                Title = m.Title,
+                Habit = m.Habit,
+                Period = m.Period.ToString(),
+                StartDate = m.StartDate,
+                EndDate = m.EndDate,
+                JoinedAtUtc = m.CreatedAt,
+                TimeZone = m.TimeZoneId,
+                CheckIns = checkIns[m.Id].ToList()
+            }).ToList()
         };
     }
 }

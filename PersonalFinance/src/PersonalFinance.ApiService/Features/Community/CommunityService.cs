@@ -10,8 +10,8 @@ using PersonalFinance.Shared.Helpers;
 namespace PersonalFinance.ApiService.Features.Community;
 
 /// <summary>
-/// Service implementation of the Guild Hall (the Community Feature): Pseudonyms, Polls, Comments, Strategies and
-/// Reactions.
+/// Service implementation of the Guild Hall (the Community Feature): Pseudonyms, Polls, Comments, Strategies,
+/// Reactions, and Challenges with their private Check-ins.
 /// An author is shown by its Pseudonym, resolved from the Account at read time, so a re-roll shows on every past post
 /// and no DTO carries a display name or email (ADR 0018). A post whose author has no Pseudonym any more (a Former
 /// member, ADR 0005) is returned with a null author.
@@ -76,6 +76,8 @@ internal sealed class CommunityService : ICommunityService
                 return dto;
             }).ToList(),
             Strategies = strategies,
+            Challenges = await ChallengeViewsAsync(userId, await ListedChallengesQuery().ToListAsync(cancellationToken),
+                cancellationToken),
         };
     }
 
@@ -498,9 +500,194 @@ internal sealed class CommunityService : ICommunityService
         return true;
     }
 
+    public async Task<CommunityChallengeDto> JoinChallengeAsync(string userId, int challengeId, string? timeZone,
+        CancellationToken cancellationToken = default)
+    {
+        string zoneId = BrowserTimeZone.Resolve(timeZone);
+        CommunityChallenge challenge = await NotEndedChallengeAsync(challengeId, zoneId, cancellationToken);
+        CommunityChallengeMember? member = await _dbContext.CommunityChallengeMembers.FirstOrDefaultAsync(
+            m => m.UserId == userId && m.ChallengeId == challengeId, cancellationToken);
+        DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
+        if (member is null)
+        {
+            var joined = new CommunityChallengeMember
+            {
+                UserId = userId,
+                ChallengeId = challengeId,
+                TimeZoneId = zoneId,
+                CreatedAt = now,
+            };
+            _dbContext.CommunityChallengeMembers.Add(joined);
+            try
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                // The same Account's other request (a double click) joined first: it is a member either way.
+                _dbContext.Entry(joined).State = EntityState.Detached;
+            }
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Challenge joined: ChallengeId={ChallengeId}, UserId={UserId}", challengeId, userId);
+            }
+        }
+        else
+        {
+            await RememberZoneAsync(member, zoneId, now, cancellationToken);
+        }
+
+        return (await ChallengeViewsAsync(userId, [challenge], cancellationToken)).Single();
+    }
+
+    public async Task<CommunityChallengeDto> CheckInAsync(string userId, int challengeId, string? timeZone,
+        CancellationToken cancellationToken = default)
+    {
+        string zoneId = BrowserTimeZone.Resolve(timeZone);
+        CommunityChallenge challenge = await NotEndedChallengeAsync(challengeId, zoneId, cancellationToken);
+        CommunityChallengeMember? member = await _dbContext.CommunityChallengeMembers.FirstOrDefaultAsync(
+            m => m.UserId == userId && m.ChallengeId == challengeId, cancellationToken);
+        if (member is null)
+        {
+            throw new ApiErrorException(ApiErrorKeys.Community.ChallengeNotJoined, "Join the Challenge to check in.",
+                statusCode: StatusCodes.Status409Conflict);
+        }
+
+        DateTimeOffset utcNow = _timeProvider.GetUtcNow();
+        await RememberZoneAsync(member, zoneId, utcNow.UtcDateTime, cancellationToken);
+        DateOnly? period = ChallengeCalendar.CurrentPeriod(challenge.Period, challenge.StartDate, challenge.EndDate,
+            BrowserTimeZone.Today(utcNow, BrowserTimeZone.Zone(zoneId)));
+        if (period is null)
+        {
+            throw new ApiErrorException(ApiErrorKeys.Community.ChallengeNotStarted, "The Challenge has not started yet.",
+                statusCode: StatusCodes.Status409Conflict);
+        }
+
+        bool already = await _dbContext.CommunityCheckIns.AnyAsync(
+            c => c.UserId == userId && c.ChallengeId == challengeId && c.PeriodStart == period.Value, cancellationToken);
+        if (!already)
+        {
+            var checkIn = new CommunityCheckIn
+            {
+                UserId = userId,
+                ChallengeId = challengeId,
+                PeriodStart = period.Value,
+                CreatedAt = utcNow.UtcDateTime,
+            };
+            _dbContext.CommunityCheckIns.Add(checkIn);
+            try
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                // The same Account's other request (a double click) checked in first: the period is kept either way.
+                _dbContext.Entry(checkIn).State = EntityState.Detached;
+            }
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("Checked in: ChallengeId={ChallengeId}, UserId={UserId}, PeriodStart={PeriodStart}",
+                    challengeId, userId, period.Value);
+            }
+        }
+
+        return (await ChallengeViewsAsync(userId, [challenge], cancellationToken)).Single();
+    }
+
+    public Task<List<CommunityChallengeAdminItemDto>> ListChallengesAsync(CancellationToken cancellationToken = default) =>
+        ChallengeAdminQuery().ToListAsync(cancellationToken);
+
+    public async Task<CommunityChallengeAdminItemDto> CreateChallengeAsync(CommunityChallengeRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var challenge = new CommunityChallenge
+        {
+            Title = request.Title.Trim(),
+            Habit = request.Habit.Trim(),
+            Period = request.Period,
+            StartDate = request.StartDate,
+            EndDate = request.EndDate,
+            CreatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime,
+        };
+        _dbContext.CommunityChallenges.Add(challenge);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Challenge written: ChallengeId={ChallengeId}", challenge.Id);
+        }
+
+        return new CommunityChallengeAdminItemDto
+        {
+            Id = challenge.Id,
+            Title = challenge.Title,
+            Habit = challenge.Habit,
+            Period = challenge.Period,
+            StartDate = challenge.StartDate,
+            EndDate = challenge.EndDate,
+            CreatedAtUtc = challenge.CreatedAtUtc,
+        };
+    }
+
     // =========================================================================
     // Queries (internal so tests can check they translate to Azure SQL)
     // =========================================================================
+
+    /// <summary>
+    /// The Challenges that may still be running somewhere: those ending no earlier than yesterday in UTC, since local
+    /// dates run up to a day behind it. Each viewer's own time zone then decides which have ended.
+    /// </summary>
+    internal IQueryable<CommunityChallenge> ListedChallengesQuery()
+    {
+        DateOnly yesterday = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime).AddDays(-1);
+        return _dbContext.CommunityChallenges.AsNoTracking()
+            .Where(c => c.EndDate >= yesterday)
+            .OrderBy(c => c.StartDate)
+            .ThenBy(c => c.Id);
+    }
+
+    /// <summary>
+    /// How many Accounts checked in to each of <paramref name="challengeIds"/> for each period starting on or after
+    /// <paramref name="from"/>. Counts only: no Account id leaves this query.
+    /// </summary>
+    internal IQueryable<CheckInCountRow> CheckInCountsQuery(IReadOnlyCollection<int> challengeIds, DateOnly from) =>
+        _dbContext.CommunityCheckIns.AsNoTracking()
+            .Where(c => challengeIds.Contains(c.ChallengeId) && c.PeriodStart >= from)
+            .GroupBy(c => new { c.ChallengeId, c.PeriodStart })
+            .Select(g => new CheckInCountRow
+            {
+                ChallengeId = g.Key.ChallengeId,
+                PeriodStart = g.Key.PeriodStart,
+                Count = g.Count(),
+            });
+
+    /// <summary>How many Accounts joined each of <paramref name="challengeIds"/>. Counts only, like the Check-ins'.</summary>
+    internal IQueryable<CheckInCountRow> MemberCountsQuery(IReadOnlyCollection<int> challengeIds) =>
+        _dbContext.CommunityChallengeMembers.AsNoTracking()
+            .Where(m => challengeIds.Contains(m.ChallengeId))
+            .GroupBy(m => m.ChallengeId)
+            .Select(g => new CheckInCountRow { ChallengeId = g.Key, Count = g.Count() });
+
+    /// <summary>
+    /// Every Challenge for the Admin list, newest start first, with how many Accounts joined it.
+    /// </summary>
+    internal IQueryable<CommunityChallengeAdminItemDto> ChallengeAdminQuery() =>
+        _dbContext.CommunityChallenges.AsNoTracking()
+            .OrderByDescending(c => c.StartDate)
+            .ThenByDescending(c => c.Id)
+            .Select(c => new CommunityChallengeAdminItemDto
+            {
+                Id = c.Id,
+                Title = c.Title,
+                Habit = c.Habit,
+                Period = c.Period,
+                StartDate = c.StartDate,
+                EndDate = c.EndDate,
+                CreatedAtUtc = c.CreatedAtUtc,
+                MemberCount = _dbContext.CommunityChallengeMembers.Count(m => m.ChallengeId == c.Id),
+            });
 
     /// <summary>
     /// The open Polls, newest first, each with its options in order, every option's number of votes and the option
@@ -737,6 +924,119 @@ internal sealed class CommunityService : ICommunityService
     }
 
     /// <summary>
+    /// The Challenge <paramref name="challengeId"/>, unless it does not exist or has ended in <paramref name="zoneId"/>,
+    /// which throws a 404 <c>ChallengeNotFound</c>.
+    /// </summary>
+    private async Task<CommunityChallenge> NotEndedChallengeAsync(int challengeId, string zoneId,
+        CancellationToken cancellationToken)
+    {
+        CommunityChallenge? challenge = await _dbContext.CommunityChallenges.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == challengeId, cancellationToken);
+        DateOnly today = BrowserTimeZone.Today(_timeProvider.GetUtcNow(), BrowserTimeZone.Zone(zoneId));
+        if (challenge is null || today > challenge.EndDate)
+        {
+            throw new ApiErrorException(ApiErrorKeys.Community.ChallengeNotFound, "No running Challenge matches this id.",
+                statusCode: StatusCodes.Status404NotFound);
+        }
+
+        return challenge;
+    }
+
+    /// <summary>Stores the time zone the browser last sent with a membership, when it changed.</summary>
+    private async Task RememberZoneAsync(CommunityChallengeMember member, string zoneId, DateTime now,
+        CancellationToken cancellationToken)
+    {
+        if (member.TimeZoneId == zoneId)
+        {
+            return;
+        }
+
+        member.TimeZoneId = zoneId;
+        member.UpdatedAt = now;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// The <paramref name="challenges"/> as <paramref name="userId"/> sees them, leaving out any that has ended in the
+    /// viewer's time zone (the membership's, or UTC for a Challenge it has not joined): running ones first, then the
+    /// ones about to start. Only the viewer's own Check-ins are read, for its streak; everyone else's only as counts.
+    /// </summary>
+    private async Task<List<CommunityChallengeDto>> ChallengeViewsAsync(string userId,
+        List<CommunityChallenge> challenges, CancellationToken cancellationToken)
+    {
+        if (challenges.Count == 0)
+        {
+            return [];
+        }
+
+        List<int> ids = challenges.Select(c => c.Id).ToList();
+        Dictionary<int, string> zones = await _dbContext.CommunityChallengeMembers.AsNoTracking()
+            .Where(m => m.UserId == userId && ids.Contains(m.ChallengeId))
+            .ToDictionaryAsync(m => m.ChallengeId, m => m.TimeZoneId, cancellationToken);
+        ILookup<int, DateOnly> own = (await _dbContext.CommunityCheckIns.AsNoTracking()
+                .Where(c => c.UserId == userId && ids.Contains(c.ChallengeId))
+                .Select(c => new { c.ChallengeId, c.PeriodStart })
+                .ToListAsync(cancellationToken))
+            .ToLookup(c => c.ChallengeId, c => c.PeriodStart);
+
+        Dictionary<int, int> members = await MemberCountsQuery(ids)
+            .ToDictionaryAsync(r => r.ChallengeId, r => r.Count, cancellationToken);
+
+        DateTimeOffset utcNow = _timeProvider.GetUtcNow();
+        var shown = challenges
+            .Select(challenge =>
+            {
+                bool isMember = zones.TryGetValue(challenge.Id, out string? zoneId);
+                DateOnly today = BrowserTimeZone.Today(utcNow, BrowserTimeZone.Zone(zoneId ?? BrowserTimeZone.Utc));
+                return new
+                {
+                    Challenge = challenge,
+                    IsMember = isMember,
+                    Ended = today > challenge.EndDate,
+                    Current = ChallengeCalendar.CurrentPeriod(challenge.Period, challenge.StartDate, challenge.EndDate,
+                        today),
+                };
+            })
+            .Where(c => !c.Ended)
+            .ToList();
+
+        List<DateOnly> currents = shown.Where(c => c.Current.HasValue).Select(c => c.Current!.Value).ToList();
+        Dictionary<(int, DateOnly), int> counts = currents.Count == 0
+            ? []
+            : (await CheckInCountsQuery(ids, currents.Min()).ToListAsync(cancellationToken))
+            .ToDictionary(r => (r.ChallengeId, r.PeriodStart), r => r.Count);
+
+        return shown
+            .OrderBy(c => c.Current is null)
+            .ThenBy(c => c.Challenge.StartDate)
+            .ThenBy(c => c.Challenge.Id)
+            .Select(c =>
+            {
+                var kept = new HashSet<DateOnly>(own[c.Challenge.Id]);
+                return new CommunityChallengeDto
+                {
+                    Id = c.Challenge.Id,
+                    Title = c.Challenge.Title,
+                    Habit = c.Challenge.Habit,
+                    Period = c.Challenge.Period,
+                    StartDate = c.Challenge.StartDate,
+                    EndDate = c.Challenge.EndDate,
+                    CurrentPeriodStart = c.Current,
+                    IsMember = c.IsMember,
+                    CheckedInThisPeriod = c.Current.HasValue && kept.Contains(c.Current.Value),
+                    Streak = c.Current.HasValue
+                        ? ChallengeCalendar.Streak(c.Challenge.Period, c.Challenge.StartDate, c.Current.Value, kept)
+                        : 0,
+                    CheckedInCount = c.Current.HasValue
+                        ? counts.GetValueOrDefault((c.Challenge.Id, c.Current.Value))
+                        : 0,
+                    MemberCount = members.GetValueOrDefault(c.Challenge.Id),
+                };
+            })
+            .ToList();
+    }
+
+    /// <summary>
     /// An open Poll as the viewer sees it. Each option's share is a whole percentage, the shares adding up to 100 by
     /// the largest remainder (ties go to the earlier option); before the viewer votes, no option has one.
     /// </summary>
@@ -785,6 +1085,17 @@ internal sealed class CommunityService : ICommunityService
         public string Category { get; init; } = string.Empty;
         public int? VotedOptionId { get; init; }
         public List<OpenPollOptionRow> Options { get; init; } = new();
+    }
+
+    /// <summary>
+    /// How many Accounts checked in to a Challenge for one period (<see cref="CheckInCountsQuery"/>), or joined it
+    /// (<see cref="MemberCountsQuery"/>, with no period).
+    /// </summary>
+    internal sealed class CheckInCountRow
+    {
+        public int ChallengeId { get; init; }
+        public DateOnly PeriodStart { get; init; }
+        public int Count { get; init; }
     }
 
     /// <summary>An option of an <see cref="OpenPollRow"/> with its number of votes.</summary>

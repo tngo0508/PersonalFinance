@@ -1,3 +1,5 @@
+using PersonalFinance.ApiService.Infrastructure;
+
 namespace PersonalFinance.ApiService.Features.Learning.Domain;
 
 /// <summary>
@@ -7,38 +9,16 @@ namespace PersonalFinance.ApiService.Features.Learning.Domain;
 internal static class JourneyClock
 {
     /// <summary>The zone stored when the browser sent none or an unknown one.</summary>
-    public const string Utc = "UTC";
+    public const string Utc = BrowserTimeZone.Utc;
 
     /// <summary>The longest zone id stored; a longer one is treated as unknown.</summary>
-    public const int ZoneIdMaxLength = 64;
+    public const int ZoneIdMaxLength = BrowserTimeZone.ZoneIdMaxLength;
 
-    /// <summary>
-    /// The IANA id to store for the zone the browser sent: the id itself when the platform knows it (a Windows id is
-    /// converted), otherwise <see cref="Utc"/>.
-    /// </summary>
-    public static string ResolveZoneId(string? zoneId)
-    {
-        if (string.IsNullOrWhiteSpace(zoneId) || zoneId.Trim().Length > ZoneIdMaxLength)
-        {
-            return Utc;
-        }
+    /// <summary>The IANA id to store for the zone the browser sent (<see cref="BrowserTimeZone.Resolve"/>).</summary>
+    public static string ResolveZoneId(string? zoneId) => BrowserTimeZone.Resolve(zoneId);
 
-        if (!TimeZoneInfo.TryFindSystemTimeZoneById(zoneId.Trim(), out TimeZoneInfo? zone))
-        {
-            return Utc;
-        }
-
-        if (zone.HasIanaId)
-        {
-            return zone.Id;
-        }
-
-        return TimeZoneInfo.TryConvertWindowsIdToIanaId(zone.Id, out string? iana) ? iana : Utc;
-    }
-
-    /// <summary>The zone a stored id names; <see cref="TimeZoneInfo.Utc"/> when the platform no longer knows it.</summary>
-    public static TimeZoneInfo Zone(string zoneId) =>
-        TimeZoneInfo.TryFindSystemTimeZoneById(zoneId, out TimeZoneInfo? zone) ? zone : TimeZoneInfo.Utc;
+    /// <summary>The zone a stored id names (<see cref="BrowserTimeZone.Zone"/>).</summary>
+    public static TimeZoneInfo Zone(string zoneId) => BrowserTimeZone.Zone(zoneId);
 
     /// <summary>
     /// The first local midnight in <paramref name="zone"/> after <paramref name="finishedAtUtc"/>, as a UTC instant.

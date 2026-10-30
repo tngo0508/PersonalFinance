@@ -1,0 +1,73 @@
+@using System.Globalization
+@using PersonalFinance.Shared.Enums
+@model CommunityChallenge
+@*
+    One Challenge on the rail. The streak and the Check-in state are the viewer's own (ADR 0018); of others the card
+    shows only how many kept it this period, as text and as a row of lanterns. Joining and checking in post from
+    community.js, which swaps in this partial as the action renders it.
+*@
+@{
+    bool daily = Model.Period == CommunityChallengePeriod.Daily;
+    string titleId = $"challenge-{Model.Id}-title";
+    string Day(DateOnly date) => date.ToString("m", CultureInfo.CurrentCulture);
+}
+
+<section class="community-rail-card community-challenge" data-challenge-id="@Model.Id" aria-labelledby="@titleId">
+    <p class="community-eyebrow">@(daily ? L["Community.Challenge.EyebrowDaily"] : L["Community.Challenge.EyebrowWeekly"])</p>
+    <h2 class="community-rail-title" id="@titleId">@Model.Title</h2>
+    <p class="community-challenge-habit">@Model.Habit</p>
+    <p class="community-challenge-dates">
+        @L.Named("Community.Challenge.Runs", ("start", Day(Model.StartDate)), ("end", Day(Model.EndDate)))
+    </p>
+
+    @if (Model.IsRunning)
+    {
+        <p class="community-challenge-count">
+            @L.Plural(daily ? "Community.Challenge.KeptToday" : "Community.Challenge.KeptThisWeek", Model.CheckedInCount)
+        </p>
+        @if (Model.Lanterns > 0)
+        {
+            <div class="community-lanterns" aria-hidden="true">
+                @for (int i = 0; i < Model.Lanterns; i++)
+                {
+                    <span class="community-lantern@(i < Model.LitLanterns ? " is-lit" : null)"></span>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <p class="community-challenge-count">@L.Named("Community.Challenge.StartsOn", ("date", Day(Model.StartDate)))</p>
+    }
+
+    @if (!Model.IsMember)
+    {
+        <button type="button" class="community-btn" data-challenge-action="JoinChallenge">@L["Community.Challenge.Join"]</button>
+    }
+    else if (Model.IsRunning)
+    {
+        <button type="button" class="community-btn community-checkin@(Model.CheckedInThisPeriod ? " is-kept" : null)"
+                data-challenge-action="CheckIn" aria-pressed="@(Model.CheckedInThisPeriod ? "true" : "false")">
+            @if (Model.CheckedInThisPeriod)
+            {
+                @(daily ? L["Community.Challenge.KeptDaily"] : L["Community.Challenge.KeptWeekly"])
+            }
+            else
+            {
+                @(daily ? L["Community.Challenge.CheckInDaily"] : L["Community.Challenge.CheckInWeekly"])
+            }
+        </button>
+    }
+    else
+    {
+        <p class="community-challenge-joined">@L["Community.Challenge.Joined"]</p>
+    }
+
+    @if (Model.IsMember)
+    {
+        <p class="community-private">
+            <span aria-hidden="true">🔒</span>
+            @L.Plural(daily ? "Community.Challenge.StreakDays" : "Community.Challenge.StreakWeeks", Model.Streak)
+        </p>
+    }
+</section>

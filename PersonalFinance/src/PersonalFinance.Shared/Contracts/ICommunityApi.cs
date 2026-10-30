@@ -97,4 +97,33 @@ public interface ICommunityApi
     [Put("/api/community/polls/{pollId}/status")]
     Task SetPollStatusAsync(int pollId, [Body] CommunityPollStatusRequestDto request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Joins a Challenge, remembering the browser's time zone; joining twice is harmless. An unknown or ended
+    /// Challenge is 404.
+    /// </summary>
+    [Post("/api/community/challenges/{challengeId}/join")]
+    Task<CommunityChallengeDto> JoinChallengeAsync(int challengeId, [Body] CommunityChallengeActionRequestDto request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks in to a joined Challenge for the current period; checking in twice is harmless. An unknown or ended
+    /// Challenge is 404, one not joined or not yet started is 409.
+    /// </summary>
+    [Post("/api/community/challenges/{challengeId}/check-in")]
+    Task<CommunityChallengeDto> CheckInAsync(int challengeId, [Body] CommunityChallengeActionRequestDto request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists every Challenge for the Admin, newest start first, with how many joined. Requires the Admin Policy.
+    /// </summary>
+    [Get("/api/community/challenges")]
+    Task<List<CommunityChallengeAdminItemDto>> ListChallengesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Writes a new Challenge. Requires the Admin Policy; an invalid Challenge is 400.
+    /// </summary>
+    [Post("/api/community/challenges")]
+    Task<CommunityChallengeAdminItemDto> CreateChallengeAsync([Body] CommunityChallengeRequestDto request,
+        CancellationToken cancellationToken = default);
 }

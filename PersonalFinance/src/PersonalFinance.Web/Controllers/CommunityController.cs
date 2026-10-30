@@ -15,7 +15,7 @@ namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
 /// MVC Controller for the Guild Hall page (the Community Feature): the viewer's Pseudonym, polls, the board of
-/// Strategies, their Comments and Reactions. All data operations are delegated to the ApiService via the ICommunityApi Refit client, which knows the
+/// Strategies, their Comments and Reactions, and the Challenges with the viewer's private Check-ins. All data operations are delegated to the ApiService via the ICommunityApi Refit client, which knows the
 /// Account from the forwarded user id; no name ever leaves this app.
 /// </summary>
 [Authorize]
@@ -226,9 +226,51 @@ public sealed class CommunityController : Controller
         });
     }
 
+    /// <summary>
+    /// Joins a Challenge via AJAX, with the browser's time zone, and answers with the card as it now reads.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> JoinChallenge([FromBody] ChallengeRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        CommunityChallengeDto challenge = await _communityApi.JoinChallengeAsync(request.ChallengeId,
+            new CommunityChallengeActionRequestDto { TimeZone = request.TimeZone }, cancellationToken);
+        return PartialView("_Challenge", MapChallenge(challenge));
+    }
+
+    /// <summary>
+    /// Checks in to a joined Challenge via AJAX for the current period, and answers with the card as it now reads.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CheckIn([FromBody] ChallengeRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        CommunityChallengeDto challenge = await _communityApi.CheckInAsync(request.ChallengeId,
+            new CommunityChallengeActionRequestDto { TimeZone = request.TimeZone }, cancellationToken);
+        return PartialView("_Challenge", MapChallenge(challenge));
+    }
+
     // =========================================================================
     // Mapping helpers: API DTOs → View Models
     // =========================================================================
+
+    private static CommunityChallenge MapChallenge(CommunityChallengeDto c) => new()
+    {
+        Id = c.Id,
+        Title = c.Title,
+        Habit = c.Habit,
+        Period = c.Period,
+        StartDate = c.StartDate,
+        EndDate = c.EndDate,
+        IsRunning = c.CurrentPeriodStart.HasValue,
+        IsMember = c.IsMember,
+        CheckedInThisPeriod = c.CheckedInThisPeriod,
+        Streak = c.Streak,
+        CheckedInCount = c.CheckedInCount,
+        MemberCount = c.MemberCount,
+    };
 
     private static CommunityViewModel MapToViewModel(CommunityResponseDto response)
     {
@@ -254,6 +296,7 @@ public sealed class CommunityController : Controller
                 CheeringByViewer = s.CheeringByViewer,
                 Comments = s.Comments.Select(MapComment).ToList(),
             }).ToList(),
+            Challenges = response.Challenges.Select(MapChallenge).ToList(),
         };
     }
 
@@ -292,6 +335,17 @@ public sealed class CommunityController : Controller
     // =========================================================================
     // Request models (local to this controller)
     // =========================================================================
+
+    /// <summary>
+    /// Request model for joining a Challenge or checking in to it.
+    /// </summary>
+    public sealed class ChallengeRequest
+    {
+        public int ChallengeId { get; set; }
+
+        /// <summary>The browser's IANA time zone; the ApiService falls back to UTC when it is missing or unknown.</summary>
+        public string? TimeZone { get; set; }
+    }
 
     /// <summary>
     /// Request model for poll voting.
