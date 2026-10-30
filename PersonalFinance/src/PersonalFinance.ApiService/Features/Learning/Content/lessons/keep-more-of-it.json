@@ -1,0 +1,51 @@
+{
+  "slug": "keep-more-of-it",
+  "day": 5,
+  "title": "Keep more of it",
+  "intro": "Taxes take part of what your investments earn. This Lesson shows how the tax on a profit works. It also shows an account where some growth is never taxed.",
+  "terms": [
+    "capital-gains-tax",
+    "roth-ira"
+  ],
+  "check": [
+    {
+      "format": "what-happens-next",
+      "prompt": "Tuan sells shares he held for two years, for more than they cost. What kind of gain is it?",
+      "options": [
+        "A long-term gain",
+        "A short-term gain",
+        "No gain"
+      ],
+      "correctOption": 0,
+      "explanation": "A long-term gain. He held the shares for more than one year."
+    },
+    {
+      "format": "myth-or-fact",
+      "prompt": "A loss on selling your own car lowers your tax.",
+      "options": [
+        "Myth",
+        "Fact"
+      ],
+      "correctOption": 0,
+      "explanation": "Myth. Losses on personal things, such as a home or car, do not count."
+    },
+    {
+      "format": "myth-or-fact",
+      "prompt": "Qualified withdrawals from a Roth IRA are tax free.",
+      "options": [
+        "Myth",
+        "Fact"
+      ],
+      "correctOption": 1,
+      "explanation": "Fact. You pay tax before the money goes in, not when qualified withdrawals come out."
+    }
+  ],
+  "tryIt": {
+    "label": "Net Worth",
+    "url": "/Networth"
+  },
+  "keepsake": {
+    "symbol": "🐖",
+    "name": "Piggy bank"
+  }
+}
