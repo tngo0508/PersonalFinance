@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.10.1] - 2026-10-30
+
+### Added
+
+- **The Atelier: the `/atelier-draft` skill**: the owner turns a file of pasted Approved Source excerpts into a Term Entry draft, and the Lesson's entries into one `atelier:content` PR (#524, part of #513).
+  - A gate script, `tools/atelier-excerpts.js`, refuses an excerpt from a source that is not on the allowlist or not draft + cite, a URL outside its source, and an IRS excerpt without its tax year. The drafter reads only what the gate prints.
+  - The content checks can now check a scratch folder (`ATELIER_CONTENT_DIR`), so a dry run never touches the content folder.
+
+### Changed
+
+- **The Atelier: one related term is enough**: a Term Entry needs 1–5 related terms instead of 2–5, so Lesson 1's two entries can pass while the Library is small.
+
 ## [16.10.0] - 2026-10-30
 
 ### Added

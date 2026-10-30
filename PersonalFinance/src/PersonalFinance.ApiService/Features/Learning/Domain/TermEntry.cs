@@ -39,7 +39,7 @@ public sealed record TermEntry
     /// <summary>The optional In Vietnam note.</summary>
     public CountryNote? InVietnam { get; init; }
 
-    /// <summary>The slugs of 2–5 related Term Entries.</summary>
+    /// <summary>The slugs of 1–5 related Term Entries.</summary>
     public required IReadOnlyList<string> RelatedTerms { get; init; }
 
     /// <summary>The cited Approved Sources; at least one.</summary>

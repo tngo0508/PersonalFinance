@@ -12,6 +12,16 @@ internal static class LearningContentFolders
     public static string Real =>
         Path.Combine(RepositoryRoot.SourceProject("PersonalFinance.ApiService"), "Features", "Learning", "Content");
 
+    /// <summary>
+    /// The folder the content checks treat as the real one: <see cref="Real"/>, or the folder named by
+    /// <c>ATELIER_CONTENT_DIR</c>, so <c>/atelier-draft</c> can check a dry-run draft in a scratch copy.
+    /// </summary>
+    public static string UnderCheck =>
+        Environment.GetEnvironmentVariable("ATELIER_CONTENT_DIR") is { Length: > 0 } folder ? folder : Real;
+
+    /// <summary>The <c>/atelier-draft</c> skill's folder, where its samples and dry-run draft live.</summary>
+    public static string AtelierDraftSkill => Path.Combine(RepositoryRoot.Find(), ".claude", "skills", "atelier-draft");
+
     /// <summary>Good fixture content: four Term Entries and two Lessons, with Vietnamese for <c>apr</c> and Lesson 2.</summary>
     public static string Fixture =>
         Path.Combine(RepositoryRoot.Find(), "PersonalFinance", "tests", "PersonalFinance.Tests", "Learning", "Fixtures",
