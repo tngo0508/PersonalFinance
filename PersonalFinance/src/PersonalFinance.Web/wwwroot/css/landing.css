@@ -5,11 +5,44 @@
 
 .lp-page {
     --lp-max-copy: 34rem;
-    --lp-section-gap: clamp(3.5rem, 8vw, 6rem);
+    --lp-section-gap: clamp(4rem, 9vw, 6.5rem);
+    --lp-radius: 12px;
 
     color: var(--lp-ink);
     font-family: var(--lp-font);
     font-variant-numeric: tabular-nums;
+}
+
+/* A short label over each heading: a rule, then the section's name in capitals */
+.lp-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.85rem;
+    color: var(--lp-ledger-text);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.lp-eyebrow::before {
+    content: "";
+    width: 1.1rem;
+    height: 2px;
+    background: currentColor;
+}
+
+/* The tick on the hero's assurances and the privacy panels */
+.lp-check {
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: var(--lp-ledger-text);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 /* ==========================================================================
@@ -22,10 +55,6 @@
     gap: 0.75rem;
 }
 
-.lp-cta-row--center {
-    justify-content: center;
-}
-
 .lp-btn {
     display: inline-flex;
     align-items: center;
@@ -33,7 +62,7 @@
     min-height: 44px;
     padding: 0.65rem 1.4rem;
     border: 1px solid transparent;
-    border-radius: 6px;
+    border-radius: 8px;
     font-size: 1rem;
     font-weight: 600;
     line-height: 1.2;
@@ -61,17 +90,17 @@
 }
 
 .lp-btn--secondary {
-    background: var(--lp-paper);
-    border-color: var(--lp-ink-soft);
+    background: var(--lp-raised);
+    border-color: var(--lp-rule);
     color: var(--lp-ink);
 }
 
 .lp-btn--secondary:hover {
-    background: var(--lp-surface);
+    border-color: var(--lp-ink-soft);
     color: var(--lp-ink);
 }
 
-/* Light and ghost buttons sit on the navy band, which stays navy in dark mode, so they keep their colours */
+/* Light and ghost buttons sit on the navy closing panel, which stays navy in dark mode, so they keep their colours */
 .lp-btn--light {
     background: var(--lp-on-navy);
     color: var(--lp-navy);
@@ -88,7 +117,7 @@
 }
 
 .lp-btn--ghost:hover {
-    background: var(--lp-on-navy-rule);
+    background: var(--lp-on-navy-hover);
     border-color: var(--lp-on-navy);
     color: var(--lp-on-navy);
 }
@@ -104,10 +133,10 @@
 
 .lp-hero {
     display: grid;
-    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
     align-items: center;
     gap: clamp(2rem, 5vw, 4rem);
-    padding: clamp(1.5rem, 5vw, 4rem) 0 var(--lp-section-gap);
+    padding: clamp(1.5rem, 5vw, 4rem) 0 clamp(3rem, 6vw, 4.5rem);
 }
 
 .lp-hero__copy {
@@ -117,8 +146,8 @@
 .lp-hero__title {
     margin: 0 0 1.25rem;
     color: var(--lp-ink);
-    font-size: clamp(2.25rem, 4.6vw, 3.5rem);
-    font-weight: 600;
+    font-size: clamp(2.25rem, 4.6vw, 3.4rem);
+    font-weight: 700;
     line-height: 1.08;
     letter-spacing: -0.025em;
 }
@@ -130,9 +159,25 @@
     line-height: 1.6;
 }
 
+.lp-assure {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    margin: 1.75rem 0 0;
+    padding: 0;
+    list-style: none;
+    color: var(--lp-ink-soft);
+    font-size: 0.9rem;
+}
+
+.lp-assure li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
 .lp-hero__note {
     margin: 1rem 0 0;
-    color: var(--lp-muted);
     font-size: 0.9rem;
 }
 
@@ -235,12 +280,10 @@
         color: var(--lp-ink-soft);
     }
 
+    /* Over the city the window keeps a solid body, so the figures read as cleanly as on the plain page */
     .lp-hero .lp-plan {
         border-color: color-mix(in srgb, var(--lp-rule) 80%, transparent);
-        background: color-mix(in srgb, var(--lp-surface) 64%, transparent);
         box-shadow: var(--lp-shadow-float);
-        -webkit-backdrop-filter: blur(5px);
-        backdrop-filter: blur(5px);
     }
 }
 
@@ -251,61 +294,103 @@
 }
 
 /* ==========================================================================
-   Sample plan chart
+   Sample plan: an app window with three figures over the projection chart
    ========================================================================== */
 
 .lp-plan {
     margin: 0;
-    padding: clamp(1.1rem, 2.5vw, 1.75rem);
+    overflow: hidden;
     border: 1px solid var(--lp-rule);
-    border-radius: 12px;
+    border-radius: 14px;
+    background: var(--lp-raised);
+    box-shadow: var(--lp-shadow-float);
+}
+
+.lp-plan__bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--lp-rule);
     background: var(--lp-surface);
 }
 
-.lp-plan__head {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+.lp-plan__dots {
+    display: inline-flex;
+    gap: 0.35rem;
+}
+
+.lp-plan__dots i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--lp-rule);
 }
 
 .lp-plan__label {
-    margin: 0 0 0.2rem;
-    color: var(--lp-muted);
-    font-size: 0.9rem;
-}
-
-.lp-plan__figure {
-    margin: 0;
-    color: var(--lp-ink);
-    font-size: clamp(1.6rem, 3vw, 2.1rem);
-    font-weight: 600;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
-}
-
-.lp-plan__figure span {
-    color: var(--lp-muted);
-    font-size: 1rem;
-    font-weight: 400;
-    letter-spacing: 0;
-}
-
-.lp-plan__tag {
-    flex-shrink: 0;
-    margin: 0;
-    padding: 0.2rem 0.6rem;
-    border: 1px solid var(--lp-rule);
-    border-radius: 999px;
-    background: var(--lp-paper);
     color: var(--lp-muted);
     font-size: 0.8rem;
 }
 
+.lp-plan__tag {
+    margin-left: auto;
+    padding: 0.1rem 0.6rem;
+    border: 1px solid color-mix(in srgb, var(--lp-brass) 45%, transparent);
+    border-radius: 999px;
+    color: var(--lp-brass);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.lp-plan__body {
+    padding: clamp(1rem, 2.2vw, 1.5rem) clamp(1rem, 2.2vw, 1.5rem) 2.5rem;
+}
+
+.lp-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0 0 1.5rem;
+}
+
+.lp-kpi {
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--lp-rule);
+    border-radius: 10px;
+}
+
+.lp-kpi dt {
+    color: var(--lp-muted);
+    font-size: 0.78rem;
+    font-weight: 500;
+}
+
+.lp-kpi dd {
+    margin: 0;
+}
+
+.lp-kpi .lp-kpi__value {
+    margin-top: 0.2rem;
+    color: var(--lp-ink);
+    font-size: clamp(1.15rem, 1.8vw, 1.4rem);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.lp-kpi--key .lp-kpi__value {
+    color: var(--lp-ledger-text);
+}
+
+.lp-kpi__note {
+    color: var(--lp-muted);
+    font-size: 0.75rem;
+}
+
 .lp-plan__chart {
     position: relative;
-    height: clamp(200px, 24vw, 280px);
+    height: clamp(180px, 20vw, 230px);
 }
 
 .lp-plan__chart svg {
@@ -353,7 +438,7 @@
     height: 14px;
     border: 3px solid var(--lp-ledger);
     border-radius: 50%;
-    background: var(--lp-paper);
+    background: var(--lp-raised);
     transform: translate(-50%, -50%);
 }
 
@@ -364,7 +449,7 @@
     border-radius: 6px;
     background: var(--lp-ink);
     color: var(--lp-paper);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 500;
     white-space: nowrap;
     transform: translate(calc(-100% + 0.75rem), calc(-100% - 0.85rem));
@@ -375,7 +460,7 @@
     top: calc(50% + 0.4rem);
     left: 0;
     color: var(--lp-brass);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 600;
 }
 
@@ -387,16 +472,53 @@
     display: flex;
     justify-content: space-between;
     color: var(--lp-muted);
-    font-size: 0.8rem;
+    font-size: 0.78rem;
 }
 
 .lp-plan__caption {
-    margin-top: 2.5rem;
-    padding-top: 1rem;
+    padding: 0.85rem clamp(1rem, 2.2vw, 1.5rem);
     border-top: 1px solid var(--lp-rule);
+    background: var(--lp-surface);
     color: var(--lp-ink-soft);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     line-height: 1.55;
+}
+
+/* ==========================================================================
+   Strip: four facts in a full-bleed band under the hero
+   ========================================================================== */
+
+.lp-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin: 0;
+    padding: 1.4rem 0;
+    list-style: none;
+    background: var(--lp-surface);
+    box-shadow: 0 0 0 100vmax var(--lp-surface);
+    clip-path: inset(0 -100vmax);
+}
+
+.lp-strip__item {
+    display: grid;
+    gap: 0.15rem;
+    padding: 0 1.25rem;
+    border-left: 1px solid var(--lp-rule);
+}
+
+.lp-strip__item:first-child {
+    padding-left: 0;
+    border-left: 0;
+}
+
+.lp-strip__title {
+    color: var(--lp-ink);
+    font-weight: 600;
+}
+
+.lp-strip__text {
+    color: var(--lp-muted);
+    font-size: 0.88rem;
 }
 
 /* ==========================================================================
@@ -405,117 +527,87 @@
 
 .lp-section {
     padding: var(--lp-section-gap) 0;
-    border-top: 1px solid var(--lp-rule);
 }
 
 /* Full-bleed tinted background without horizontal overflow */
 .lp-section--tinted {
-    border-top-color: transparent;
     background: var(--lp-surface);
     box-shadow: 0 0 0 100vmax var(--lp-surface);
     clip-path: inset(0 -100vmax);
 }
 
-.lp-section--tinted + .lp-section {
-    border-top-color: transparent;
-}
-
 .lp-section__head {
     max-width: 42rem;
-    margin-bottom: 2.5rem;
+    margin-bottom: 3rem;
 }
 
 .lp-section__title {
-    margin: 0 0 0.75rem;
+    margin: 0 0 0.85rem;
     color: var(--lp-ink);
-    font-size: clamp(1.65rem, 3vw, 2.25rem);
-    font-weight: 600;
-    line-height: 1.2;
+    font-size: clamp(1.7rem, 3vw, 2.3rem);
+    font-weight: 700;
+    line-height: 1.15;
     letter-spacing: -0.02em;
 }
 
 .lp-section__lead {
     margin: 0;
     color: var(--lp-ink-soft);
-    font-size: 1.1rem;
+    font-size: 1.08rem;
     line-height: 1.65;
 }
 
-/* Mission: the three rules of the plan */
+/* Mission: the three rules of the plan, as numbered cards with the formula large */
 .lp-rules {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 2rem;
+    gap: 1.25rem;
     margin: 0;
+    counter-reset: lp-rule;
 }
 
 .lp-rule {
-    padding-top: 1.25rem;
-    border-top: 2px solid var(--lp-ink);
+    padding: 1.6rem;
+    border: 1px solid var(--lp-rule);
+    border-radius: var(--lp-radius);
+    background: var(--lp-raised);
+    counter-increment: lp-rule;
+}
+
+.lp-rule::before {
+    content: counter(lp-rule, decimal-leading-zero);
+    display: block;
+    margin-bottom: 0.4rem;
+    color: var(--lp-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
 }
 
 .lp-rule__term {
-    margin-bottom: 0.35rem;
-    color: var(--lp-ledger-text);
-    font-size: 0.95rem;
+    color: var(--lp-ink);
     font-weight: 600;
 }
 
 .lp-rule__sum {
-    margin: 0 0 0.75rem;
-    color: var(--lp-ink);
-    font-size: 1.45rem;
-    font-weight: 600;
+    margin: 0.85rem 0;
+    color: var(--lp-ledger-text);
+    font-size: 1.35rem;
+    font-weight: 700;
     letter-spacing: -0.01em;
 }
 
 .lp-rule__text {
     margin: 0;
     color: var(--lp-ink-soft);
+    font-size: 0.95rem;
     line-height: 1.6;
 }
 
-/* ==========================================================================
-   The ledger: every tool is a line of the same sample plan
-   Figures sit in the right column in the money face, and the total closes
-   the finances under a double rule, as the Budget pages close theirs.
-   ========================================================================== */
-
-.lp-ledger {
-    --lp-ledger-name: 12rem;
-    --lp-ledger-figure: 15rem;
-}
-
-.lp-ledger__head {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--lp-ledger-figure);
-    align-items: end;
-    gap: 1rem;
-    padding-bottom: 0.6rem;
-    border-bottom: 2px solid var(--lp-ink);
-}
-
-.lp-ledger__group {
-    margin: 0;
-    color: var(--lp-ink);
-    font-size: 1.05rem;
-    font-weight: 600;
-}
-
-.lp-ledger__group--more {
-    margin-top: 3rem;
-    padding-bottom: 0.6rem;
-    border-bottom: 2px solid var(--lp-ink);
-}
-
-.lp-ledger__column {
-    margin: 0;
-    color: var(--lp-muted);
-    font-size: 0.85rem;
-    text-align: right;
-}
-
+/* Tools: a card for each tool that writes the plan, with the sample plan's figure where it has one */
 .lp-tools {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -523,75 +615,94 @@
 
 .lp-tool {
     display: grid;
-    grid-template-columns: var(--lp-ledger-name) minmax(0, 1fr) var(--lp-ledger-figure);
-    grid-template-areas: "title text figure";
-    gap: 0.25rem 1.5rem;
-    padding: 1.1rem 0;
-    border-bottom: 1px solid var(--lp-rule);
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+        "icon title"
+        "icon text"
+        "icon figure";
+    align-content: start;
+    gap: 0.35rem 1rem;
+    padding: 1.6rem;
+    border: 1px solid var(--lp-rule);
+    border-radius: var(--lp-radius);
+    background: var(--lp-raised);
+}
+
+.lp-tool:hover {
+    border-color: color-mix(in srgb, var(--lp-ledger) 45%, var(--lp-rule));
+}
+
+.lp-tool__icon {
+    grid-area: icon;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 10px;
+    background: var(--lp-ledger-wash);
+}
+
+.lp-tool__icon svg {
+    width: 1.35rem;
+    height: 1.35rem;
+    fill: none;
+    stroke: var(--lp-ledger-on-wash);
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .lp-tool__title {
     grid-area: title;
     margin: 0;
     color: var(--lp-ink);
-    font-size: 1.05rem;
+    font-size: 1.08rem;
     font-weight: 600;
     line-height: 1.4;
 }
 
 .lp-tool__text {
     grid-area: text;
-    max-width: 38rem;
     margin: 0;
     color: var(--lp-ink-soft);
+    font-size: 0.95rem;
     line-height: 1.6;
 }
 
 .lp-tool__figure {
     grid-area: figure;
-    margin: 0;
-    color: var(--lp-ink);
-    font-family: var(--app-font-mono);
-    font-size: 0.95rem;
-    font-weight: 500;
-    line-height: 1.6;
-    text-align: right;
-}
-
-/* The first line carries the FI target, the figure the whole plan is kept against */
-.lp-tool:first-child .lp-tool__figure {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0.5rem 0 0;
     color: var(--lp-brass);
+    font-family: var(--app-font-mono);
+    font-size: 0.88rem;
     font-weight: 600;
 }
 
-.lp-ledger__total {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 1rem;
-    margin: 0;
-    padding: 0.9rem 0 0;
-    border-top: 3px double var(--lp-ink);
+.lp-tool__figure::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
 }
 
-.lp-ledger__total-label {
+/* Resources: a compact register under its own rule */
+.lp-more__title {
+    margin: 3.5rem 0 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--lp-rule);
     color: var(--lp-ink);
     font-size: 1.05rem;
     font-weight: 600;
 }
 
-.lp-ledger__total-figure {
-    color: var(--lp-brass);
-    font-family: var(--app-font-mono);
-    font-size: 1.05rem;
-    font-weight: 600;
-    text-align: right;
-}
-
-/* Resources: a two-column register under its own rule */
 .lp-more {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: 3rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.75rem 1.5rem;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -599,10 +710,8 @@
 
 .lp-more__item {
     display: grid;
-    grid-template-columns: var(--lp-ledger-name) minmax(0, 1fr);
-    gap: 0.2rem 1.5rem;
-    padding: 0.85rem 0;
-    border-bottom: 1px solid var(--lp-rule);
+    align-content: start;
+    gap: 0.25rem;
 }
 
 .lp-more__name {
@@ -612,11 +721,11 @@
 
 .lp-more__text {
     color: var(--lp-ink-soft);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     line-height: 1.5;
 }
 
-/* Getting started: a real sequence, so the steps are numbered */
+/* Getting started: a real sequence, so the steps are numbered and joined by a line */
 .lp-steps {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -628,27 +737,40 @@
 }
 
 .lp-step {
+    position: relative;
     counter-increment: lp-step;
 }
 
 .lp-step::before {
     content: counter(lp-step);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    margin-bottom: 0.9rem;
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-bottom: 1.1rem;
+    border: 1.5px solid var(--lp-ledger);
     border-radius: 50%;
-    background: var(--lp-ledger-fill);
-    color: var(--lp-on-ledger);
-    font-weight: 600;
+    background: var(--lp-paper);
+    color: var(--lp-ledger-text);
+    font-weight: 700;
+}
+
+.lp-step:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 1.25rem;
+    right: -1.25rem;
+    left: 3.25rem;
+    height: 1px;
+    background: var(--lp-rule);
 }
 
 .lp-step__title {
     margin: 0 0 0.4rem;
     color: var(--lp-ink);
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     font-weight: 600;
 }
 
@@ -658,61 +780,74 @@
     line-height: 1.6;
 }
 
-/* Yours: privacy beside the two languages and currencies, each list under its own rule */
+/* Yours: privacy beside the two languages and currencies, each in its own panel */
 .lp-yours {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 2.5rem clamp(2rem, 6vw, 5rem);
+    gap: 1.25rem;
 }
 
-.lp-yours__title {
-    margin: 0 0 1rem;
-    padding-top: 1.25rem;
-    border-top: 2px solid var(--lp-ink);
+.lp-panel {
+    padding: clamp(1.5rem, 3vw, 2rem);
+    border: 1px solid var(--lp-rule);
+    border-radius: var(--lp-radius);
+    background: var(--lp-raised);
+}
+
+.lp-panel__title {
+    margin: 0 0 1.1rem;
     color: var(--lp-ink);
-    font-size: 1.35rem;
+    font-size: 1.2rem;
     font-weight: 600;
     line-height: 1.3;
     letter-spacing: -0.01em;
 }
 
-.lp-yours__list {
+.lp-checks {
     display: grid;
-    gap: 0.55rem;
+    gap: 0.8rem;
     margin: 0;
-    padding-left: 1.1rem;
+    padding: 0;
+    list-style: none;
     color: var(--lp-ink-soft);
-    line-height: 1.6;
+    line-height: 1.55;
 }
 
-.lp-yours__list li::marker {
-    color: var(--lp-ledger-text);
+.lp-checks li {
+    display: grid;
+    grid-template-columns: 1rem minmax(0, 1fr);
+    gap: 0.65rem;
 }
 
-/* Closing call to action: full-bleed navy band */
+.lp-checks .lp-check {
+    margin-top: 0.2rem;
+}
+
+/* Closing call to action: a navy panel within the page width */
 .lp-closing {
-    margin-bottom: -3rem;
-    padding: clamp(3.5rem, 8vw, 5rem) 1rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2rem;
+    margin: var(--lp-section-gap) 0 1rem;
+    padding: clamp(2.5rem, 6vw, 4rem);
+    border-radius: 18px;
     background: var(--lp-navy);
-    box-shadow: 0 0 0 100vmax var(--lp-navy);
-    clip-path: inset(0 -100vmax);
     color: var(--lp-on-navy);
-    text-align: center;
 }
 
 .lp-closing__title {
-    margin: 0 0 0.75rem;
+    margin: 0 0 0.5rem;
     color: var(--lp-on-navy);
-    font-size: clamp(1.65rem, 3vw, 2.25rem);
-    font-weight: 600;
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+    font-weight: 700;
     letter-spacing: -0.02em;
 }
 
 .lp-closing__lead {
-    margin: 0 auto 2rem;
-    max-width: 32rem;
+    margin: 0;
     color: var(--lp-on-navy-soft);
-    font-size: 1.1rem;
+    font-size: 1.08rem;
 }
 
 /* ==========================================================================
@@ -720,7 +855,8 @@
    ========================================================================== */
 
 @media (prefers-reduced-motion: no-preference) {
-    .lp-btn {
+    .lp-btn,
+    .lp-tool {
         transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
     }
 }
@@ -734,23 +870,22 @@
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .lp-ledger {
-        --lp-ledger-figure: 11rem;
+    .lp-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem 0;
     }
 
-    .lp-tool {
-        grid-template-columns: minmax(0, 1fr) var(--lp-ledger-figure);
-        grid-template-areas:
-            "title figure"
-            "text  figure";
-        align-items: start;
+    .lp-strip__item:nth-child(odd) {
+        padding-left: 0;
+        border-left: 0;
     }
 
     .lp-more {
-        grid-template-columns: minmax(0, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .lp-yours {
+    .lp-yours,
+    .lp-closing {
         grid-template-columns: minmax(0, 1fr);
     }
 }
@@ -758,8 +893,13 @@
 @media (max-width: 767.98px) {
     .lp-rules,
     .lp-tools,
-    .lp-steps {
+    .lp-steps,
+    .lp-more {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .lp-step::after {
+        display: none;
     }
 
     .lp-cta-row {
@@ -769,39 +909,23 @@
     .lp-btn {
         width: 100%;
     }
+}
 
-    /* One column: the figure closes the line, right-aligned, instead of running beside it */
-    .lp-ledger__head,
-    .lp-ledger__total {
+@media (max-width: 479.98px) {
+    .lp-strip {
         grid-template-columns: minmax(0, 1fr);
-        gap: 0.2rem;
     }
 
-    .lp-ledger__column,
-    .lp-ledger__total-figure {
-        text-align: left;
+    .lp-strip__item {
+        padding-left: 0;
+        border-left: 0;
     }
 
-    .lp-tool {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-areas:
-            "title"
-            "text"
-            "figure";
+    .lp-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .lp-tool__figure {
-        margin-top: 0.35rem;
-        text-align: left;
-    }
-
-    .lp-more__item {
-        grid-template-columns: minmax(0, 1fr);
-        gap: 0.2rem;
-    }
-
-    .lp-plan__head {
-        flex-direction: column-reverse;
-        gap: 0.75rem;
+    .lp-kpi--key {
+        grid-column: span 2;
     }
 }

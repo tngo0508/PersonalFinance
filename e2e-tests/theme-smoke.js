@@ -26,7 +26,7 @@ const {AA_TEXT, contrastRatio, flattenBackground, parseColour} = require(path.jo
  */
 const CONTRAST_PAGES = {
     landing: ['.lp-hero__title', '.lp-hero__lead', '.lp-hero__note a', '.lp-section__title', '.lp-tool__text',
-        '.lp-tool__figure', '.lp-ledger__total-figure', '.lp-more__text', '.lp-step__text', '.lp-privacy__list',
+        '.lp-tool__figure', '.lp-kpi__value', '.lp-strip__text', '.lp-more__text', '.lp-step__text', '.lp-privacy__list',
         '.lp-everyday__list', '.lp-closing__lead', '.lp-btn--primary', '.app-footer__links a'],
     signIn: ['.auth-page__title', '.auth-page__subtitle', '.auth-page .form-label', '#forgot-password', '#login-submit'],
     accountSettings: ['.account-page__title', '.account-page__subtitle', '.account-nav__link[aria-current="page"]',

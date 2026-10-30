@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.2.0] - 2026-10-30
+
+### Changed
+
+- **The Landing Page: a cleaner, more product-like layout**: the same content, set out as cards and panels with a label over each heading, and the Skyline kept behind the hero.
+  - The hero's sample plan is an app window: three figures (FI target, monthly saving, FI age) above the projection chart, with its caption under it. Three ticks under the buttons say it is free, needs no bank logins and is visible only to you.
+  - A band under the hero lists four facts: no bank logins, private by default, English and Vietnamese, USD and VND.
+  - The three rules of the plan are numbered cards; the six plan tools are cards with an icon and the sample plan's figure; the seven resources are a four-column register.
+  - The steps are joined by a line, privacy and everyday use are two panels with ticks, and the closing call to action is a navy panel within the page width.
+
 ## [16.1.0] - 2026-10-30
 
 ### Changed

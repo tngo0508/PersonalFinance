@@ -15,8 +15,8 @@
     const int returnRate = 5;
     const int fiAge = 52;
 
-    // The ledger's figures follow the same sample: spending of $40,000 a year is $3,333 a month, and an emergency fund
-    // of six months of spending is $20,000.
+    // The tool cards' figures follow the same sample: spending of $40,000 a year is $3,333 a month, and an emergency
+    // fund of six months of spending is $20,000.
     const string plannedMonthly = "$3,333";
     const string emergencyFund = "$20,000";
     var figures = new Dictionary<string, string>
@@ -26,6 +26,18 @@
         ["BudgetTracker"] = L.Named("Landing.Feature.BudgetTracker.Figure", ("planned", plannedMonthly)),
         ["SavingsGoals"] = L.Named("Landing.Feature.SavingsGoals.Figure", ("fund", emergencyFund))
     };
+
+    // Line icons for the tool cards, drawn on a 24 × 24 grid with a stroke and no fill
+    var icons = new Dictionary<string, string>
+    {
+        ["NetWorth"] = "M3 20h18M5 16l4-5 4 3 6-8",
+        ["BudgetPlanner"] = "M4.5 9h15a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 13.5v-3A1.5 1.5 0 0 1 4.5 9zM9 9v6M14 9v6M17 9v6",
+        ["BudgetTracker"] = "M5 3h11l3 3v15H5zM9 9h6M9 13h6M9 17h3",
+        ["SavingsGoals"] = "M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16zM12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8z",
+        ["MoneyPriorities"] = "M4 6h10M4 12h16M4 18h7",
+        ["Analysis"] = "M4 20V10M10 20V4M16 20v-7M22 20H2"
+    };
+    const string checkPath = "M3 8.5l3 3 7-7";
 }
 
 @section Styles {
@@ -53,43 +65,71 @@
         </div>
 
         <div class="lp-hero__copy">
+            <p class="lp-eyebrow">@L["Landing.Hero.Eyebrow"]</p>
             <h1 id="lp-hero-title" class="lp-hero__title">@L["Landing.Hero.Title"]</h1>
             <p class="lp-hero__lead">@L.Named("Landing.Hero.Lead", ("appName", appName))</p>
             <div class="lp-cta-row">
                 <a class="lp-btn lp-btn--primary" asp-area="Identity" asp-page="/Account/Register">@L["Landing.Cta.Register"]</a>
                 <a class="lp-btn lp-btn--secondary" asp-area="Identity" asp-page="/Account/Login">@L["Landing.Cta.SignIn"]</a>
             </div>
+            <ul class="lp-assure">
+                @foreach (string key in new[] { "Landing.Hero.Assure.Free", "Landing.Hero.Assure.NoBankLogins", "Landing.Hero.Assure.OnlyYou" })
+                {
+                    <li>
+                        <svg class="lp-check" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="@checkPath"/></svg>
+                        @L[key]
+                    </li>
+                }
+            </ul>
             <p class="lp-hero__note">
-                @L["Landing.Hero.Note"]
                 <a asp-area="" asp-controller="Home" asp-action="About">@L.Named("Landing.Hero.About", ("appName", appName))</a>
             </p>
         </div>
 
-        @* Illustrative projection. The figures follow the app's own FI rule (25 × annual spending). *@
+        @* Illustrative projection in an app window. The figures follow the app's own FI rule (25 × annual spending). *@
         <figure class="lp-plan">
-            <div class="lp-plan__head">
-                <div>
-                    <p class="lp-plan__label">@L["Landing.Plan.Label"]</p>
-                    <p class="lp-plan__figure">@projected <span>@L.Named("Landing.Plan.AtAge", ("age", fiAge))</span></p>
-                </div>
-                <p class="lp-plan__tag">@L["Landing.Plan.Tag"]</p>
+            <div class="lp-plan__bar">
+                <span class="lp-plan__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span class="lp-plan__label">@L["Landing.Plan.Label"]</span>
+                <span class="lp-plan__tag">@L["Landing.Plan.Tag"]</span>
             </div>
 
-            <div class="lp-plan__chart" aria-hidden="true">
-                <svg viewBox="0 0 600 240" preserveAspectRatio="none" focusable="false">
-                    <line class="lp-plan__grid" x1="0" y1="0" x2="600" y2="0"/>
-                    <line class="lp-plan__grid" x1="0" y1="240" x2="600" y2="240"/>
-                    <path class="lp-plan__area" d="M0 235.2 L20 232.1 L40 228.8 L60 225.4 L80 221.8 L100 218 L120 214 L140 209.8 L160 205.4 L180 200.8 L200 196 L220 190.9 L240 185.5 L260 179.9 L280 174.1 L300 167.9 L320 161.4 L340 154.6 L360 147.4 L380 139.9 L400 132 L420 123.8 L440 115.1 L460 105.9 L480 96.4 L500 86.3 L520 75.7 L540 64.6 L560 53 L580 40.8 L600 27.9 L600 240 L0 240 Z"/>
-                    <line class="lp-plan__target" x1="0" y1="120" x2="600" y2="120"/>
-                    <path class="lp-plan__line" d="M0 235.2 L20 232.1 L40 228.8 L60 225.4 L80 221.8 L100 218 L120 214 L140 209.8 L160 205.4 L180 200.8 L200 196 L220 190.9 L240 185.5 L260 179.9 L280 174.1 L300 167.9 L320 161.4 L340 154.6 L360 147.4 L380 139.9 L400 132 L420 123.8 L440 115.1 L460 105.9 L480 96.4 L500 86.3 L520 75.7 L540 64.6 L560 53 L580 40.8 L600 27.9"/>
-                    <line class="lp-plan__drop" x1="440" y1="115.1" x2="440" y2="240"/>
-                </svg>
-                <span class="lp-plan__marker" style="left: 73.33%; top: 47.96%"></span>
-                <span class="lp-plan__callout" style="left: 73.33%; top: 47.96%">@L.Named("Landing.Plan.Callout", ("age", fiAge))</span>
-                <span class="lp-plan__target-label">@L.Named("Landing.Plan.TargetLabel", ("amount", target))</span>
-                <span class="lp-plan__ages">
-                    <span>@L.Named("Landing.Plan.AxisAge", ("age", 30))</span><span>40</span><span>50</span><span>60</span>
-                </span>
+            <div class="lp-plan__body">
+                <dl class="lp-kpis">
+                    <div class="lp-kpi">
+                        <dt>@L["Landing.Plan.Kpi.Target"]</dt>
+                        <dd class="lp-kpi__value">@target</dd>
+                        <dd class="lp-kpi__note">@L.Named("Landing.Plan.Kpi.TargetNote", ("spending", spending))</dd>
+                    </div>
+                    <div class="lp-kpi">
+                        <dt>@L["Landing.Plan.Kpi.Saving"]</dt>
+                        <dd class="lp-kpi__value">@monthlySaving</dd>
+                        <dd class="lp-kpi__note">@L.Named("Landing.Plan.Kpi.SavingNote", ("rate", returnRate))</dd>
+                    </div>
+                    <div class="lp-kpi lp-kpi--key">
+                        <dt>@L["Landing.Plan.Kpi.Age"]</dt>
+                        <dd class="lp-kpi__value">@fiAge</dd>
+                        <dd class="lp-kpi__note">@L.Named("Landing.Plan.Kpi.AgeNote", ("projected", projected))</dd>
+                    </div>
+                </dl>
+
+                <div class="lp-plan__chart" aria-hidden="true">
+                    <svg viewBox="0 0 600 240" preserveAspectRatio="none" focusable="false">
+                        <line class="lp-plan__grid" x1="0" y1="60" x2="600" y2="60"/>
+                        <line class="lp-plan__grid" x1="0" y1="180" x2="600" y2="180"/>
+                        <line class="lp-plan__grid" x1="0" y1="240" x2="600" y2="240"/>
+                        <path class="lp-plan__area" d="M0 235.2 L20 232.1 L40 228.8 L60 225.4 L80 221.8 L100 218 L120 214 L140 209.8 L160 205.4 L180 200.8 L200 196 L220 190.9 L240 185.5 L260 179.9 L280 174.1 L300 167.9 L320 161.4 L340 154.6 L360 147.4 L380 139.9 L400 132 L420 123.8 L440 115.1 L460 105.9 L480 96.4 L500 86.3 L520 75.7 L540 64.6 L560 53 L580 40.8 L600 27.9 L600 240 L0 240 Z"/>
+                        <line class="lp-plan__target" x1="0" y1="120" x2="600" y2="120"/>
+                        <path class="lp-plan__line" d="M0 235.2 L20 232.1 L40 228.8 L60 225.4 L80 221.8 L100 218 L120 214 L140 209.8 L160 205.4 L180 200.8 L200 196 L220 190.9 L240 185.5 L260 179.9 L280 174.1 L300 167.9 L320 161.4 L340 154.6 L360 147.4 L380 139.9 L400 132 L420 123.8 L440 115.1 L460 105.9 L480 96.4 L500 86.3 L520 75.7 L540 64.6 L560 53 L580 40.8 L600 27.9"/>
+                        <line class="lp-plan__drop" x1="440" y1="115.1" x2="440" y2="240"/>
+                    </svg>
+                    <span class="lp-plan__marker" style="left: 73.33%; top: 47.96%"></span>
+                    <span class="lp-plan__callout" style="left: 73.33%; top: 47.96%">@L.Named("Landing.Plan.Callout", ("age", fiAge))</span>
+                    <span class="lp-plan__target-label">@L.Named("Landing.Plan.TargetLabel", ("amount", target))</span>
+                    <span class="lp-plan__ages">
+                        <span>@L.Named("Landing.Plan.AxisAge", ("age", 30))</span><span>40</span><span>50</span><span>60</span>
+                    </span>
+                </div>
             </div>
 
             <figcaption class="lp-plan__caption">
@@ -99,10 +139,22 @@
         </figure>
     </section>
 
+    @* ---------- What sets it apart, at a glance ---------- *@
+    <ul class="lp-strip" aria-label="@L["Landing.Strip.Label"]">
+        @foreach (string item in new[] { "NoBankLogins", "Private", "Languages", "Currencies" })
+        {
+            <li class="lp-strip__item">
+                <span class="lp-strip__title">@L[$"Landing.Strip.{item}.Title"]</span>
+                <span class="lp-strip__text">@L[$"Landing.Strip.{item}.Text"]</span>
+            </li>
+        }
+    </ul>
+
     @* ---------- Mission: how the plan works ---------- *@
     <section class="lp-section lp-mission" aria-labelledby="lp-mission-title">
         <div class="lp-section__head">
-            <h2 id="lp-mission-title" class="lp-section__title">@L["Landing.Mission.Title"]</h2>
+            <p class="lp-eyebrow">@L["Landing.Mission.Eyebrow"]</p>
+            <h2 id="lp-mission-title" class="lp-section__title">@L["Landing.Mission.Heading"]</h2>
             <p class="lp-section__lead">@L["Landing.Mission.Lead"]</p>
         </div>
 
@@ -127,52 +179,47 @@
         </dl>
     </section>
 
-    @* ---------- The ledger: every tool is a line of the same plan ---------- *@
-    <section class="lp-section" aria-labelledby="lp-ledger-title">
+    @* ---------- Tools: every tool writes a line of the same plan ---------- *@
+    <section class="lp-section lp-section--tinted" aria-labelledby="lp-tools-title">
         <div class="lp-section__head">
-            <h2 id="lp-ledger-title" class="lp-section__title">@L["Landing.Ledger.Title"]</h2>
-            <p class="lp-section__lead">@L["Landing.Ledger.Lead"]</p>
+            <p class="lp-eyebrow">@L["Landing.Tools.Eyebrow"]</p>
+            <h2 id="lp-tools-title" class="lp-section__title">@L["Landing.Tools.Title"]</h2>
+            <p class="lp-section__lead">@L["Landing.Tools.Lead"]</p>
         </div>
 
-        <div class="lp-ledger">
-            <div class="lp-ledger__head">
-                <h3 class="lp-ledger__group">@L["Landing.Ledger.Finances"]</h3>
-                <p class="lp-ledger__column">@L["Landing.Ledger.Column"]</p>
-            </div>
-            <ul class="lp-tools">
-                @foreach (var feature in Model.CoreFeatures)
-                {
-                    <li class="lp-tool">
-                        <h4 class="lp-tool__title">@L[feature.TitleKey]</h4>
-                        <p class="lp-tool__text">@L[feature.DescriptionKey]</p>
-                        @if (feature.HasFigure && figures.TryGetValue(feature.Id, out string? figure))
-                        {
-                            <p class="lp-tool__figure">@figure</p>
-                        }
-                    </li>
-                }
-            </ul>
-            <p class="lp-ledger__total">
-                <span class="lp-ledger__total-label">@L["Landing.Ledger.Total"]</span>
-                <span class="lp-ledger__total-figure">@L.Named("Landing.Ledger.TotalFigure", ("projected", projected), ("age", fiAge))</span>
-            </p>
+        <ul class="lp-tools">
+            @foreach (var feature in Model.CoreFeatures)
+            {
+                <li class="lp-tool">
+                    <span class="lp-tool__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false"><path d="@(icons.GetValueOrDefault(feature.Id, ""))"/></svg>
+                    </span>
+                    <h3 class="lp-tool__title">@L[feature.TitleKey]</h3>
+                    <p class="lp-tool__text">@L[feature.DescriptionKey]</p>
+                    @if (feature.HasFigure && figures.TryGetValue(feature.Id, out string? figure))
+                    {
+                        <p class="lp-tool__figure">@figure</p>
+                    }
+                </li>
+            }
+        </ul>
 
-            <h3 class="lp-ledger__group lp-ledger__group--more">@L["Landing.Ledger.Resources"]</h3>
-            <ul class="lp-more">
-                @foreach (var feature in Model.MoreFeatures)
-                {
-                    <li class="lp-more__item">
-                        <span class="lp-more__name">@L[feature.TitleKey]</span>
-                        <span class="lp-more__text">@L[feature.DescriptionKey]</span>
-                    </li>
-                }
-            </ul>
-        </div>
+        <h3 class="lp-more__title">@L["Landing.Ledger.Resources"]</h3>
+        <ul class="lp-more">
+            @foreach (var feature in Model.MoreFeatures)
+            {
+                <li class="lp-more__item">
+                    <span class="lp-more__name">@L[feature.TitleKey]</span>
+                    <span class="lp-more__text">@L[feature.DescriptionKey]</span>
+                </li>
+            }
+        </ul>
     </section>
 
     @* ---------- Getting started ---------- *@
-    <section class="lp-section lp-section--tinted" aria-labelledby="lp-steps-title">
+    <section class="lp-section" aria-labelledby="lp-steps-title">
         <div class="lp-section__head">
+            <p class="lp-eyebrow">@L["Landing.Steps.Eyebrow"]</p>
             <h2 id="lp-steps-title" class="lp-section__title">@L["Landing.Steps.Title"]</h2>
         </div>
         <ol class="lp-steps">
@@ -192,24 +239,33 @@
     </section>
 
     @* ---------- Yours: privacy, and the two languages and currencies ---------- *@
-    <section class="lp-section" aria-labelledby="lp-privacy-title">
+    <section class="lp-section lp-section--tinted" aria-labelledby="lp-privacy-title">
+        <div class="lp-section__head">
+            <p class="lp-eyebrow">@L["Landing.Privacy.Eyebrow"]</p>
+            <h2 id="lp-privacy-title" class="lp-section__title">@L["Landing.Privacy.Title"]</h2>
+        </div>
         <div class="lp-yours">
-            <div class="lp-privacy">
-                <h2 id="lp-privacy-title" class="lp-yours__title">@L["Landing.Privacy.Title"]</h2>
-                <ul class="lp-privacy__list lp-yours__list">
-                    <li>@L["Landing.Privacy.OnlyYou"]</li>
-                    <li>@L["Landing.Privacy.NoBankLogins"]</li>
-                    <li>@L["Landing.Privacy.Https"]</li>
-                    <li>@L["Landing.Privacy.Drive"]</li>
-                    <li>@L.Named("Landing.Privacy.IdleSignOut", ("minutes", IdleSignOut.Value.TimeoutMinutes))</li>
+            <div class="lp-panel">
+                <h3 class="lp-panel__title">@L["Landing.Privacy.Security"]</h3>
+                <ul class="lp-privacy__list lp-checks">
+                    @foreach (string line in new[]
+                    {
+                        L["Landing.Privacy.OnlyYou"].Value, L["Landing.Privacy.NoBankLogins"].Value,
+                        L["Landing.Privacy.Https"].Value, L["Landing.Privacy.Drive"].Value,
+                        L.Named("Landing.Privacy.IdleSignOut", ("minutes", IdleSignOut.Value.TimeoutMinutes))
+                    })
+                    {
+                        <li><svg class="lp-check" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="@checkPath"/></svg>@line</li>
+                    }
                 </ul>
             </div>
-            <div class="lp-everyday">
-                <h2 class="lp-yours__title">@L["Landing.Everyday.Title"]</h2>
-                <ul class="lp-everyday__list lp-yours__list">
-                    <li>@L["Landing.Everyday.Language"]</li>
-                    <li>@L["Landing.Everyday.Currency"]</li>
-                    <li>@L["Landing.Everyday.Theme"]</li>
+            <div class="lp-panel">
+                <h3 class="lp-panel__title">@L["Landing.Everyday.Title"]</h3>
+                <ul class="lp-everyday__list lp-checks">
+                    @foreach (string key in new[] { "Landing.Everyday.Language", "Landing.Everyday.Currency", "Landing.Everyday.Theme" })
+                    {
+                        <li><svg class="lp-check" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="@checkPath"/></svg>@L[key]</li>
+                    }
                 </ul>
             </div>
         </div>
@@ -217,9 +273,11 @@
 
     @* ---------- Closing call to action ---------- *@
     <section class="lp-closing" aria-labelledby="lp-closing-title">
-        <h2 id="lp-closing-title" class="lp-closing__title">@L["Landing.Closing.Title"]</h2>
-        <p class="lp-closing__lead">@L["Landing.Closing.Lead"]</p>
-        <div class="lp-cta-row lp-cta-row--center">
+        <div class="lp-closing__copy">
+            <h2 id="lp-closing-title" class="lp-closing__title">@L["Landing.Closing.Title"]</h2>
+            <p class="lp-closing__lead">@L["Landing.Closing.Lead"]</p>
+        </div>
+        <div class="lp-cta-row">
             <a class="lp-btn lp-btn--light" asp-area="Identity" asp-page="/Account/Register">@L["Landing.Cta.Register"]</a>
             <a class="lp-btn lp-btn--ghost" asp-area="Identity" asp-page="/Account/Login">@L["Landing.Cta.SignIn"]</a>
         </div>
