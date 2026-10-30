@@ -1,0 +1,29 @@
+{
+  "slug": "emergency-fund",
+  "term": "Emergency fund",
+  "vietnameseName": "quỹ dự phòng khẩn cấp",
+  "alsoKnownAs": [
+    "emergency savings"
+  ],
+  "topic": "saving-banking",
+  "oneLine": "Money you keep only for unplanned costs, such as car repairs.",
+  "explanation": [
+    "An emergency fund is cash you keep only for unplanned costs. Common examples are car repairs, home repairs, medical bills and a loss of income.",
+    "It pays for bills that are not part of your normal monthly spending. These bills can be large or small.",
+    "How much you need depends on your situation. Think about the surprise costs you had in the past and what they cost. That can help you set a goal. Even a small amount helps, and an automatic transfer from your checking account to your savings account each month builds it over time."
+  ],
+  "whyItMatters": "Without savings, even a small surprise cost can cause money problems. People without savings often use a credit card or a loan. Interest and fees can make the cost much bigger than the first bill. Some people take money from their retirement savings instead. If you use your emergency fund, you can build it up again.",
+  "workedExample": "Lan's car needs a $600 repair. With $600 in her emergency fund, she pays the bill, and the repair costs her $600. Without it, she puts the repair on a credit card. If she repays it slowly, interest and fees make the repair cost more than $600.",
+  "relatedTerms": [
+    "compound-interest"
+  ],
+  "sources": [
+    {
+      "name": "CFPB, An essential guide to building an emergency fund",
+      "url": "https://www.consumerfinance.gov/an-essential-guide-to-building-an-emergency-fund/",
+      "accessed": "2026-10-30"
+    }
+  ],
+  "furtherReading": [],
+  "lastReviewed": "2026-10-30"
+}
