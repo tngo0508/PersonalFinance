@@ -12,5 +12,6 @@ public interface ISearchApi
     /// Searches across transactions, Budget Categories, and Savings Goals.
     /// </summary>
     [Get("/api/Search")]
-    Task<SearchResultsDto> SearchAsync([Query] string q, CancellationToken cancellationToken = default);
+    Task<SearchResultsDto> SearchAsync([Query] string q, [Query] string language,
+        CancellationToken cancellationToken = default);
 }

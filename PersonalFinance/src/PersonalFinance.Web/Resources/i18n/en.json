@@ -939,6 +939,7 @@
   "Shell.Js.Search.Group.Transactions": "Transactions",
   "Shell.Js.Search.Group.Categories": "Budget Categories",
   "Shell.Js.Search.Group.SavingsGoals": "Savings Goals",
+  "Shell.Js.Search.Group.Learning": "Learning",
   "Shell.Js.Search.NoResults": "No results for \"{query}\"",
   "Shell.Js.IdleSignOut.Countdown": "Signing out in {time}",
   "Shell.Js.Search.Results.one": "{count} result",
