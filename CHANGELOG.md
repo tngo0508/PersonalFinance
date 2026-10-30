@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.0.1] - 2026-10-30
+
+### Fixed
+
+- **First visit after an idle spell no longer fails with a 500**: pages load even while ApiService is still starting up from zero replicas.
+  - Every page's layout asks ApiService whether the Learning Library has entries, to decide whether the nav shows "Learning". A cold ApiService took longer than the Web's 15-second HttpClient timeout. That timeout surfaces as a `TaskCanceledException`, which the fallback deliberately let through as if the browser had cancelled, so the whole page returned 500 until a refresh found ApiService warm.
+  - Now only the request's own cancellation propagates; a timeout hides the Learning entry for a minute, as any other ApiService failure already did.
+
 ## [16.0.0] - 2026-10-30
 
 ### Added
