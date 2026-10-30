@@ -1,4 +1,4 @@
-/* global d3, topojson, PFI18n */
+/* global d3, topojson, PFI18n, ChartPalette */
 /**
  * Research page, World tab: a D3 choropleth of stock-market capitalisation by country, one year at a time, in an
  * Equal Earth projection without Antarctica. Reads the World snapshot from the JSON data island rendered by
@@ -211,7 +211,7 @@
         const { years, names } = indexData(data);
         const legend = document.getElementById(LEGEND_ID);
         const subtitle = document.getElementById(SUBTITLE_ID);
-        const colours = readColours(host);
+        let colours = readColours(host);
         let metricKey = 'marketCap';
         let periodIndex = data.periods.length - 1;
 
@@ -223,8 +223,8 @@
             .attr('width', 6)
             .attr('height', 6)
             .attr('patternTransform', 'rotate(45)');
-        pattern.append('rect').attr('width', 6).attr('height', 6).attr('fill', colours.noData);
-        pattern.append('line').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 6)
+        const patternGround = pattern.append('rect').attr('width', 6).attr('height', 6).attr('fill', colours.noData);
+        const patternLine = pattern.append('line').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 6)
             .attr('stroke', colours.noDataInk).attr('stroke-width', 1.5);
         const countries = svg.append('g').attr('class', 'research-world__countries');
         const paths = countries.selectAll('path')
@@ -380,8 +380,21 @@
             paint(false);
         }
 
+        /**
+         * Re-read the colours for the theme in effect and repaint the map, the hatch and the legend (#486).
+         * @returns {void}
+         */
+        function restyle () {
+            colours = readColours(host);
+            patternGround.attr('fill', colours.noData);
+            patternLine.attr('stroke', colours.noDataInk);
+            paint(false);
+            renderLegend(legend, METRICS[metricKey], colours);
+        }
+
         layout();
         renderLegend(legend, METRICS[metricKey], colours);
+        ChartPalette.subscribe(restyle);
         return { periods: data.periods, transitionMs: TRANSITION_MS, update, table, setMetric, resize };
     }
 

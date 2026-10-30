@@ -104,7 +104,7 @@
     height: 0.75rem;
     border-radius: 50%;
     background: var(--research-fund-colour, var(--research-office-neutral));
-    box-shadow: 0 0 0 1px rgba(11, 11, 11, 0.1);
+    box-shadow: 0 0 0 1px var(--app-border-subtle);
 }
 
 [data-fund-slot="1"] { --research-fund-colour: var(--research-office-1); }
@@ -252,7 +252,7 @@
     height: 3rem;
     border-radius: 4px;
     background: var(--research-overlap-fill, var(--app-surface-secondary));
-    color: #0b0b0b;
+    color: var(--research-label-dark);
     font-size: var(--app-font-size-small);
     font-weight: var(--app-font-weight-semibold);
     font-variant-numeric: tabular-nums;
@@ -260,7 +260,7 @@
 }
 
 .research-overlap__cell--light-ink {
-    color: #ffffff;
+    color: var(--research-label-light);
 }
 
 .research-overlap__cell--same,
@@ -410,7 +410,7 @@
 }
 
 .research-performance__grid line {
-    stroke: #e1e0d9;
+    stroke: var(--app-chart-grid);
     stroke-width: 1;
 }
 
@@ -422,11 +422,11 @@
 
 .research-performance__axis path,
 .research-performance__axis line {
-    stroke: #c3c2b7;
+    stroke: var(--app-research-axis);
 }
 
 .research-performance__baseline {
-    stroke: #8a8983;
+    stroke: var(--app-research-guide);
     stroke-width: 1;
     stroke-dasharray: 2 3;
 }
@@ -510,7 +510,7 @@
 }
 
 .research-performance__zero {
-    stroke: #8a8983;
+    stroke: var(--app-research-guide);
     stroke-width: 1;
 }
 
@@ -537,7 +537,7 @@
 
 .research-performance__dot {
     fill: var(--research-fund-colour, var(--app-text));
-    stroke: var(--app-bg, #ffffff);
+    stroke: var(--app-bg);
     stroke-width: 2;
     pointer-events: none;
 }
@@ -609,11 +609,11 @@
    the basket's worst fall from a high. */
 
 .research-performance__band--hike {
-    fill: #e4ecf7;
+    fill: var(--app-research-band-hike);
 }
 
 .research-performance__band--recession {
-    fill: #ecebe8;
+    fill: var(--app-research-band-recession);
 }
 
 .research-performance__band-label {
@@ -626,16 +626,16 @@
     display: inline-block;
     width: 0.875rem;
     height: 0.875rem;
-    border: 1px solid rgba(11, 11, 11, 0.12);
+    border: 1px solid var(--app-border-subtle);
     border-radius: 2px;
 }
 
 .research-performance__band-swatch--hike {
-    background: #e4ecf7;
+    background: var(--app-research-band-hike);
 }
 
 .research-performance__band-swatch--recession {
-    background: #ecebe8;
+    background: var(--app-research-band-recession);
 }
 
 .research-performance__worst line {
@@ -645,7 +645,7 @@
 }
 
 .research-performance__worst circle {
-    fill: var(--app-bg, #ffffff);
+    fill: var(--app-bg);
     stroke: var(--app-text);
     stroke-width: 1.5;
 }
@@ -662,7 +662,7 @@
     height: 0.625rem;
     border: 1.5px solid var(--app-text);
     border-radius: 50%;
-    background: var(--app-bg, #ffffff);
+    background: var(--app-bg);
 }
 
 /* --------------------------------------------------------------------------
@@ -695,7 +695,7 @@
 .research-risk__bubble {
     fill: var(--research-fund-colour, var(--research-office-neutral));
     fill-opacity: 0.78;
-    stroke: var(--app-bg, #ffffff);
+    stroke: var(--app-bg);
     stroke-width: 1.5;
 }
 
@@ -708,7 +708,7 @@
 
 .research-risk__diamond {
     fill: var(--app-text);
-    stroke: var(--app-bg, #ffffff);
+    stroke: var(--app-bg);
     stroke-width: 2;
 }
 
@@ -765,7 +765,7 @@
 }
 
 .research-risk__bar--return {
-    background: #2a78d6;
+    background: var(--app-research-ahead);
 }
 
 .research-risk__bar--volatility {
@@ -773,7 +773,7 @@
 }
 
 .research-risk__bar--negative {
-    background: #eb6834;
+    background: var(--app-research-behind);
 }
 
 .research-risk__bar-value {
@@ -797,11 +797,11 @@
 .research-risk__role[aria-pressed="true"] {
     border-color: var(--app-brand);
     background: var(--app-brand-soft);
-    color: var(--app-brand-pressed);
+    color: var(--app-brand-on-soft);
 }
 
 .research-risk__quadrants line {
-    stroke: #8a8983;
+    stroke: var(--app-research-guide);
     stroke-width: 1;
     stroke-dasharray: 4 4;
 }
@@ -812,7 +812,7 @@
 }
 
 .research-risk__leader {
-    stroke: #8a8983;
+    stroke: var(--app-research-guide);
     stroke-width: 1;
 }
 
@@ -844,7 +844,7 @@
 }
 
 .research-world-basket__map .research-world__country {
-    stroke: var(--app-bg, #ffffff);
+    stroke: var(--app-bg);
     stroke-width: 0.5;
 }
 
@@ -856,7 +856,7 @@
 }
 
 .research-world-basket__dot {
-    stroke: var(--app-bg, #ffffff);
+    stroke: var(--app-bg);
     stroke-width: 1;
     cursor: pointer;
 }

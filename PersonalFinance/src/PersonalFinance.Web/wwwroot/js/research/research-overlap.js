@@ -33,8 +33,9 @@
     const FILTER_CLEAR_ID = 'research-overlap-filter-clear';
     const TOOLTIP_ID = 'research-overlap-tooltip';
     const TABLE_ROWS = 15;
-    // The dataviz reference sequential blue, steps 100 to 700; values print in dark ink up to the fourth step.
-    const BLUES = ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
+    // The dataviz reference sequential blue, steps 100 to 700; values print in dark ink up to the fourth step. The
+    // colours are the app tokens (site.css), the same in both themes since each cell carries its own ink (#486).
+    const BLUES = [1, 2, 3, 4, 5, 6, 7].map((step) => `var(--app-research-blue-${step})`);
     const FIRST_LIGHT_INK_STEP = 4;
 
     /**

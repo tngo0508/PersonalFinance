@@ -2125,7 +2125,7 @@
   "Research.Performance.Max": "Max",
   "Research.Performance.BrushLabel": "Drag across the strip to choose the period; the buttons set it too",
   "Research.Performance.PanelLabel": "About the performance data",
-  "Research.Performance.HowToRead1": "Every line starts at 100 at the end of the month before the first month all your funds have a return. A line at 150 means 100 grew to 150. \"Your basket\" is the heavier dark line.",
+  "Research.Performance.HowToRead1": "Every line starts at 100 at the end of the month before the first month all your funds have a return. A line at 150 means 100 grew to 150. \"Your basket\" is the heavier line.",
   "Research.Performance.HowToRead2": "Adjusted for inflation divides each line by how much consumer prices rose since the start, so it shows growth in buying power. A month the Bureau of Labor Statistics did not publish (October 2025, during the government shutdown) is filled in between the months either side.",
   "Research.Performance.HowToRead3": "The lower panels share the chart's months: the effective federal funds rate, and your basket minus the fund you compare it with, in points of the growth of 100 (blue where the basket is ahead, orange where it is behind). Drag across the strip under the chart, or use the period buttons, to zoom; every line then starts at 100 again and the figures cover that period.",
   "Research.Performance.About1": "Funds report a total return for each month on Form N-PORT. These are returns on the fund's net asset value at month ends, not market prices, and they are published some weeks after the quarter they cover.",

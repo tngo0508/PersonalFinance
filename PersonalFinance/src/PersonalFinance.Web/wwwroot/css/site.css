@@ -166,6 +166,59 @@
     --app-guild-note-shadow: rgba(43, 36, 32, 0.08);
     --app-guild-pin-shadow: rgba(0, 0, 0, 0.3);
 
+    /* Research (#486; research.css explains each set). The eight SEC offices, in office-number order, are the
+       dataviz-validated categorical set; the dark set keeps each hue, lifted to 3:1 on the dark page and card (as the
+       Dashboard donut's). Ahead/behind and the lean pair are the first two hues; their -ink steps are text. */
+    --app-research-office-1: #2A78D6;
+    --app-research-office-2: #EB6834;
+    --app-research-office-3: #1BAF7A;
+    --app-research-office-4: #EDA100;
+    --app-research-office-5: #E87BA4;
+    --app-research-office-6: #008300;
+    --app-research-office-7: #6250D6;
+    --app-research-office-8: #E34948;
+    --app-research-ahead: #2A78D6;
+    --app-research-behind: #EB6834;
+    --app-research-lean-more: #2A78D6;
+    --app-research-lean-less: #E0661F;
+    --app-research-lean-more-ink: #1D64B8;
+    --app-research-lean-less-ink: #B4501A;
+    /* Chart lines: the axis, and the dashed guides (baseline, zero, quadrants, leaders); annotation bands */
+    --app-research-axis: #C3C2B7;
+    --app-research-guide: #8A8983;
+    --app-research-band-hike: #E4ECF7;
+    --app-research-band-recession: #ECEBE8;
+    --app-research-hatch-line: #8A919C;
+    /* The World choropleth: eight steps light to dark (low to high); dark runs the ramp the other way, so a high
+       value stands out from the dark page. "No data" is hatched grey. */
+    --app-research-world-step-1: #86B6EF;
+    --app-research-world-step-2: #64A2EA;
+    --app-research-world-step-3: #428CE6;
+    --app-research-world-step-4: #2A77D5;
+    --app-research-world-step-5: #2265B7;
+    --app-research-world-step-6: #19539B;
+    --app-research-world-step-7: #10417F;
+    --app-research-world-step-8: #0C3162;
+    --app-research-world-nodata: #ECEBE8;
+    --app-research-world-nodata-ink: #B4B2AD;
+    /* Labels on a fill, and the Overlap and Correlation heatmaps: each cell carries its own ink (dark on the light
+       steps, white on the dark ones), so these are the same in both themes */
+    --app-research-label-light: #FFFFFF;
+    --app-research-label-dark: #0B0B0B;
+    --app-research-blue-1: #CDE2FB;
+    --app-research-blue-2: #9EC5F4;
+    --app-research-blue-3: #6DA7EC;
+    --app-research-blue-4: #3987E5;
+    --app-research-blue-5: #256ABF;
+    --app-research-blue-6: #184F95;
+    --app-research-blue-7: #0D366B;
+    --app-research-red-1: #F4ACA6;
+    --app-research-red-2: #EC8079;
+    --app-research-red-3: #DF4E4C;
+    --app-research-red-4: #C1252C;
+    --app-research-red-5: #990618;
+    --app-research-heat-neutral: #F0EFEC;
+
     /* Minimal shadows — rules over elevation */
     --app-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.04);
     --app-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.06);
@@ -351,6 +404,37 @@
     --app-guild-on-accent: #2A211A;
     --app-guild-note-shadow: rgba(0, 0, 0, 0.35);
     --app-guild-pin-shadow: rgba(0, 0, 0, 0.6);
+
+    /* Research (#486): the offices lifted to 3:1 on the dark page and card; the World ramp runs dark to light */
+    --app-research-office-1: #6FA8E8;
+    --app-research-office-2: #F08A5D;
+    --app-research-office-3: #3CCB95;
+    --app-research-office-4: #EDB43A;
+    --app-research-office-5: #F0A0BE;
+    --app-research-office-6: #4CC24C;
+    --app-research-office-7: #9D8FF0;
+    --app-research-office-8: #F07A79;
+    --app-research-ahead: #6FA8E8;
+    --app-research-behind: #F08A5D;
+    --app-research-lean-more: #6FA8E8;
+    --app-research-lean-less: #F08A5D;
+    --app-research-lean-more-ink: #8DBBEE;
+    --app-research-lean-less-ink: #F4A27E;
+    --app-research-axis: #3A4A57;
+    --app-research-guide: #7A8A96;
+    --app-research-band-hike: #1A2A3C;
+    --app-research-band-recession: #24292E;
+    --app-research-hatch-line: #5E6E7A;
+    --app-research-world-step-1: #184F95;
+    --app-research-world-step-2: #2062B4;
+    --app-research-world-step-3: #2976D2;
+    --app-research-world-step-4: #418CE6;
+    --app-research-world-step-5: #66A2EA;
+    --app-research-world-step-6: #89B8F0;
+    --app-research-world-step-7: #ACCDF5;
+    --app-research-world-step-8: #CDE2FB;
+    --app-research-world-nodata: #26313B;
+    --app-research-world-nodata-ink: #41505C;
 
     --app-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.3);
     --app-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.35);
