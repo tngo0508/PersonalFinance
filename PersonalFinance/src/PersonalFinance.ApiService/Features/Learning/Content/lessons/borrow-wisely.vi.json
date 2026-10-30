@@ -1,0 +1,38 @@
+{
+  "slug": "borrow-wisely",
+  "title": "Vay một cách khôn ngoan",
+  "intro": "Vay tiền có giá của nó. Bài học này chỉ ra cách đọc mức giá đó. Nó cũng cho thấy cách các bên cho vay quyết định mức phí của bạn.",
+  "check": [
+    {
+      "prompt": "APR và lãi suất của khoản vay luôn giống nhau.",
+      "options": [
+        "Lầm tưởng",
+        "Sự thật"
+      ],
+      "explanation": "Lầm tưởng. APR cộng phí của bên cho vay vào lãi suất."
+    },
+    {
+      "prompt": "Điểm tín dụng của Hoa tăng lên. Lãi suất mà các bên cho vay đưa ra cho cô ấy thường sẽ ra sao?",
+      "options": [
+        "Giảm xuống",
+        "Tăng lên",
+        "Giữ nguyên"
+      ],
+      "explanation": "Giảm xuống. Điểm cao hơn thường đồng nghĩa với lãi suất thấp hơn."
+    },
+    {
+      "prompt": "Mỗi người chỉ có một điểm tín dụng.",
+      "options": [
+        "Lầm tưởng",
+        "Sự thật"
+      ],
+      "explanation": "Lầm tưởng. Điểm số của bạn có thể khác nhau tùy theo mô hình, dữ liệu và ngày."
+    }
+  ],
+  "tryIt": {
+    "label": "Ngân sách"
+  },
+  "keepsake": {
+    "name": "Sổ cái"
+  }
+}
