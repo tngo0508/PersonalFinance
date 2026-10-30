@@ -14,7 +14,8 @@ namespace PersonalFinance.Web.Controllers;
 /// <summary>
 /// MVC Controller for the Currency Converter: a plain GET form, so the URL holds the inputs. Before the first submit it
 /// shows the form with defaults from the Account's Reporting Currency; on a submit it asks the
-/// <see cref="ICurrencyConverterApi"/> Refit client for the conversion. The ApiService does every calculation.
+/// <see cref="ICurrencyConverterApi"/> Refit client for the conversion. With JavaScript the page asks
+/// <see cref="Quote"/> instead, as the inputs change. The ApiService does every calculation.
 /// </summary>
 [Authorize]
 public class CurrencyConverterController : Controller
@@ -81,6 +82,44 @@ public class CurrencyConverterController : Controller
         return View(model);
     }
 
+    /// <summary>
+    /// The live quote the page's JavaScript asks for as the inputs change: the ApiService's conversion as JSON. A rejected
+    /// input answers 400 with its messages keyed by field; a failed call answers 502 with a general message, never
+    /// exception details.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Quote(decimal? amount, string? from, string? to, DateOnly? date,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(Errors(ModelState
+                .Where(entry => entry.Value!.Errors.Count > 0)
+                .ToDictionary(entry => entry.Key,
+                    IReadOnlyList<string> (entry) => entry.Value!.Errors.Select(error => error.ErrorMessage).ToList())));
+        }
+
+        try
+        {
+            return Json(await _converterApi.ConvertAsync(amount, from ?? string.Empty, to ?? string.Empty, date,
+                cancellationToken));
+        }
+        catch (ApiException ex) when ((int)ex.StatusCode < 500)
+        {
+            return BadRequest(Errors(FieldMessages(ex)));
+        }
+        // The page aborts a quote in flight whenever the inputs change: that cancellation propagates, it is not a failure.
+        catch (Exception ex) when (ex is ApiException or HttpRequestException or TaskCanceledException
+                                   && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Currency conversion quote failed.");
+            return StatusCode(StatusCodes.Status502BadGateway, new CurrencyConverterErrorsViewModel
+            {
+                Errors = [ApiErrorMessages.ForUser(_localizer, ex, _localizer["CurrencyConverter.Error.Failed"])]
+            });
+        }
+    }
+
     /// <summary>The From default: US dollars, or đồng when the Reporting Currency is US dollars.</summary>
     private static string DefaultFrom(string reporting) =>
         string.Equals(reporting, SupportedCurrencies.Usd.Code, StringComparison.Ordinal)
@@ -90,19 +129,46 @@ public class CurrencyConverterController : Controller
     /// <summary>The ApiService's keyed rejections, each under its field (or above the form).</summary>
     private void AddFieldErrors(ApiException ex)
     {
-        IReadOnlyDictionary<string, IReadOnlyList<string>> fields = ApiErrorMessages.Fields(_localizer, ex);
-        if (fields.Count == 0)
-        {
-            ModelState.AddModelError(string.Empty, ApiErrorMessages.FromApiException(_localizer, ex));
-            return;
-        }
-
-        foreach ((string field, IReadOnlyList<string> messages) in fields)
+        foreach ((string field, IReadOnlyList<string> messages) in FieldMessages(ex))
         {
             foreach (string message in messages)
             {
                 ModelState.AddModelError(field, message);
             }
         }
+    }
+
+    /// <summary>
+    /// The messages of a rejection keyed by field, whole-request ones under <c>""</c>; a body that is not keyed errors
+    /// becomes one whole-request message.
+    /// </summary>
+    private IReadOnlyDictionary<string, IReadOnlyList<string>> FieldMessages(ApiException ex)
+    {
+        IReadOnlyDictionary<string, IReadOnlyList<string>> fields = ApiErrorMessages.Fields(_localizer, ex);
+        return fields.Count > 0
+            ? fields
+            : new Dictionary<string, IReadOnlyList<string>>
+            {
+                [string.Empty] = [ApiErrorMessages.FromApiException(_localizer, ex)]
+            };
+    }
+
+    /// <summary>Messages keyed by field as the page's JavaScript reads them; those under <c>""</c> are the general ones.</summary>
+    private static CurrencyConverterErrorsViewModel Errors(IReadOnlyDictionary<string, IReadOnlyList<string>> fields)
+    {
+        var errors = new CurrencyConverterErrorsViewModel();
+        foreach ((string field, IReadOnlyList<string> messages) in fields)
+        {
+            if (field.Length == 0)
+            {
+                errors.Errors.AddRange(messages);
+            }
+            else
+            {
+                errors.FieldErrors[field] = [.. messages];
+            }
+        }
+
+        return errors;
     }
 }

@@ -94,6 +94,82 @@ public class CurrencyConverterWebControllerTests
         Assert.DoesNotContain("stack trace", message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Quote_PassesTheInputs_AndAnswersTheConversionAsJson()
+    {
+        var conversion = new CurrencyConversionDto { Amount = 1_000_000m, From = "JPY", To = "VND", ConvertedAmount = 170_000_000m, Rate = 170m };
+        var api = new FakeConverterApi { Result = conversion };
+        var date = new DateOnly(2026, 10, 20);
+
+        IActionResult result = await CreateController(api).Quote(1_000_000m, "JPY", "VND", date);
+
+        Assert.Same(conversion, Assert.IsType<JsonResult>(result).Value);
+        Assert.Equal((1_000_000m, "JPY", "VND", date), api.LastRequest);
+    }
+
+    [Fact]
+    public async Task Quote_RejectedField_Answers400_WithTheMessageUnderThatField()
+    {
+        string body = """{"errors":[{"key":"CurrencyConverter.Validation.AmountNegative","message":"Amount cannot be negative.","field":"Amount"}]}""";
+        var api = new FakeConverterApi { Failure = await ApiExceptionAsync(HttpStatusCode.BadRequest, body) };
+
+        IActionResult result = await CreateController(api).Quote(-1m, "JPY", "VND", null);
+
+        CurrencyConverterErrorsViewModel errors = Assert.IsType<CurrencyConverterErrorsViewModel>(
+            Assert.IsType<BadRequestObjectResult>(result).Value);
+        Assert.Empty(errors.Errors);
+        Assert.Equal(TestLocalization.Localizer[ApiErrorKeys.CurrencyConverter.AmountNegative].Value,
+            Assert.Single(errors.FieldErrors["Amount"]));
+    }
+
+    [Fact]
+    public async Task Quote_ServerFailure_Answers502_WithAGeneralMessage_WithoutDetails()
+    {
+        var api = new FakeConverterApi
+        {
+            Failure = await ApiExceptionAsync(HttpStatusCode.InternalServerError, "System.Exception: secret stack trace")
+        };
+
+        IActionResult result = await CreateController(api).Quote(1m, "JPY", "VND", null);
+
+        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status502BadGateway, objectResult.StatusCode);
+        CurrencyConverterErrorsViewModel errors = Assert.IsType<CurrencyConverterErrorsViewModel>(objectResult.Value);
+        Assert.Empty(errors.FieldErrors);
+        Assert.Equal(TestLocalization.Localizer["CurrencyConverter.Error.Failed"].Value, Assert.Single(errors.Errors));
+    }
+
+    [Fact]
+    public async Task Quote_Unreachable_Answers502()
+    {
+        var api = new FakeConverterApi { Failure = new HttpRequestException("connection refused") };
+
+        IActionResult result = await CreateController(api).Quote(1m, "JPY", "VND", null);
+
+        Assert.Equal(StatusCodes.Status502BadGateway, Assert.IsType<ObjectResult>(result).StatusCode);
+    }
+
+    [Fact]
+    public async Task Quote_TimedOut_Answers502()
+    {
+        var api = new FakeConverterApi { Failure = new TaskCanceledException("HttpClient timeout") };
+
+        IActionResult result = await CreateController(api).Quote(1m, "JPY", "VND", null);
+
+        Assert.Equal(StatusCodes.Status502BadGateway, Assert.IsType<ObjectResult>(result).StatusCode);
+    }
+
+    [Fact]
+    public async Task Quote_AbortedByThePage_PropagatesTheCancellation()
+    {
+        using var aborted = new CancellationTokenSource();
+        await aborted.CancelAsync();
+        var api = new FakeConverterApi { Failure = new TaskCanceledException("aborted", null, aborted.Token) };
+
+        await Assert.ThrowsAsync<TaskCanceledException>(() =>
+            CreateController(api).Quote(1m, "JPY", "VND", null, aborted.Token));
+    }
+
     [Theory]
     [InlineData("164.213472", "164.213")]
     [InlineData("25500", "25,500")]
