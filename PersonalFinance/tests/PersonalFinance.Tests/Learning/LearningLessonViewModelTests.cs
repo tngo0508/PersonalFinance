@@ -66,8 +66,41 @@ public class LearningLessonViewModelTests
         Assert.Equal(LessonAccess.Locked, model.Access);
     }
 
-    private static LearningLessonViewModel For(string slug, JourneyStateDto journey) =>
-        LearningLessonViewModel.ForJourney(new LessonDto { Slug = slug }, journey);
+    [Fact]
+    public void OpenLessonAfterDayOne_OpensWithTheReview()
+    {
+        LearningLessonViewModel model = For("two", Journey(LessonStatus.Finished, LessonStatus.Open), day: 2, Cards);
+
+        Assert.True(model.ShowsReview);
+        Assert.Same(Cards, model.Review);
+    }
+
+    [Theory]
+    [InlineData("one", 1, LessonStatus.Open, LessonStatus.Locked)]
+    [InlineData("one", 1, LessonStatus.Finished, LessonStatus.Open)]
+    [InlineData("two", 2, LessonStatus.Finished, LessonStatus.Finished)]
+    [InlineData("two", 2, LessonStatus.Open, LessonStatus.Locked)]
+    public void DayOneFinishedOrLockedLesson_HasNoReview(string slug, int day, LessonStatus first, LessonStatus second)
+    {
+        JourneyStateDto journey = Journey(first, second);
+
+        LearningLessonViewModel model = For(slug, journey, day, Cards);
+
+        Assert.False(model.ShowsReview);
+        Assert.False(LearningLessonViewModel.ReviewIsDue(new LessonDto { Slug = slug, Day = day }, journey));
+    }
+
+    [Fact]
+    public void OpenLesson_WithNoCards_HasNoReview()
+    {
+        Assert.False(For("two", Journey(LessonStatus.Finished, LessonStatus.Open), day: 2, []).ShowsReview);
+    }
+
+    private static readonly List<ReviewCardDto> Cards = [new() { Slug = "emergency-fund", Term = "Emergency fund" }];
+
+    private static LearningLessonViewModel For(string slug, JourneyStateDto journey, int day = 1,
+        IReadOnlyList<ReviewCardDto>? review = null) =>
+        LearningLessonViewModel.ForJourney(new LessonDto { Slug = slug, Day = day }, journey, review);
 
     private static JourneyStateDto Journey(LessonStatus first, LessonStatus second) => new()
     {

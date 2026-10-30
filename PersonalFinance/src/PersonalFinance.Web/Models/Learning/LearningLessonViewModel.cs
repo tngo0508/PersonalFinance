@@ -56,6 +56,14 @@ public sealed class LearningLessonViewModel
     /// <summary>What the finished note says about <see cref="Next"/> once this Lesson's Check is answered.</summary>
     public NextLessonNote NextNote { get; init; }
 
+    /// <summary>
+    /// Today's Review cards (#520), shown on the first sheet of an open Lesson from Day 2 on; empty otherwise.
+    /// </summary>
+    public IReadOnlyList<ReviewCardDto> Review { get; init; } = [];
+
+    /// <summary>Whether the page opens with the Review sheet.</summary>
+    public bool ShowsReview => Review.Count > 0;
+
     /// <summary>The page as a guest sees it.</summary>
     public static LearningLessonViewModel ForGuest(LessonDto lesson) =>
         new() { Lesson = lesson, Access = LessonAccess.SignIn };
@@ -63,9 +71,11 @@ public sealed class LearningLessonViewModel
     /// <summary>
     /// The page as a signed-in Account sees it. A Lesson the Journey does not list is treated as locked. The finished
     /// note is worked out for after the Check: finishing an open Lesson dates the next one for tomorrow, while
-    /// retaking a finished one leaves the next as it is.
+    /// retaking a finished one leaves the next as it is. The <paramref name="review"/> cards are kept only for an open
+    /// Lesson after Day 1.
     /// </summary>
-    public static LearningLessonViewModel ForJourney(LessonDto lesson, JourneyStateDto journey)
+    public static LearningLessonViewModel ForJourney(LessonDto lesson, JourneyStateDto journey,
+        IReadOnlyList<ReviewCardDto>? review = null)
     {
         List<LessonProgressDto> road = journey.Lessons.OrderBy(l => l.Day).ToList();
         int index = road.FindIndex(l => l.Slug == lesson.Slug);
@@ -96,6 +106,14 @@ public sealed class LearningLessonViewModel
             Previous = previous,
             Next = next,
             NextNote = note,
+            Review = ReviewIsDue(lesson, journey) ? review ?? [] : [],
         };
     }
+
+    /// <summary>
+    /// Whether the Lesson opens with a Review: it is the Account's open Lesson and not Day 1. The controller asks for the
+    /// cards only then.
+    /// </summary>
+    public static bool ReviewIsDue(LessonDto lesson, JourneyStateDto journey) =>
+        lesson.Day > 1 && journey.Lessons.Any(l => l.Slug == lesson.Slug && l.Status == LessonStatus.Open);
 }

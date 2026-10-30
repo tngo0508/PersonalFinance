@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.9.0] - 2026-10-30
+
+### Added
+
+- **The Atelier: the Review**: from Day 2 on, today's Lesson opens with up to three flash cards from earlier Lessons (#520, part of #513).
+  - A card shows the Term and turns on click or Enter to show its Vietnamese name and one-liner. A turned card can be marked "Knew it" or "Not yet", and the mark is saved and announced.
+  - Focus moves to the next card after a mark, and to a "Review done" note after the last one.
+  - A Skip link goes straight to today's Lesson. The Review never blocks it: there is none on Day 1, when there are no cards, or when the cards can't be loaded.
+  - The cards follow the light and dark themes.
+  - E2E: in Development, `E2E_SEED_LEARNING=true` on both apps seeds a learner past Lesson 1, so the Atelier smoke can open Lesson 2 and its Review.
+
 ## [16.8.0] - 2026-10-30
 
 ### Added

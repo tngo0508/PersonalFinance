@@ -29,7 +29,41 @@
         <span>@L.Named("Learning.Road.LessonDay", ("day", lesson.Day))</span>
     </nav>
 
-    <header class="atelier-sheet atelier-lesson-header">
+    @if (Model.ShowsReview)
+    {
+        <section class="atelier-sheet atelier-review" aria-labelledby="reviewHeading" data-review data-test-id="atelier-review">
+            <h2 class="atelier-sheet-title" id="reviewHeading">@L["Learning.Review.Heading"]</h2>
+            <p class="atelier-lede">@L["Learning.Review.Lede"]</p>
+            <ol class="atelier-cards">
+                @foreach (var card in Model.Review)
+                {
+                    <li class="atelier-card" data-card data-mark-url="@Url.Action("MarkCard", "Learning", new { slug = card.Slug })"
+                        data-test-id="review-card-@card.Slug">
+                        <button type="button" class="atelier-card-face" data-card-turn aria-expanded="false"
+                                aria-controls="card-back-@card.Slug">
+                            <span class="atelier-card-term">@card.Term</span>
+                            <span class="atelier-card-hint">@L["Learning.Review.Turn"]</span>
+                        </button>
+                        <div class="atelier-card-back" id="card-back-@card.Slug" data-card-back hidden>
+                            <p class="atelier-vi-name" lang="vi">@card.VietnameseName</p>
+                            <p class="atelier-card-one-line">@card.OneLine</p>
+                            <div class="atelier-card-marks" role="group" aria-label="@L["Learning.Review.Marks"]">
+                                <button type="button" class="atelier-option" data-mark="true">@L["Learning.Review.KnewIt"]</button>
+                                <button type="button" class="atelier-option" data-mark="false">@L["Learning.Review.NotYet"]</button>
+                            </div>
+                            <p class="atelier-card-status" data-card-status aria-live="polite"></p>
+                        </div>
+                    </li>
+                }
+            </ol>
+            <p class="atelier-review-done" data-review-done tabindex="-1" hidden>@L["Learning.Review.Done"]</p>
+            <p class="atelier-review-skip">
+                <a href="#lessonStart" data-review-skip data-test-id="atelier-review-skip">@L["Learning.Review.Skip"]</a>
+            </p>
+        </section>
+    }
+
+    <header class="atelier-sheet atelier-lesson-header" id="lessonStart" tabindex="-1">
         <p class="atelier-eyebrow">@L.Named("Learning.Road.LessonDay", ("day", lesson.Day))</p>
         <h1 class="atelier-title" data-test-id="atelier-lesson-title">@lesson.Title</h1>
         @if (canRead)
@@ -170,5 +204,9 @@
     {
         <js-strings prefix="Learning.Js." />
         <script src="~/js/learning/lesson-check.js" asp-append-version="true"></script>
+    }
+    @if (Model.ShowsReview)
+    {
+        <script src="~/js/learning/review-cards.js" asp-append-version="true"></script>
     }
 }

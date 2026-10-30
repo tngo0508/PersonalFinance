@@ -153,6 +153,8 @@ try
     await ResearchFixtureSeeder.SeedIfEnabledAsync(app);
     // E2E only: Development with E2E_SEED_COMMUNITY=true stores a running Guild Hall Challenge; never in Production.
     await CommunityFixtureSeeder.SeedIfEnabledAsync(app);
+    // E2E only: Development with E2E_SEED_LEARNING=true stores a learner past Lesson 1 (the Review); never in Production.
+    await LearningFixtureSeeder.SeedIfEnabledAsync(app);
 
     await app.MigrateAndRunAsync(args);
     return StartupExit.Success;

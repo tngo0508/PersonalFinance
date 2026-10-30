@@ -69,7 +69,7 @@ fi
 echo "== Starting ApiService on $API_URL (InMemory; logs -> .api.log)"
 # OpenAI__ApiKey: a blank key counts as no key, so a user secret with a real key does not spend quota in E2E.
 ASPNETCORE_ENVIRONMENT=Development DATABASE_PROVIDER=InMemory ConnectionStrings__DefaultConnection=InMemory:E2ETestApi \
-  E2E_SEED_RESEARCH=true E2E_SEED_COMMUNITY=true OpenAI__ApiKey=" " \
+  E2E_SEED_RESEARCH=true E2E_SEED_COMMUNITY=true E2E_SEED_LEARNING=true OpenAI__ApiKey=" " \
   Learning__ContentPath="$ROOT/PersonalFinance/tests/PersonalFinance.Tests/Learning/Fixtures/Content" \
   dotnet run --project PersonalFinance/src/PersonalFinance.ApiService --no-launch-profile \
     --environment Development --urls "http://0.0.0.0:$API_PORT" > .api.log 2>&1 &
@@ -78,7 +78,7 @@ wait_for ApiService "$API_URL" .api.log || exit 1
 
 echo "== Starting Web on $WEB_URL (InMemory; logs -> .web.log)"
 ASPNETCORE_ENVIRONMENT=Development DATABASE_PROVIDER=InMemory ConnectionStrings__DefaultConnection=InMemory:E2ETestWeb \
-  ApiSettings__BaseUrl="$API_URL" E2E_DISABLE_EMAIL_CONFIRMATION=true \
+  ApiSettings__BaseUrl="$API_URL" E2E_DISABLE_EMAIL_CONFIRMATION=true E2E_SEED_LEARNING=true \
   dotnet run --project PersonalFinance/src/PersonalFinance.Web --no-launch-profile \
     --environment Development --urls "http://0.0.0.0:$WEB_PORT" > .web.log 2>&1 &
 WEB_PID=$!

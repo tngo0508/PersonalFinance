@@ -328,6 +328,9 @@
 
 .atelier-button:focus-visible,
 .atelier-option:focus-visible,
+.atelier-card-face:focus-visible,
+.atelier-lesson-header:focus-visible,
+.atelier-review-done:focus-visible,
 .atelier-stop-title:focus-visible {
     outline: 2px solid var(--app-atelier-clay);
     outline-offset: 2px;
@@ -522,6 +525,102 @@
     font-weight: 600;
 }
 
+/*
+ * The Review (#520): flash cards from earlier Lessons on the first sheet. A card is an index card on the paper: the
+ * Term on its face, the one-liner and the marks under it once turned. Cards sit side by side while each gets about
+ * 12rem, and stack otherwise.
+ */
+.atelier-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+    padding: 0;
+    list-style: none;
+}
+
+.atelier-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--app-atelier-paper);
+    border: 1px solid var(--app-atelier-spine-edge);
+    border-top: 4px solid var(--app-atelier-clay);
+    border-radius: 0.375rem;
+}
+
+.atelier-card.is-marked {
+    border-top-color: var(--app-atelier-moss);
+}
+
+.atelier-card-face {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 1rem;
+    font: inherit;
+    text-align: start;
+    color: var(--app-atelier-ink);
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.atelier-card-term {
+    font-family: var(--atelier-serif);
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+.atelier-card-hint {
+    font-size: 0.85rem;
+    color: var(--app-atelier-moss);
+}
+
+.atelier-card.is-turned .atelier-card-hint {
+    display: none;
+}
+
+.atelier-card-back {
+    padding: 0 1rem 1rem;
+}
+
+.atelier-card-back .atelier-vi-name {
+    margin: 0;
+}
+
+.atelier-card-one-line {
+    margin: 0.25rem 0 0.75rem;
+}
+
+.atelier-card-marks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.atelier-card-marks .atelier-option[aria-pressed="true"] {
+    border: 2px solid var(--app-atelier-moss);
+    font-weight: 600;
+}
+
+.atelier-card-status {
+    margin: 0.5rem 0 0;
+    font-size: 0.9rem;
+}
+
+.atelier-card-status:empty {
+    display: none;
+}
+
+.atelier-review-done {
+    color: var(--app-atelier-moss);
+    font-weight: 600;
+}
+
+.atelier-review-skip {
+    margin-bottom: 0;
+}
+
 /* The Check */
 .atelier-question {
     padding: 1rem 0;
@@ -578,6 +677,9 @@
     margin: 0.75rem 0 0;
 }
 
+.atelier-review[hidden],
+.atelier-card-back[hidden],
+.atelier-review-done[hidden],
 .atelier-explanation[hidden],
 .atelier-check-error[hidden],
 .atelier-finished[hidden] {

@@ -207,6 +207,8 @@ jobs:
           E2E_SEED_RESEARCH: "true"
           # Stores one running Guild Hall Challenge (Development only): E2E has no Admin to write one.
           E2E_SEED_COMMUNITY: "true"
+          # Stores a learner past Lesson 1 (Development only), so the Atelier smoke can open Lesson 2's Review.
+          E2E_SEED_LEARNING: "true"
           # The Atelier smoke (e2e-tests/learning-smoke.js) reads the test fixture Term Entries until real content ships.
           Learning__ContentPath: ${{ github.workspace }}/PersonalFinance/tests/PersonalFinance.Tests/Learning/Fixtures/Content
         run: |
@@ -254,6 +256,8 @@ jobs:
           ConnectionStrings__DefaultConnection: InMemory:E2ETestWeb
           ApiSettings__BaseUrl: http://localhost:${{ steps.ports.outputs.api_port }}
           E2E_DISABLE_EMAIL_CONFIRMATION: "true"
+          # Creates the Atelier fixture Account whose Lesson 1 the ApiService stored (Development only).
+          E2E_SEED_LEARNING: "true"
         run: |
           echo "Starting Web on port ${{ steps.ports.outputs.web_port }} (logs -> .web.log)"
           dotnet run --project PersonalFinance/src/PersonalFinance.Web \

@@ -6,8 +6,10 @@
  * Lesson 1's Check, sees its keepsake, and finds "Opens tomorrow" on Lesson 2. Unlock timing stays in the service
  * tests. Ask the AI (#521): a guest is asked to sign in; a fresh Account opens the AI Assistant from the entry and
  * sees the "About" chip, the two starter questions and, on the reply, "AI answer, not reviewed". The chat reply is
- * faked in the browser (no AI key in E2E); the request is checked to carry only the Term's slug. Run from ui-test.js
- * as Test 9k.
+ * faked in the browser (no AI key in E2E); the request is checked to carry only the Term's slug. Last, the fixture
+ * learner (E2E_SEED_LEARNING=true on both apps), past Lesson 1 since two days ago, opens Lesson 2 in dark mode: the
+ * Review (#520) shows Lesson 1's cards, a card turns with Enter and takes a mark, its text is readable, and Skip goes
+ * to the Lesson. Run from ui-test.js as Test 9k.
  *
  * ApiService must read the fixture content folder (Learning__ContentPath, set by e2e-inmemory.sh and CI's E2E job):
  * the real one holds no Term Entries until the content slices. Expected labels are read from Resources/i18n/en.json.
@@ -24,6 +26,12 @@ const FIXTURE = path.join(__dirname, '..', 'PersonalFinance', 'tests', 'Personal
 const apr = require(path.join(FIXTURE, 'terms', 'apr.json'));
 // Written in the repo, not axe-core (MPL-2.0 is not on the license policy's list)
 const {AA_TEXT, contrastRatio, flattenBackground} = require(path.join(WEB, 'tools', 'contrast.js'));
+
+// The fixture learner, created by the Web's LearningFixtureAccountSeeder; test values only.
+const LEARNER = {email: 'e2e-atelier-learner@example.test', password: 'Atelier-E2E-2026!'};
+const LESSON_ONE_TERMS = ['emergency-fund', 'compound-interest'];
+const REVIEW_TEXT = ['.atelier-card-term', '.atelier-card-hint', '.atelier-card-one-line',
+    '.atelier-review .atelier-lede'];
 
 const DARK_TEXT = ['[data-test-id="atelier-term"]', '[data-test-id="atelier-vi-name"]',
     '[data-test-id="atelier-one-line"]', '.atelier-reading p', '.atelier-note-heading', '.atelier-sources a',
@@ -164,7 +172,21 @@ async function checkDarkMode(browser, base, report) {
         const theme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
         check(theme === 'dark', 'Atelier: the entry follows the dark theme', `data-theme=${theme}`, report);
 
-        const measured = await page.evaluate((list) => list.map((selector) => {
+        await checkContrast(page, DARK_TEXT, report);
+    } finally {
+        await context.close();
+    }
+}
+
+/**
+ * Checks that each selector's first visible element meets 4.5:1 against its effective background.
+ * @param {import('playwright').Page} page - The page.
+ * @param {string[]} selectors - CSS selectors of the text to measure.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+async function checkContrast(page, selectors, report) {
+    const theme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+    const measured = await page.evaluate((list) => list.map((selector) => {
             const element = Array.from(document.querySelectorAll(selector))
                 .find((el) => el.getClientRects().length > 0);
             if (!element) {
@@ -175,18 +197,15 @@ async function checkDarkMode(browser, base, report) {
                 layers.unshift(getComputedStyle(node).backgroundColor);
             }
             return {selector, found: true, colour: getComputedStyle(element).color, layers};
-        }), DARK_TEXT);
-        for (const item of measured) {
-            if (!item.found) {
-                report.fail(`Atelier: no visible "${item.selector}" to check contrast`);
-                continue;
-            }
-            const ratio = contrastRatio(item.colour, flattenBackground(item.layers));
-            check(ratio >= AA_TEXT, `Atelier: "${item.selector}" meets ${AA_TEXT}:1 in dark mode`,
-                `${ratio.toFixed(2)}:1`, report);
+        }), selectors);
+    for (const item of measured) {
+        if (!item.found) {
+            report.fail(`Atelier: no visible "${item.selector}" to check contrast`);
+            continue;
         }
-    } finally {
-        await context.close();
+        const ratio = contrastRatio(item.colour, flattenBackground(item.layers));
+        check(ratio >= AA_TEXT, `Atelier: "${item.selector}" meets ${AA_TEXT}:1 in ${theme} mode`,
+            `${ratio.toFixed(2)}:1`, report);
     }
 }
 
@@ -230,6 +249,71 @@ async function checkJourney(browser, base, report) {
         check(status === en['Learning.Road.Status.OpensTomorrow'], 'Atelier: Lesson 2 opens tomorrow', status, report);
         check(await page.locator('[data-test-id="atelier-desk"]').isVisible(),
             'Atelier: the finished Lesson\'s keepsake is on the desk', 'no desk', report);
+    } finally {
+        await context.close();
+    }
+}
+
+/**
+ * The fixture learner opens Lesson 2 in dark mode: the Review shows Lesson 1's cards, a card turns with Enter and
+ * takes a "Not yet" mark (which keeps it in later runs against a kept database), its text is readable, and Skip hides
+ * the Review and moves focus to the Lesson.
+ * @param {import('playwright').Browser} browser - The browser.
+ * @param {string} base - The Web app's base URL.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+async function checkReview(browser, base, report) {
+    const context = await browser.newContext({ignoreHTTPSErrors: true, colorScheme: 'dark', locale: 'en-US',
+        extraHTTPHeaders: {'Accept-Language': 'en-US,en;q=0.9'}});
+    try {
+        const page = await context.newPage();
+        await page.goto(`${base}/Identity/Account/Login`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await page.fill('input[type="email"]', LEARNER.email);
+        await page.fill('input[type="password"]', LEARNER.password);
+        await page.click('#login-submit');
+        await page.waitForLoadState('networkidle', {timeout: TIMEOUT});
+        if (!(await page.locator('#sidebar').isVisible().catch(() => false))) {
+            // Without LEARNING_FIXTURE (a run against your own apps) the fixture learner may not exist: skip.
+            if (process.env.LEARNING_FIXTURE) {
+                report.fail('Atelier: could not sign in as the fixture learner; is E2E_SEED_LEARNING=true on both apps?');
+            }
+            return;
+        }
+
+        await page.goto(`${base}/Learning/Lesson/borrow-wisely`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        const access = await page.locator('[data-test-id="atelier-lesson"]').getAttribute('data-lesson-access');
+        check(access === 'open', 'Atelier: Lesson 2 is open for the fixture learner', `access=${access}`, report);
+        const review = page.locator('[data-test-id="atelier-review"]');
+        if (!(await review.isVisible())) {
+            report.fail('Atelier: Lesson 2 opens with the Review');
+            return;
+        }
+        report.pass('Atelier: Lesson 2 opens with the Review');
+        const slugs = await page.locator('[data-card]').evaluateAll((cards) =>
+            cards.map((card) => card.getAttribute('data-test-id').replace('review-card-', '')));
+        check(slugs.length > 0 && slugs.every((slug) => LESSON_ONE_TERMS.includes(slug)),
+            'Atelier: the Review shows Lesson 1\'s cards', slugs.join(','), report);
+
+        const card = page.locator('[data-card]').first();
+        const face = card.locator('[data-card-turn]');
+        await face.focus();
+        await page.keyboard.press('Enter');
+        check(await face.getAttribute('aria-expanded') === 'true' && await card.locator('[data-card-back]').isVisible(),
+            'Atelier: Enter turns a card to its one-liner', 'not turned', report);
+        await checkContrast(page, REVIEW_TEXT, report);
+
+        const mark = page.waitForResponse((r) => r.url().includes('/Learning/Review/'), {timeout: TIMEOUT});
+        await card.locator('[data-mark="false"]').click();
+        const response = await mark;
+        check(response.status() === 204, 'Atelier: a turned card takes a "Not yet" mark', `HTTP ${response.status()}`,
+            report);
+        const status = (await card.locator('[data-card-status]').textContent()).trim();
+        check(status === en['Learning.Js.Review.MarkedNotYet'], 'Atelier: the mark is announced', status, report);
+
+        await page.locator('[data-test-id="atelier-review-skip"]').click();
+        const focused = await page.evaluate(() => document.activeElement && document.activeElement.id);
+        check(!(await review.isVisible()) && focused === 'lessonStart',
+            'Atelier: Skip hides the Review and moves to today\'s Lesson', `focused=${focused}`, report);
     } finally {
         await context.close();
     }
@@ -302,6 +386,7 @@ async function runLearningSmoke({browser, base, pass, fail}) {
     await checkDarkMode(browser, base, report);
     await checkJourney(browser, base, report);
     await checkAskTheAi(browser, base, report);
+    await checkReview(browser, base, report);
 }
 
 module.exports = {runLearningSmoke};
