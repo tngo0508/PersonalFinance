@@ -1,0 +1,32 @@
+{
+  "slug": "diversification",
+  "term": "Diversification",
+  "vietnameseName": "đa dạng hóa danh mục đầu tư",
+  "alsoKnownAs": [],
+  "topic": "investing-basics",
+  "oneLine": "Spreading your money across different investments to lower your risk.",
+  "explanation": [
+    "Diversification means spreading your money across many different investments. People do it to lower their risk.",
+    "You can spread money across types of investment, such as stocks, bonds and cash. You can also spread it inside one type, for example by owning many different stocks.",
+    "Different types and different industries often do well at different times. When one investment does badly, another may do well and make up for some of the loss."
+  ],
+  "whyItMatters": "If all your money is in one company, one bad year for that company hurts all of it. Spread across many companies, one bad result matters less. A fund pools money from many people and buys many investments at once, so it makes diversification easier. A fund that holds only one industry may still not be diversified.",
+  "workedExample": "Mai has $1,000 to invest. If she puts it all in one company and its stock falls by half, she has $500 left. If she puts $100 in each of ten companies and one falls by half, she loses $50.",
+  "relatedTerms": [
+    "stock"
+  ],
+  "sources": [
+    {
+      "name": "U.S. SEC, Investor.gov, Asset allocation and diversification",
+      "url": "https://www.investor.gov/introduction-investing/getting-started/asset-allocation",
+      "accessed": "2026-10-30"
+    }
+  ],
+  "furtherReading": [
+    {
+      "name": "FINRA, Asset allocation and diversification",
+      "url": "https://www.finra.org/investors/investing/investing-basics/asset-allocation-diversification"
+    }
+  ],
+  "lastReviewed": "2026-10-30"
+}

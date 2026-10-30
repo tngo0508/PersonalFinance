@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.13.0] - 2026-10-30
+
+### Added
+
+- **Atelier content: Lesson 3, Own a piece**: the Term Entries *Stock* and *Diversification*, drafted with `/atelier-draft` from Investor.gov pages (#529, part of #513).
+  - The Check asks whether prices only rise, what one fall does to a spread-out $1,000, and whether a one-industry fund is diversified. Finishing it places the Puzzle piece keepsake.
+
 ## [16.12.0] - 2026-10-30
 
 ### Added
