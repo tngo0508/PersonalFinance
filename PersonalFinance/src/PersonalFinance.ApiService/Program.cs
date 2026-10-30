@@ -151,6 +151,8 @@ try
 
     // E2E only: Development with E2E_SEED_RESEARCH=true stores small Research fixture snapshots; never in Production.
     await ResearchFixtureSeeder.SeedIfEnabledAsync(app);
+    // E2E only: Development with E2E_SEED_COMMUNITY=true stores a running Guild Hall Challenge; never in Production.
+    await CommunityFixtureSeeder.SeedIfEnabledAsync(app);
 
     await app.MigrateAndRunAsync(args);
     return StartupExit.Success;

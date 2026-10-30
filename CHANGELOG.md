@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.0.2] - 2026-10-30
+
+### Added
+
+- **Guild Hall Challenge E2E smoke**: a new Playwright smoke (Test 9l, `e2e-tests/challenge-smoke.js`) joins a Challenge, checks in, and checks that another Account sees only the count (#420).
+  - A fresh Account sees the running Challenge with a Join button, joins, checks in with one tap, reads its one-day private streak, and still sees the Check-in after a reload.
+  - A second Account sees how many kept it today, a Join button, and no one else's streak.
+  - Only an Admin writes Challenges and an E2E run has none, so the ApiService stores one running fixture Challenge at startup when `E2E_SEED_COMMUNITY=true` in Development (`CommunityFixtureSeeder`), like `E2E_SEED_RESEARCH`; never in Production. `e2e-inmemory.sh` and CI's E2E job set it.
+
 ## [16.0.1] - 2026-10-30
 
 ### Fixed

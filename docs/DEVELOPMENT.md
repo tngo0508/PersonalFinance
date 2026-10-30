@@ -853,6 +853,7 @@ same settings the CI e2e job uses:
 
 - `E2E_DISABLE_EMAIL_CONFIRMATION=true` on the Web app, so the account registered by Test 9 can sign in without email confirmation.
 - `E2E_SEED_RESEARCH=true` on the ApiService, so the Research walkthrough (Test 9c) has data and the Reporting Currency smoke (Test 9f) sees a converted total. In Development only, the ApiService then stores small made-up Sectors, funds and World snapshots and one USD to VND exchange rate at startup (`Features/Research/ResearchFixtureSeeder.cs`), leaving any dataset already stored alone (on a SQL Server database the fixture rows stay until a Research refresh replaces them); it needs no network to SEC or the World Bank. The setting is ignored in every other environment, so it never seeds Production.
+- `E2E_SEED_COMMUNITY=true` on the ApiService, so the Guild Hall Challenge smoke (Test 9l) has a Challenge to join: only an Admin writes one, and an E2E run has no Admin. In Development only, the ApiService then stores a running daily Challenge, "Pack a lunch", at startup (`Features/Community/CommunityFixtureSeeder.cs`), unless one is still running; on a SQL Server database it stays, like any Challenge, until its end date. Set `COMMUNITY_FIXTURE=true` on the test run too, so a missing Challenge fails the smoke instead of skipping it. Ignored in every other environment.
 - `DATABASE_PROVIDER=InMemory` and `ConnectionStrings__DefaultConnection=InMemory:<name>` on both apps if no SQL Server is reachable, as CI does; set `DATABASE_PROVIDER=InMemory` for `npm run e2e:preflight` too, so it skips the SQL Server check.
 - `ApiSettings__BaseUrl=http://localhost:5100` on the Web app. Without the AppHost, nothing resolves the default `https+http://apiservice` address.
 - `--urls http://localhost:<port>` on both apps. Otherwise the ApiService redirects HTTP to HTTPS, and Web-to-API calls fail if the ASP.NET Core dev certificate is not trusted.
@@ -862,13 +863,13 @@ same settings the CI e2e job uses:
 ```bash
 # zsh; in PowerShell set each variable with $env:NAME = '...' first
 # OpenAI__ApiKey= keeps a user-secret OpenAI key out of the run (on Windows: $env:OpenAI__ApiKey = ' ')
-export ASPNETCORE_ENVIRONMENT=Development E2E_SEED_RESEARCH=true OpenAI__ApiKey=
+export ASPNETCORE_ENVIRONMENT=Development E2E_SEED_RESEARCH=true E2E_SEED_COMMUNITY=true OpenAI__ApiKey=
 dotnet run --project PersonalFinance/src/PersonalFinance.ApiService --no-launch-profile --urls http://localhost:5100
 # second terminal
 export ASPNETCORE_ENVIRONMENT=Development E2E_DISABLE_EMAIL_CONFIRMATION=true ApiSettings__BaseUrl=http://localhost:5100
 dotnet run --project PersonalFinance/src/PersonalFinance.Web --no-launch-profile --urls http://localhost:5200
 # third terminal (E2E_DB_PORT only if SQL_HOST_PORT is not 1433)
-export WEB_URL=http://localhost:5200 API_URL=http://localhost:5100 E2E_DB_PORT=1433
+export WEB_URL=http://localhost:5200 API_URL=http://localhost:5100 E2E_DB_PORT=1433 COMMUNITY_FIXTURE=true
 npm run e2e:preflight && npm run test:e2e && npm run test:api
 ```
 

@@ -69,7 +69,7 @@ fi
 echo "== Starting ApiService on $API_URL (InMemory; logs -> .api.log)"
 # OpenAI__ApiKey: a blank key counts as no key, so a user secret with a real key does not spend quota in E2E.
 ASPNETCORE_ENVIRONMENT=Development DATABASE_PROVIDER=InMemory ConnectionStrings__DefaultConnection=InMemory:E2ETestApi \
-  E2E_SEED_RESEARCH=true OpenAI__ApiKey=" " \
+  E2E_SEED_RESEARCH=true E2E_SEED_COMMUNITY=true OpenAI__ApiKey=" " \
   Learning__ContentPath="$ROOT/PersonalFinance/tests/PersonalFinance.Tests/Learning/Fixtures/Content" \
   dotnet run --project PersonalFinance/src/PersonalFinance.ApiService --no-launch-profile \
     --environment Development --urls "http://0.0.0.0:$API_PORT" > .api.log 2>&1 &
@@ -84,7 +84,7 @@ ASPNETCORE_ENVIRONMENT=Development DATABASE_PROVIDER=InMemory ConnectionStrings_
 WEB_PID=$!
 wait_for Web "$WEB_URL" .web.log || exit 1
 
-export WEB_URL API_URL DATABASE_PROVIDER=InMemory LEARNING_FIXTURE=true
+export WEB_URL API_URL DATABASE_PROVIDER=InMemory LEARNING_FIXTURE=true COMMUNITY_FIXTURE=true
 failed=0
 if [ "$SUITES" = "all" ] || [ "$SUITES" = "ui" ]; then
   echo "== UI suite (npm run test:e2e) against $WEB_URL"
