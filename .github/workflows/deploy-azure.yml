@@ -205,6 +205,8 @@ jobs:
           ConnectionStrings__DefaultConnection: InMemory:E2ETestApi
           # Stores small Research fixture snapshots (Development only), so the walkthrough needs no SEC/World Bank.
           E2E_SEED_RESEARCH: "true"
+          # Stores one running Guild Hall Challenge (Development only): E2E has no Admin to write one.
+          E2E_SEED_COMMUNITY: "true"
           # The Atelier smoke (e2e-tests/learning-smoke.js) reads the test fixture Term Entries until real content ships.
           Learning__ContentPath: ${{ github.workspace }}/PersonalFinance/tests/PersonalFinance.Tests/Learning/Fixtures/Content
         run: |
@@ -296,6 +298,8 @@ jobs:
           API_URL: http://localhost:${{ steps.ports.outputs.api_port }}
           # ApiService reads the fixture content folder above, so the Atelier smoke expects Term Entries, not the empty state
           LEARNING_FIXTURE: "true"
+          # ApiService stores the fixture Challenge above, so the Challenge smoke expects it
+          COMMUNITY_FIXTURE: "true"
         run: npm run test:e2e
 
       - name: Run API endpoint E2E tests

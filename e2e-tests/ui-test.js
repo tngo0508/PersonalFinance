@@ -8,6 +8,7 @@ const {runCurrencyConverterSmoke} = require('./currency-converter-smoke');
 const {runMoneyBoundsSmoke} = require('./money-bounds-smoke');
 const {runThemeSmoke} = require('./theme-smoke');
 const {runLearningSmoke} = require('./learning-smoke');
+const {runChallengeSmoke} = require('./challenge-smoke');
 
 (async () => {
     const results = {passed: 0, failed: 0, errors: []};
@@ -990,6 +991,16 @@ const {runLearningSmoke} = require('./learning-smoke');
             await runLearningSmoke({browser, base, pass, fail});
         } catch (error) {
             fail(`Atelier Library smoke failed: ${error.message}`);
+        }
+
+        // =========================================================
+        // Test 9l: Guild Hall Challenge smoke (#420): join, check in, a private streak, and what another Account sees
+        // =========================================================
+        console.log('\n--- Test 9l: Guild Hall Challenge Smoke ---');
+        try {
+            await runChallengeSmoke({browser, base, pass, fail});
+        } catch (error) {
+            fail(`Guild Hall Challenge smoke failed: ${error.message}`);
         }
 
         // =========================================================
