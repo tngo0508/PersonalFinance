@@ -74,6 +74,16 @@
       "whyItMatters": "3f5304d2fbb8fbdd",
       "workedExample": "e6f65d278bedbee3"
     },
+    "terms/margin-interest": {
+      "term": "030128db304bcd9b",
+      "oneLine": "339556fb7420a8bf",
+      "explanation.0": "c2ecc939b187e1f1",
+      "explanation.1": "7d2c9f6f313b704d",
+      "explanation.2": "307c9445f408ad67",
+      "whyItMatters": "9e98d4a66896e803",
+      "workedExample": "feb11836344b7279",
+      "inTheUs.text": "c423cb9d4534bb64"
+    },
     "terms/roth-ira": {
       "term": "ef50ebcfb9c0991e",
       "oneLine": "98eff763779def56",
@@ -83,6 +93,16 @@
       "whyItMatters": "37f643ba397b5beb",
       "workedExample": "d79a2966ca56ebdd",
       "inTheUs.text": "7c8b4cfbe512308e"
+    },
+    "terms/short-selling": {
+      "term": "a8758974326e6c04",
+      "oneLine": "f0b011cacf3e6b24",
+      "explanation.0": "79d2aec4b59ccbe1",
+      "explanation.1": "1bbc8bbf1db44032",
+      "explanation.2": "8d122ce9e24ba39a",
+      "whyItMatters": "93e760f55dfecc12",
+      "workedExample": "efb41789b5f4e3e6",
+      "inTheUs.text": "506018882671277c"
     },
     "terms/stock": {
       "term": "d5cade7ef3191690",
@@ -168,6 +188,26 @@
       "check.2.explanation": "fc0ca7c9a9036542",
       "tryIt.label": "2e64c05ce4194cf3",
       "keepsake.name": "832063bb4d25ccf1"
+    },
+    "lessons/know-the-sharp-tools": {
+      "title": "0c4ebf252555a7bc",
+      "intro": "05784f52794ac68f",
+      "check.0.prompt": "306bc160d0393c5b",
+      "check.0.options.0": "4d2a08782615ae38",
+      "check.0.options.1": "6dcb3db5060a5ef1",
+      "check.0.options.2": "0481b38cd02b5b42",
+      "check.0.explanation": "d8a3e26e08505180",
+      "check.1.prompt": "781a0949c05eb856",
+      "check.1.options.0": "e50ea2d7737ee25a",
+      "check.1.options.1": "2558566c5e58d4c6",
+      "check.1.explanation": "72e71ac88a609b75",
+      "check.2.prompt": "18d11b82c19972e2",
+      "check.2.options.0": "ed317100a77946a9",
+      "check.2.options.1": "a4a76b2ec07fdcb4",
+      "check.2.options.2": "e793cd4f9ae7b783",
+      "check.2.explanation": "1e8f732afd2f8896",
+      "tryIt.label": "979d6300fd9884ff",
+      "keepsake.name": "95ddf8e9a1b838e1"
     },
     "lessons/own-a-piece": {
       "title": "69ca0f1994eefc8b",

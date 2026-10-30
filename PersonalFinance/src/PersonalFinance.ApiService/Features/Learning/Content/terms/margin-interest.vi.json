@@ -1,0 +1,15 @@
+{
+  "slug": "margin-interest",
+  "term": "Lãi vay ký quỹ",
+  "oneLine": "Lãi suất mà công ty môi giới thu khi cho bạn vay tiền để mua các khoản đầu tư.",
+  "explanation": [
+    "Trong tài khoản ký quỹ, công ty môi giới của bạn cho bạn vay tiền mặt để mua thêm các khoản đầu tư. Một công ty môi giới là công ty mua bán các khoản đầu tư cho bạn. Các khoản đầu tư và tiền mặt trong tài khoản của bạn sẽ hỗ trợ khoản vay.",
+    "Giống như bất kỳ khoản vay nào, khoản vay ký quỹ có lãi suất. Đây là lãi vay ký quỹ. Lãi suất có thể rất khác nhau giữa các công ty.",
+    "Vốn chủ sở hữu của bạn là giá trị các khoản đầu tư trừ đi số tiền bạn nợ công ty. Nếu vốn chủ sở hữu của bạn thấp hơn mức tối thiểu của công ty, công ty sẽ thực hiện lệnh gọi ký quỹ. Bạn phải thêm tiền mặt hoặc đầu tư, nếu không công ty sẽ bán các khoản đầu tư của bạn."
+  ],
+  "whyItMatters": "Ký quỹ cho phép bạn mua nhiều hơn, nhưng cũng có thể làm thua lỗ lớn hơn. Lãi suất làm giảm lợi nhuận của bạn, vì vậy các khoản đầu tư của bạn phải sinh lời nhiều hơn để hòa vốn. Trong một lệnh gọi ký quỹ, công ty có thể bán các khoản đầu tư của bạn, ngay cả với giá thấp.",
+  "workedExample": "Bạn vay ký quỹ 50.000 đô la với lãi suất 7% mỗi năm. Tiền lãi là 3.500 đô la mỗi năm, tương đương khoảng 9,59 đô la mỗi ngày. Khoản đầu tư của bạn phải thu lợi ít nhất 3.500 đô la mỗi năm chỉ để trang trải khoản này.",
+  "inTheUs": {
+    "text": "Quy định của FINRA yêu cầu vốn chủ sở hữu của bạn phải luôn ở mức ít nhất 25% giá trị đầu tư ký quỹ. Nhiều công ty yêu cầu nhiều hơn, thường từ 30% đến 40%."
+  }
+}

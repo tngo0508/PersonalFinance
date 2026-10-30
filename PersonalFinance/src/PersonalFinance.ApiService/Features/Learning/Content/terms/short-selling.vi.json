@@ -1,0 +1,15 @@
+{
+  "slug": "short-selling",
+  "term": "Bán khống",
+  "oneLine": "Bán cổ phiếu vay với hy vọng mua lại với giá thấp hơn.",
+  "explanation": [
+    "Bán khống có nghĩa là bán một cổ phiếu mà bạn không sở hữu. Thông thường, công ty môi giới của bạn sẽ cho bạn vay cổ phần, và bạn sẽ bán ngay lập tức.",
+    "Sau đó bạn mua lại số lượng cổ phần tương đương và trả lại. Nếu giá giảm, bạn sẽ có lời. Nếu giá tăng, bạn sẽ thua lỗ.",
+    "Sở hữu một cổ phiếu gọi là vị thế mua (long). Bán khống thì ngược lại, là vị thế bán (short)."
+  ],
+  "whyItMatters": "Khi bạn sở hữu một cổ phiếu, bạn chỉ mất tối đa số tiền đã trả. Khi bạn bán khống, khoản lỗ của bạn không giới hạn, vì giá có thể tiếp tục tăng. Bạn cũng phải trả lãi trên cổ phần mượn, và các quy tắc ký quỹ được áp dụng. Nếu cổ phiếu trả cổ tức, bạn phải trả cho bên cho vay.",
+  "workedExample": "Bạn mượn cổ phần với giá 60 đô la mỗi cổ phiếu và bán chúng. Nếu giá giảm xuống còn 40 đô la, bạn mua lại và kiếm được 20 đô la mỗi cổ phiếu, trừ phí. Nếu giá tăng lên 80 đô la, bạn mất 20 đô la mỗi cổ phiếu, cộng với phí.",
+  "inTheUs": {
+    "text": "Hầu hết các giao dịch bán khống đều hợp pháp. Việc bán khống nhằm đẩy giá cổ phiếu lên hoặc giảm một cách có chủ ý là không được phép."
+  }
+}

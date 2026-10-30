@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.16.0] - 2026-10-30
+
+### Added
+
+- **Atelier content: Lesson 6, Know the sharp tools**: the Term Entries *Margin interest* (with the FINRA 25% maintenance rule) and *Short selling*, drafted with `/atelier-draft` from Investor.gov bulletins (#532, part of #513). With it the six-Lesson Journey is complete.
+  - The Check asks what a missed margin call leads to, whether short-selling losses have a limit, and what a rise from $60 to $80 costs a short seller. Finishing it places the Toolbox keepsake.
+
 ## [16.15.0] - 2026-10-30
 
 ### Added

@@ -1,0 +1,47 @@
+{
+  "slug": "short-selling",
+  "term": "Short selling",
+  "vietnameseName": "bán khống",
+  "alsoKnownAs": [
+    "short sale",
+    "shorting"
+  ],
+  "topic": "trading",
+  "oneLine": "Selling borrowed stock in the hope of buying it back at a lower price.",
+  "explanation": [
+    "Short selling means selling a stock you do not own. Usually your broker lends you the shares, and you sell them right away.",
+    "Later you buy the same number of shares back and return them. If the price fell, you make a profit. If the price rose, you lose money.",
+    "Owning a stock is called a long position. Short selling is the opposite, a short position."
+  ],
+  "whyItMatters": "When you own a stock, you can lose at most what you paid. When you sell short, your losses have no limit, because a price can keep rising. You also pay interest on the borrowed shares, and margin rules apply. If the stock pays a dividend, you must pay it to the lender.",
+  "workedExample": "You borrow shares at $60 each and sell them. If the price falls to $40, you buy them back and make $20 a share, minus fees. If the price rises to $80, you lose $20 a share, plus fees.",
+  "inTheUs": {
+    "text": "Most short sales are legal. Short sales used to push a stock's price up or down on purpose are not allowed.",
+    "rulesAsOf": 2026,
+    "sources": [
+      {
+        "name": "U.S. SEC, Investor.gov, Investor bulletin: An introduction to short sales",
+        "url": "https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/investor-bulletins-51",
+        "accessed": "2026-10-30"
+      }
+    ]
+  },
+  "relatedTerms": [
+    "margin-interest",
+    "stock"
+  ],
+  "sources": [
+    {
+      "name": "U.S. SEC, Investor.gov, Investor bulletin: An introduction to short sales",
+      "url": "https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/investor-bulletins-51",
+      "accessed": "2026-10-30"
+    },
+    {
+      "name": "U.S. SEC, Investor.gov, Stock purchases and sales: Long and short",
+      "url": "https://www.investor.gov/introduction-investing/investing-basics/how-stock-markets-work/stock-purchases-and-sales-long-and",
+      "accessed": "2026-10-30"
+    }
+  ],
+  "furtherReading": [],
+  "lastReviewed": "2026-10-30"
+}
