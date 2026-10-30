@@ -9,8 +9,10 @@ namespace PersonalFinance.Shared.Contracts;
 public interface IDashboardApi
 {
     /// <summary>
-    /// Gets a summary of all dashboard data for the current user.
+    /// Gets a summary of all dashboard data for the current user; the Atelier card's titles are in
+    /// <paramref name="language"/> (English when null).
     /// </summary>
     [Get("/api/Dashboard/summary")]
-    Task<DashboardSummaryDto> GetSummaryAsync(CancellationToken cancellationToken = default);
+    Task<DashboardSummaryDto> GetSummaryAsync([Query] string? language = null,
+        CancellationToken cancellationToken = default);
 }

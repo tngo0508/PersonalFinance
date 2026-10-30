@@ -300,6 +300,36 @@ public sealed partial class DashboardRenderingTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task AtelierCard_OpensTheLesson_AndHidesWithAnAntiforgeryPost()
+    {
+        _api.Summary = new DashboardSummaryDto
+        {
+            Atelier = new DashboardAtelierDto
+            {
+                LessonSlug = "borrow-wisely", Day = 2, Title = "Borrow wisely",
+                Keepsakes = [new PersonalFinance.Shared.DTOs.Learning.KeepsakeDto { Symbol = "🫙", Name = "Coin jar" }]
+            }
+        };
+
+        string card = Section(await GetAsync(vietnamese: false), "dash-atelier");
+
+        Assert.Contains("Atelier: Lesson 2, <em>Borrow wisely</em>, is open today", card, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Learning/Lesson/borrow-wisely\"", card, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Coin jar\"", card, StringComparison.Ordinal);
+        Assert.Contains("action=\"/Learning/Dashboard\"", card, StringComparison.Ordinal);
+        Assert.Contains("name=\"__RequestVerificationToken\"", card, StringComparison.Ordinal);
+        Assert.Contains("name=\"show\" value=\"false\"", card, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task NoAtelierCard_WhenTheSummaryHasNone()
+    {
+        _api.Summary = Filled;
+
+        Assert.DoesNotContain("dash-atelier", await GetAsync(vietnamese: false), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task QuickActions_AreMarkedMobileOnly()
     {
         _api.Summary = Filled;

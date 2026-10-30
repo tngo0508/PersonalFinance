@@ -1,10 +1,12 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using PersonalFinance.ApiService.Features.Learning;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.Dashboard;
+using PersonalFinance.Shared.DTOs.Learning;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.Enums;
 using PersonalFinance.Shared.Helpers;
@@ -31,15 +33,19 @@ internal sealed class DashboardService : IDashboardService
 
     private readonly ICurrencyConverter _currencyConverter;
 
+    private readonly IJourneyService? _journey;
+
+    /// <param name="journey">The Learning Feature's Journey, for the quiet Atelier card; none shows no card.</param>
     public DashboardService(AppDbContext dbContext, IBudgetDataProvider budgetDataProvider,
-        ICurrencyConverter currencyConverter)
+        ICurrencyConverter currencyConverter, IJourneyService? journey = null)
     {
         _dbContext = dbContext;
         _budgetDataProvider = budgetDataProvider;
         _currencyConverter = currencyConverter;
+        _journey = journey;
     }
 
-    public async Task<DashboardSummaryDto> GetDashboardSummaryAsync(string userId,
+    public async Task<DashboardSummaryDto> GetDashboardSummaryAsync(string userId, string? language = null,
         CancellationToken cancellationToken = default)
     {
         // The Dashboard's "now" figures (net worth, budget, goals) are balances, converted once at the latest rate into
@@ -58,6 +64,9 @@ internal sealed class DashboardService : IDashboardService
         List<RecentActivityDto> recentActivity = await GetRecentActivityAsync(userId, newestGoals, cancellationToken);
         bool hasGoogleDriveConnection = await HasGoogleDriveConnectionAsync(userId, cancellationToken);
         BudgetDataSource activeSource = await _budgetDataProvider.GetActiveSourceAsync(userId, cancellationToken);
+        DashboardAtelierDto? atelier = _journey is null
+            ? null
+            : AtelierCard(await _journey.GetStateAsync(userId, language, cancellationToken));
 
         return new DashboardSummaryDto
         {
@@ -70,8 +79,32 @@ internal sealed class DashboardService : IDashboardService
             ActiveSource = activeSource,
             HasGoogleDriveConnection = hasGoogleDriveConnection,
             ReportingCurrency = reportingCurrency,
-            Conversion = conversion.ToDto()
+            Conversion = conversion.ToDto(),
+            Atelier = atelier
         };
+    }
+
+    /// <summary>
+    /// The quiet Atelier card (#523): only mid-Journey (started, not finished) while today's Lesson is open, and only
+    /// while the Account has not hidden it. No Notification and no email go with it.
+    /// </summary>
+    internal static DashboardAtelierDto? AtelierCard(JourneyStateDto journey)
+    {
+        if (!journey.ShowOnDashboard || !journey.Started || journey.Finished)
+        {
+            return null;
+        }
+
+        LessonProgressDto? open = journey.Lessons.FirstOrDefault(l => l.Status == LessonStatus.Open);
+        return open is null
+            ? null
+            : new DashboardAtelierDto
+            {
+                LessonSlug = open.Slug,
+                Day = open.Day,
+                Title = open.Title,
+                Keepsakes = journey.Lessons.Where(l => l.Status == LessonStatus.Finished).Select(l => l.Keepsake).ToList()
+            };
     }
 
     private async Task<NetWorthSummaryDto?> GetNetWorthSummaryAsync(string userId, ReportingConversion conversion,

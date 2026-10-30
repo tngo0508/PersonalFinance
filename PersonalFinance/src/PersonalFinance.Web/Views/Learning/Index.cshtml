@@ -86,6 +86,22 @@
                     </ul>
                 </div>
             }
+
+            @if (Model.IsSignedIn)
+            {
+                @* Turns the quiet Dashboard card on or off (#523); the card's own Hide button turns it off too. *@
+                <form class="atelier-dashboard-switch" method="post" asp-action="ShowOnDashboard">
+                    <input type="hidden" name="show" value="@(Model.ShowOnDashboard ? "false" : "true")"/>
+                    <input type="hidden" name="returnUrl" value="@(Url.Action("Index", "Learning") + "#journey")"/>
+                    <button type="submit" class="atelier-switch" role="switch"
+                            aria-checked="@(Model.ShowOnDashboard ? "true" : "false")"
+                            aria-describedby="dashboardSwitchHint" data-test-id="atelier-dashboard-switch">
+                        <span class="atelier-switch-track" aria-hidden="true"><span class="atelier-switch-thumb"></span></span>
+                        <span class="atelier-switch-label">@L["Learning.Dashboard.Switch"]</span>
+                    </button>
+                    <p class="atelier-switch-hint" id="dashboardSwitchHint">@L["Learning.Dashboard.SwitchHint"]</p>
+                </form>
+            }
         </section>
     }
 
