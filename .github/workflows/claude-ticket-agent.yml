@@ -116,7 +116,7 @@ jobs:
             info=$(gh api "repos/$GH_REPO/issues/$n")
             [ "$(jq -r '.state' <<< "$info")" = "open" ] || return 1
             jq -e '[.labels[].name] | index("ready-for-agent")' <<< "$info" > /dev/null || return 1
-            jq -e '[.labels[].name] | (index("agent:in-progress") or index("wayfinder:map")) | not' <<< "$info" > /dev/null || return 1
+            jq -e '[.labels[].name] | (index("agent:in-progress") or index("wayfinder:map") or index("atelier:content")) | not' <<< "$info" > /dev/null || return 1
             [ "$(jq '.assignees | length' <<< "$info")" = "0" ] || return 1
             [ "$(jq '.sub_issues_summary.total // 0' <<< "$info")" = "0" ] || return 1
             [ "$(jq '.issue_dependencies_summary.blocked_by // 0' <<< "$info")" = "0" ] || return 1

@@ -12,4 +12,10 @@ public interface ILearningLibraryService
 
     /// <summary>The Term Entry with this slug, or <c>null</c>.</summary>
     TermEntryDto? FindTerm(string slug, string? language);
+
+    /// <summary>The Journey's outline: every Lesson by day.</summary>
+    List<LessonSummaryDto> GetLessons(string? language);
+
+    /// <summary>The Lesson with this slug, with its Term Entries in teaching order, or <c>null</c>.</summary>
+    LessonDto? FindLesson(string slug, string? language);
 }

@@ -40,6 +40,15 @@
             <p class="atelier-aka">@L.Named("Learning.Entry.AlsoKnownAs", ("names", string.Join(", ", entry.AlsoKnownAs)))</p>
         }
         <p class="atelier-one-line" data-test-id="atelier-one-line">@entry.OneLine</p>
+        @if (entry.Lesson is { } lesson)
+        {
+            <p class="atelier-entry-lesson" data-test-id="atelier-entry-lesson">
+                @L.Named("Learning.Entry.InLesson", ("day", lesson.Day))
+                <a asp-action="Lesson" asp-route-slug="@lesson.Slug">@lesson.Title</a>
+                <span aria-hidden="true">·</span>
+                <a href="@Url.Action("Index", "Learning")#journey">@L["Learning.Road.Start"]</a>
+            </p>
+        }
     </header>
 
     <div class="atelier-sheet atelier-reading">

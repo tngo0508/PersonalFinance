@@ -1,0 +1,174 @@
+@using PersonalFinance.Web.Models.Learning
+@using PersonalFinance.Web.Services
+@model LearningLessonViewModel
+@{
+    var lesson = Model.Lesson;
+    ViewData["Title"] = lesson.Title;
+    Func<string, string> termUrl = slug => Url.Action("Term", "Learning", new { slug })!;
+    var canRead = Model.Access is LessonAccess.Open or LessonAccess.Finished;
+    var finished = Model.Access == LessonAccess.Finished;
+    // Try it only ever points inside the app.
+    var tryItUrl = lesson.TryIt.Url.StartsWith('/') && !lesson.TryIt.Url.StartsWith("//", StringComparison.Ordinal)
+        ? lesson.TryIt.Url
+        : null;
+    var finishUrl = Url.Action("Finish", "Learning", new { slug = lesson.Slug });
+}
+
+@section Head {
+    <meta name="robots" content="noindex"/>
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/learning.css" asp-append-version="true"/>
+}
+
+<article class="atelier atelier-lesson" data-test-id="atelier-lesson" data-lesson-access="@Model.Access.ToString().ToLowerInvariant()">
+    <nav class="atelier-breadcrumb" aria-label="@L["Learning.Entry.Breadcrumb"]">
+        <a asp-action="Index" asp-fragment="journey">@L["Learning.Road.Heading"]</a>
+        <span aria-hidden="true">/</span>
+        <span>@L.Named("Learning.Road.LessonDay", ("day", lesson.Day))</span>
+    </nav>
+
+    <header class="atelier-sheet atelier-lesson-header">
+        <p class="atelier-eyebrow">@L.Named("Learning.Road.LessonDay", ("day", lesson.Day))</p>
+        <h1 class="atelier-title" data-test-id="atelier-lesson-title">@lesson.Title</h1>
+        @if (canRead)
+        {
+            <p class="atelier-one-line">@lesson.Intro</p>
+        }
+        @if (finished)
+        {
+            <p class="atelier-finished-banner" data-test-id="atelier-finished-banner">
+                <span aria-hidden="true">@lesson.Keepsake.Symbol</span> @L["Learning.Lesson.FinishedBanner"]
+            </p>
+        }
+    </header>
+
+    @switch (Model.Access)
+    {
+        case LessonAccess.SignIn:
+            <div class="atelier-sheet atelier-gate" data-test-id="atelier-sign-in">
+                <p>@L["Learning.Lesson.SignIn.Prompt"]</p>
+                <p class="atelier-gate-actions">
+                    <a class="atelier-button" asp-area="Identity" asp-page="/Account/Login"
+                       asp-route-returnUrl="@Url.Action("Lesson", "Learning", new { slug = lesson.Slug })">@L["Learning.Lesson.SignIn.Button"]</a>
+                    <a asp-area="Identity" asp-page="/Account/Register"
+                       asp-route-returnUrl="@Url.Action("Lesson", "Learning", new { slug = lesson.Slug })">@L["Learning.Lesson.SignIn.Register"]</a>
+                </p>
+            </div>
+            break;
+        case LessonAccess.Locked:
+            <div class="atelier-sheet atelier-gate" data-test-id="atelier-locked">
+                <p>
+                    @if (Model.OpensTomorrow || Model.Previous is null)
+                    {
+                        @L["Learning.Lesson.Locked.Tomorrow"]
+                    }
+                    else
+                    {
+                        @L.Named("Learning.Lesson.Locked.AfterPrevious", ("day", Model.Previous.Day), ("title", Model.Previous.Title))
+                    }
+                </p>
+                <p><a asp-action="Index" asp-fragment="journey">@L["Learning.Lesson.BackToRoad"]</a></p>
+            </div>
+            break;
+    }
+
+    @if (canRead)
+    {
+        @foreach (var term in lesson.Terms)
+        {
+            <section class="atelier-sheet atelier-reading" aria-labelledby="term-@term.Slug" data-test-id="lesson-term-@term.Slug">
+                <h2 class="atelier-sheet-title" id="term-@term.Slug">@term.Term</h2>
+                <p class="atelier-vi-name" lang="vi">@term.VietnameseName</p>
+                <p class="atelier-one-line">@term.OneLine</p>
+                @foreach (var paragraph in term.Explanation)
+                {
+                    <p>@TermTextLinker.Link(paragraph, term.Mentions, termUrl)</p>
+                }
+                <h3>@L["Learning.Entry.WorkedExample"]</h3>
+                <p class="atelier-example">@TermTextLinker.Link(term.WorkedExample, term.Mentions, termUrl)</p>
+                <p><a asp-action="Term" asp-route-slug="@term.Slug">@L["Learning.Lesson.ReadEntry"]</a></p>
+            </section>
+        }
+
+        <section class="atelier-sheet atelier-check" aria-labelledby="checkHeading" data-check
+                 data-finish-url="@finishUrl" data-test-id="atelier-check">
+            <h2 class="atelier-sheet-title" id="checkHeading">@L["Learning.Lesson.Check.Heading"]</h2>
+            <p class="atelier-lede">@L["Learning.Lesson.Check.Lede"]</p>
+            @for (var q = 0; q < lesson.Check.Count; q++)
+            {
+                var question = lesson.Check[q];
+                <div class="atelier-question" role="group" aria-labelledby="question-@q" data-question
+                     data-correct="@question.CorrectOption" data-test-id="question-@q">
+                    <p class="atelier-question-format">
+                        @(question.Format == "myth-or-fact" ? L["Learning.Lesson.Check.MythOrFact"] : L["Learning.Lesson.Check.WhatHappensNext"])
+                    </p>
+                    <p class="atelier-question-prompt" id="question-@q">@question.Prompt</p>
+                    <div class="atelier-options">
+                        @for (var o = 0; o < question.Options.Count; o++)
+                        {
+                            <button type="button" class="atelier-option" data-option="@o" aria-pressed="false">@question.Options[o]</button>
+                        }
+                    </div>
+                    <div class="atelier-feedback" aria-live="polite">
+                        <p class="atelier-explanation" data-explanation hidden>
+                            <strong data-verdict></strong> @question.Explanation
+                        </p>
+                    </div>
+                </div>
+            }
+            <p class="atelier-check-error" data-finish-error role="alert" hidden>
+                <span data-finish-error-text></span>
+                <button type="button" class="atelier-button" data-finish-retry>@L["Learning.Lesson.Check.Retry"]</button>
+            </p>
+        </section>
+
+        @if (tryItUrl is not null)
+        {
+            <section class="atelier-sheet atelier-try-it" aria-labelledby="tryItHeading">
+                <h2 class="atelier-sheet-title" id="tryItHeading">@L["Learning.Lesson.TryIt.Heading"]</h2>
+                <p>
+                    @L["Learning.Lesson.TryIt.Lede"]
+                    <a href="@tryItUrl" data-test-id="atelier-try-it">@lesson.TryIt.Label</a>
+                </p>
+            </section>
+        }
+
+        <section class="atelier-sheet atelier-finished" aria-labelledby="finishedHeading" tabindex="-1"
+                 data-finished data-test-id="atelier-finished" hidden="@(!finished)">
+            <h2 class="atelier-sheet-title" id="finishedHeading">@L["Learning.Lesson.Finished.Heading"]</h2>
+            <p class="atelier-keepsake-large" data-test-id="atelier-keepsake">
+                <span class="atelier-keepsake-symbol" aria-hidden="true">@lesson.Keepsake.Symbol</span>
+                @L.Named("Learning.Lesson.Finished.Keepsake", ("keepsake", lesson.Keepsake.Name))
+            </p>
+            @{
+                string? nextNote = Model.NextNote switch
+                {
+                    NextLessonNote.OpensTomorrow => L.Named("Learning.Lesson.Next.OpensTomorrow", ("day", Model.Next!.Day), ("title", Model.Next.Title)),
+                    NextLessonNote.OpenToday => L.Named("Learning.Lesson.Next.OpenToday", ("day", Model.Next!.Day), ("title", Model.Next.Title)),
+                    NextLessonNote.JourneyEnd => L["Learning.Lesson.Next.JourneyEnd"].Value,
+                    _ => null,
+                };
+            }
+            @if (nextNote is not null)
+            {
+                <p data-test-id="atelier-next">@nextNote</p>
+            }
+            <p><a asp-action="Index" asp-fragment="journey">@L["Learning.Lesson.BackToRoad"]</a></p>
+        </section>
+    }
+
+    <p class="atelier-disclaimer">
+        @L["Learning.Entry.EducationalOnly"]
+        <a asp-controller="Legal" asp-action="Disclaimer">@L["Learning.Entry.Disclaimer"]</a>
+    </p>
+</article>
+
+@section Scripts {
+    @if (canRead)
+    {
+        <js-strings prefix="Learning.Js." />
+        <script src="~/js/learning/lesson-check.js" asp-append-version="true"></script>
+    }
+}
