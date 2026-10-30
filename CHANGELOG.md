@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.2.0] - 2026-10-30
+
+### Changed
+
+- **Net Worth in dark mode**: the page's green text and its Save button are readable on the dark theme (#485).
+  - Green text (the "show the math" link, the story's typed-in amounts, the breakdown chips, a lever's effect) was the deep ledger green, 3.4:1 on the dark page; it now takes the mint the Ledger uses for green on dark (`--lp-ledger-on-wash`), and stays the deep green in light.
+  - The Save button takes the ledger fill tokens, so its white label meets 4.5:1 in dark; light is unchanged.
+  - `networth.css` holds no raw colour, so it leaves the raw-colour guard's allow-list.
+
+### Added
+
+- **Theme smoke: Net Worth**: the dark contrast check covers the Net Worth page (its answer, view toggle, runway legend, story and years), and checks the runway's path and band recolour on a theme switch without a reload.
+
 ## [16.1.0] - 2026-10-30
 
 ### Changed
