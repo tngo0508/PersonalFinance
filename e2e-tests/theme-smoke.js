@@ -3,11 +3,13 @@
  * by mouse and keyboard, checks that the root's theme attributes follow each choice, that System follows an emulated
  * device colour scheme, that the choice survives a reload and sign-in, and that the avatar menu holds no theme items.
  * In dark mode it checks key text against its effective background (4.5:1) on the Landing Page, a sign-in page,
- * Account settings and the Net Worth help modal (slice #482), the Google Drive sample-data notice and its Budget report
- * and Transactions modals (slice #484), Budget, Budget Tracker and Savings Goals (slice #487), and the Dashboard and
- * Money Priorities (slice #489), and that the Investment Calculator's, the Google Drive Transactions timeline's and the
- * Budget planner's Month Strip restyles on a theme switch without a reload (slices #483, #484 and #487). Run from ui-test.js
- * as Test 9j.
+ * Account settings and the Net Worth help modal (slice #482), the Net Worth page (slice #485), the Google Drive
+ * sample-data notice and its Budget report and Transactions modals (slice #484), Budget, Budget Tracker and Savings
+ * Goals (slice #487), the Dashboard and Money Priorities (slice #489), Community, News and the AI chat widget
+ * (slice #488), and Research's Sectors and World tabs (slice #486), and that the Investment Calculator's, the Google
+ * Drive Transactions timeline's, the Budget planner's Month Strip, the Net Worth runway, the Research sunburst and the
+ * World map restyle on a theme switch without a reload (slices #483, #484, #487, #485 and #486).
+ * Run from ui-test.js as Test 9j.
  *
  * Expected labels are read from Resources/i18n/en.json, so a rewording does not break the test.
  */
@@ -31,6 +33,10 @@ const CONTRAST_PAGES = {
     signIn: ['.auth-page__title', '.auth-page__subtitle', '.auth-page .form-label', '#forgot-password', '#login-submit'],
     accountSettings: ['.account-page__title', '.account-page__subtitle', '.account-nav__link[aria-current="page"]',
         '.account-nav__link:not([aria-current="page"])', '.account-page__content .form-label'],
+    // The Net Worth page (#485): the answer, the runway's legend and readout, the story's typed-in amounts, the math
+    netWorth: ['.nw-title', '.nw-subtitle', '.nw-hero__lede', '.nw-view__btn[aria-pressed="true"]',
+        '.nw-view__btn[aria-pressed="false"]', '.nw-runway__legend li', '.nw-math > summary', '.nw-story__sentence',
+        '.nw-story__input', '.nw-years__head'],
     modal: ['#nwHelpModal .modal-title', '#nwHelpModal .nw-text', '#nwHelpModal .nw-help-note__title',
         '#nwHelpModal .modal-footer .btn'],
     // Budget, Budget Tracker and Savings Goals (#487); a fresh Account's Savings Goals shows its empty state
@@ -43,6 +49,19 @@ const CONTRAST_PAGES = {
     // The Dashboard and Money Priorities (#489), as a fresh Account sees them
     dashboard: ['.dash-header__eyebrow', '.dash-header__title', '.dash-header__lede'],
     moneyPriorities: ['.mp-title', '.mp-intro', '.mp-card__title'],
+    // Community (the Guild Hall, seeded in E2E), News, and the AI chat widget open on the Dashboard (#488)
+    community: ['.community-title', '.community-subtitle', '.community-section-title', '.community-rail-title',
+        '.community-pin-guidance', '.community-btn', '.community-eyebrow', '.community-pseudonym-name'],
+    news: ['.finance-hub-title', '.finance-hub-subtitle', '.finance-hub-tab-btn.active',
+        '.finance-hub-tab-btn:not(.active)', '.finance-hub-search-btn'],
+    chatWidget: ['.ai-chat-header h2', '.ai-chat-header p', '.ai-chat-eyebrow', '.ai-chat-welcome-text', '.ai-chat-chip',
+        '.ai-chat-disclaimer'],
+    // Research (#486): the Sectors sunburst (a chart view) and the World map (a map view), on the seeded snapshots
+    researchSectors: ['.research-header__title', '.research-tabs__tab[aria-selected="true"]',
+        '.research-tabs__tab[aria-selected="false"]', '#research-sectors-title', '.research-panel__title',
+        '#research-sectors-legend .research-legend__button', '.research-view-toggle__button[aria-pressed="true"]'],
+    researchWorld: ['.research-header__title', '.research-tabs__tab[aria-selected="true"]', '#research-world-subtitle',
+        '#research-panel-world .research-panel__title', '#research-panel-world .research-legend__item'],
     // Google Drive on sample data (#484): the sample-data notice, then the Budget report and Transactions modals. The
     // sample spreadsheet holds one month, so the report shows its month view: one period chip, the active one.
     googleDriveNotice: ['.gd-notice strong', '.gd-notice .small', '.gd-notice .btn', '.gd-section-header__title'],
@@ -397,6 +416,138 @@ async function checkBudgetChartRestyles(page, report) {
 }
 
 /**
+ * The Net Worth runway, next to the token it should show: the Base path's stroke and the range band's fill as the
+ * browser paints them, and the ledger green they come from.
+ * @param {import('playwright').Page} page - The Net Worth page.
+ * @returns {Promise<{theme: string, marker: boolean, token: string, base: string|null, band: string|null}>}
+ *     marker: the page has not reloaded since the check set it. Colours are rgb(r, g, b) strings.
+ */
+async function runwayState(page) {
+    return page.evaluate(() => {
+        const root = document.documentElement;
+        const hex = getComputedStyle(root).getPropertyValue('--lp-ledger').trim().replace('#', '');
+        const full = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex;
+        const n = parseInt(full, 16);
+        const base = document.querySelector('#nwRunway .nw-rw-base');
+        const band = document.querySelector('#nwRunway .nw-rw-band');
+        return {
+            theme: root.getAttribute('data-theme'),
+            marker: window.__chartThemeCheck === true,
+            token: Number.isNaN(n) ? '' : `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`,
+            base: base ? getComputedStyle(base).stroke : null,
+            band: band ? getComputedStyle(band).fill : null
+        };
+    });
+}
+
+/**
+ * Whether the runway paints the token's colour.
+ * @param {object} state - From runwayState.
+ * @returns {boolean}
+ */
+function runwayMatchesToken(state) {
+    return state.token !== '' && state.base === state.token && state.band === state.token;
+}
+
+/**
+ * The Net Worth runway takes its colours from the Ledger tokens through css/networth.css (#485): switching the theme
+ * recolours it without a reload. Leaves the page in dark mode, as it found it.
+ * @param {import('playwright').Page} page - A signed-in page on Net Worth, in dark mode.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+async function checkRunwayRestyles(page, report) {
+    await page.locator('#nwRunway .nw-rw-base').waitFor({state: 'attached', timeout: TIMEOUT});
+    await page.evaluate(() => { window.__chartThemeCheck = true; });
+
+    const dark = await runwayState(page);
+    check(dark.theme === 'dark' && runwayMatchesToken(dark), 'Net Worth runway: the path and band hold the dark ledger green',
+        JSON.stringify(dark), report);
+
+    await chooseTheme(page, 'light');
+    const light = await runwayState(page);
+    check(light.theme === 'light' && light.marker && runwayMatchesToken(light) && light.base !== dark.base,
+        'Net Worth runway: switching to Light recolours it without a reload', JSON.stringify(light), report);
+
+    await chooseTheme(page, 'dark');
+    const back = await runwayState(page);
+    check(back.theme === 'dark' && back.marker && runwayMatchesToken(back),
+        'Net Worth runway: switching back to Dark recolours it again', JSON.stringify(back), report);
+}
+
+/**
+ * The fills a Research chart or map paints, next to the theme's tokens for them: every distinct fill of the marks
+ * (a hatch pattern's url() aside), and the token colours, both as the browser computes them.
+ * @param {import('playwright').Page} page - The Research page on the chart's tab.
+ * @param {string} marks - The marks' selector, e.g. the sunburst's arcs.
+ * @param {string[]} tokens - The custom properties the fills come from.
+ * @returns {Promise<{theme: string, marker: boolean, fills: string[], tokens: string[]}>} marker: the page has not
+ *     reloaded since the check set it. Colours are rgb(r, g, b) strings.
+ */
+async function researchFillState(page, marks, tokens) {
+    return page.evaluate(({marks, tokens}) => {
+        const root = document.documentElement;
+        const probe = document.createElement('span');
+        document.body.append(probe);
+        const computed = (colour) => {
+            probe.style.color = '';
+            probe.style.color = colour;
+            return getComputedStyle(probe).color;
+        };
+        const style = getComputedStyle(root);
+        const fills = [...new Set(Array.from(document.querySelectorAll(marks))
+            .map((mark) => mark.getAttribute('fill'))
+            .filter((fill) => fill && !fill.startsWith('url('))
+            .map(computed))];
+        const result = {
+            theme: root.getAttribute('data-theme'),
+            marker: window.__chartThemeCheck === true,
+            fills,
+            tokens: tokens.map((name) => computed(style.getPropertyValue(name).trim()))
+        };
+        probe.remove();
+        return result;
+    }, {marks, tokens});
+}
+
+/**
+ * Whether a Research chart paints only its theme's token colours.
+ * @param {object} state - From researchFillState.
+ * @returns {boolean}
+ */
+function researchFillsMatchTokens(state) {
+    return state.fills.length > 0 && state.fills.every((fill) => state.tokens.includes(fill));
+}
+
+/**
+ * A Research chart or map takes its colours from the Research tokens (#486): switching the theme repaints it without a
+ * reload. Leaves the page in dark mode, as it found it.
+ * @param {import('playwright').Page} page - A signed-in page on the chart's Research tab, in dark mode.
+ * @param {string} name - The chart, for the messages.
+ * @param {string} marks - The marks' selector.
+ * @param {string[]} tokens - The custom properties the fills come from.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+async function checkResearchRestyles(page, name, marks, tokens, report) {
+    await page.locator(marks).first().waitFor({state: 'attached', timeout: TIMEOUT});
+    await page.evaluate(() => { window.__chartThemeCheck = true; });
+
+    const dark = await researchFillState(page, marks, tokens);
+    check(dark.theme === 'dark' && researchFillsMatchTokens(dark), `${name}: the marks hold the dark Research colours`,
+        JSON.stringify(dark), report);
+
+    await chooseTheme(page, 'light');
+    const light = await researchFillState(page, marks, tokens);
+    check(light.theme === 'light' && light.marker && researchFillsMatchTokens(light)
+        && JSON.stringify(light.fills) !== JSON.stringify(dark.fills),
+    `${name}: switching to Light repaints it without a reload`, JSON.stringify(light), report);
+
+    await chooseTheme(page, 'dark');
+    const back = await researchFillState(page, marks, tokens);
+    check(back.theme === 'dark' && back.marker && researchFillsMatchTokens(back),
+        `${name}: switching back to Dark repaints it again`, JSON.stringify(back), report);
+}
+
+/**
  * The Google Drive Transactions timeline, next to the tokens it should show: its gridline colour and its spending
  * bars (the palette's second series), read from the Chart.js chart.
  * @param {import('playwright').Page} page - The Google Drive page with the Transactions modal open.
@@ -545,6 +696,9 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         await page.goto(`${base}/Identity/Account/Manage`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Account settings', CONTRAST_PAGES.accountSettings, report);
         await page.goto(`${base}/Networth`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        // Net Worth (#485): dark contrast on the page, and the runway recolours on a switch
+        await checkDarkContrast(page, 'Net Worth', CONTRAST_PAGES.netWorth, report);
+        await checkRunwayRestyles(page, report);
         await page.click('.nw-help-btn');
         await page.locator('#nwHelpModal.show .modal-title').waitFor({state: 'visible', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Net Worth help modal', CONTRAST_PAGES.modal, report);
@@ -567,6 +721,35 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         await checkDarkContrast(page, 'Dashboard', CONTRAST_PAGES.dashboard, report);
         await page.goto(`${base}/MoneyPriorities`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Money Priorities', CONTRAST_PAGES.moneyPriorities, report);
+
+        // Research (#486): dark contrast, and the Sectors sunburst and the World map repaint on a switch.
+        const offices = Array.from({length: 8}, (_, i) => `--app-research-office-${i + 1}`).concat('--app-text-faint');
+        const worldSteps = Array.from({length: 8}, (_, i) => `--app-research-world-step-${i + 1}`)
+            .concat('--app-research-world-nodata');
+        await page.goto(`${base}/Research?tab=sectors`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'Research Sectors', CONTRAST_PAGES.researchSectors, report);
+        await checkResearchRestyles(page, 'Research sunburst', '#research-sunburst path.research-sunburst__arc', offices, report);
+        await page.goto(`${base}/Research?tab=world`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'Research World', CONTRAST_PAGES.researchWorld, report);
+        await checkResearchRestyles(page, 'Research World map', '#research-world-map path.research-world__country', worldSteps,
+            report);
+
+        // Community, News and the AI chat widget (#488): dark contrast, the widget open on the Dashboard.
+        await page.goto(`${base}/Community`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'Community', CONTRAST_PAGES.community, report);
+        await page.goto(`${base}/News`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'News', CONTRAST_PAGES.news, report);
+        await page.goto(`${base}/Dashboard`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'AI chat launcher', ['.ai-chat-launcher-label'], report);
+        // The cookie banner sits over the launcher in this fresh context; take the privacy-preserving choice
+        if (await page.locator('#cookieAcceptEssential').isVisible().catch(() => false)) {
+            await page.click('#cookieAcceptEssential');
+        }
+        await page.click('#ai-chat-button');
+        // The welcome and its chips render a frame after the panel opens
+        await page.locator('#ai-chat-panel .ai-chat-chip').first().waitFor({state: 'visible', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'AI chat widget', CONTRAST_PAGES.chatWidget, report);
+        await page.click('#ai-chat-close');
 
         // 4. The avatar menu holds no theme items.
         await page.click('.app-user-toggle');

@@ -2115,7 +2115,7 @@
   "Research.Performance.Max": "Tối đa",
   "Research.Performance.BrushLabel": "Kéo qua dải để chọn khoảng thời gian; các nút cũng thiết lập nó",
   "Research.Performance.PanelLabel": "Về dữ liệu hiệu suất",
-  "Research.Performance.HowToRead1": "Mọi đường đều bắt đầu ở 100 vào cuối tháng trước tháng đầu tiên mà tất cả quỹ của bạn đều có lợi nhuận. Một đường ở 150 nghĩa là 100 đã tăng lên 150. \"Giỏ quỹ của bạn\" là đường tối màu, đậm hơn.",
+  "Research.Performance.HowToRead1": "Mỗi dòng bắt đầu từ 100 vào cuối tháng, trước khi tháng đầu tiên tất cả tiền của bạn có lợi nhuận. Một dòng ở 150 nghĩa là 100 tăng lên 150. \"Giỏ hàng của bạn\" là dòng nặng hơn.",
   "Research.Performance.HowToRead2": "Điều chỉnh theo lạm phát chia mỗi đường cho mức tăng giá tiêu dùng kể từ thời điểm bắt đầu, nên cho thấy mức tăng sức mua. Tháng mà Cục Thống kê Lao động không công bố (tháng 10 năm 2025, trong thời gian chính phủ đóng cửa) được nội suy giữa hai tháng liền kề.",
   "Research.Performance.HowToRead3": "Các bảng phía dưới dùng chung các tháng với biểu đồ: lãi suất quỹ liên bang hiệu dụng, và giỏ quỹ của bạn trừ đi quỹ bạn so sánh, tính bằng điểm của mức tăng trưởng 100 (xanh dương khi giỏ quỹ dẫn trước, cam khi tụt lại). Kéo qua dải bên dưới biểu đồ, hoặc dùng các nút giai đoạn, để phóng to; khi đó mọi đường lại bắt đầu từ 100 và các số liệu tính cho giai đoạn đó.",
   "Research.Performance.About1": "Các quỹ báo cáo tổng lợi nhuận của từng tháng theo Mẫu N-PORT. Đây là lợi nhuận trên giá trị tài sản ròng của quỹ vào cuối tháng, không phải giá thị trường, và được công bố vài tuần sau quý mà chúng thuộc về.",

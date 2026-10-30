@@ -1,4 +1,4 @@
-/* global d3, topojson, PFI18n */
+/* global d3, topojson, PFI18n, ChartPalette */
 /**
  * Research page, World tab: the "World market | Your basket" switch and the basket view.
  *
@@ -169,7 +169,7 @@
         const regionList = document.getElementById(REGIONS_ID);
         const currencyList = document.getElementById(CURRENCIES_ID);
         let pinnedRegion = null;
-        const colours = readColours(host);
+        let colours = readColours(host);
         const tooltip = page.createTooltip(document.getElementById(TOOLTIP_ID), (line, entry) => [
             line(countryName(entry.code), 'research-tooltip__name'),
             line(PFI18n.t('Research.Js.WorldBasket.OfBasket', { value: formatShare(entry.percent) }), 'research-tooltip__value'),
@@ -572,6 +572,11 @@
                 }
             }).observe(host);
         }
+        // A theme switch re-reads the step colours and redraws the basket view (#486).
+        ChartPalette.subscribe(() => {
+            colours = readColours(host);
+            drawBasket();
+        });
         const basket = window.ResearchBasket ? window.ResearchBasket.get() : [];
         drawBasket();
         setMode(basket.length > 0 && exposure.count > 0 ? 'basket' : 'market');

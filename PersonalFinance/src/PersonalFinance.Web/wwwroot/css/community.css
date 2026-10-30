@@ -8,19 +8,21 @@
 
 /* --- Page Container --- */
 .community-page {
-  --gh-paper: #fbf6ec;
-  --gh-linen: #f3ead8;
-  --gh-cork: #e8d9bc;
-  --gh-ink: #2b2420;
-  --gh-ink-soft: #5a4c42;
-  --gh-clay: #a4532f;
-  --gh-clay-hover: #8a4325;
-  --gh-clay-pressed: #74381f;
-  --gh-clay-wash: #f6e3d6;
-  --gh-brass: #8a6a1e;
-  --gh-moss: #3f6145;
-  --gh-moss-wash: #e3ecdf;
-  --gh-rule: #dccdb2;
+  --gh-paper: var(--app-guild-paper);
+  --gh-linen: var(--app-guild-linen);
+  --gh-cork: var(--app-guild-cork);
+  --gh-ink: var(--app-guild-ink);
+  --gh-ink-soft: var(--app-guild-ink-soft);
+  --gh-clay: var(--app-guild-clay);
+  --gh-clay-hover: var(--app-guild-clay-hover);
+  --gh-clay-pressed: var(--app-guild-clay-pressed);
+  --gh-clay-wash: var(--app-guild-clay-wash);
+  --gh-brass: var(--app-guild-brass);
+  --gh-moss: var(--app-guild-moss);
+  --gh-moss-wash: var(--app-guild-moss-wash);
+  --gh-rule: var(--app-guild-rule);
+  --gh-sheet: var(--app-guild-sheet);
+  --gh-on-accent: var(--app-guild-on-accent);
   --gh-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
 
   --app-brand: var(--gh-clay);
@@ -28,7 +30,7 @@
   --app-brand-pressed: var(--gh-clay-pressed);
   --app-brand-soft: var(--gh-clay-wash);
   --app-brand-bg-hover: var(--gh-linen);
-  --app-surface: #fffdf7;
+  --app-surface: var(--gh-sheet);
   --app-border: var(--gh-rule);
   --app-border-hover: var(--gh-brass);
   --app-text: var(--gh-ink);
@@ -499,8 +501,8 @@
   margin-bottom: 1rem;
   padding: 1.15rem 1rem 0.9rem;
   border-radius: 4px;
-  background: #fffdf7;
-  box-shadow: 0 2px 0 rgba(43, 36, 32, 0.08), 0 6px 14px rgba(43, 36, 32, 0.08);
+  background: var(--gh-sheet);
+  box-shadow: 0 2px 0 var(--app-guild-note-shadow), 0 6px 14px var(--app-guild-note-shadow);
 }
 
 .community-note:nth-child(odd) {
@@ -513,7 +515,8 @@
 
 /* The viewer's own Strategy, waiting for an Admin: striped, so it reads as not yet on the board */
 .community-note--pending {
-  background: repeating-linear-gradient(-45deg, #fffdf7, #fffdf7 10px, #f7efdf 10px, #f7efdf 20px);
+  background: repeating-linear-gradient(-45deg, var(--gh-sheet), var(--gh-sheet) 10px, var(--app-guild-sheet-stripe) 10px,
+    var(--app-guild-sheet-stripe) 20px);
 }
 
 .community-note--rejected {
@@ -531,7 +534,7 @@
   margin-left: -6px;
   border-radius: 50%;
   background: var(--gh-clay);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 2px var(--app-guild-pin-shadow);
 }
 
 .community-note--rejected .community-pin {
@@ -602,7 +605,7 @@
   padding: 1rem;
   border: 1px solid var(--gh-rule);
   border-radius: var(--app-radius-l);
-  background: #fff;
+  background: var(--app-guild-card);
 }
 
 .community-rail-title {
@@ -648,7 +651,7 @@
   border: none;
   border-radius: 999px;
   background: var(--app-brand);
-  color: #fff;
+  color: var(--gh-on-accent);
   font-weight: var(--app-font-weight-semibold);
   cursor: pointer;
   transition: background 0.15s ease;

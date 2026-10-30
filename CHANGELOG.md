@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [16.2.0] - 2026-10-30
+## [16.5.0] - 2026-10-30
 
 ### Changed
 
@@ -16,6 +16,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A band under the hero lists four facts: no bank logins, private by default, English and Vietnamese, USD and VND.
   - The three rules of the plan are numbered cards; the six plan tools are cards with an icon and the sample plan's figure; the seven resources are a four-column register.
   - The steps are joined by a line, privacy and everyday use are two panels with ticks, and the closing call to action is a navy panel within the page width.
+
+## [16.4.0] - 2026-10-30
+
+### Changed
+
+- **Research in dark mode**: every Research tab takes its colours from the theme tokens, and its charts and maps repaint when the theme changes, without a reload (#486).
+  - The Research palettes move into the app token sheet (`--app-research-*`): the eight SEC office colours, ahead/behind, the basket's lean pair and its text steps, the chart axis and guide lines, the annotation bands, the hatch, and the World choropleth. Each has a dark value: the offices are lifted to 3:1 on the dark page and card (the Dashboard donut's dark hues), and the World ramp runs dark to light (the dark steps research.css had recorded).
+  - The Sectors sunburst and the World maps (market and basket) redraw on a theme switch through the chart palette helper; the Performance difference fills follow the tokens directly.
+  - A sunburst label picks its ink from its arc's colour as drawn, blended with the page at the ring's opacity. On the dark page an outer ring's label is white where it was black on a darkened blue; in light, a few outer-ring labels on light orange and pink turn dark, which reads better than the white they had.
+  - Pressed toggles and chips (Sunburst/Treemap, Nominal/Adjusted, the period buttons, Market/Your basket) take the text-on-wash token, and the selected tab and links the brand text green: they were the lifted green on its dark wash, 3.6:1.
+  - The Performance help no longer calls "Your basket" the "heavier dark line": the line is in the page's ink, light in dark mode.
+  - The Overlap and Correlation heatmaps keep the same ramps in both themes: each cell carries its own ink. The play button takes the brand fill, so its white icon meets 4.5:1 in dark.
+  - `research.css` and `research-funds.css` hold no raw colour. The raw-colour guard's allow-list is now empty: every Web stylesheet takes its colours from tokens (#479).
+
+### Added
+
+- **Theme smoke: Research**: the dark contrast check covers the Sectors and World tabs, and checks that the sunburst and the World map repaint in the light colours on a switch, and back.
+
+### Removed
+
+- **The raw-colour guard's listed-stylesheet test**: it only ran while a stylesheet was still on the allow-list; "an unlisted file with any literal fails" covers a new literal now that the list is empty.
+
+## [16.3.0] - 2026-10-30
+
+### Changed
+
+- **The Guild Hall, Finance News and the AI assistant in dark mode**: the three take their colours from the theme tokens, so they turn dark with the rest of the app (#488).
+  - The Guild Hall's paper, linen and cork palette moves into the app token sheet (`--app-guild-*`) with a dark set, the Atelier's lamplit desk: dark wood surfaces, cream ink, lifted clay, brass and moss. Before, the page stayed light in dark mode. Buttons on clay and moss take a dark label in dark.
+  - Finance News: green text (the active tab, badges, links) takes the brand text green, which meets 4.5:1 on the dark card (the active tab was 4.4:1); the Search button and the header icon take the brand fill, whose white label meets 4.5:1 (it was 3.9:1). The error alert and failed states take the negative tokens.
+  - The AI assistant's launcher and Send button take the brand fill (the launcher label was 3.9:1 in dark), its links and icons the brand text green, and its shadows the shared shadow tokens. Inline code is ink on its tinted background instead of pink.
+  - `community.css`, `news.css` and `ai-chat-widget.css` hold no raw colour, so they leave the raw-colour guard's allow-list.
+
+### Added
+
+- **Theme smoke: Community, News and the AI assistant**: the dark contrast check covers the Guild Hall, Finance News, and the assistant's launcher and open panel on the Dashboard.
+- **Guild Hall token pairs**: the theme token test checks the Guild Hall's text and labels on its surfaces in both themes. Brass on linen stays 4.2:1 in light, as the palette shipped, and is checked in dark only.
+
+## [16.2.0] - 2026-10-30
+
+### Changed
+
+- **Net Worth in dark mode**: the page's green text and its Save button are readable on the dark theme (#485).
+  - Green text (the "show the math" link, the story's typed-in amounts, the breakdown chips, a lever's effect) was the deep ledger green, 3.4:1 on the dark page; it now takes the mint the Ledger uses for green on dark (`--lp-ledger-on-wash`), and stays the deep green in light.
+  - The Save button takes the ledger fill tokens, so its white label meets 4.5:1 in dark; light is unchanged.
+  - `networth.css` holds no raw colour, so it leaves the raw-colour guard's allow-list.
+
+### Added
+
+- **Theme smoke: Net Worth**: the dark contrast check covers the Net Worth page (its answer, view toggle, runway legend, story and years), and checks the runway's path and band recolour on a theme switch without a reload.
 
 ## [16.1.0] - 2026-10-30
 

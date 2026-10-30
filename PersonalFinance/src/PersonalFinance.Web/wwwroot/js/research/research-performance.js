@@ -45,9 +45,10 @@
     const HEIGHT = DIFF.top + DIFF.height + 26;
     const BRUSH_HEIGHT = 56;
     const LABEL_GAP = 13;
-    // Up and down in the difference panel: the dataviz reference blue and orange, never red and green.
-    const AHEAD = '#2a78d6';
-    const BEHIND = '#eb6834';
+    // Up and down in the difference panel: the dataviz reference blue and orange, never red and green. Tokens with a
+    // dark value each (site.css, #486), so the fills follow the theme without a redraw.
+    const AHEAD = 'var(--app-research-ahead)';
+    const BEHIND = 'var(--app-research-behind)';
 
     /**
      * A month's key.
