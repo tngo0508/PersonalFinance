@@ -1,0 +1,15 @@
+{
+  "slug": "roth-ira",
+  "term": "Tài khoản hưu trí cá nhân Roth",
+  "oneLine": "Một tài khoản hưu trí tại Mỹ, nơi các khoản rút đủ điều kiện được miễn thuế.",
+  "explanation": [
+    "Tài khoản hưu trí cá nhân Roth là tài khoản hưu trí cá nhân của Hoa Kỳ. IRA có nghĩa là thỏa thuận hưu trí cá nhân. Bạn đã nạp tiền đã đóng thuế.",
+    "Bạn không thể khấu trừ số tiền đã nhập vào thuế, không giống như IRA truyền thống. Nhưng các khoản rút đủ điều kiện sau này sẽ được miễn thuế, và bạn không bao giờ phải rút tiền.",
+    "Việc rút tiền được coi là đủ điều kiện nếu ít nhất 5 năm sau khi bạn đóng góp vào Tài khoản hưu trí cá nhân Roth đầu tiên. Việc rút tiền cũng phải được thực hiện khi bạn 591/2 tuổi trở lên, hoặc vì một vài lý do khác, chẳng hạn như khuyết tật hoặc có nhà đầu tiên."
+  ],
+  "whyItMatters": "Tiền trong Tài khoản hưu trí cá nhân Roth có thể tăng trưởng trong nhiều năm, và các khoản rút đủ điều kiện không phải đóng thuế trên mức tăng trưởng đó. Có giới hạn hàng năm về số tiền bạn có thể bỏ vào. Người có thu nhập cao hơn có thể nạp ít hơn, hoặc không nạp gì cả.",
+  "workedExample": "Linh bỏ 5.000 đô la vào Tài khoản hưu trí cá nhân Roth khi 30 tuổi. Đến 60 tuổi, số tiền đã tăng lên 20.000 đô la. Khoản đóng góp đầu tiên của cô ấy là hơn 5 năm trước, và cô ấy đã hơn 591/2 tuổi. Vậy cô ấy có thể rút toàn bộ 20.000 đô la miễn thuế.",
+  "inTheUs": {
+    "text": "Đối với năm 2026, bạn có thể đầu tư tối đa $7,500 mỗi năm vào tất cả các IRA của mình cùng nhau, hoặc $8,600 khi từ 50 tuổi trở lên. Đóng góp Roth dần loại bỏ đối với những người độc thân có thu nhập từ $153,000 đến $168,000, và cho các cặp vợ chồng nộp cùng nhau có thu nhập từ $242,000 đến $252,000."
+  }
+}
