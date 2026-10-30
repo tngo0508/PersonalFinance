@@ -1,7 +1,7 @@
 /**
- * Currency Converter smoke test (#446): a fresh Account opens Currency Converter from the sidebar, converts 1,000,000
- * Japanese yen to Vietnamese đồng at the latest rate, and sees an amount, a rate and a rate date. Run from ui-test.js as
- * Test 9g.
+ * Currency Converter smoke test (#446, #490): a fresh Account opens Currency Converter from the sidebar, types 1,000,000
+ * Japanese yen to Vietnamese đồng, and sees the live result: an amount, a rate and a rate date, with the inputs in the
+ * URL. Run from ui-test.js as Test 9g.
  *
  * Expected texts are read from Resources/i18n/en.json, so a rewording does not break the test. CI seeds yen and đồng
  * rates (E2E_SEED_RESEARCH=true), so the page converts; without them it says "Conversion unavailable", which is the
@@ -85,7 +85,8 @@ async function runCurrencyConverterSmoke({browser, base, pass, fail}) {
             return;
         }
 
-        // 1. The sidebar link opens the page, which shows no result before the first submit.
+        // 1. The sidebar link opens the page, which shows no result before the first conversion. With JavaScript the
+        //    page updates live, so the Convert button is hidden.
         await page.goto(`${base}/Dashboard`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         await Promise.all([
             page.waitForNavigation({waitUntil: 'networkidle', timeout: TIMEOUT}),
@@ -93,25 +94,31 @@ async function runCurrencyConverterSmoke({browser, base, pass, fail}) {
         ]);
         check(await page.locator('#currency-converter-form').isVisible().catch(() => false),
             'The sidebar link opens the Currency Converter', page.url(), report);
-        check(await page.locator('[data-converter-result]').count() === 0, 'No result before the first submit',
-            'a result is shown', report);
+        check(!await page.locator('[data-converter-rate]').isVisible().catch(() => false)
+            && await page.inputValue('[data-converter-amount]') === '', 'No result before the first conversion',
+        'a result is shown', report);
+        check(!await page.locator('#converter-submit').isVisible().catch(() => true),
+            'The Convert button is hidden when JavaScript runs', 'it is visible', report);
 
-        // 2. Convert 1,000,000 JPY to VND at the latest rate.
-        await page.fill('#converter-amount', '1000000');
+        // 2. Convert 1,000,000 JPY to VND at the latest rate: the result arrives live.
         await page.selectOption('#converter-from', 'JPY');
         await page.selectOption('#converter-to', 'VND');
-        await Promise.all([
-            page.waitForNavigation({waitUntil: 'networkidle', timeout: TIMEOUT}),
-            page.click('#converter-submit')
-        ]);
-        check(page.url().includes('from=JPY') && page.url().includes('to=VND'), 'The URL holds the inputs', page.url(), report);
+        await page.fill('#converter-amount', '1000000');
+        await page.waitForFunction(() => {
+            const to = document.querySelector('[data-converter-amount]');
+            const unavailable = document.querySelector('[data-converter-unavailable]');
+            return (to && to.value !== '') || (unavailable && !unavailable.hidden);
+        }, null, {timeout: TIMEOUT});
+        await page.waitForFunction(() => window.location.search.includes('amount='), null, {timeout: TIMEOUT});
+        check(page.url().includes('from=JPY') && page.url().includes('to=VND') && page.url().includes('amount=1000000'),
+            'The URL holds the inputs', page.url(), report);
 
-        if (await page.locator('[data-converter-unavailable]').count() > 0) {
+        if (await page.locator('[data-converter-unavailable]').isVisible().catch(() => false)) {
             check(false, 'The ApiService has yen and đồng rates', 'it says "Conversion unavailable"', report);
             return;
         }
-        const amount = await textOf(page, '[data-converter-amount]');
-        check(amount.includes('₫') && /\d/.test(amount), 'The converted amount is shown in đồng', `"${amount}"`, report);
+        const amount = await page.inputValue('[data-converter-amount]');
+        check(/^\d{1,3}(,\d{3})+$/.test(amount), 'The converted amount is shown in whole đồng', `"${amount}"`, report);
         const rate = await textOf(page, '[data-converter-rate]');
         check(rate.startsWith('1 JPY =') && rate.endsWith('VND'), 'The rate is shown as "1 JPY = … VND"', `"${rate}"`, report);
         const rateDate = await textOf(page, '[data-converter-rate-date]');

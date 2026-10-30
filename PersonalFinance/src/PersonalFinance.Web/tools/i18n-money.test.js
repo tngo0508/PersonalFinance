@@ -101,6 +101,20 @@ test('formatInputAmount shows the minor units only when the amount has any, as a
     assert.strictEqual(vi.formatInputAmount(278123.45, 'USD'), '278.123,45');
 });
 
+test('formatConvertible matches the C# formatter: a supported currency with its symbol, another with its ISO code', () => {
+    assert.strictEqual(en.formatConvertible(1234.565, 'USD'), '$1,234.57');
+    assert.strictEqual(en.formatConvertible(170000000, 'VND'), '₫170,000,000');
+    assert.strictEqual(en.formatConvertible(1000000, 'JPY'), `1,000,000${NBSP}JPY`);
+    assert.strictEqual(en.formatConvertible(1234.565, 'EUR'), `1,234.57${NBSP}EUR`);
+    assert.strictEqual(vi.formatConvertible(1234.5, 'EUR'), `1.234,50${NBSP}EUR`);
+    assert.strictEqual(vi.formatConvertible(1234567.5, 'KRW'), `1.234.568${NBSP}KRW`);
+    assert.strictEqual(en.formatConvertible(-0.004, 'GBP'), `0.00${NBSP}GBP`);
+});
+
+test('formatConvertible refuses a currency that is not convertible', () => {
+    assert.throws(() => en.formatConvertible(1, 'CHF'));
+});
+
 test('the culture comes from <html data-culture>, never from navigator.language', () => {
     const fallback = load('en');
     assert.strictEqual(fallback.culture, 'en-US');
