@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.15.0] - 2026-10-30
+
+### Added
+
+- **Atelier content: Lesson 5, Keep more of it**: the Term Entries *Capital gains tax* and *Roth IRA*, each with an *In the US* note (2025 capital gains brackets, 2026 IRA limits), drafted with `/atelier-draft` from IRS pages (#531, part of #513).
+  - The Check asks what makes a gain long-term, whether a car sold at a loss lowers tax, and whether qualified Roth withdrawals are tax free. Finishing it places the Piggy bank keepsake.
+
 ## [16.14.0] - 2026-10-30
 
 ### Added

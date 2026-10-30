@@ -1,0 +1,58 @@
+{
+  "slug": "roth-ira",
+  "term": "Roth IRA",
+  "vietnameseName": "tài khoản hưu trí cá nhân Roth",
+  "alsoKnownAs": [],
+  "topic": "retirement",
+  "oneLine": "A US retirement account where qualified withdrawals are tax free.",
+  "explanation": [
+    "A Roth IRA is a US individual retirement account. IRA means individual retirement arrangement. You put in money you have already paid tax on.",
+    "You cannot deduct what you put in from your taxes, unlike a traditional IRA. But qualified withdrawals later are tax free, and you never have to take the money out.",
+    "A withdrawal is qualified when it comes at least 5 years after your first Roth IRA contribution. It must also be made at age 59½ or later, or for a few other reasons, such as disability or a first home."
+  ],
+  "whyItMatters": "Money in a Roth IRA can grow for many years, and qualified withdrawals pay no tax on that growth. There is a yearly limit on how much you can put in. People with higher incomes can put in less, or nothing at all.",
+  "workedExample": "Linh puts $5,000 into a Roth IRA at age 30. By age 60, it has grown to $20,000. Her first contribution was more than 5 years ago, and she is over 59½. So she can take out all $20,000 tax free.",
+  "inTheUs": {
+    "text": "For 2026, you can put up to $7,500 a year into all your IRAs together, or $8,600 at age 50 or older. Roth contributions phase out for single people earning $153,000 to $168,000, and for married couples filing jointly earning $242,000 to $252,000.",
+    "rulesAsOf": 2026,
+    "sources": [
+      {
+        "name": "IRS, Retirement topics: IRA contribution limits",
+        "url": "https://www.irs.gov/retirement-plans/plan-participant-employee/retirement-topics-ira-contribution-limits",
+        "accessed": "2026-10-30",
+        "taxYear": 2026
+      },
+      {
+        "name": "IRS, 401(k) limit increases to $24,500 for 2026, IRA limit increases to $7,500",
+        "url": "https://www.irs.gov/newsroom/401k-limit-increases-to-24500-for-2026-ira-limit-increases-to-7500",
+        "accessed": "2026-10-30",
+        "taxYear": 2026
+      }
+    ]
+  },
+  "relatedTerms": [
+    "capital-gains-tax",
+    "compound-interest"
+  ],
+  "sources": [
+    {
+      "name": "IRS, Publication 590-B, Distributions from individual retirement arrangements (IRAs)",
+      "url": "https://www.irs.gov/publications/p590b",
+      "accessed": "2026-10-30",
+      "taxYear": 2025
+    },
+    {
+      "name": "IRS, Retirement topics: IRA contribution limits",
+      "url": "https://www.irs.gov/retirement-plans/plan-participant-employee/retirement-topics-ira-contribution-limits",
+      "accessed": "2026-10-30",
+      "taxYear": 2026
+    }
+  ],
+  "furtherReading": [
+    {
+      "name": "FINRA, Retirement accounts",
+      "url": "https://www.finra.org/investors/investing/investment-accounts/retirement-accounts"
+    }
+  ],
+  "lastReviewed": "2026-10-30"
+}

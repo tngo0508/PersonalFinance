@@ -1,0 +1,44 @@
+{
+  "slug": "capital-gains-tax",
+  "term": "Capital gains tax",
+  "vietnameseName": "thuế lãi vốn",
+  "alsoKnownAs": [
+    "capital gain",
+    "capital loss"
+  ],
+  "topic": "tax",
+  "oneLine": "Tax on the profit you make when you sell something for more than it cost.",
+  "explanation": [
+    "A capital asset is almost anything you own for personal use or to invest, such as a home or stocks. When you sell one, the difference between its cost and the sale price is a capital gain or a capital loss.",
+    "You have a capital gain if you sell for more than the asset cost you. You have a capital loss if you sell for less.",
+    "A gain is long-term if you held the asset for more than one year. It is short-term if you held it for one year or less."
+  ],
+  "whyItMatters": "How long you hold an investment can change the tax on its profit. Long-term gains often have a lower tax rate than short-term gains. Losses can lower your tax too, but losses on personal things, such as your home or car, do not count.",
+  "workedExample": "You buy shares for $1,000 and sell them two years later for $1,500. Your capital gain is $500, and it is long-term. At a 15% rate, the tax on it is $75.",
+  "inTheUs": {
+    "text": "Short-term gains are taxed like your other income. Long-term gains are taxed at 0%, 15% or 20%, depending on your taxable income. For a single person in 2025, the 0% rate applies up to $48,350. Up to $3,000 of net losses a year can lower your other income.",
+    "rulesAsOf": 2025,
+    "sources": [
+      {
+        "name": "IRS, Topic no. 409, Capital gains and losses",
+        "url": "https://www.irs.gov/taxtopics/tc409",
+        "accessed": "2026-10-30",
+        "taxYear": 2025
+      }
+    ]
+  },
+  "relatedTerms": [
+    "stock",
+    "roth-ira"
+  ],
+  "sources": [
+    {
+      "name": "IRS, Topic no. 409, Capital gains and losses",
+      "url": "https://www.irs.gov/taxtopics/tc409",
+      "accessed": "2026-10-30",
+      "taxYear": 2025
+    }
+  ],
+  "furtherReading": [],
+  "lastReviewed": "2026-10-30"
+}

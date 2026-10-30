@@ -10,6 +10,16 @@
       "workedExample": "bbd6610c1139ca77",
       "inTheUs.text": "62e71a4385078f3d"
     },
+    "terms/capital-gains-tax": {
+      "term": "c12bd44711c365f6",
+      "oneLine": "841ee4b4ae0a408c",
+      "explanation.0": "7d4456b51b33a725",
+      "explanation.1": "5715fdc415884450",
+      "explanation.2": "6b119f52005a456d",
+      "whyItMatters": "6f2988dd499c48ef",
+      "workedExample": "8878020379e959a6",
+      "inTheUs.text": "18d7107a9152fe04"
+    },
     "terms/compound-interest": {
       "term": "bb96b3917d6eb2d1",
       "oneLine": "798ca753762b4a05",
@@ -63,6 +73,16 @@
       "explanation.2": "48178bad727d85d4",
       "whyItMatters": "3f5304d2fbb8fbdd",
       "workedExample": "e6f65d278bedbee3"
+    },
+    "terms/roth-ira": {
+      "term": "ef50ebcfb9c0991e",
+      "oneLine": "98eff763779def56",
+      "explanation.0": "2f5e6a5f562f7adf",
+      "explanation.1": "c4946952f91403fe",
+      "explanation.2": "7460c903061e5c0d",
+      "whyItMatters": "37f643ba397b5beb",
+      "workedExample": "d79a2966ca56ebdd",
+      "inTheUs.text": "7c8b4cfbe512308e"
     },
     "terms/stock": {
       "term": "d5cade7ef3191690",
@@ -129,6 +149,25 @@
       "check.2.explanation": "e3411255ee9e2f30",
       "tryIt.label": "2e64c05ce4194cf3",
       "keepsake.name": "f082ac980336071f"
+    },
+    "lessons/keep-more-of-it": {
+      "title": "8a53b073f2e53eeb",
+      "intro": "b253115e50b526b6",
+      "check.0.prompt": "c797327548a68d53",
+      "check.0.options.0": "4e776ccce004cc8e",
+      "check.0.options.1": "de5f6cf939ec3791",
+      "check.0.options.2": "2053a36350b7f617",
+      "check.0.explanation": "93ad0d4764d499fc",
+      "check.1.prompt": "f2ea29e2da845cdb",
+      "check.1.options.0": "e50ea2d7737ee25a",
+      "check.1.options.1": "2558566c5e58d4c6",
+      "check.1.explanation": "826d200198c3e32f",
+      "check.2.prompt": "e70f11ec155438f1",
+      "check.2.options.0": "e50ea2d7737ee25a",
+      "check.2.options.1": "2558566c5e58d4c6",
+      "check.2.explanation": "fc0ca7c9a9036542",
+      "tryIt.label": "2e64c05ce4194cf3",
+      "keepsake.name": "832063bb4d25ccf1"
     },
     "lessons/own-a-piece": {
       "title": "69ca0f1994eefc8b",
