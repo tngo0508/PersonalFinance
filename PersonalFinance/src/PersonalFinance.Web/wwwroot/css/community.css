@@ -708,9 +708,10 @@
 }
 
 .community-lantern.is-lit {
-  background: radial-gradient(circle at 50% 60%, #ffd98a, #e39a3b);
-  border-color: #c7802c;
-  box-shadow: 0 0 6px rgba(227, 154, 59, 0.55);
+  background: radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--gh-brass) 35%, var(--gh-paper)),
+    color-mix(in srgb, var(--gh-brass) 80%, var(--gh-clay)));
+  border-color: var(--gh-brass);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--gh-brass) 55%, transparent);
 }
 
 .community-checkin.is-kept,
