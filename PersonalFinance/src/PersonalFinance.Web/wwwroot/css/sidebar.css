@@ -395,7 +395,7 @@ body:not(:has(#sidebar)) .topbar {
 
 .theme-switcher__check {
     visibility: hidden;
-    color: var(--app-brand);
+    color: var(--app-brand-text);
 }
 
 .theme-switcher__choice[aria-checked="true"] .theme-switcher__check {

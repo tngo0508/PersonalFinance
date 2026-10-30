@@ -152,7 +152,7 @@
 .calculator-value-display {
     font-size: 1.1rem;
     font-weight: var(--app-font-weight-bold);
-    color: var(--app-accent-positive);
+    color: var(--app-brand-text);
     text-align: center;
     margin-bottom: 0.4rem;
     font-family: var(--app-font-mono);

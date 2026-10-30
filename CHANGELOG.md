@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.5.1] - 2026-10-30
+
+### Fixed
+
+- **Dark mode: the last text under 4.5:1 contrast**: the dark-mode audit of every page and component (#542) found five places where text fell below 4.5:1 contrast, and they now take their colours from the theme tokens.
+  - Bootstrap's grey outline buttons (the signed-out language switcher, the cookie banner's "Essential Only", the data source toggle, Budget Tracker's "Start Blank", Analysis's "Go to Google Drive") and its `text-secondary` badge text.
+  - Bootstrap's red text and outline buttons (the Access Denied message, Personal data's "Delete my account").
+  - The Dashboard calendar's past days, the Investment Calculator's slider values, and the theme control's check mark.
+  - The theme smoke now checks the language switcher, the cookie banner, the Dashboard's past days and its data source toggle in dark mode.
+
 ## [16.5.0] - 2026-10-30
 
 ### Changed
