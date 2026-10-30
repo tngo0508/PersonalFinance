@@ -92,6 +92,25 @@
         </div>
     }
 
+    <section class="atelier-sheet atelier-ask" aria-labelledby="askAiHeading" data-test-id="atelier-ask-ai">
+        <h2 class="atelier-ask-heading" id="askAiHeading">@L["Learning.Entry.AskAi.Heading"]</h2>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <p>@L["Learning.Entry.AskAi.Lede"]</p>
+            <button type="button" class="atelier-ask-button" data-ask-ai data-term-slug="@entry.Slug"
+                    data-term="@entry.Term" data-related="@(entry.RelatedTerms.FirstOrDefault()?.Term)"
+                    data-test-id="atelier-ask-ai-button">@L["Learning.Entry.AskAi.Button"]</button>
+        }
+        else
+        {
+            <p data-test-id="atelier-ask-ai-sign-in">
+                @L["Learning.Entry.AskAi.SignIn"]
+                <a asp-area="Identity" asp-page="/Account/Login"
+                   asp-route-returnUrl="@Url.Action("Term", "Learning", new { slug = entry.Slug })">@L["Learning.Entry.AskAi.SignInLink"]</a>
+            </p>
+        }
+    </section>
+
     <footer class="atelier-sheet atelier-entry-footer">
         @if (entry.RelatedTerms.Count > 0)
         {
@@ -139,3 +158,10 @@
         </p>
     </footer>
 </article>
+
+@section Scripts {
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <script src="~/js/learning/ask-the-ai.js" asp-append-version="true"></script>
+    }
+}

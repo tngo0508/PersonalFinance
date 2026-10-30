@@ -985,6 +985,11 @@
   "Shell.Js.Ai.Thinking": "Assistant is thinking",
   "Shell.Js.Ai.Status.Thinking": "Thinking through your question...",
   "Shell.Js.Ai.Status.UsageLimit": "AI usage limit reached. Please try again later.",
+  "Shell.Js.Ai.Term.About": "About: {term}",
+  "Shell.Js.Ai.Term.Hint": "Tap a question, or type your own about this term.",
+  "Shell.Js.Ai.Term.Starter.Simpler": "Explain {term} with a simpler example",
+  "Shell.Js.Ai.Term.Starter.Difference": "What is the difference between {term} and {related}?",
+  "Shell.Js.Ai.Term.Unreviewed": "AI answer, not reviewed",
   "Shell.Js.Ai.Status.Failed": "Couldn’t get a reply. Your question is ready to try again.",
   "Feedback.Title": "Send feedback",
   "Feedback.Intro": "Found a bug or have an idea? Tell us here. For support, data protection requests or security reports, use the {contactLink}.",
@@ -2700,5 +2705,10 @@
   "Learning.Entry.LastReviewed": "Last reviewed {date}",
   "Learning.Entry.EducationalOnly": "For learning only. This is not personal financial advice.",
   "Learning.Entry.Disclaimer": "Read the Disclaimer",
+  "Learning.Entry.AskAi.Heading": "Ask the AI",
+  "Learning.Entry.AskAi.Lede": "Still unsure? Ask the AI Assistant about this term. Its answers are not reviewed like this entry.",
+  "Learning.Entry.AskAi.Button": "Ask the AI",
+  "Learning.Entry.AskAi.SignIn": "Sign in to ask the AI Assistant about this term.",
+  "Learning.Entry.AskAi.SignInLink": "Sign in",
   "Learning.Error.LessonLocked": "This Lesson is not open yet. Finish the one before it first, then come back after midnight."
 }

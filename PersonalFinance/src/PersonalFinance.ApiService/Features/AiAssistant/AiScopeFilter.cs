@@ -129,7 +129,7 @@ internal sealed class AiScopeFilter : IAiScopeFilter
     /// Evaluates the user message and returns a canned response if the message is off-topic or a greeting.
     /// Returns null when the message is finance-related and should proceed to the LLM.
     /// </summary>
-    public AiChatResponseDto? Evaluate(string message)
+    public AiChatResponseDto? Evaluate(string message, bool aboutTerm = false)
     {
         if (string.IsNullOrWhiteSpace(message))
         {
@@ -177,7 +177,7 @@ internal sealed class AiScopeFilter : IAiScopeFilter
             return CreateRefusalResponse();
         }
 
-        return financeScore > 0 ? null : CreateRefusalResponse();
+        return financeScore > 0 || aboutTerm ? null : CreateRefusalResponse();
     }
 
     /// <summary>

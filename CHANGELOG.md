@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.7.0] - 2026-10-30
+
+### Added
+
+- **The Atelier: Ask the AI on a Term Entry**: a signed-in reader can ask the AI Assistant about the entry they are reading (#521, part of #513).
+  - The Ask the AI button opens the assistant with an "About: {Term}" chip and two one-tap starter questions: "Explain {Term} with a simpler example" and "What is the difference between {Term} and {first related term}?".
+  - The chat request carries only the Term's slug. ApiService loads the Published entry itself, adds it to the prompt as data with the plain-English rule (CEFR B1, short sentences, no idioms), and still replies in the user's Language with the financial tools available.
+  - Replies about a Term are labelled "AI answer, not reviewed". An unknown slug is ignored, and the reply is not labelled.
+  - Each question counts against the normal AI quota. A question about a Term needs no finance keyword of its own to pass the scope filter, but the injection and off-topic checks still apply.
+  - Guests see a sign-in prompt instead of the button.
+
 ## [16.5.1] - 2026-10-30
 
 ### Fixed

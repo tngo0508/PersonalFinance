@@ -364,7 +364,7 @@ public class KeyedRejectionCoverageTests
     }
 
     // The checks under test run before any dependency is used, so none is given.
-    private static AiAssistantController AiController() => new(null!, null!, null!);
+    private static AiAssistantController AiController() => new(null!, null!, null!, null!);
 
     private static SpreadsheetAnalysisController AnalysisController() =>
         new(null!, null!, NullLogger<SpreadsheetAnalysisController>.Instance, null!, null!, null!);
