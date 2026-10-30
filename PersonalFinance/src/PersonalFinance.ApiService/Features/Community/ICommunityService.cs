@@ -95,4 +95,29 @@ public interface ICommunityService
     /// Opens a Poll for voting or closes it. False when no such Poll exists.
     /// </summary>
     Task<bool> SetPollOpenAsync(int pollId, bool isOpen, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Joins a Challenge that has not ended, or refreshes the membership's time zone if the Account already joined.
+    /// Throws a 404 <c>ChallengeNotFound</c> for an unknown or ended Challenge.
+    /// </summary>
+    Task<CommunityChallengeDto> JoinChallengeAsync(string userId, int challengeId, string? timeZone,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records the Account's Check-in for the current period in its time zone, once; a second one changes nothing.
+    /// Throws <c>ChallengeNotFound</c> (404), <c>ChallengeNotJoined</c> or <c>ChallengeNotStarted</c> (409).
+    /// </summary>
+    Task<CommunityChallengeDto> CheckInAsync(string userId, int challengeId, string? timeZone,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The Admin's Challenge list: every Challenge, newest start first, with how many Accounts joined.
+    /// </summary>
+    Task<List<CommunityChallengeAdminItemDto>> ListChallengesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stores an Admin's Challenge (the controller validates it).
+    /// </summary>
+    Task<CommunityChallengeAdminItemDto> CreateChallengeAsync(CommunityChallengeRequestDto request,
+        CancellationToken cancellationToken = default);
 }

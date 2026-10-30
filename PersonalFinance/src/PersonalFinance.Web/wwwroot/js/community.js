@@ -1,7 +1,7 @@
 /* global PFI18n */
 /**
- * Guild Hall page — the Pseudonym re-roll, poll voting, Reactions, reply threads on Strategies and polls, and pinning
- * a Strategy with the no-amounts nudge. Chrome strings come from the page's <js-strings prefix="Community.Js."> island via PFI18n;
+ * Guild Hall page — the Pseudonym re-roll, poll voting, Reactions, reply threads on Strategies and polls, joining and
+ * checking in to Challenges, and pinning a Strategy with the no-amounts nudge. Chrome strings come from the page's <js-strings prefix="Community.Js."> island via PFI18n;
  * user content (Strategies, comments, Pseudonyms) is set as text and never translated.
  */
 (function () {
@@ -285,6 +285,59 @@
             hint.hidden = true;
         }
     }
+
+    // --- Challenges: join and check in ---
+
+    /**
+     * The browser's IANA time zone, which decides the viewer's local day for a Challenge; null when unknown.
+     * @returns {string|null} The zone id, e.g. "Asia/Ho_Chi_Minh".
+     */
+    function browserTimeZone () {
+        try {
+            return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+        } catch {
+            return null;
+        }
+    }
+
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-challenge-action]');
+        const card = btn ? btn.closest('[data-challenge-id]') : null;
+        if (!btn || !card || btn.disabled || btn.classList.contains('is-kept')) {
+            return;
+        }
+
+        btn.disabled = true;
+        try {
+            const response = await fetch(`/Community/${btn.dataset.challengeAction}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': window.PFUtils.getAntiForgeryToken()
+                },
+                body: JSON.stringify({ challengeId: parseInt(card.dataset.challengeId, 10), timeZone: browserTimeZone() })
+            });
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                btn.disabled = false;
+                showToast(data.error || PFI18n.t('Community.Js.ChallengeFailed'));
+                return;
+            }
+
+            const parsed = new DOMParser().parseFromString(await response.text(), 'text/html');
+            const updated = parsed.body.firstElementChild;
+            if (updated) {
+                card.replaceWith(updated);
+                const next = updated.querySelector('[data-challenge-action]');
+                if (next) {
+                    next.focus();
+                }
+            }
+        } catch {
+            btn.disabled = false;
+            showToast(PFI18n.t('Community.Js.ChallengeFailed'));
+        }
+    });
 
     // --- Pin a Strategy ---
     const pinForm = document.getElementById('pinStrategyForm');

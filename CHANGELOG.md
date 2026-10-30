@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.0.0] - 2026-10-30
+
+### Added
+
+- **Guild Hall Challenges**: Admins define time-boxed habit Challenges, and users join them and check in with one tap per day or week (#420, slice 6, the last).
+  - Each Challenge sits on the Guild Hall's rail with how many people kept it this period, as text and a row of lanterns lit in proportion. A user's own Check-ins and streak are shown only to them.
+  - Periods are the user's local days, in the time zone the browser sends when joining or checking in. A weekly Challenge's weeks start on its start date. A Challenge shows until its end date; Check-ins open on its first day.
+  - Admins write Challenges on a new Challenges page (Admin → Challenges). A Challenge is about behavior: one whose title or habit names a money amount is refused with `Community.Validation.ChallengeAmount`.
+  - New signed-in endpoints `POST api/community/challenges/{id}/join` and `POST api/community/challenges/{id}/check-in`, and Admin-only `GET` and `POST api/community/challenges`. An unknown or ended Challenge gets 404; a Check-in before joining or before the start gets 409.
+
+### Changed
+
+- **Schema migration** `AddGuildHallChallenges`: adds `CommunityChallenges` (shared, no owner), `CommunityChallengeMembers` (one live row per Account and Challenge, with its time zone) and `CommunityCheckIns` (one live row per Account, Challenge and period).
+- **Data Export**: the Guild Hall section lists the Challenges the Account joined, each with the periods it checked in for.
+- **Purge**: memberships and Check-ins are erased with the Account's other rows.
+- **Time zones**: the browser time-zone check the Journey uses moved to `ApiService/Infrastructure/BrowserTimeZone`, shared with Challenges; behavior is unchanged.
+
 ## [15.1.0] - 2026-10-29
 
 ### Added

@@ -300,6 +300,49 @@ public class AdminController : Controller
     }
 
     /// <summary>
+    /// Displays every Guild Hall Challenge with the form for writing a new one. A failed load shows the Unavailable
+    /// State, never an empty list.
+    /// </summary>
+    [HttpGet]
+    public Task<IActionResult> Challenges(CancellationToken cancellationToken = default) =>
+        ChallengesViewAsync(new AdminChallengeForm(), cancellationToken);
+
+    /// <summary>
+    /// Writes a new Challenge. A rejected form is shown again as typed, with the reason.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateChallenge(AdminChallengeForm form, CancellationToken cancellationToken = default)
+    {
+        if (!ModelState.IsValid)
+        {
+            return await ChallengesViewAsync(form, cancellationToken);
+        }
+
+        try
+        {
+            await _communityApi.CreateChallengeAsync(new CommunityChallengeRequestDto
+            {
+                Title = form.Title,
+                Habit = form.Habit,
+                Period = form.Period,
+                StartDate = form.StartDate!.Value,
+                EndDate = form.EndDate!.Value,
+            }, cancellationToken);
+            TempData["AdminMessage"] = "Challenge saved.";
+            return RedirectToAction(nameof(Challenges));
+        }
+        catch (Exception ex) when ((ex is ApiException or HttpRequestException or TaskCanceledException)
+                                   && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to write a Challenge.");
+            ModelState.AddModelError(string.Empty,
+                ApiErrorMessages.ForUser(_localizer, ex, "The Challenge could not be saved. Try again later."));
+            return await ChallengesViewAsync(form, cancellationToken);
+        }
+    }
+
+    /// <summary>
     /// Assigns a role to an account.
     /// </summary>
     [HttpPost]
@@ -359,6 +402,21 @@ public class AdminController : Controller
         {
             _logger.LogWarning(ex, "Failed to load the Poll list.");
             return this.UnavailableView("Polls", "We couldn't load the Polls", "Admin", nameof(Polls));
+        }
+    }
+
+    private async Task<IActionResult> ChallengesViewAsync(AdminChallengeForm form, CancellationToken cancellationToken)
+    {
+        try
+        {
+            List<CommunityChallengeAdminItemDto> items = await _communityApi.ListChallengesAsync(cancellationToken);
+            return View(nameof(Challenges), new AdminChallengeListViewModel { Items = items, Form = form });
+        }
+        catch (Exception ex) when ((ex is ApiException or HttpRequestException or TaskCanceledException)
+                                   && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to load the Challenge list.");
+            return this.UnavailableView("Challenges", "We couldn't load the Challenges", "Admin", nameof(Challenges));
         }
     }
 

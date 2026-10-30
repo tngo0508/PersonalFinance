@@ -1,0 +1,99 @@
+@using PersonalFinance.Shared.Constants
+@using PersonalFinance.Shared.Enums
+@model AdminChallengeListViewModel
+@{
+    ViewData["Title"] = "Challenges";
+}
+
+<div class="py-3">
+    <header class="mb-4">
+        <p class="text-muted text-uppercase small mb-1"><a asp-action="Index">Admin</a></p>
+        <h1 class="h3 mb-1">Challenges</h1>
+        <p class="text-muted mb-0">
+            Guild Hall Challenges, newest start first. Users see one from the moment it is saved until its end date, and
+            check in once per day or week; their Check-ins and streaks stay private. Name a habit, never an amount of
+            money: a Challenge that mentions one is refused.
+        </p>
+    </header>
+
+    @if (TempData["AdminMessage"] is string adminMessage)
+    {
+        <div class="alert alert-success" role="status">@adminMessage</div>
+    }
+    @if (TempData["AdminError"] is string adminError)
+    {
+        <div class="alert alert-danger" role="alert">@adminError</div>
+    }
+
+    <section class="card mb-4" aria-labelledby="newChallengeHeading">
+        <div class="card-body">
+            <h2 class="h5" id="newChallengeHeading">Write a Challenge</h2>
+            <form asp-action="CreateChallenge" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-2" role="alert"></div>
+                <div class="mb-3">
+                    <label asp-for="Form.Title" class="form-label">Title</label>
+                    <input asp-for="Form.Title" class="form-control" maxlength="@CommunityChallengeLimits.TitleMaxLength"
+                           placeholder="Cook at home" />
+                    <span asp-validation-for="Form.Title" class="text-danger small"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Form.Habit" class="form-label">Habit</label>
+                    <textarea asp-for="Form.Habit" class="form-control" rows="2"
+                              maxlength="@CommunityChallengeLimits.HabitMaxLength"
+                              placeholder="Cook dinner at home instead of ordering in."></textarea>
+                    <span asp-validation-for="Form.Habit" class="text-danger small"></span>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-sm-4">
+                        <label asp-for="Form.Period" class="form-label">Check in</label>
+                        <select asp-for="Form.Period" class="form-select"
+                                asp-items="Html.GetEnumSelectList<CommunityChallengePeriod>()"></select>
+                    </div>
+                    <div class="col-sm-4">
+                        <label asp-for="Form.StartDate" class="form-label">Starts</label>
+                        <input asp-for="Form.StartDate" type="date" class="form-control" />
+                        <span asp-validation-for="Form.StartDate" class="text-danger small"></span>
+                    </div>
+                    <div class="col-sm-4">
+                        <label asp-for="Form.EndDate" class="form-label">Ends</label>
+                        <input asp-for="Form.EndDate" type="date" class="form-control" />
+                        <span asp-validation-for="Form.EndDate" class="text-danger small"></span>
+                    </div>
+                </div>
+                <p class="text-muted small">
+                    Days are each user's own local days. A weekly Challenge's weeks start on its start date. At most
+                    @CommunityChallengeLimits.MaxDays days.
+                </p>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </form>
+        </div>
+    </section>
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-muted">No Challenges yet.</div>
+        </div>
+    }
+    else
+    {
+        <ul class="list-group">
+            @foreach (var item in Model.Items)
+            {
+                <li class="list-group-item py-3" data-challenge-id="@item.Id">
+                    <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+                        <span class="small">
+                            <span class="badge text-bg-secondary">@item.Period</span>
+                            <span class="text-muted ms-1">
+                                @item.StartDate.ToString("yyyy-MM-dd") to @item.EndDate.ToString("yyyy-MM-dd")
+                            </span>
+                        </span>
+                        <span class="text-muted small">@item.MemberCount @(item.MemberCount == 1 ? "member" : "members")</span>
+                    </div>
+                    <p class="fw-semibold mb-1 text-break">@item.Title</p>
+                    <p class="text-muted small mb-0 text-break">@item.Habit</p>
+                </li>
+            }
+        </ul>
+    }
+</div>

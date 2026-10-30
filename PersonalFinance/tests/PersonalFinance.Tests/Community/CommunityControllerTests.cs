@@ -160,11 +160,58 @@ public class CommunityControllerTests
         Assert.Empty(proxy.Calls);
     }
 
+    [Fact]
+    public async Task CheckIn_SendsTheBrowsersTimeZone_AndAnswersWithTheCardAsItNowReads()
+    {
+        (ICommunityApi api, ApiProxy<ICommunityApi> proxy) = ApiProxy.Create<ICommunityApi>();
+        proxy.Returns(nameof(ICommunityApi.CheckInAsync), new CommunityChallengeDto
+        {
+            Id = 5,
+            Title = "Cook at home",
+            Period = CommunityChallengePeriod.Daily,
+            CurrentPeriodStart = new DateOnly(2026, 10, 30),
+            IsMember = true,
+            CheckedInThisPeriod = true,
+            Streak = 4,
+            CheckedInCount = 7,
+            MemberCount = 9,
+        });
+
+        IActionResult result = await CreateController(api).CheckIn(
+            new CommunityController.ChallengeRequest { ChallengeId = 5, TimeZone = "Asia/Ho_Chi_Minh" });
+
+        PartialViewResult partial = Assert.IsType<PartialViewResult>(result);
+        Assert.Equal("_Challenge", partial.ViewName);
+        CommunityChallenge card = Assert.IsType<CommunityChallenge>(partial.Model);
+        Assert.True(card.IsRunning);
+        Assert.Equal(4, card.Streak);
+        Assert.Equal(5, proxy.Arguments.Single()[0]);
+        Assert.Equal("Asia/Ho_Chi_Minh",
+            Assert.IsType<CommunityChallengeActionRequestDto>(proxy.Arguments.Single()[1]).TimeZone);
+    }
+
+    [Theory]
+    [InlineData(0, 0, 0, 0)]
+    [InlineData(9, 0, 9, 0)]
+    [InlineData(9, 7, 9, 7)]
+    [InlineData(300, 1, 30, 1)]
+    [InlineData(300, 150, 30, 15)]
+    [InlineData(300, 300, 30, 30)]
+    public void Lanterns_ShowOnePerMemberUpToThirty_LitInProportion(int members, int checkedIn, int lanterns, int lit)
+    {
+        var card = new CommunityChallenge { MemberCount = members, CheckedInCount = checkedIn };
+
+        Assert.Equal(lanterns, card.Lanterns);
+        Assert.Equal(lit, card.LitLanterns);
+    }
+
     [Theory]
     [InlineData(nameof(CommunityController.SubmitStrategy))]
     [InlineData(nameof(CommunityController.AddComment))]
     [InlineData(nameof(CommunityController.React))]
     [InlineData(nameof(CommunityController.Vote))]
+    [InlineData(nameof(CommunityController.JoinChallenge))]
+    [InlineData(nameof(CommunityController.CheckIn))]
     public void PostingActions_ValidateTheAntiforgeryToken(string action)
     {
         Assert.NotNull(typeof(CommunityController).GetMethod(action)!

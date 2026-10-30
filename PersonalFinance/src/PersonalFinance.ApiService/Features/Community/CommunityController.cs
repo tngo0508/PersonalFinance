@@ -14,7 +14,7 @@ namespace PersonalFinance.ApiService.Features.Community;
 /// RESTful API controller for the Guild Hall (the Community Feature): the Pseudonym, polls, Comments, Strategies and
 /// Reactions. All endpoints are scoped to the current user identified by the authenticated Account (see
 /// XUserIdAuthenticationHandler); the author of a post is always that Account. Reviewing Strategies and moderating
-/// Comments and writing, opening and closing Polls require the Admin Policy.
+/// Comments, writing, opening and closing Polls, and writing Challenges require the Admin Policy.
 /// </summary>
 [Authorize]
 [ApiController]
@@ -27,18 +27,21 @@ public class CommunityController : ControllerBase
     private readonly IValidator<CommunityStrategyReviewRequestDto> _reviewValidator;
     private readonly IValidator<CommunityReactionRequestDto> _reactionValidator;
     private readonly IValidator<CommunityPollRequestDto> _pollValidator;
+    private readonly IValidator<CommunityChallengeRequestDto> _challengeValidator;
 
     public CommunityController(ICommunityService communityService,
         IValidator<CommunityStrategyRequestDto> strategyValidator,
         IValidator<CommunityStrategyReviewRequestDto> reviewValidator,
         IValidator<CommunityReactionRequestDto> reactionValidator,
-        IValidator<CommunityPollRequestDto> pollValidator)
+        IValidator<CommunityPollRequestDto> pollValidator,
+        IValidator<CommunityChallengeRequestDto> challengeValidator)
     {
         _communityService = communityService;
         _strategyValidator = strategyValidator;
         _reviewValidator = reviewValidator;
         _reactionValidator = reactionValidator;
         _pollValidator = pollValidator;
+        _challengeValidator = challengeValidator;
     }
 
     /// <summary>
@@ -260,5 +263,70 @@ public class CommunityController : ControllerBase
         return await _communityService.SetPollOpenAsync(pollId, request.IsOpen, cancellationToken)
             ? NoContent()
             : NotFound();
+    }
+
+    /// <summary>
+    /// Joins a Challenge under the browser's time zone. Unknown or ended Challenges return 404.
+    /// </summary>
+    [HttpPost("challenges/{challengeId:int}/join")]
+    [ProducesResponseType(typeof(CommunityChallengeDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CommunityChallengeDto>> JoinChallenge(int challengeId,
+        [FromBody] CommunityChallengeActionRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        return Ok(await _communityService.JoinChallengeAsync(User.GetUserId(), challengeId, request.TimeZone,
+            cancellationToken));
+    }
+
+    /// <summary>
+    /// Checks in to a joined Challenge for the current period. Unknown or ended Challenges return 404; one not joined
+    /// or not yet started returns 409.
+    /// </summary>
+    [HttpPost("challenges/{challengeId:int}/check-in")]
+    [ProducesResponseType(typeof(CommunityChallengeDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<CommunityChallengeDto>> CheckIn(int challengeId,
+        [FromBody] CommunityChallengeActionRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        return Ok(await _communityService.CheckInAsync(User.GetUserId(), challengeId, request.TimeZone,
+            cancellationToken));
+    }
+
+    /// <summary>
+    /// Lists every Challenge for the Admin, newest start first.
+    /// </summary>
+    [HttpGet("challenges")]
+    [Authorize(Policy = AppPolicies.RequireAdmin)]
+    [ProducesResponseType(typeof(List<CommunityChallengeAdminItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<List<CommunityChallengeAdminItemDto>>> ListChallenges(
+        CancellationToken cancellationToken = default)
+    {
+        return Ok(await _communityService.ListChallengesAsync(cancellationToken));
+    }
+
+    /// <summary>
+    /// Writes a new Challenge.
+    /// </summary>
+    [HttpPost("challenges")]
+    [Authorize(Policy = AppPolicies.RequireAdmin)]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<CommunityChallengeAdminItemDto>> CreateChallenge(
+        [FromBody] CommunityChallengeRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        ValidationResult validation = await _challengeValidator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
+        {
+            return BadRequest(validation.ToApiError());
+        }
+
+        CommunityChallengeAdminItemDto challenge = await _communityService.CreateChallengeAsync(request, cancellationToken);
+        return CreatedAtAction(nameof(ListChallenges), challenge);
     }
 }

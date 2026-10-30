@@ -667,6 +667,58 @@
   cursor: progress;
 }
 
+/* --- Challenges: a rail card each, with a row of lanterns lit for the share that kept it this period. The streak
+   line is the viewer's own and says so. --- */
+.community-challenge {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.community-challenge .community-eyebrow,
+.community-challenge .community-rail-title {
+  margin-bottom: 0;
+}
+
+.community-challenge-habit,
+.community-challenge-dates,
+.community-challenge-count,
+.community-challenge-joined,
+.community-private {
+  margin: 0;
+}
+
+.community-challenge-dates,
+.community-private {
+  font-size: var(--app-font-size-small);
+  color: var(--gh-ink-soft);
+}
+
+.community-lanterns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.community-lantern {
+  width: 12px;
+  height: 16px;
+  border-radius: 6px 6px 4px 4px;
+  background: var(--gh-linen);
+  border: 1px solid var(--gh-rule);
+}
+
+.community-lantern.is-lit {
+  background: radial-gradient(circle at 50% 60%, #ffd98a, #e39a3b);
+  border-color: #c7802c;
+  box-shadow: 0 0 6px rgba(227, 154, 59, 0.55);
+}
+
+.community-checkin.is-kept,
+.community-checkin.is-kept:hover {
+  background: var(--gh-moss);
+  cursor: default;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .community-note:nth-child(odd),
   .community-note:nth-child(even) {

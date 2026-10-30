@@ -3,8 +3,8 @@ using PersonalFinance.Shared.Enums;
 namespace PersonalFinance.Web.Models.Community;
 
 /// <summary>
-/// View model for the Guild Hall page: the viewer's Pseudonym, polls and the board of Strategies, each with its
-/// Comments.
+/// View model for the Guild Hall page: the viewer's Pseudonym, polls, the board of Strategies, each with its
+/// Comments, and the Challenges.
 /// </summary>
 public sealed class CommunityViewModel
 {
@@ -27,6 +27,11 @@ public sealed class CommunityViewModel
     /// Gets or sets the category the board is filtered to, or null for every category.
     /// </summary>
     public string? Category { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Challenges running or about to start, running ones first.
+    /// </summary>
+    public List<CommunityChallenge> Challenges { get; set; } = new();
 }
 
 /// <summary>
@@ -221,4 +226,87 @@ public sealed class CommunityComment
     /// Gets or sets whether the viewer reacted Cheering you on.
     /// </summary>
     public bool CheeringByViewer { get; set; }
+}
+
+/// <summary>
+/// A Challenge on the Guild Hall's rail, running or about to start. The streak and whether the viewer checked in are
+/// the viewer's own; of others it shows only how many joined and how many kept it this period.
+/// </summary>
+public sealed class CommunityChallenge
+{
+    /// <summary>The most lanterns the card draws; a bigger group lights them in proportion.</summary>
+    public const int MaxLanterns = 30;
+
+    /// <summary>
+    /// Gets or sets the unique identifier.
+    /// </summary>
+    public int Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets its short name.
+    /// </summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the habit it asks for.
+    /// </summary>
+    public string Habit { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets how often it asks for a Check-in.
+    /// </summary>
+    public CommunityChallengePeriod Period { get; set; }
+
+    /// <summary>
+    /// Gets or sets its first day.
+    /// </summary>
+    public DateOnly StartDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets its last day.
+    /// </summary>
+    public DateOnly EndDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether it has started in the viewer's time zone.
+    /// </summary>
+    public bool IsRunning { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the viewer joined it.
+    /// </summary>
+    public bool IsMember { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the viewer checked in for the current period.
+    /// </summary>
+    public bool CheckedInThisPeriod { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many periods in a row the viewer kept; only the viewer sees it.
+    /// </summary>
+    public int Streak { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many Accounts checked in for the current period.
+    /// </summary>
+    public int CheckedInCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many Accounts joined it.
+    /// </summary>
+    public int MemberCount { get; set; }
+
+    /// <summary>
+    /// How many lanterns the card draws: one per member, up to <see cref="MaxLanterns"/>.
+    /// </summary>
+    public int Lanterns => Math.Min(MemberCount, MaxLanterns);
+
+    /// <summary>
+    /// How many of the <see cref="Lanterns"/> are lit: the share that checked in this period, at least one when anyone
+    /// did.
+    /// </summary>
+    public int LitLanterns => MemberCount == 0 || CheckedInCount == 0
+        ? 0
+        : Math.Clamp((int)Math.Round((double)CheckedInCount * Lanterns / MemberCount), 1, Lanterns);
 }

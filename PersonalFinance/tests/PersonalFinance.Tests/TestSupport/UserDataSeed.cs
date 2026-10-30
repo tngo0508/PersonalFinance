@@ -53,6 +53,15 @@ public static class UserDataSeed
         var poll = new CommunityPoll { PollCode = $"{marker}-poll", Question = $"{marker} question?" };
         var option = new CommunityPollOption { Poll = poll, Text = "Yes" };
         db.CommunityPollVotes.Add(new CommunityPollVote { UserId = userId, Poll = poll, Option = option });
+        var challenge = new CommunityChallenge
+        {
+            Title = $"{marker} challenge", Habit = "Cook at home", Period = CommunityChallengePeriod.Daily,
+            StartDate = new DateOnly(2026, 3, 1), EndDate = new DateOnly(2026, 3, 31),
+        };
+        db.CommunityChallengeMembers.Add(new CommunityChallengeMember
+        { UserId = userId, Challenge = challenge, TimeZoneId = "Asia/Ho_Chi_Minh" });
+        db.CommunityCheckIns.Add(new CommunityCheckIn
+        { UserId = userId, Challenge = challenge, PeriodStart = new DateOnly(2026, 3, 2) });
 
         db.Feedback.Add(new FeedbackEntity { UserId = userId, Category = FeedbackCategory.Idea, Message = $"{marker} idea" });
         db.Notifications.Add(new Notification { UserId = userId, Title = $"{marker} notice", Message = "m" });

@@ -72,6 +72,21 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<CommunityPseudonym> CommunityPseudonyms => Set<CommunityPseudonym>();
 
     /// <summary>
+    /// Guild Hall Challenges (written by Admins, shared) table set.
+    /// </summary>
+    public DbSet<CommunityChallenge> CommunityChallenges => Set<CommunityChallenge>();
+
+    /// <summary>
+    /// Guild Hall Challenge memberships (user -> Challenge) table set.
+    /// </summary>
+    public DbSet<CommunityChallengeMember> CommunityChallengeMembers => Set<CommunityChallengeMember>();
+
+    /// <summary>
+    /// Guild Hall Check-ins (user -> Challenge period, private) table set.
+    /// </summary>
+    public DbSet<CommunityCheckIn> CommunityCheckIns => Set<CommunityCheckIn>();
+
+    /// <summary>
     /// User budget allocations table set.
     /// </summary>
     public DbSet<UserBudgetAllocation> UserBudgetAllocations => Set<UserBudgetAllocation>();
@@ -200,6 +215,8 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         builder.Entity<CommunityReaction>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<CommunityPollVote>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<CommunityPseudonym>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<CommunityChallengeMember>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<CommunityCheckIn>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Notification>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<BudgetCategory>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<MonthlyBudgetPlan>().HasQueryFilter(e => !e.IsDeleted);
@@ -774,6 +791,52 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.Name).IsRequired().HasMaxLength(60);
             entity.HasIndex(e => e.UserId).IsUnique();
             entity.HasIndex(e => e.Name).IsUnique();
+        });
+
+        // Configure CommunityChallenge entity — shared data written by Admins, never deleted; the Guild Hall reads the
+        // ones not yet ended
+        builder.Entity<CommunityChallenge>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(CommunityChallengeLimits.TitleMaxLength);
+            entity.Property(e => e.Habit).IsRequired().HasMaxLength(CommunityChallengeLimits.HabitMaxLength);
+            entity.Property(e => e.Period).IsRequired();
+            entity.HasIndex(e => e.EndDate);
+        });
+
+        // Configure CommunityChallengeMember entity — one live membership per Account and Challenge
+        builder.Entity<CommunityChallengeMember>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.TimeZoneId).IsRequired()
+                .HasMaxLength(CommunityChallengeLimits.TimeZoneIdMaxLength).IsUnicode(false);
+            entity.HasIndex(e => new { e.UserId, e.ChallengeId })
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
+            entity.HasIndex(e => e.ChallengeId);
+
+            entity.HasOne(e => e.Challenge)
+                .WithMany()
+                .HasForeignKey(e => e.ChallengeId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure CommunityCheckIn entity — one live Check-in per Account, Challenge and period; the Guild Hall
+        // counts a period's Check-ins by Challenge
+        builder.Entity<CommunityCheckIn>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.HasIndex(e => new { e.UserId, e.ChallengeId, e.PeriodStart })
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
+            entity.HasIndex(e => new { e.ChallengeId, e.PeriodStart });
+
+            entity.HasOne(e => e.Challenge)
+                .WithMany()
+                .HasForeignKey(e => e.ChallengeId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 

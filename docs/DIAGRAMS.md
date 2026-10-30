@@ -209,12 +209,12 @@ JavaScript paths are under `Web/wwwroot/js/`.
 | Analysis | `SpreadsheetAnalysisController` (`api/SpreadsheetAnalysis`) | `ISpreadsheetAnalysisService`, `IGoogleSheetRemovalService` | `SpreadsheetBudgetSnapshot`, `SpreadsheetTransactionRecord` | `ISpreadsheetAnalysisApi` | `Analysis` (also injects `IBudgetTrackerApi`) | `analysis/` | Depends on GoogleDrive's `ISpreadsheetReader`; see [13](#13-google-drive-and-spreadsheet-analysis) |
 | BudgetPlanner | `BudgetController` (`api/Budget`) | `IBudgetService` | `UserBudgetAllocation` | `IBudgetPlannerApi` | `Budget` | `budget/` | Raises Notifications; reads `IBudgetDataProvider` |
 | BudgetTracker | `BudgetTrackerController` (`api/budget-tracker`) | `IMonthlyBudgetService`, `IBudgetTrackerRemovalService` | `BudgetCategory`, `BudgetTransaction`, `MonthlyBudgetPlan`, `MonthlyBudgetLine` | `IBudgetTrackerApi` | `BudgetTracker` | `budget-tracker/`, `core/data-source-toggle.js` | Six Validators; the controller also injects `IBudgetDataSourceService` |
-| Community | `CommunityController` (`api/Community`; Strategy review, Comment moderation and Polls RequireAdmin) | `ICommunityService` | `CommunityPseudonym`, `CommunityStrategy`, `CommunityComment`, `CommunityReaction`, `CommunityPoll`, `CommunityPollOption`, `CommunityPollVote` | `ICommunityApi` | `Community`; Strategy review, Comment moderation and Polls in `Admin` | `community.js` | Four Validators (pinning and reviewing a Strategy, toggling a Reaction, writing a Poll); the Service throws keyed `ApiErrorException`s for votes, comments and Reaction targets. `MoneyAmountRule` (Shared) is the no-amounts rule both the form's nudge and the Admin queue's flag use |
+| Community | `CommunityController` (`api/Community`; Strategy review, Comment moderation, Polls and writing Challenges RequireAdmin) | `ICommunityService` | `CommunityPseudonym`, `CommunityStrategy`, `CommunityComment`, `CommunityReaction`, `CommunityPoll`, `CommunityPollOption`, `CommunityPollVote`, `CommunityChallenge`, `CommunityChallengeMember`, `CommunityCheckIn` | `ICommunityApi` | `Community`; Strategy review, Comment moderation, Polls and Challenges in `Admin` | `community.js` | Five Validators (pinning and reviewing a Strategy, toggling a Reaction, writing a Poll or a Challenge); the Service throws keyed `ApiErrorException`s for votes, comments and Reaction targets. `MoneyAmountRule` (Shared) is the no-amounts rule both the form's nudge and the Admin queue's flag use |
 | CurrencyConverter | `CurrencyConverterController` (`api/CurrencyConverter`) | `ICurrencyConversionService` | none (reads `ExchangeRate` only through Infrastructure's `ICurrencyConverter`) | `ICurrencyConverterApi` | `CurrencyConverter` (plain GET form) | none | Stateless calculator: no Entity, no rate lookup of its own, no rate limit; see [16](#16-localization) |
 | Dashboard | `DashboardController` (`api/Dashboard`) | `IDashboardService` | none (reads `NetWorthParameters`, `SavingsGoal`, `UserBudgetAllocation`, `GoogleDriveConnection`) | `IDashboardApi` | `Dashboard` | `dashboard/` | Read-only aggregator over four Features plus `IBudgetDataProvider` |
 | Feedback | `FeedbackController` (`api/Feedback`) | `IFeedbackService` | `Feedback` | `IFeedbackApi` | `Feedback`; inbox in `Admin` | none | The canonical example ([2](#2-anatomy-of-a-feature)) |
 | GoogleDrive | `GoogleDriveController` (`api/GoogleDrive`) | `IDriveConnectionService`, `ISpreadsheetReader`, `IGoogleDriveFileSource` (internal) | `GoogleDriveConnection`, `GoogleDriveCachedFile` | `IGoogleDriveApi` | `GoogleDrive` | `google-drive/` | Typed `HttpClient`s to Google Drive; a 1,450-line static parser; see [13](#13-google-drive-and-spreadsheet-analysis) |
-| Learning | `LearningController` (`api/learning`, `[AllowAnonymous]`), `JourneyController` (`api/learning/journey`) | `ILearningContent`, `ILearningLibraryService`, `IJourneyService` | `LessonCompletion`, `ReviewCardState` (writes `UserPreference.ShowJourneyOnDashboard`; reads its JSON content folder, `Features/Learning/Content/`, at startup) | `ILearningApi` | `Learning` (public; also serves `/sitemap.xml` and `/robots.txt`) | `learning/` | Content is code (ADR 0019): Term Entries and Lessons are files loaded into memory, Vietnamese falling back to English per field; xUnit content checks (`tests/.../Learning/`) guard the files. Anonymous reads; the nav's "Learning" entry asks `ILearningLibraryStatus` (cached) and stays hidden while the Library is empty. The Journey's open Lesson is computed on read from the finishes and their time zones (`Domain/JourneyClock`), never stored; the road, Lesson and Review pages come in later slices of #513 |
+| Learning | `LearningController` (`api/learning`, `[AllowAnonymous]`), `JourneyController` (`api/learning/journey`) | `ILearningContent`, `ILearningLibraryService`, `IJourneyService` | `LessonCompletion`, `ReviewCardState` (writes `UserPreference.ShowJourneyOnDashboard`; reads its JSON content folder, `Features/Learning/Content/`, at startup) | `ILearningApi` | `Learning` (public; also serves `/sitemap.xml` and `/robots.txt`) | `learning/` | Content is code (ADR 0019): Term Entries and Lessons are files loaded into memory, Vietnamese falling back to English per field; xUnit content checks (`tests/.../Learning/`) guard the files. Anonymous reads; the nav's "Learning" entry asks `ILearningLibraryStatus` (cached) and stays hidden while the Library is empty. The Journey's open Lesson is computed on read from the finishes and their time zones (`Domain/JourneyClock`, on Infrastructure's `BrowserTimeZone`), never stored; the road, Lesson and Review pages come in later slices of #513 |
 | NetWorth | `NetWorthController` (`api/NetWorth`) | `INetWorthParametersService` | `NetWorthParameters` | `INetWorthApi` | `Networth` | `networth/` | `calculate` is pure: a static Validator and the static `NetWorthProjectionService`, no Service, no database |
 | Research | `ResearchController` (`api/Research`), `CompaniesController` (`api/Research/companies`) | `IResearchService`, `ICompanyProfileService`, ten `IResearchDatasetRefresher` (one fills the exchange rates), `ResearchSnapshotStore` | `ResearchSnapshot`, `ExchangeRate` (not user-owned) | `IResearchApi` | `Research` | `research/` (12 files) | The largest Feature: five external adapters, `Domain/` with 56 pure types, a refresh job; see [10](#10-research-pipeline) |
 | SavingsGoals | `SavingsGoalsController` (`api/SavingsGoals`, Contributions under `{goalId}/contributions`) | `ISavingsGoalService` | `SavingsGoal`, `Contribution` | `ISavingsGoalsApi` | `SavingsGoals` | `savingsgoals/` | Validators for a new goal, a Contribution and a balance correction; the saved amount is the Contribution total, cached on the goal in the same save; each goal's Pace is worked out on read (`SavingsGoalPace`); raises each milestone Notification once |
@@ -241,7 +241,7 @@ Reading key:
   rows carry `UserId = "deleted-account"` (`Shared/Constants/DeletedAccount.cs`).
 - **Soft delete.** A global query filter `!IsDeleted` hides deleted rows of every `AuditableEntity` except
   `AiUsageRecord`, which is never soft-deleted. `CommunityPoll`, `CommunityPollOption`, `GoogleDriveCachedFile`,
-  `ResearchSnapshot` and `DeletionRequest` are not auditable and are hard-deleted (or kept) as noted.
+  `CommunityChallenge`, `ResearchSnapshot` and `DeletionRequest` are not auditable and are hard-deleted (or kept) as noted.
 - Relationship labels give the FK column and the configured delete behaviour. Money columns are `decimal`; the
   precision is in the comment.
 - **One currency per money-bearing row** ([ADR 0016](adr/0016-per-amount-currency-with-reporting-currency.md)): its
@@ -471,6 +471,27 @@ erDiagram
         int OptionId FK "nullable"
         DateTime CreatedAtUtc
     }
+    CommunityChallenge {
+        int Id PK
+        string Title "max 120"
+        string Habit "max 1000; no money amount"
+        int Period "Daily, Weekly"
+        DateOnly StartDate
+        DateOnly EndDate "indexed"
+        DateTime CreatedAtUtc
+    }
+    CommunityChallengeMember {
+        int Id PK
+        string UserId "unique with ChallengeId among live rows"
+        int ChallengeId FK "indexed"
+        string TimeZoneId "IANA, varchar 64"
+    }
+    CommunityCheckIn {
+        int Id PK
+        string UserId "unique with ChallengeId and PeriodStart among live rows"
+        int ChallengeId FK "indexed with PeriodStart"
+        DateOnly PeriodStart "the local day, or the week's first day"
+    }
 
     CommunityStrategy ||--o{ CommunityComment : "StrategyId, SetNull"
     CommunityStrategy ||--o{ CommunityReaction : "StrategyId, NoAction"
@@ -479,9 +500,12 @@ erDiagram
     CommunityPoll ||--o{ CommunityPollVote : "PollId, SetNull"
     CommunityPoll ||--o{ CommunityComment : "PollId, SetNull"
     CommunityPollOption ||--o{ CommunityPollVote : "OptionId, SetNull"
+    CommunityChallenge ||--o{ CommunityChallengeMember : "ChallengeId, Restrict"
+    CommunityChallenge ||--o{ CommunityCheckIn : "ChallengeId, Restrict"
 ```
 
-`CommunityPoll` and `CommunityPollOption` are shared data with no `UserId`, no soft delete, untouched by the Purge.
+`CommunityPoll`, `CommunityPollOption` and `CommunityChallenge` are shared data with no `UserId`, no soft delete,
+untouched by the Purge.
 Nothing is seeded: the Community starts empty (#422). Reaction counts are counted from the Reaction rows; no table
 stores them, and only Strategies show them: a Comment shows only whether the viewer reacted. Taking a Reaction back
 soft-deletes it, so its unique indexes skip deleted rows. Comments are shown at once; an Admin hides one (or shows it
@@ -494,7 +518,11 @@ Strategies and comments survive the Purge under the placeholder id ([ADR
 0005](adr/0005-account-purge-hard-deletes-after-grace-period.md)); the Pseudonym row is deleted with the Account's other
 rows, so they are shown as written by "Former member". Pending and Rejected Strategies are erased: nobody else has seen
 them. The Account's own Reactions are erased, and so are other people's Reactions on anything the Purge erases; the
-Reaction foreign keys do not cascade, so the Purge removes those first.
+Reaction foreign keys do not cascade, so the Purge removes those first. A `CommunityCheckIn` is private: only its own
+Account reads it back, for its streak (`ChallengeCalendar`); the Guild Hall shows everyone else only how many joined
+and how many checked in this period. Periods are local days in the time zone the browser last sent, stored on the
+`CommunityChallengeMember` (`ApiService/Infrastructure/BrowserTimeZone`, shared with the Journey). Memberships and
+Check-ins are erased with the Account's other rows.
 
 ### 4.4 Account, consent and cross-cutting records
 

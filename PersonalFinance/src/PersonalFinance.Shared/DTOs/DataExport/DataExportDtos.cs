@@ -356,7 +356,9 @@ public class DataExportPriorityWalkDto
     public DateTime CreatedAtUtc { get; set; }
 }
 
-/// <summary>What the Account wrote and reacted to in the Guild Hall (the Community Feature), and the name it did it under.</summary>
+/// <summary>
+/// What the Account wrote, reacted to and joined in the Guild Hall (the Community Feature), and the name it did it under.
+/// </summary>
 public class DataExportCommunityDto
 {
     /// <summary>The Account's Pseudonym; null if it has never opened the Guild Hall.</summary>
@@ -371,6 +373,32 @@ public class DataExportCommunityDto
     public List<DataExportReactionDto> Reactions { get; set; } = [];
 
     public List<DataExportPollVoteDto> PollVotes { get; set; } = [];
+
+    /// <summary>The Challenges the Account joined, oldest membership first, each with its own Check-ins.</summary>
+    public List<DataExportChallengeDto> Challenges { get; set; } = [];
+}
+
+/// <summary>A Challenge the Account joined and the periods it checked in for.</summary>
+public class DataExportChallengeDto
+{
+    public string Title { get; set; } = string.Empty;
+
+    public string Habit { get; set; } = string.Empty;
+
+    /// <summary>Daily or Weekly.</summary>
+    public string Period { get; set; } = string.Empty;
+
+    public DateOnly StartDate { get; set; }
+
+    public DateOnly EndDate { get; set; }
+
+    public DateTime JoinedAtUtc { get; set; }
+
+    /// <summary>The IANA time zone its periods are counted in.</summary>
+    public string TimeZone { get; set; } = string.Empty;
+
+    /// <summary>The first day of each period the Account checked in for, oldest first.</summary>
+    public List<DateOnly> CheckIns { get; set; } = [];
 }
 
 public class DataExportStrategyDto
