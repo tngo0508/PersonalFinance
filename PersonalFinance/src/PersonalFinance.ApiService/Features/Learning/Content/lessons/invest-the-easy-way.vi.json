@@ -12,7 +12,7 @@
       "explanation": "Lầm tưởng. ETF không được đảm bảo hay bảo hiểm, và bạn có thể mất tiền."
     },
     {
-      "prompt": "Hai quỹ theo cùng một chỉ số và kiếm được mức phí tương đương, nhưng một quỹ có phí thấp hơn. Cái nào cho bạn nhiều hơn?",
+      "prompt": "Hai quỹ theo cùng một chỉ số và có lợi nhuận như nhau trước phí, nhưng một quỹ có phí thấp hơn. Cái nào cho bạn nhiều hơn?",
       "options": [
         "Quỹ với phí thấp hơn",
         "Cả hai đều cho kết quả giống nhau",
