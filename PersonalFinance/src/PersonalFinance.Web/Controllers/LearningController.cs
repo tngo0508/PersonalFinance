@@ -14,11 +14,11 @@ using ApiException = Refit.ApiException;
 namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
-/// The Atelier's public pages (#513): the Library and each Term Entry, readable without signing in, plus the
-/// <c>robots.txt</c> and <c>/sitemap.xml</c> that let a search engine find the entries. Content comes from ApiService
-/// through <see cref="ILearningApi"/> in the request's Language.
+/// The Atelier's pages (#513): the Journey's road and the Library, each Term Entry and each Lesson, plus the
+/// <c>robots.txt</c> and <c>/sitemap.xml</c> that let a search engine find the entries. Every page is readable without
+/// signing in; a guest sees the Journey's outline and a sign-in prompt, and only finishing a Lesson needs the Account.
+/// Content and progress come from ApiService through <see cref="ILearningApi"/> in the request's Language.
 /// </summary>
-[AllowAnonymous]
 public sealed class LearningController : Controller
 {
     private static readonly XNamespace SitemapNamespace = "http://www.sitemaps.org/schemas/sitemap/0.9";
@@ -35,15 +35,23 @@ public sealed class LearningController : Controller
         _localizer = localizer;
     }
 
-    /// <summary>The Library: book spines on a shelf per Topic, or a "being written" note while it is empty.</summary>
+    /// <summary>
+    /// The Journey's road (the signed-in Account's progress, or the outline for a guest) and the Library: book spines
+    /// on a shelf per Topic, or a "being written" note while it is empty.
+    /// </summary>
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
     {
         try
         {
-            LearningLibraryDto library =
-                await _learningApi.GetLibraryAsync(AppLanguages.Current().Code, cancellationToken);
-            return View(new LearningIndexViewModel { Topics = library.Topics });
+            string language = AppLanguages.Current().Code;
+            LearningLibraryDto library = await _learningApi.GetLibraryAsync(language, cancellationToken);
+            bool signedIn = IsSignedIn;
+            IReadOnlyList<LearningRoadStop> road = signedIn
+                ? LearningRoadStop.ForJourney(await _learningApi.GetJourneyAsync(language, cancellationToken))
+                : LearningRoadStop.Outline(await _learningApi.GetLessonsAsync(language, cancellationToken));
+            return View(new LearningIndexViewModel { Topics = library.Topics, Road = road, IsSignedIn = signedIn });
         }
         catch (Exception ex) when (ex is ApiException or HttpRequestException or TaskCanceledException
                                        && !cancellationToken.IsCancellationRequested)
@@ -55,6 +63,7 @@ public sealed class LearningController : Controller
     }
 
     /// <summary>A Term Entry; an unknown slug is a 404.</summary>
+    [AllowAnonymous]
     [HttpGet("/Learning/Term/{slug}")]
     public async Task<IActionResult> Term(string slug, CancellationToken cancellationToken = default)
     {
@@ -81,9 +90,61 @@ public sealed class LearningController : Controller
     }
 
     /// <summary>
+    /// A Lesson: stacked paper sheets and the Check when it is open or finished, its opening when it is locked, and
+    /// the title with a sign-in prompt for a guest. An unknown slug is a 404.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("/Learning/Lesson/{slug}")]
+    public async Task<IActionResult> Lesson(string slug, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            string language = AppLanguages.Current().Code;
+            LessonDto lesson = await _learningApi.GetLessonAsync(slug, language, cancellationToken);
+            return View(IsSignedIn
+                ? LearningLessonViewModel.ForJourney(lesson, await _learningApi.GetJourneyAsync(language, cancellationToken))
+                : LearningLessonViewModel.ForGuest(lesson));
+        }
+        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            return NotFound();
+        }
+        catch (Exception ex) when (ex is ApiException or HttpRequestException or TaskCanceledException
+                                       && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to load a Lesson; rendering the Unavailable State instead.");
+            return this.UnavailableView(_localizer["Learning.Title"], _localizer["Learning.Message.LessonUnavailable"],
+                "Learning", nameof(Lesson), new Dictionary<string, string> { ["slug"] = slug });
+        }
+    }
+
+    /// <summary>
+    /// Finishes the Lesson once its Check is answered (AJAX from lesson-check.js), with the browser's time zone. 204 on
+    /// success; 404 for an unknown slug and 409 for a locked Lesson, as ApiService answers.
+    /// </summary>
+    [Authorize]
+    [HttpPost("/Learning/Lesson/{slug}/Finish")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Finish(string slug, [FromBody] FinishLessonRequest? request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _learningApi.FinishLessonAsync(slug, request ?? new FinishLessonRequest(),
+                AppLanguages.Current().Code, cancellationToken);
+            return NoContent();
+        }
+        catch (ApiException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Conflict)
+        {
+            return StatusCode((int)ex.StatusCode);
+        }
+    }
+
+    /// <summary>
     /// The sitemap: <c>/Learning</c> and every Published Term Entry, in English (Language is a cookie). While the
     /// Library is empty, or ApiService cannot be read, it lists no entries.
     /// </summary>
+    [AllowAnonymous]
     [HttpGet("/sitemap.xml")]
     public async Task<IActionResult> Sitemap(CancellationToken cancellationToken = default)
     {
@@ -108,6 +169,7 @@ public sealed class LearningController : Controller
     }
 
     /// <summary><c>robots.txt</c>: the public pages may be crawled, and the sitemap lists the Term Entries.</summary>
+    [AllowAnonymous]
     [HttpGet("/robots.txt")]
     public IActionResult Robots()
     {
@@ -115,6 +177,8 @@ public sealed class LearningController : Controller
         return Content($"User-agent: *\nDisallow: /Identity/\nAllow: /\n\nSitemap: {sitemapUrl}\n", "text/plain",
             Encoding.UTF8);
     }
+
+    private bool IsSignedIn => User.Identity?.IsAuthenticated == true;
 
     private string TermUrl(string slug) => Url.Action(nameof(Term), "Learning", new { slug }, Request.Scheme)!;
 }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PersonalFinance.ApiService.Features.Learning;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AiAssistant;
@@ -21,13 +22,15 @@ public class AiAssistantController : ControllerBase
     private readonly IAiAssistantService _aiAssistantService;
     private readonly IAiScopeFilter _scopeFilter;
     private readonly IAiQuotaService _quotaService;
+    private readonly ILearningLibraryService _learning;
 
     public AiAssistantController(IAiAssistantService aiAssistantService, IAiScopeFilter scopeFilter,
-        IAiQuotaService quotaService)
+        IAiQuotaService quotaService, ILearningLibraryService learning)
     {
         _aiAssistantService = aiAssistantService;
         _scopeFilter = scopeFilter;
         _quotaService = quotaService;
+        _learning = learning;
     }
 
     /// <summary>
@@ -57,8 +60,10 @@ public class AiAssistantController : ControllerBase
                 nameof(AiChatRequestDto.Message), ErrorArgs.Number("max", AiAssistantMessages.MaxMessageLength));
         }
 
-        // Check scope before calling the LLM
-        AiChatResponseDto? cannedResponse = _scopeFilter.Evaluate(request.Message);
+        // Check scope before calling the LLM; a question about a Published Term Entry is finance by construction
+        bool aboutTerm = !string.IsNullOrWhiteSpace(request.TermSlug)
+                         && _learning.FindTerm(request.TermSlug, null) is not null;
+        AiChatResponseDto? cannedResponse = _scopeFilter.Evaluate(request.Message, aboutTerm);
         if (cannedResponse != null)
         {
             return Ok(cannedResponse);

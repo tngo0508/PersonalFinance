@@ -2,6 +2,9 @@
  * AI Assistant Chat Widget.
  * A floating chat panel that provides AI-powered personal finance insights
  * with contextual quick actions and a clean, modern interface.
+ *
+ * PFAiChat.openWithTerm opens it about one Term Entry (Ask the AI, #521): an "About" chip, two starter questions, and
+ * replies labelled "AI answer, not reviewed". Only the Term's slug is sent; ApiService loads the entry itself.
  */
 (function () {
     'use strict';
@@ -14,7 +17,8 @@
         isOpen: false,
         isLoading: false,
         history: [],
-        hasInteracted: false
+        hasInteracted: false,
+        term: null
     };
 
     /**
@@ -22,8 +26,21 @@
      * @param {string} key - The key after Shell.Js.Ai.
      * @returns {string}
      */
-    function t (key) {
-        return window.PFI18n.t(`Shell.Js.Ai.${ key}`);
+    function t (key, args) {
+        return window.PFI18n.t(`Shell.Js.Ai.${ key}`, args);
+    }
+
+    /**
+     * The two starter questions about the Term in context, built here from the entry's fields.
+     * @returns {string[]} The questions; the second only when the entry has a related Term.
+     */
+    function termStarters () {
+        const term = state.term;
+        const starters = [t('Term.Starter.Simpler', { term: term.term })];
+        if (term.related) {
+            starters.push(t('Term.Starter.Difference', { term: term.term, related: term.related }));
+        }
+        return starters;
     }
 
     /**
@@ -215,6 +232,20 @@
             return;
         }
 
+        if (state.term) {
+            const about = el('div', { class: 'ai-chat-welcome' }, [
+                el('p', { class: 'ai-chat-about', 'data-test-id': 'ai-chat-about' }, [t('Term.About', { term: state.term.term })]),
+                el('p', { class: 'ai-chat-welcome-hint' }, [t('Term.Hint')])
+            ]);
+            const starters = el('div', { class: 'ai-chat-quick-actions' }, termStarters().map((text, index) =>
+                el('button', { type: 'button', class: 'ai-chat-chip', 'data-starter': String(index) }, [
+                    el('span', {}, [text])
+                ])));
+            container.replaceChildren(about, starters);
+            container.scrollTop = 0;
+            return;
+        }
+
         const welcome = el('div', { class: 'ai-chat-welcome' }, [
             el('div', { class: 'ai-chat-welcome-icon', 'aria-hidden': 'true' }, ['✦']),
             el('p', { class: 'ai-chat-eyebrow' }, [t('Welcome.Eyebrow')]),
@@ -237,8 +268,9 @@
      * Add a chat message bubble to the conversation.
      * @param {string} role - "user" or "assistant"
      * @param {string} content
+     * @param {string} [note] - A label under the bubble ("AI answer, not reviewed").
      */
-    function addMessage (role, content) {
+    function addMessage (role, content, note) {
         const container = document.getElementById('ai-chat-messages');
         if (!container) {
             return;
@@ -261,6 +293,9 @@
         label.textContent = role === 'user' ? t('Role.User') : t('Role.Assistant');
         wrapper.appendChild(label);
         wrapper.appendChild(bubble);
+        if (note) {
+            wrapper.appendChild(el('span', { class: 'ai-chat-message-note' }, [note]));
+        }
         container.appendChild(wrapper);
         container.scrollTop = container.scrollHeight;
 
@@ -344,7 +379,8 @@
                 },
                 body: JSON.stringify({
                     message: message,
-                    conversationHistory: historyToSend
+                    conversationHistory: historyToSend,
+                    termSlug: state.term ? state.term.slug : null
                 })
             });
 
@@ -363,7 +399,7 @@
             if (typeof data.response !== 'string' || !data.response.trim()) {
                 throw new Error('Empty response');
             }
-            addMessage('assistant', data.response);
+            addMessage('assistant', data.response, data.aboutTerm ? t('Term.Unreviewed') : null);
             document.getElementById('ai-chat-status').textContent = data.budgetWarning || '';
             const disclaimer = document.querySelector('.ai-chat-disclaimer');
             if (disclaimer && data.disclaimer) {
@@ -462,6 +498,7 @@
         document.getElementById('ai-chat-status').textContent = '';
         state.history = [];
         state.hasInteracted = false;
+        state.term = null;
         renderWelcome();
         const input = document.getElementById('ai-chat-input');
         input.value = '';
@@ -526,6 +563,13 @@
                 if (!chip) {
                     return;
                 }
+                if (chip.hasAttribute('data-starter') && state.term) {
+                    const starter = termStarters()[parseInt(chip.getAttribute('data-starter'), 10)];
+                    if (starter) {
+                        sendMessage(starter);
+                    }
+                    return;
+                }
                 const index = parseInt(chip.getAttribute('data-index'), 10);
                 if (!isNaN(index) && QUICK_ACTIONS[index]) {
                     sendMessage(t(`QuickAction.${ QUICK_ACTIONS[index].key }.Message`));
@@ -552,6 +596,25 @@
             }
         }, true);
     }
+
+    /**
+     * Opens a fresh chat about one Term Entry. A conversation in progress is replaced.
+     * @param {{slug: string, term: string, related: (string|undefined)}} context - The entry's slug, its Term in the
+     *     page's Language, and its first related Term.
+     */
+    function openWithTerm (context) {
+        if (state.isLoading || !context || !context.slug || !context.term) {
+            return;
+        }
+        state.term = { slug: context.slug, term: context.term, related: context.related || '' };
+        state.history = [];
+        state.hasInteracted = false;
+        document.getElementById('ai-chat-status').textContent = '';
+        renderWelcome();
+        openChat();
+    }
+
+    window.PFAiChat = { openWithTerm: openWithTerm };
 
     /**
      * Initialize the widget.
