@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.5.2] - 2026-10-30
+
+### Changed
+
+- **Atelier content guard**: Agent Auto-Merge no longer merges a PR that touches the Atelier content folder, and the ticket agent never picks an `atelier:content` issue (#515, part of #513).
+  - Agent Auto-Merge lists the PR's changed files, a renamed file's old path included. When any is under `Features/Learning/Content/`, it leaves one comment saying the owner reviews and merges the PR, and stops. The PR stays green.
+  - No commit counts as approval, the i18n bot's `i18n: translate N keys (vi)` included: the guard looks only at the files.
+  - `docs/agents/issue-tracker.md` describes both rules under "Scheduled ticket agent".
+
 ## [16.5.1] - 2026-10-30
 
 ### Fixed
