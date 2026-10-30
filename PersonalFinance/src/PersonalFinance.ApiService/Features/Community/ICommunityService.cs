@@ -79,4 +79,20 @@ public interface ICommunityService
     /// Hides a Comment from everyone, or shows it again. False when no such Comment exists.
     /// </summary>
     Task<bool> SetCommentHiddenAsync(int commentId, bool isHidden, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The Admin's Poll list: every Poll, open and closed, newest first, with its number of votes.
+    /// </summary>
+    Task<List<CommunityPollAdminItemDto>> ListPollsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stores an Admin's Poll (the controller validates it), closed until the Admin opens it.
+    /// </summary>
+    Task<CommunityPollAdminItemDto> CreatePollAsync(CommunityPollRequestDto request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Opens a Poll for voting or closes it. False when no such Poll exists.
+    /// </summary>
+    Task<bool> SetPollOpenAsync(int pollId, bool isOpen, CancellationToken cancellationToken = default);
 }

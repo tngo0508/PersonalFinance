@@ -125,6 +125,21 @@ public static class ApiErrorKeys
 
         /// <summary>An Admin's review named a status other than Approved or Rejected.</summary>
         public const string StrategyReviewStatus = "Community.Validation.StrategyReviewStatus";
+
+        /// <summary>An Admin's Poll had no question, or one longer than the <c>max</c> argument.</summary>
+        public const string PollQuestion = "Community.Validation.PollQuestion";
+
+        /// <summary>An Admin's Poll had a description longer than the <c>max</c> argument.</summary>
+        public const string PollDescription = "Community.Validation.PollDescription";
+
+        /// <summary>An Admin's Poll had a category that is not one of the board's.</summary>
+        public const string PollCategory = "Community.Validation.PollCategory";
+
+        /// <summary>An Admin's Poll had fewer than <c>min</c> or more than <c>max</c> distinct options.</summary>
+        public const string PollOptions = "Community.Validation.PollOptions";
+
+        /// <summary>One of an Admin's Poll options was empty or longer than the <c>max</c> argument.</summary>
+        public const string PollOptionText = "Community.Validation.PollOptionText";
     }
 
     /// <summary>The keys of the Budget Tracker Feature's rejections.</summary>

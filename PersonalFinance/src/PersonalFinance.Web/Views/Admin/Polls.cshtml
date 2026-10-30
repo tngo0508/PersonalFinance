@@ -1,0 +1,122 @@
+@using PersonalFinance.Shared.Constants
+@model AdminPollListViewModel
+@{
+    ViewData["Title"] = "Polls";
+    while (Model.Form.Options.Count < CommunityPollLimits.MaxOptions)
+    {
+        Model.Form.Options.Add(null);
+    }
+}
+
+<div class="py-3">
+    <header class="mb-4">
+        <p class="text-muted text-uppercase small mb-1"><a asp-action="Index">Admin</a></p>
+        <h1 class="h3 mb-1">Polls</h1>
+        <p class="text-muted mb-0">
+            Guild Hall Polls, newest first. Only open Polls reach users, who see the results (rounded shares, no totals)
+            once they have voted. Ask about habits and choices, never amounts.
+        </p>
+    </header>
+
+    @if (TempData["AdminMessage"] is string adminMessage)
+    {
+        <div class="alert alert-success" role="status">@adminMessage</div>
+    }
+    @if (TempData["AdminError"] is string adminError)
+    {
+        <div class="alert alert-danger" role="alert">@adminError</div>
+    }
+
+    <section class="card mb-4" aria-labelledby="newPollHeading">
+        <div class="card-body">
+            <h2 class="h5" id="newPollHeading">Write a Poll</h2>
+            <form asp-action="CreatePoll" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-2" role="alert"></div>
+                <div class="mb-3">
+                    <label asp-for="Form.Question" class="form-label">Question</label>
+                    <input asp-for="Form.Question" class="form-control" maxlength="@CommunityPollLimits.QuestionMaxLength" />
+                    <span asp-validation-for="Form.Question" class="text-danger small"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Form.Description" class="form-label">Description <span class="text-muted">(optional)</span></label>
+                    <textarea asp-for="Form.Description" class="form-control" rows="2"
+                              maxlength="@CommunityPollLimits.DescriptionMaxLength"></textarea>
+                    <span asp-validation-for="Form.Description" class="text-danger small"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Form.Category" class="form-label">Category</label>
+                    <select asp-for="Form.Category" class="form-select"
+                            asp-items="@(new SelectList(CommunityStrategyLimits.Categories))">
+                        <option value="">Choose…</option>
+                    </select>
+                    <span asp-validation-for="Form.Category" class="text-danger small"></span>
+                </div>
+                <fieldset class="mb-3">
+                    <legend class="form-label fs-6">
+                        Options <span class="text-muted">(@CommunityPollLimits.MinOptions to @CommunityPollLimits.MaxOptions, in order; leave the rest blank)</span>
+                    </legend>
+                    @for (int i = 0; i < CommunityPollLimits.MaxOptions; i++)
+                    {
+                        <input asp-for="Form.Options[i]" class="form-control mb-2" aria-label="Option @(i + 1)"
+                               maxlength="@CommunityPollLimits.OptionTextMaxLength" />
+                    }
+                    <span asp-validation-for="Form.Options" class="text-danger small"></span>
+                </fieldset>
+                <button type="submit" class="btn btn-primary">Save closed</button>
+            </form>
+        </div>
+    </section>
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-muted">No Polls yet.</div>
+        </div>
+    }
+    else
+    {
+        <ul class="list-group">
+            @foreach (var item in Model.Items)
+            {
+                <li class="list-group-item py-3@(item.IsOpen ? null : " bg-body-tertiary")" data-poll-id="@item.Id">
+                    <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+                        <span class="small">
+                            <span class="badge @(item.IsOpen ? "text-bg-success" : "text-bg-secondary")">@(item.IsOpen ? "Open" : "Closed")</span>
+                            <span class="text-muted ms-1">@item.Category</span>
+                        </span>
+                        <time class="text-muted small" datetime="@item.CreatedAtUtc.ToString("o")">
+                            @item.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC
+                        </time>
+                    </div>
+                    <p class="fw-semibold mb-1 text-break">@item.Question</p>
+                    @if (!string.IsNullOrEmpty(item.Description))
+                    {
+                        <p class="text-muted small mb-2 text-break">@item.Description</p>
+                    }
+                    <ol class="small mb-2">
+                        @foreach (var option in item.Options)
+                        {
+                            <li class="text-break">@option</li>
+                        }
+                    </ol>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div class="text-muted small">@item.VoteCount @(item.VoteCount == 1 ? "vote" : "votes")</div>
+                        <form asp-action="SetPollStatus" method="post">
+                            <input type="hidden" name="id" value="@item.Id" />
+                            @if (item.IsOpen)
+                            {
+                                <button type="submit" name="open" value="false"
+                                        class="btn btn-sm btn-outline-secondary">Close</button>
+                            }
+                            else
+                            {
+                                <button type="submit" name="open" value="true"
+                                        class="btn btn-sm btn-outline-success">Open</button>
+                            }
+                        </form>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>

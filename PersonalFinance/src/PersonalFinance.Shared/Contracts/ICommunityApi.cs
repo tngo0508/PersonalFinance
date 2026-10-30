@@ -77,4 +77,24 @@ public interface ICommunityApi
     [Put("/api/community/comments/{commentId}/visibility")]
     Task SetCommentVisibilityAsync(int commentId, [Body] CommunityCommentVisibilityRequestDto request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists every Poll for the Admin, open and closed, newest first. Requires the Admin Policy.
+    /// </summary>
+    [Get("/api/community/polls")]
+    Task<List<CommunityPollAdminItemDto>> ListPollsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Writes a new Poll, stored closed. Requires the Admin Policy; an invalid Poll is 400.
+    /// </summary>
+    [Post("/api/community/polls")]
+    Task<CommunityPollAdminItemDto> CreatePollAsync([Body] CommunityPollRequestDto request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Opens a Poll for voting or closes it. Requires the Admin Policy; an unknown Poll is 404.
+    /// </summary>
+    [Put("/api/community/polls/{pollId}/status")]
+    Task SetPollStatusAsync(int pollId, [Body] CommunityPollStatusRequestDto request,
+        CancellationToken cancellationToken = default);
 }

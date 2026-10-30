@@ -154,18 +154,23 @@ public sealed class CommunityStrategyReviewItemDto
 }
 
 /// <summary>
-/// DTO for a poll option.
+/// An option of a Poll. Results are a rounded share only, never a count (ADR 0018).
 /// </summary>
 public sealed class CommunityPollOptionDto
 {
     public int Id { get; set; }
     public string Text { get; set; } = string.Empty;
-    public int Votes { get; set; }
-    public double Percentage { get; set; }
+
+    /// <summary>
+    /// Its share of the votes as a whole percentage, the shares adding up to 100 once anyone voted; null until the
+    /// viewing Account has voted, so results never sway a vote.
+    /// </summary>
+    public int? Percentage { get; set; }
 }
 
 /// <summary>
-/// DTO for a community poll.
+/// An open Poll as the viewing Account sees it. It carries no vote totals, so results inform without becoming a
+/// scoreboard.
 /// </summary>
 public sealed class CommunityPollDto
 {
@@ -174,7 +179,6 @@ public sealed class CommunityPollDto
     public string Description { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
     public List<CommunityPollOptionDto> Options { get; set; } = new();
-    public int TotalVotes { get; set; }
     public bool IsActive { get; set; } = true;
     public bool HasVoted { get; set; }
     public int? VotedOptionId { get; set; }
@@ -245,4 +249,45 @@ public sealed class CommunityStrategyRequestDto
 public sealed class CommunityStrategyReviewRequestDto
 {
     public CommunityStrategyStatus Status { get; set; }
+}
+
+/// <summary>
+/// An Admin's new Poll. It is stored closed, for the Admin to open when it is ready.
+/// </summary>
+public sealed class CommunityPollRequestDto
+{
+    public string Question { get; set; } = string.Empty;
+    public string? Description { get; set; }
+
+    /// <summary>One of the board's categories (<c>CommunityStrategyLimits.Categories</c>).</summary>
+    public string Category { get; set; } = string.Empty;
+
+    /// <summary>The options' texts, in the order they are shown.</summary>
+    public List<string> Options { get; set; } = new();
+}
+
+/// <summary>
+/// A Poll in the Admin list, open or closed. Unlike what users see, it carries the number of votes.
+/// </summary>
+public sealed class CommunityPollAdminItemDto
+{
+    public int Id { get; set; }
+    public string Question { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string Category { get; set; } = string.Empty;
+    public bool IsOpen { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+
+    /// <summary>The options' texts, in the order they are shown.</summary>
+    public List<string> Options { get; set; } = new();
+
+    public int VoteCount { get; set; }
+}
+
+/// <summary>
+/// An Admin's decision to open a Poll for voting or close it.
+/// </summary>
+public sealed class CommunityPollStatusRequestDto
+{
+    public bool IsOpen { get; set; }
 }

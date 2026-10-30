@@ -181,6 +181,8 @@ public partial class CommunityServiceTests
         AzureSqlTranslation.AssertTranslates(service.ReviewQueueQuery(CommunityStrategyStatus.Pending));
         AzureSqlTranslation.AssertTranslates(service.ThreadCommentsQuery(UserId, [1, 2], [3]));
         AzureSqlTranslation.AssertTranslates(service.CommentReviewQuery().Take(CommunityCommentLimits.ReviewListSize));
+        AzureSqlTranslation.AssertTranslates(service.OpenPollsQuery(UserId));
+        AzureSqlTranslation.AssertTranslates(service.PollAdminQuery());
     }
 
     [Fact]
@@ -217,7 +219,7 @@ public partial class CommunityServiceTests
     }
 
     [Fact]
-    public async Task GetCommunity_ReportsTheViewersVote_AndOptionPercentages()
+    public async Task GetCommunity_ReportsTheViewersVote_AndWholeShares_WithoutCounts()
     {
         await using AppDbContext db = CreateContext();
         var poll = new CommunityPoll { PollCode = "save-rate", Question = "How much do you save?", Category = "Saving" };
@@ -239,12 +241,11 @@ public partial class CommunityServiceTests
         CommunityPollDto dto = Assert.Single(response.ActivePolls);
         Assert.Equal("save-rate", dto.Id);
         Assert.Equal(string.Empty, dto.Description);
-        Assert.Equal(3, dto.TotalVotes);
         Assert.True(dto.HasVoted);
         Assert.Equal(high.Id, dto.VotedOptionId);
         Assert.Collection(dto.Options,
-            o => { Assert.Equal("Under 10%", o.Text); Assert.Equal(1, o.Votes); Assert.Equal(33.3, o.Percentage); },
-            o => { Assert.Equal("10% or more", o.Text); Assert.Equal(2, o.Votes); Assert.Equal(66.7, o.Percentage); });
+            o => { Assert.Equal("Under 10%", o.Text); Assert.Equal(33, o.Percentage); },
+            o => { Assert.Equal("10% or more", o.Text); Assert.Equal(67, o.Percentage); });
     }
 
     [Fact]
@@ -293,7 +294,7 @@ public partial class CommunityServiceTests
                 .Select(f => (string)f.GetRawConstantValue()!)
                 .ToList();
 
-            Assert.Equal(17, keys.Count);
+            Assert.Equal(22, keys.Count);
             foreach (string key in keys)
             {
                 var entry = new ApiErrorEntryDto { Key = key, Message = key, Args = ArgsOf(key) };
@@ -317,6 +318,11 @@ public partial class CommunityServiceTests
             ApiErrorKeys.Community.StrategyTitle => ErrorArgs.Number("max", CommunityStrategyLimits.TitleMaxLength),
             ApiErrorKeys.Community.StrategyTried or ApiErrorKeys.Community.StrategyHappened
                 or ApiErrorKeys.Community.StrategyKeeping => ErrorArgs.Number("max", CommunityStrategyLimits.TextMaxLength),
+            ApiErrorKeys.Community.PollQuestion => ErrorArgs.Number("max", CommunityPollLimits.QuestionMaxLength),
+            ApiErrorKeys.Community.PollDescription => ErrorArgs.Number("max", CommunityPollLimits.DescriptionMaxLength),
+            ApiErrorKeys.Community.PollOptionText => ErrorArgs.Number("max", CommunityPollLimits.OptionTextMaxLength),
+            ApiErrorKeys.Community.PollOptions => ErrorArgs.NumberRange(CommunityPollLimits.MinOptions,
+                CommunityPollLimits.MaxOptions),
             _ => null,
         };
         return args?.ToDictionary(pair => pair.Key, pair => pair.Value);

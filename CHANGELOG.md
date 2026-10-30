@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [15.1.0] - 2026-10-29
+
+### Added
+
+- **Admin-written Polls**: Admins write Guild Hall Polls on a new Polls page (Admin → Polls) and open or close them, so Polls change without a code change (#420, slice 5).
+  - A Poll has a question, an optional description, one of the board's categories and 2 to 6 different options. It is saved closed; only open Polls reach the Guild Hall.
+  - New Admin-only endpoints `GET api/community/polls`, `POST api/community/polls` and `PUT api/community/polls/{id}/status`. An invalid Poll gets 400 with one of the new `Community.Validation.Poll*` keys.
+
+### Changed
+
+- **Poll results after voting**: a Poll shows its results only to an Account that has voted, as warm bars with whole percentages that add up to 100. No vote totals or counts are shown, and the ApiService no longer sends them.
+- **Antiforgery**: voting on a Poll now validates the antiforgery token.
+
 ## [15.0.0] - 2026-10-29
 
 ### Added

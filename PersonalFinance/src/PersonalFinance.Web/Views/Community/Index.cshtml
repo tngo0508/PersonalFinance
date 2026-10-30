@@ -33,41 +33,42 @@
             </svg>
             @L["Community.Polls.Heading"]
         </h2>
+        @if (Model.ActivePolls.Count == 0)
+        {
+            <p class="community-board-empty">@L["Community.Polls.Empty"]</p>
+        }
         <div class="community-polls-grid">
             @foreach (var poll in Model.ActivePolls)
             {
                 <div class="community-poll-card" data-poll-id="@poll.Id">
                     <div class="community-poll-header">
                         <span class="community-poll-category">@CommunityText.Category(L, poll.Category)</span>
-                        <span class="community-poll-votes">@L.Plural("Community.Js.Votes", poll.TotalVotes)</span>
                     </div>
                     <h3 class="community-poll-question">@poll.Question</h3>
-                    <p class="community-poll-description">@poll.Description</p>
+                    @if (!string.IsNullOrEmpty(poll.Description))
+                    {
+                        <p class="community-poll-description">@poll.Description</p>
+                    }
                     <div class="community-poll-options">
                         @foreach (var option in poll.Options)
                         {
                             var isVoted = poll.HasVoted && poll.VotedOptionId == option.Id;
-                            <div class="community-poll-option" data-option="@option.Text">
-                                <button type="button" class="community-poll-option-btn@(poll.HasVoted ? " voted" : "")"
-                                        data-poll-code="@poll.Id"
-                                        data-option-id="@option.Id"
-                                        data-option-text="@option.Text"
-                                        @(poll.HasVoted ? "disabled" : null)
-                                        aria-label="@L.Named("Community.Polls.VoteFor", ("option", option.Text))">
-                                    <span class="community-poll-option-text">@option.Text</span>
-                                    <span class="community-poll-option-result" style="display:@(poll.HasVoted ? "flex" : "none");">
-                                        <span class="community-poll-option-bar" style="width: @(poll.HasVoted ? option.Percentage.ToString(System.Globalization.CultureInfo.InvariantCulture) + "%" : "0%");" data-percentage="@option.Percentage.ToString(System.Globalization.CultureInfo.InvariantCulture)"></span>
-                                        <span class="community-poll-option-percentage">@option.Percentage%</span>
-                                    </span>
-                                    @if (isVoted)
-                                    {
-                                        <span class="community-poll-option-checked" aria-hidden="true">✓</span>
-                                    }
-                                </button>
-                                <span class="community-poll-option-votes" style="display:@(poll.HasVoted ? "inline" : "none");">@L.Plural("Community.Js.Votes", option.Votes)</span>
-                            </div>
+                            var share = (option.Percentage ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                            <button type="button" class="community-poll-option-btn@(poll.HasVoted ? " voted" : "")@(isVoted ? " chosen" : "")"
+                                    data-poll-code="@poll.Id"
+                                    data-option-id="@option.Id"
+                                    @(poll.HasVoted ? "disabled" : null)
+                                    aria-label="@(poll.HasVoted ? null : L.Named("Community.Polls.VoteFor", ("option", option.Text)))">
+                                <span class="community-poll-option-bar" style="width: @(share)%;" aria-hidden="true"></span>
+                                <span class="community-poll-option-text">@option.Text</span>
+                                <span class="community-poll-option-result" @(poll.HasVoted ? null : "hidden")>
+                                    <span class="community-poll-option-checked" aria-hidden="true" @(isVoted ? null : "hidden")>✓</span>
+                                    <span class="community-poll-option-percentage">@(share)%</span>
+                                </span>
+                            </button>
                         }
                     </div>
+                    <p class="community-poll-hint" @(poll.HasVoted ? "hidden" : null)>@L["Community.Polls.ResultsAfterVoting"]</p>
                     <partial name="_Thread" model="new CommunityThread(null, poll.Id, poll.Comments)" />
                 </div>
             }

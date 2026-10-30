@@ -246,54 +246,43 @@
     });
 
     /**
-     * Updates a poll card with new results from the server.
+     * Shows a poll card's results once the viewer has voted: each option's share as a bar and a rounded percentage,
+     * with a check on the chosen one. The server sends shares only, never vote counts.
      * @param {HTMLElement} pollCard - The poll card.
      * @param {object} pollData - The updated poll.
      */
     function updatePollResults (pollCard, pollData) {
-        const buttons = pollCard.querySelectorAll('.community-poll-option-btn');
-        const voteSpans = pollCard.querySelectorAll('.community-poll-option-votes');
-        const totalVotesEl = pollCard.querySelector('.community-poll-votes');
-
-        buttons.forEach((btn, index) => {
-            const optionText = btn.dataset.optionText;
-            const option = pollData.options.find((o) => o.text === optionText);
-            if (!option) {
+        pollCard.querySelectorAll('.community-poll-option-btn').forEach((btn) => {
+            const option = pollData.options.find((o) => String(o.id) === btn.dataset.optionId);
+            if (!option || option.percentage === null || option.percentage === undefined) {
                 return;
             }
 
-            const result = btn.querySelector('.community-poll-option-result');
+            const chosen = option.id === pollData.votedOptionId;
+            btn.classList.toggle('chosen', chosen);
+            // The label asked for a vote; without it the option reads with its share.
+            btn.removeAttribute('aria-label');
             const bar = btn.querySelector('.community-poll-option-bar');
+            const result = btn.querySelector('.community-poll-option-result');
+            const check = btn.querySelector('.community-poll-option-checked');
             const pct = btn.querySelector('.community-poll-option-percentage');
-
-            if (result) {
-                result.style.display = 'flex';
-            }
             if (bar) {
                 bar.style.width = `${option.percentage}%`;
+            }
+            if (result) {
+                result.hidden = false;
+            }
+            if (check) {
+                check.hidden = !chosen;
             }
             if (pct) {
                 pct.textContent = `${option.percentage}%`;
             }
-
-            // Mark the voted option
-            if (pollData.votedOptionId && option.id === pollData.votedOptionId &&
-                !btn.querySelector('.community-poll-option-checked')) {
-                const span = document.createElement('span');
-                span.className = 'community-poll-option-checked';
-                span.setAttribute('aria-hidden', 'true');
-                span.textContent = '✓';
-                btn.appendChild(span);
-            }
-
-            if (voteSpans[index]) {
-                voteSpans[index].style.display = 'inline';
-                voteSpans[index].textContent = PFI18n.plural('Community.Js.Votes', option.votes);
-            }
         });
 
-        if (totalVotesEl) {
-            totalVotesEl.textContent = PFI18n.plural('Community.Js.Votes', pollData.totalVotes);
+        const hint = pollCard.querySelector('.community-poll-hint');
+        if (hint) {
+            hint.hidden = true;
         }
     }
 
