@@ -2738,5 +2738,16 @@
   "Learning.Js.Check.Right": "Right.",
   "Learning.Js.Check.NotQuite": "Not quite.",
   "Learning.Js.Check.FinishFailed": "We couldn't save your progress. Please try again.",
+  "Learning.Review.Heading": "Review",
+  "Learning.Review.Lede": "Before today's Lesson, turn each card and say if you knew it. You can skip this.",
+  "Learning.Review.Turn": "Turn the card",
+  "Learning.Review.Marks": "Did you know it?",
+  "Learning.Review.KnewIt": "Knew it",
+  "Learning.Review.NotYet": "Not yet",
+  "Learning.Review.Done": "Review done. Today's Lesson starts below.",
+  "Learning.Review.Skip": "Skip to today's Lesson",
+  "Learning.Js.Review.MarkedKnewIt": "Saved: you knew it.",
+  "Learning.Js.Review.MarkedNotYet": "Saved: not yet. This card comes back in a later Review.",
+  "Learning.Js.Review.MarkFailed": "We couldn't save that. Please try again.",
   "Learning.Error.LessonLocked": "This Lesson is not open yet. Finish the one before it first, then come back after midnight."
 }

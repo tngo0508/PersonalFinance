@@ -101,9 +101,16 @@ public sealed class LearningController : Controller
         {
             string language = AppLanguages.Current().Code;
             LessonDto lesson = await _learningApi.GetLessonAsync(slug, language, cancellationToken);
-            return View(IsSignedIn
-                ? LearningLessonViewModel.ForJourney(lesson, await _learningApi.GetJourneyAsync(language, cancellationToken))
-                : LearningLessonViewModel.ForGuest(lesson));
+            if (!IsSignedIn)
+            {
+                return View(LearningLessonViewModel.ForGuest(lesson));
+            }
+
+            JourneyStateDto journey = await _learningApi.GetJourneyAsync(language, cancellationToken);
+            IReadOnlyList<ReviewCardDto> review = LearningLessonViewModel.ReviewIsDue(lesson, journey)
+                ? await ReviewOrNoneAsync(language, cancellationToken)
+                : [];
+            return View(LearningLessonViewModel.ForJourney(lesson, journey, review));
         }
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
@@ -137,6 +144,27 @@ public sealed class LearningController : Controller
         catch (ApiException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Conflict)
         {
             return StatusCode((int)ex.StatusCode);
+        }
+    }
+
+    /// <summary>
+    /// Marks a turned Review card "Knew it" or "Not yet" (AJAX from review-cards.js). 204 on success; 404 when the Term is
+    /// not in a finished Lesson, as ApiService answers.
+    /// </summary>
+    [Authorize]
+    [HttpPost("/Learning/Review/{slug}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> MarkCard(string slug, [FromBody] MarkReviewCardRequest? request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _learningApi.MarkReviewCardAsync(slug, request ?? new MarkReviewCardRequest(), cancellationToken);
+            return NoContent();
+        }
+        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            return NotFound();
         }
     }
 
@@ -176,6 +204,22 @@ public sealed class LearningController : Controller
         string sitemapUrl = Url.Action(nameof(Sitemap), "Learning", null, Request.Scheme)!;
         return Content($"User-agent: *\nDisallow: /Identity/\nAllow: /\n\nSitemap: {sitemapUrl}\n", "text/plain",
             Encoding.UTF8);
+    }
+
+    /// <summary>Today's Review cards, or none when ApiService cannot be read: the Review never blocks the Lesson.</summary>
+    private async Task<IReadOnlyList<ReviewCardDto>> ReviewOrNoneAsync(string language,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return (await _learningApi.GetReviewAsync(language, cancellationToken)).Cards;
+        }
+        catch (Exception ex) when (ex is ApiException or HttpRequestException or TaskCanceledException
+                                       && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to load the Review; opening the Lesson without it.");
+            return [];
+        }
     }
 
     private bool IsSignedIn => User.Identity?.IsAuthenticated == true;

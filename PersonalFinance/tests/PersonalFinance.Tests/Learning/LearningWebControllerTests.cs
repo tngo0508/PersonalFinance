@@ -19,9 +19,9 @@ using RefitSettings = Refit.RefitSettings;
 namespace PersonalFinance.Tests.Learning;
 
 /// <summary>
-/// The Web Atelier pages (#517, #519): the Library and the Journey's road in the reader's Language, a Term Entry with
-/// its canonical URL, a Lesson as a guest or a signed-in Account sees it, finishing a Lesson, a 404 for an unknown slug,
-/// and the sitemap and robots.txt a search engine reads.
+/// The Web Atelier pages (#517, #519, #520): the Library and the Journey's road in the reader's Language, a Term Entry
+/// with its canonical URL, a Lesson as a guest or a signed-in Account sees it with its Review, finishing a Lesson,
+/// marking a Review card, a 404 for an unknown slug, and the sitemap and robots.txt a search engine reads.
 /// </summary>
 public class LearningWebControllerTests
 {
@@ -113,6 +113,75 @@ public class LearningWebControllerTests
         Assert.Equal(LessonAccess.Locked, model.Access);
         Assert.True(model.OpensTomorrow);
         Assert.Equal("build-a-cushion", model.Previous!.Slug);
+    }
+
+    [Fact]
+    public async Task Lesson_OpenOnDayTwo_OpensWithTheReviewInTheReadersLanguage()
+    {
+        (ILearningApi api, ApiProxy<ILearningApi> proxy) = ApiProxy.Create<ILearningApi>();
+        proxy.Returns(nameof(ILearningApi.GetLessonAsync), Lesson("borrow-wisely", 2));
+        proxy.Returns(nameof(ILearningApi.GetJourneyAsync), DayTwoOpen);
+        proxy.Returns(nameof(ILearningApi.GetReviewAsync), new ReviewDto { Cards = [new() { Slug = "emergency-fund" }] });
+
+        LearningLessonViewModel model;
+        using (new UiCultureScope("vi"))
+        {
+            model = Model<LearningLessonViewModel>(await Controller(api, signedIn: true).Lesson("borrow-wisely"));
+        }
+
+        Assert.Equal("emergency-fund", Assert.Single(model.Review).Slug);
+        Assert.Equal("vi", proxy.Arguments[proxy.Calls.IndexOf(nameof(ILearningApi.GetReviewAsync))][0]);
+    }
+
+    [Fact]
+    public async Task Lesson_Locked_DoesNotAskForTheReview()
+    {
+        (ILearningApi api, ApiProxy<ILearningApi> proxy) = ApiProxy.Create<ILearningApi>();
+        proxy.Returns(nameof(ILearningApi.GetLessonAsync), Lesson("borrow-wisely", 2));
+        proxy.Returns(nameof(ILearningApi.GetJourneyAsync), FinishedDayOne);
+
+        await Controller(api, signedIn: true).Lesson("borrow-wisely");
+
+        Assert.DoesNotContain(nameof(ILearningApi.GetReviewAsync), proxy.Calls);
+    }
+
+    [Fact]
+    public async Task Lesson_WhenTheReviewFails_OpensWithoutIt()
+    {
+        (ILearningApi api, ApiProxy<ILearningApi> proxy) = ApiProxy.Create<ILearningApi>();
+        proxy.Returns(nameof(ILearningApi.GetLessonAsync), Lesson("borrow-wisely", 2));
+        proxy.Returns(nameof(ILearningApi.GetJourneyAsync), DayTwoOpen);
+        proxy.Throws(nameof(ILearningApi.GetReviewAsync), new HttpRequestException("connection refused"));
+
+        LearningLessonViewModel model =
+            Model<LearningLessonViewModel>(await Controller(api, signedIn: true).Lesson("borrow-wisely"));
+
+        Assert.Equal(LessonAccess.Open, model.Access);
+        Assert.False(model.ShowsReview);
+    }
+
+    [Fact]
+    public async Task MarkCard_PostsTheMark_AndAnswersNoContent()
+    {
+        (ILearningApi api, ApiProxy<ILearningApi> proxy) = ApiProxy.Create<ILearningApi>();
+        proxy.Returns(nameof(ILearningApi.MarkReviewCardAsync), null);
+
+        IActionResult result = await Controller(api, signedIn: true)
+            .MarkCard("emergency-fund", new MarkReviewCardRequest { KnewIt = true });
+
+        Assert.IsType<NoContentResult>(result);
+        object?[] args = proxy.Arguments.Single();
+        Assert.Equal("emergency-fund", args[0]);
+        Assert.True(Assert.IsType<MarkReviewCardRequest>(args[1]).KnewIt);
+    }
+
+    [Fact]
+    public async Task MarkCard_ATermNotYetLearned_IsNotFound()
+    {
+        (ILearningApi api, ApiProxy<ILearningApi> proxy) = ApiProxy.Create<ILearningApi>();
+        proxy.Throws(nameof(ILearningApi.MarkReviewCardAsync), await ApiFailure(HttpStatusCode.NotFound));
+
+        Assert.IsType<NotFoundResult>(await Controller(api, signedIn: true).MarkCard("apr", null));
     }
 
     [Fact]
@@ -264,6 +333,17 @@ public class LearningWebControllerTests
                 OpensAtUtc = new DateTime(2026, 10, 31, 0, 0, 0, DateTimeKind.Utc),
                 Keepsake = new KeepsakeDto { Symbol = "📒", Name = "Ledger" },
             },
+        ],
+    };
+
+    // Lesson 1 finished two days ago; Lesson 2 is open today.
+    private static readonly JourneyStateDto DayTwoOpen = new()
+    {
+        Started = true,
+        Lessons =
+        [
+            new LessonProgressDto { Slug = "build-a-cushion", Day = 1, Status = LessonStatus.Finished },
+            new LessonProgressDto { Slug = "borrow-wisely", Day = 2, Status = LessonStatus.Open },
         ],
     };
 

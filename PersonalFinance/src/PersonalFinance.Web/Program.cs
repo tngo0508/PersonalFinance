@@ -169,6 +169,8 @@ try
         .WithStaticAssets();
     app.MapRazorPages();
 
+    // E2E only: Development with E2E_SEED_LEARNING=true creates the Atelier fixture Account; never in Production.
+    await LearningFixtureAccountSeeder.SeedIfEnabledAsync(app);
     await app.MigrateAndRunAsync(args);
     return StartupExit.Success;
 }
