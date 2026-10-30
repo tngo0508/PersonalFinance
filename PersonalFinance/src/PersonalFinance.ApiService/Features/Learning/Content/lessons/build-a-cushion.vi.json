@@ -1,0 +1,38 @@
+{
+  "slug": "build-a-cushion",
+  "title": "Tạo một lớp đệm",
+  "intro": "Chi phí bất ngờ xảy ra với tất cả mọi người. Bài học này cho thấy cách một khoản tiết kiệm bảo vệ bạn. Nó cũng cho thấy cách tiết kiệm có thể tự phát triển.",
+  "check": [
+    {
+      "prompt": "Một quỹ dự phòng khẩn cấp dành cho các chi phí đã lên kế hoạch, chẳng hạn như kỳ nghỉ.",
+      "options": [
+        "Lầm tưởng",
+        "Sự thật"
+      ],
+      "explanation": "Lầm tưởng. Một quỹ dự phòng khẩn cấp dành cho các chi phí ngoài kế hoạch, như sửa chữa xe."
+    },
+    {
+      "prompt": "Minh tiết kiệm được 100 đô la với lãi suất 5% mỗi năm và không thêm gì. Năm thứ hai anh ấy kiếm được bao nhiêu?",
+      "options": [
+        "Hơn $5",
+        "Chính xác $5",
+        "Dưới $5"
+      ],
+      "explanation": "Nhiều hơn 5 đô la. Anh ta nhận lãi trên 100 đô la và 5 đô la năm ngoái."
+    },
+    {
+      "prompt": "Thanh toán hóa đơn bất ngờ bằng thẻ tín dụng có thể khiến chi phí tăng lên.",
+      "options": [
+        "Lầm tưởng",
+        "Sự thật"
+      ],
+      "explanation": "Sự thật. Lãi suất và phí có thể làm chi phí lớn hơn hóa đơn đầu tiên."
+    }
+  ],
+  "tryIt": {
+    "label": "Mục tiêu tiết kiệm"
+  },
+  "keepsake": {
+    "name": "Hũ tiền xu"
+  }
+}
