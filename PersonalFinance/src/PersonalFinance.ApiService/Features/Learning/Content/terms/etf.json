@@ -1,0 +1,36 @@
+{
+  "slug": "etf",
+  "term": "Exchange-traded fund",
+  "vietnameseName": "quỹ hoán đổi danh mục",
+  "alsoKnownAs": [
+    "ETF"
+  ],
+  "topic": "investing-basics",
+  "oneLine": "A fund that pools many people's money and trades on a stock exchange.",
+  "explanation": [
+    "An ETF, or exchange-traded fund, pools money from many investors. It invests that money in stocks, bonds or other assets. Each ETF share is a small part of everything the fund owns.",
+    "You buy and sell ETF shares on a stock exchange, usually through a brokerage account. You can trade them at the market price whenever the market is open.",
+    "Many ETFs hold many companies and industries, so one share gives you diversification. Some ETFs hold only a few investments, or even track a single stock."
+  ],
+  "whyItMatters": "An ETF lets you own a small part of many investments for a low amount of money. But ETFs are not guaranteed or insured by the government, and you can lose some or all of your money. Every ETF charges fees and expenses. Even small differences in fees can mean large differences in returns over time.",
+  "workedExample": "Nam buys one ETF share for $100. The ETF holds stocks of 200 companies, so his $100 is spread across all of them. If one company fails, he loses only a small part. If the whole market falls, his share falls too.",
+  "relatedTerms": [
+    "index-fund",
+    "diversification",
+    "stock"
+  ],
+  "sources": [
+    {
+      "name": "U.S. SEC, Investor.gov, Exchange-traded funds (ETFs)",
+      "url": "https://www.investor.gov/introduction-investing/investing-basics/investment-products/mutual-funds-and-exchange-traded-2",
+      "accessed": "2026-10-30"
+    }
+  ],
+  "furtherReading": [
+    {
+      "name": "FINRA, Exchange-traded funds and products",
+      "url": "https://www.finra.org/investors/investing/investment-products/exchange-traded-funds-and-products"
+    }
+  ],
+  "lastReviewed": "2026-10-30"
+}

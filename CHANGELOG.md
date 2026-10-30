@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.14.0] - 2026-10-30
+
+### Added
+
+- **Atelier content: Lesson 4, Invest the easy way**: the Term Entries *Exchange-traded fund* and *Index fund*, drafted with `/atelier-draft` from Investor.gov pages (#530, part of #513).
+  - The Check asks whether ETFs are guaranteed, what lower fees do to a return, and whether an index can be bought directly. Finishing it places the Compass keepsake.
+
 ## [16.13.0] - 2026-10-30
 
 ### Added
