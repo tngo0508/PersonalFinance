@@ -1,4 +1,4 @@
-/* global d3, PFI18n */
+/* global d3, PFI18n, ChartPalette */
 /**
  * Research page, Sectors tab: a D3 sunburst of the largest SEC filers by Public float, one year at a time.
  * Rings, inside out: SEC industry office, SIC industry, company (plus one "Other" slice per industry for the smaller
@@ -89,7 +89,6 @@
         'Trade & Services',
         'Industrial Applications and Services'
     ];
-    const DARK_LABEL_OFFICES = ['Manufacturing'];
     const RING_OPACITY = [1, 1, 0.88, 0.76];
     const OTHER_OPACITY = 0.45;
     // Dimmed by the Technology highlight: the fill keeps its office colour, only fainter.
@@ -637,6 +636,28 @@
     }
 
     /**
+     * The colour a translucent fill shows over what is behind it, for choosing its label's ink: an outer ring's office
+     * colour over the light page reads lighter, over the dark page darker (#486).
+     * @param {string} fill - The fill colour.
+     * @param {number} opacity - The fill's opacity, 0 to 1.
+     * @param {Element} element - The chart's host; its first painted ancestor is the ground.
+     * @returns {string} The blended colour.
+     */
+    function blendOver (fill, opacity, element) {
+        let ground = d3.rgb(255, 255, 255);
+        for (let node = element; node; node = node.parentElement) {
+            const colour = d3.color(getComputedStyle(node).backgroundColor);
+            if (colour && colour.opacity > 0) {
+                ground = colour.rgb();
+                break;
+            }
+        }
+        const rgb = d3.rgb(fill);
+        const mix = (top, bottom) => top * opacity + bottom * (1 - opacity);
+        return d3.rgb(mix(rgb.r, ground.r), mix(rgb.g, ground.g), mix(rgb.b, ground.b)).formatHex();
+    }
+
+    /**
      * The d3 hierarchy of one period, summed by Public float, sorted, and with the Technology flag marked.
      * @param {Object} data - The Sectors snapshot.
      * @param {Object} period - One entry of data.values.
@@ -919,9 +940,9 @@
                 .attr('fill-opacity', transition ? 0 : 1);
 
             const all = entering.merge(labels)
-                .attr('fill', (d) => (d.data.hatched || DARK_LABEL_OFFICES.includes(d.data.office)
+                .attr('fill', (d) => (d.data.hatched
                     ? 'var(--research-label-dark)'
-                    : 'var(--research-label-light)'))
+                    : inkFor(blendOver(officeColour(host, d.data.office), opacityOf(d) || 1, host))))
                 .text((d) => labelText(d, unit));
             if (transition) {
                 all.transition(transition)
@@ -1554,6 +1575,11 @@
         chart = createSunburst(host, data, tooltip);
         page.registerTab(TAB_ID, chart);
         window.ResearchSunburst = chart;
+        // A theme switch redraws the arcs, tiles, legend and ranked bars in the new office colours (#486).
+        ChartPalette.subscribe(() => {
+            tooltip.hide();
+            chart.refresh();
+        });
         const treemapHost = document.getElementById(TREEMAP_ID);
         // The card holds both charts; watching it (not the chart host) ignores the host hiding when the treemap shows.
         const card = host.parentElement || host;

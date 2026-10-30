@@ -25,10 +25,11 @@
     const TOOLTIP_ID = 'research-correlation-tooltip';
     const DEFAULT_YEARS = 3;
     // The dataviz reference diverging pair: blue (steps 200 to 600) and a red arm stepped to the same lightness, with
-    // the reference grey midpoint. Values print in light ink from the fourth step of either arm.
-    const BLUES = ['#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95'];
-    const REDS = ['#f4aca6', '#ec8079', '#df4e4c', '#c1252c', '#990618'];
-    const NEUTRAL = '#f0efec';
+    // the reference grey midpoint. Values print in light ink from the fourth step of either arm. The colours are the
+    // app tokens (site.css), the same in both themes since each cell carries its own ink (#486).
+    const BLUES = [2, 3, 4, 5, 6].map((step) => `var(--app-research-blue-${step})`);
+    const REDS = [1, 2, 3, 4, 5].map((step) => `var(--app-research-red-${step})`);
+    const NEUTRAL = 'var(--app-research-heat-neutral)';
     const FIRST_LIGHT_INK_STEP = 4;
 
     /**

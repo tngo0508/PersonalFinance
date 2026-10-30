@@ -154,17 +154,3 @@ test('adding a raw colour to a clean app token sheet fails the guard', () => {
     counts['wwwroot/css/site.css'] = countRawColours(`${site}\n.app-footer { color: rgb(0, 0, 0); }\n`, true);
     assert.match(checkRawColours(counts, readAllowList()).join('\n'), /wwwroot\/css\/site\.css has 1 raw colour/);
 });
-
-test('adding a raw colour to a listed stylesheet fails the guard', (t) => {
-    // Whichever stylesheet is still listed: the list shrinks slice by slice (#479)
-    const listed = Object.keys(readAllowList())[0];
-    if (!listed) {
-        t.skip('the allow-list is empty');
-        return;
-    }
-    const counts = scanStylesheets(WEB_ROOT);
-    const css = fs.readFileSync(path.join(WEB_ROOT, ...listed.split('/')), 'utf8');
-    counts[listed] = countRawColours(`${css}\n.x { color: rgb(0, 0, 0); }\n`, false);
-    const failures = checkRawColours(counts, readAllowList());
-    assert.ok(failures.some(failure => failure.startsWith(`${listed} has `) && failure.includes(', up from ')), failures.join('\n'));
-});

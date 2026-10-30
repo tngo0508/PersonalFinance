@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.4.0] - 2026-10-30
+
+### Changed
+
+- **Research in dark mode**: every Research tab takes its colours from the theme tokens, and its charts and maps repaint when the theme changes, without a reload (#486).
+  - The Research palettes move into the app token sheet (`--app-research-*`): the eight SEC office colours, ahead/behind, the basket's lean pair and its text steps, the chart axis and guide lines, the annotation bands, the hatch, and the World choropleth. Each has a dark value: the offices are lifted to 3:1 on the dark page and card (the Dashboard donut's dark hues), and the World ramp runs dark to light (the dark steps research.css had recorded).
+  - The Sectors sunburst and the World maps (market and basket) redraw on a theme switch through the chart palette helper; the Performance difference fills follow the tokens directly.
+  - A sunburst label picks its ink from its arc's colour as drawn, blended with the page at the ring's opacity. On the dark page an outer ring's label is white where it was black on a darkened blue; in light, a few outer-ring labels on light orange and pink turn dark, which reads better than the white they had.
+  - Pressed toggles and chips (Sunburst/Treemap, Nominal/Adjusted, the period buttons, Market/Your basket) take the text-on-wash token, and the selected tab and links the brand text green: they were the lifted green on its dark wash, 3.6:1.
+  - The Performance help no longer calls "Your basket" the "heavier dark line": the line is in the page's ink, light in dark mode.
+  - The Overlap and Correlation heatmaps keep the same ramps in both themes: each cell carries its own ink. The play button takes the brand fill, so its white icon meets 4.5:1 in dark.
+  - `research.css` and `research-funds.css` hold no raw colour. The raw-colour guard's allow-list is now empty: every Web stylesheet takes its colours from tokens (#479).
+
+### Added
+
+- **Theme smoke: Research**: the dark contrast check covers the Sectors and World tabs, and checks that the sunburst and the World map repaint in the light colours on a switch, and back.
+
+### Removed
+
+- **The raw-colour guard's listed-stylesheet test**: it only ran while a stylesheet was still on the allow-list; "an unlisted file with any literal fails" covers a new literal now that the list is empty.
+
 ## [16.3.0] - 2026-10-30
 
 ### Changed

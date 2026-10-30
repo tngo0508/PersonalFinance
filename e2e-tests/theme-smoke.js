@@ -5,9 +5,10 @@
  * In dark mode it checks key text against its effective background (4.5:1) on the Landing Page, a sign-in page,
  * Account settings and the Net Worth help modal (slice #482), the Net Worth page (slice #485), the Google Drive
  * sample-data notice and its Budget report and Transactions modals (slice #484), Budget, Budget Tracker and Savings
- * Goals (slice #487), the Dashboard and Money Priorities (slice #489), and Community, News and the AI chat widget
- * (slice #488), and that the Investment Calculator's, the Google Drive Transactions timeline's, the Budget planner's
- * Month Strip and the Net Worth runway restyle on a theme switch without a reload (slices #483, #484, #487 and #485).
+ * Goals (slice #487), the Dashboard and Money Priorities (slice #489), Community, News and the AI chat widget
+ * (slice #488), and Research's Sectors and World tabs (slice #486), and that the Investment Calculator's, the Google
+ * Drive Transactions timeline's, the Budget planner's Month Strip, the Net Worth runway, the Research sunburst and the
+ * World map restyle on a theme switch without a reload (slices #483, #484, #487, #485 and #486).
  * Run from ui-test.js as Test 9j.
  *
  * Expected labels are read from Resources/i18n/en.json, so a rewording does not break the test.
@@ -55,6 +56,12 @@ const CONTRAST_PAGES = {
         '.finance-hub-tab-btn:not(.active)', '.finance-hub-search-btn'],
     chatWidget: ['.ai-chat-header h2', '.ai-chat-header p', '.ai-chat-eyebrow', '.ai-chat-welcome-text', '.ai-chat-chip',
         '.ai-chat-disclaimer'],
+    // Research (#486): the Sectors sunburst (a chart view) and the World map (a map view), on the seeded snapshots
+    researchSectors: ['.research-header__title', '.research-tabs__tab[aria-selected="true"]',
+        '.research-tabs__tab[aria-selected="false"]', '#research-sectors-title', '.research-panel__title',
+        '#research-sectors-legend .research-legend__button', '.research-view-toggle__button[aria-pressed="true"]'],
+    researchWorld: ['.research-header__title', '.research-tabs__tab[aria-selected="true"]', '#research-world-subtitle',
+        '#research-panel-world .research-panel__title', '#research-panel-world .research-legend__item'],
     // Google Drive on sample data (#484): the sample-data notice, then the Budget report and Transactions modals. The
     // sample spreadsheet holds one month, so the report shows its month view: one period chip, the active one.
     googleDriveNotice: ['.gd-notice strong', '.gd-notice .small', '.gd-notice .btn', '.gd-section-header__title'],
@@ -468,6 +475,79 @@ async function checkRunwayRestyles(page, report) {
 }
 
 /**
+ * The fills a Research chart or map paints, next to the theme's tokens for them: every distinct fill of the marks
+ * (a hatch pattern's url() aside), and the token colours, both as the browser computes them.
+ * @param {import('playwright').Page} page - The Research page on the chart's tab.
+ * @param {string} marks - The marks' selector, e.g. the sunburst's arcs.
+ * @param {string[]} tokens - The custom properties the fills come from.
+ * @returns {Promise<{theme: string, marker: boolean, fills: string[], tokens: string[]}>} marker: the page has not
+ *     reloaded since the check set it. Colours are rgb(r, g, b) strings.
+ */
+async function researchFillState(page, marks, tokens) {
+    return page.evaluate(({marks, tokens}) => {
+        const root = document.documentElement;
+        const probe = document.createElement('span');
+        document.body.append(probe);
+        const computed = (colour) => {
+            probe.style.color = '';
+            probe.style.color = colour;
+            return getComputedStyle(probe).color;
+        };
+        const style = getComputedStyle(root);
+        const fills = [...new Set(Array.from(document.querySelectorAll(marks))
+            .map((mark) => mark.getAttribute('fill'))
+            .filter((fill) => fill && !fill.startsWith('url('))
+            .map(computed))];
+        const result = {
+            theme: root.getAttribute('data-theme'),
+            marker: window.__chartThemeCheck === true,
+            fills,
+            tokens: tokens.map((name) => computed(style.getPropertyValue(name).trim()))
+        };
+        probe.remove();
+        return result;
+    }, {marks, tokens});
+}
+
+/**
+ * Whether a Research chart paints only its theme's token colours.
+ * @param {object} state - From researchFillState.
+ * @returns {boolean}
+ */
+function researchFillsMatchTokens(state) {
+    return state.fills.length > 0 && state.fills.every((fill) => state.tokens.includes(fill));
+}
+
+/**
+ * A Research chart or map takes its colours from the Research tokens (#486): switching the theme repaints it without a
+ * reload. Leaves the page in dark mode, as it found it.
+ * @param {import('playwright').Page} page - A signed-in page on the chart's Research tab, in dark mode.
+ * @param {string} name - The chart, for the messages.
+ * @param {string} marks - The marks' selector.
+ * @param {string[]} tokens - The custom properties the fills come from.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+async function checkResearchRestyles(page, name, marks, tokens, report) {
+    await page.locator(marks).first().waitFor({state: 'attached', timeout: TIMEOUT});
+    await page.evaluate(() => { window.__chartThemeCheck = true; });
+
+    const dark = await researchFillState(page, marks, tokens);
+    check(dark.theme === 'dark' && researchFillsMatchTokens(dark), `${name}: the marks hold the dark Research colours`,
+        JSON.stringify(dark), report);
+
+    await chooseTheme(page, 'light');
+    const light = await researchFillState(page, marks, tokens);
+    check(light.theme === 'light' && light.marker && researchFillsMatchTokens(light)
+        && JSON.stringify(light.fills) !== JSON.stringify(dark.fills),
+    `${name}: switching to Light repaints it without a reload`, JSON.stringify(light), report);
+
+    await chooseTheme(page, 'dark');
+    const back = await researchFillState(page, marks, tokens);
+    check(back.theme === 'dark' && back.marker && researchFillsMatchTokens(back),
+        `${name}: switching back to Dark repaints it again`, JSON.stringify(back), report);
+}
+
+/**
  * The Google Drive Transactions timeline, next to the tokens it should show: its gridline colour and its spending
  * bars (the palette's second series), read from the Chart.js chart.
  * @param {import('playwright').Page} page - The Google Drive page with the Transactions modal open.
@@ -641,6 +721,18 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         await checkDarkContrast(page, 'Dashboard', CONTRAST_PAGES.dashboard, report);
         await page.goto(`${base}/MoneyPriorities`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Money Priorities', CONTRAST_PAGES.moneyPriorities, report);
+
+        // Research (#486): dark contrast, and the Sectors sunburst and the World map repaint on a switch.
+        const offices = Array.from({length: 8}, (_, i) => `--app-research-office-${i + 1}`).concat('--app-text-faint');
+        const worldSteps = Array.from({length: 8}, (_, i) => `--app-research-world-step-${i + 1}`)
+            .concat('--app-research-world-nodata');
+        await page.goto(`${base}/Research?tab=sectors`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'Research Sectors', CONTRAST_PAGES.researchSectors, report);
+        await checkResearchRestyles(page, 'Research sunburst', '#research-sunburst path.research-sunburst__arc', offices, report);
+        await page.goto(`${base}/Research?tab=world`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'Research World', CONTRAST_PAGES.researchWorld, report);
+        await checkResearchRestyles(page, 'Research World map', '#research-world-map path.research-world__country', worldSteps,
+            report);
 
         // Community, News and the AI chat widget (#488): dark contrast, the widget open on the Dashboard.
         await page.goto(`${base}/Community`, {waitUntil: 'networkidle', timeout: TIMEOUT});
