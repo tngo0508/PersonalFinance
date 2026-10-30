@@ -1,6 +1,6 @@
 {
   "slug": "own-a-piece",
-  "title": "Sở hữu một tác phẩm",
+  "title": "Sở hữu một phần",
   "intro": "Một cổ phiếu khiến bạn trở thành đồng sở hữu của một công ty. Bài học này cho thấy bạn nhận được gì và rủi ro gì. Nó cũng cho thấy cách phân tán tiền giúp giảm rủi ro đó.",
   "check": [
     {
@@ -16,9 +16,9 @@
       "options": [
         "$50",
         "$500",
-        "Không có gì"
+        "Không mất gì"
       ],
-      "explanation": "50 đô la. Chỉ có 100 đô la trong công ty đó, nên một lần ngã không quan trọng lắm."
+      "explanation": "50 đô la. Chỉ có 100 đô la trong công ty đó, nên một lần giảm giá ảnh hưởng ít hơn."
     },
     {
       "prompt": "Một quỹ chỉ nắm giữ một ngành luôn được đa dạng hóa tốt.",
