@@ -2699,5 +2699,16 @@
   "Learning.Js.Check.Right": "Bên phải.",
   "Learning.Js.Check.NotQuite": "Không hẳn.",
   "Learning.Js.Check.FinishFailed": "Chúng tôi không thể cứu được tiến trình của bạn. Làm ơn thử lại.",
+  "Learning.Review.Heading": "Đánh giá",
+  "Learning.Review.Lede": "Trước bài học hôm nay, hãy lật từng lá bài và hỏi xem bạn có biết không. Bạn có thể bỏ qua phần này.",
+  "Learning.Review.Turn": "Lật lá bài",
+  "Learning.Review.Marks": "Bạn có biết không?",
+  "Learning.Review.KnewIt": "Tôi biết mà.",
+  "Learning.Review.NotYet": "Chưa đâu",
+  "Learning.Review.Done": "Đánh giá đã xong. Bài học hôm nay bắt đầu bên dưới.",
+  "Learning.Review.Skip": "Bỏ qua đến bài học hôm nay",
+  "Learning.Js.Review.MarkedKnewIt": "Được cứu: bạn biết mà.",
+  "Learning.Js.Review.MarkedNotYet": "Đã lưu: chưa. Lá bài này sẽ trở lại trong một bài đánh giá sau.",
+  "Learning.Js.Review.MarkFailed": "Chúng tôi không thể cứu được điều đó. Làm ơn thử lại.",
   "Learning.Error.LessonLocked": "Bài học này chưa mở. Hãy hoàn thành bài trước trước, rồi quay lại sau nửa đêm."
 }

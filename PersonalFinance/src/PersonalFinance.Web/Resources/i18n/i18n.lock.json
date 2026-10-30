@@ -2700,6 +2700,17 @@
     "Learning.Js.Check.Right": "cd5592e5e3140daa",
     "Learning.Js.Check.NotQuite": "ea3f893fa0fb68b7",
     "Learning.Js.Check.FinishFailed": "bbafd1cff61bc12c",
+    "Learning.Review.Heading": "aff0766a5290e117",
+    "Learning.Review.Lede": "ac564d7dcacbf58c",
+    "Learning.Review.Turn": "f58f957818e2a330",
+    "Learning.Review.Marks": "5046e677bb762aab",
+    "Learning.Review.KnewIt": "ec55b24af340f90e",
+    "Learning.Review.NotYet": "a9549d7d06368d83",
+    "Learning.Review.Done": "a9b93ab4629f139d",
+    "Learning.Review.Skip": "f49b01a961b2de40",
+    "Learning.Js.Review.MarkedKnewIt": "71b011afbc0534b1",
+    "Learning.Js.Review.MarkedNotYet": "6a97be48af4ca519",
+    "Learning.Js.Review.MarkFailed": "5e4c62978bd7357d",
     "Learning.Error.LessonLocked": "bcf29e45b548f4c2"
   }
 }
