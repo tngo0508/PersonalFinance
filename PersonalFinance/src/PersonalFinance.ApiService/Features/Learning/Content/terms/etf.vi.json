@@ -1,0 +1,12 @@
+{
+  "slug": "etf",
+  "term": "Quỹ hoán đổi danh mục",
+  "oneLine": "Một quỹ tập hợp tiền của nhiều người và giao dịch trên sàn giao dịch cổ phiếu.",
+  "explanation": [
+    "Một quỹ ETF, hay quỹ hoán đổi danh mục, gom tiền từ nhiều nhà đầu tư. Nó đầu tư số tiền đó vào cổ phiếu, trái phiếu hoặc các tài sản khác. Mỗi cổ phiếu ETF là một phần nhỏ trong tất cả những gì quỹ sở hữu.",
+    "Bạn mua và bán cổ phần ETF trên sàn giao dịch cổ phiếu, thường thông qua tài khoản môi giới. Bạn có thể giao dịch chúng với giá thị trường bất cứ khi nào thị trường mở cửa.",
+    "Nhiều quỹ ETF nắm giữ nhiều công ty và ngành công nghiệp, vì vậy một cổ phiếu sẽ giúp bạn đa dạng hóa danh mục đầu tư. Một số quỹ ETF chỉ nắm giữ vài khoản đầu tư, hoặc thậm chí theo dõi một cổ phiếu duy nhất."
+  ],
+  "whyItMatters": "ETF cho phép bạn sở hữu một phần nhỏ trong nhiều khoản đầu tư với số tiền thấp. Nhưng ETF không được chính phủ đảm bảo hoặc bảo hiểm, và bạn có thể mất một phần hoặc toàn bộ số tiền của mình. Mỗi ETF đều thu phí và chi phí. Ngay cả sự khác biệt nhỏ về phí cũng có thể dẫn đến sự khác biệt lớn về lợi nhuận theo thời gian.",
+  "workedExample": "Nam mua một cổ phiếu ETF với giá 100 đô la. ETF nắm giữ cổ phiếu của 200 công ty, nên 100 đô la của anh ta được phân bổ cho tất cả các công ty. Nếu một công ty thất bại, anh ta chỉ mất một phần nhỏ. Nếu toàn bộ thị trường giảm, cổ phần của anh ta cũng giảm."
+}

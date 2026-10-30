@@ -1,0 +1,38 @@
+{
+  "slug": "invest-the-easy-way",
+  "title": "Đầu tư theo cách dễ dàng",
+  "intro": "Một cổ phiếu mang rủi ro của một công ty. Bài học này cho thấy các quỹ nắm giữ nhiều khoản đầu tư cùng lúc. Nó cũng cho thấy tại sao phí của họ lại quan trọng.",
+  "check": [
+    {
+      "prompt": "Chính phủ đảm bảo rằng một quỹ ETF sẽ không bị thua lỗ.",
+      "options": [
+        "Lầm tưởng",
+        "Sự thật"
+      ],
+      "explanation": "Lầm tưởng. ETF không được đảm bảo hay bảo hiểm, và bạn có thể mất tiền."
+    },
+    {
+      "prompt": "Hai quỹ theo cùng một chỉ số và kiếm được mức phí tương đương, nhưng một quỹ có phí thấp hơn. Cái nào cho bạn nhiều hơn?",
+      "options": [
+        "Quỹ với phí thấp hơn",
+        "Cả hai đều cho kết quả giống nhau",
+        "Quỹ có phí cao hơn"
+      ],
+      "explanation": "Quỹ có phí thấp hơn. Phí làm giảm lợi nhuận của bạn."
+    },
+    {
+      "prompt": "Bạn có thể mua trực tiếp chỉ số thị trường.",
+      "options": [
+        "Lầm tưởng",
+        "Sự thật"
+      ],
+      "explanation": "Lầm tưởng. Bạn không thể mua một chỉ số, nhưng một quỹ chỉ số thì tuân theo một chỉ số."
+    }
+  ],
+  "tryIt": {
+    "label": "Giá trị tài sản ròng"
+  },
+  "keepsake": {
+    "name": "La bàn"
+  }
+}

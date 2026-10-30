@@ -1,0 +1,12 @@
+{
+  "slug": "index-fund",
+  "term": "Quỹ chỉ số",
+  "oneLine": "Một quỹ cố gắng đạt được lợi nhuận tương đương với chỉ số thị trường.",
+  "explanation": [
+    "Quỹ quỹ chỉ số là một quỹ tương hỗ hoặc ETF cố gắng đạt được lợi nhuận tương đương với chỉ số thị trường. Quỹ tương hỗ cũng gom tiền từ nhiều nhà đầu tư.",
+    "Chỉ số thị trường đo lường một nhóm cổ phiếu hoặc trái phiếu đại diện cho một phần của thị trường. S&P 500 là một ví dụ. Bạn không thể mua một chỉ số, nhưng một quỹ chỉ số cho phép bạn theo dõi một chỉ số.",
+    "Quỹ chỉ số thường mua bán ít hơn các quỹ khác. Họ không trả tiền cho người chọn đầu tư, nên chi phí có thể thấp hơn."
+  ],
+  "whyItMatters": "Phí và chi phí sẽ làm giảm lợi nhuận của bạn. Nếu hai quỹ nắm giữ các khoản đầu tư có kết quả tương đương, quỹ có chi phí thấp hơn thường sẽ cho bạn nhiều hơn. Không phải quỹ chỉ số nào cũng rẻ hơn, vì vậy hãy kiểm tra chi phí trước. Một quỹ chỉ số mang cùng rủi ro như thị trường mà nó theo dõi, và phí có thể làm nó có lợi nhuận thấp hơn một chút so với chỉ số của nó.",
+  "workedExample": "Hai quỹ theo cùng một chỉ số, và mỗi quỹ thu được 7% trong một năm trước khi có phí. Một quỹ thu 0,1% mỗi năm, quỹ còn lại thu 1%. Với $10,000, quỹ đầu tiên để lại $690, quỹ thứ hai để lại $600."
+}
