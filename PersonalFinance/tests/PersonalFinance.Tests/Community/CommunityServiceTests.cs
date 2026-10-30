@@ -83,7 +83,7 @@ public partial class CommunityServiceTests
         CommunityStrategyDto shown = Assert.Single(response.Strategies);
         Assert.Equal(rerolled.Name, shown.AuthorPseudonym);
         Assert.True(shown.IsOwn);
-        Assert.Equal(rerolled.Name, Assert.Single(response.RecentComments).AuthorPseudonym);
+        Assert.Equal(rerolled.Name, Assert.Single(shown.Comments).AuthorPseudonym);
         CommunityStrategyDto seenByAnother = Assert.Single((await service.GetCommunityAsync("someone-else")).Strategies);
         Assert.Equal(rerolled.Name, seenByAnother.AuthorPseudonym);
         Assert.False(seenByAnother.IsOwn);
@@ -128,30 +128,29 @@ public partial class CommunityServiceTests
         CommunityStrategyDto shown = Assert.Single(response.Strategies);
         Assert.Null(shown.AuthorPseudonym);
         Assert.False(shown.IsOwn);
-        Assert.Null(Assert.Single(response.RecentComments).AuthorPseudonym);
+        Assert.Null(Assert.Single(shown.Comments).AuthorPseudonym);
     }
 
     [Fact]
-    public async Task GetPollComments_AreReportedAsTheViewerSeesThem()
+    public async Task GetCommunity_GivesEachPollItsThread_OldestFirst_AsTheViewerSeesIt()
     {
         await using AppDbContext db = CreateContext();
         db.CommunityPolls.Add(new CommunityPoll { PollCode = "habits", Question = "Which habit stuck?", Category = "Goals" });
         await db.SaveChangesAsync();
         CommunityService service = CreateService(db);
-        CommunityCommentDto posted = await service.AddCommentAsync(UserId,
+        CommunityCommentDto first = await service.AddCommentAsync(UserId,
             new CommunityCommentRequestDto { Text = "Meal plans", PollCode = "habits" });
-        await service.ToggleCommentLikeAsync(UserId, posted.Id);
+        CommunityCommentDto second = await service.AddCommentAsync("someone-else",
+            new CommunityCommentRequestDto { Text = "A spending pause", PollCode = "habits" });
 
-        CommunityCommentDto mine = Assert.Single(await service.GetPollCommentsAsync(UserId, "habits"));
-        CommunityCommentDto theirs = Assert.Single(await service.GetPollCommentsAsync("someone-else", "habits"));
+        CommunityPollDto mine = Assert.Single((await service.GetCommunityAsync(UserId)).ActivePolls);
+        CommunityPollDto theirs = Assert.Single((await service.GetCommunityAsync("someone-else")).ActivePolls);
 
-        Assert.Equal(posted.AuthorPseudonym, mine.AuthorPseudonym);
-        Assert.True(mine.IsOwn);
-        Assert.True(mine.IsLikedByUser);
-        Assert.Equal(1, mine.Likes);
-        Assert.Equal(posted.AuthorPseudonym, theirs.AuthorPseudonym);
-        Assert.False(theirs.IsOwn);
-        Assert.False(theirs.IsLikedByUser);
+        Assert.Equal([first.Id, second.Id], mine.Comments.Select(c => c.Id));
+        Assert.True(mine.Comments[0].IsOwn);
+        Assert.False(mine.Comments[1].IsOwn);
+        Assert.False(theirs.Comments[0].IsOwn);
+        Assert.Equal(first.AuthorPseudonym, theirs.Comments[0].AuthorPseudonym);
     }
 
     [Fact]
@@ -180,8 +179,8 @@ public partial class CommunityServiceTests
         AzureSqlTranslation.AssertTranslates(service.BoardStrategiesQuery(UserId, null).Take(CommunityStrategyLimits.BoardSize));
         AzureSqlTranslation.AssertTranslates(service.BoardStrategiesQuery(UserId, "Debt").Take(CommunityStrategyLimits.BoardSize));
         AzureSqlTranslation.AssertTranslates(service.ReviewQueueQuery(CommunityStrategyStatus.Pending));
-        AzureSqlTranslation.AssertTranslates(service.VisibleCommentsQuery(UserId).Take(10));
-        AzureSqlTranslation.AssertTranslates(service.VisibleCommentsQuery(UserId).Where(c => c.PollId == 1));
+        AzureSqlTranslation.AssertTranslates(service.ThreadCommentsQuery(UserId, [1, 2], [3]));
+        AzureSqlTranslation.AssertTranslates(service.CommentReviewQuery().Take(CommunityCommentLimits.ReviewListSize));
     }
 
     [Fact]
@@ -281,30 +280,6 @@ public partial class CommunityServiceTests
     }
 
     [Fact]
-    public async Task ToggleCommentLikeAsync_Unknown_Throws404()
-    {
-        await using AppDbContext db = CreateContext();
-
-        ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(
-            () => CreateService(db).ToggleCommentLikeAsync(UserId, 999));
-
-        Assert.Equal(ApiErrorKeys.Community.CommentNotFound, ex.Key);
-        Assert.Equal(404, ex.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetPollCommentsAsync_WithUnknownPoll_ThrowsPollNotFound404()
-    {
-        await using AppDbContext db = CreateContext();
-
-        ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(
-            () => CreateService(db).GetPollCommentsAsync(UserId, "no-such-poll"));
-
-        Assert.Equal(ApiErrorKeys.Community.PollNotFound, ex.Key);
-        Assert.Equal(404, ex.StatusCode);
-    }
-
-    [Fact]
     public void EveryCommunityKey_ResolvesInEnglish_WithoutPlaceholder()
     {
         using var uiCulture = new UiCultureScope("en");
@@ -318,7 +293,7 @@ public partial class CommunityServiceTests
                 .Select(f => (string)f.GetRawConstantValue()!)
                 .ToList();
 
-            Assert.Equal(15, keys.Count);
+            Assert.Equal(17, keys.Count);
             foreach (string key in keys)
             {
                 var entry = new ApiErrorEntryDto { Key = key, Message = key, Args = ArgsOf(key) };
@@ -338,7 +313,7 @@ public partial class CommunityServiceTests
     {
         IReadOnlyDictionary<string, ApiErrorArgDto>? args = key switch
         {
-            ApiErrorKeys.Community.CommentTooLong => ErrorArgs.Number("max", 2000),
+            ApiErrorKeys.Community.CommentTooLong => ErrorArgs.Number("max", CommunityCommentLimits.TextMaxLength),
             ApiErrorKeys.Community.StrategyTitle => ErrorArgs.Number("max", CommunityStrategyLimits.TitleMaxLength),
             ApiErrorKeys.Community.StrategyTried or ApiErrorKeys.Community.StrategyHappened
                 or ApiErrorKeys.Community.StrategyKeeping => ErrorArgs.Number("max", CommunityStrategyLimits.TextMaxLength),

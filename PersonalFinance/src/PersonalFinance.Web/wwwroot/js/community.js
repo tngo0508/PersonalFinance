@@ -1,14 +1,11 @@
 /* global PFI18n */
 /**
- * Guild Hall page — the Pseudonym re-roll, poll voting, comment toggling, comment likes, and pinning a Strategy with
- * the no-amounts nudge. Chrome strings come from the page's <js-strings prefix="Community.Js."> island via PFI18n;
+ * Guild Hall page — the Pseudonym re-roll, poll voting, Reactions, reply threads on Strategies and polls, and pinning
+ * a Strategy with the no-amounts nudge. Chrome strings come from the page's <js-strings prefix="Community.Js."> island via PFI18n;
  * user content (Strategies, comments, Pseudonyms) is set as text and never translated.
  */
 (function () {
     'use strict';
-
-    const SVG_NS = 'http://www.w3.org/2000/svg';
-    const HEART_PATH = 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z';
 
     /**
      * Shows a short message in the page's toast.
@@ -45,16 +42,6 @@
     }
 
     /**
-     * The avatar letters of an author label: the first letter of up to count words, upper-cased.
-     * @param {string} name - The author label.
-     * @param {number} count - How many words to take.
-     * @returns {string} The letters.
-     */
-    function initials (name, count) {
-        return name.split(' ').filter(Boolean).slice(0, count).map((word) => word.charAt(0).toUpperCase()).join('');
-    }
-
-    /**
      * Shows a re-rolled Pseudonym everywhere the viewer's own name is on the page: the badge, and the author of the
      * viewer's own Strategies and comments, so nothing on the page still shows the old one.
      * @param {string} name - The new Pseudonym.
@@ -62,9 +49,6 @@
     function applyPseudonym (name) {
         document.querySelectorAll('[data-pseudonym-self]').forEach((el) => {
             el.textContent = name;
-        });
-        document.querySelectorAll('[data-pseudonym-self-initials]').forEach((el) => {
-            el.textContent = initials(name, parseInt(el.dataset.pseudonymSelfInitials, 10) || 1);
         });
     }
 
@@ -90,114 +74,137 @@
     }
 
     /**
-     * Opens or closes the comment form that follows a toggle button, focusing its textarea when opened.
-     * @param {HTMLElement} toggle - The toggle button.
+     * Sets a Reaction button's pressed state and, on a Strategy, its count.
+     * @param {HTMLElement} btn - The Reaction button.
+     * @param {boolean} pressed - Whether the viewer holds the Reaction.
+     * @param {number|null} count - The kind's count, or null when the button shows none (a Comment).
      */
-    function toggleCommentForm (toggle) {
-        const form = toggle.nextElementSibling;
+    function setReaction (btn, pressed, count) {
+        btn.setAttribute('aria-pressed', String(pressed));
+        const countEl = btn.querySelector('[data-react-count]');
+        if (countEl && typeof count === 'number') {
+            countEl.textContent = String(count);
+        }
+    }
+
+    /**
+     * Toggles a Reaction optimistically, then confirms it with the server, reverting on failure.
+     * @param {HTMLElement} btn - The Reaction button, carrying its kind and its Strategy or Comment id.
+     */
+    async function toggleReaction (btn) {
+        const strategyId = parseInt(btn.dataset.strategyId, 10) || null;
+        const commentId = parseInt(btn.dataset.commentId, 10) || null;
+        if (!strategyId && !commentId) {
+            return;
+        }
+
+        const countEl = btn.querySelector('[data-react-count]');
+        const wasPressed = btn.getAttribute('aria-pressed') === 'true';
+        const count = countEl ? parseInt(countEl.textContent, 10) || 0 : null;
+        const optimistic = count === null ? null : Math.max(0, count + (wasPressed ? -1 : 1));
+        setReaction(btn, !wasPressed, optimistic);
+        btn.disabled = true;
+
+        try {
+            const data = await postJson('/Community/React', {
+                kind: btn.dataset.reactKind,
+                strategyId: strategyId,
+                commentId: commentId
+            });
+            if (data.success) {
+                setReaction(btn, data.byViewer, data.count);
+            } else {
+                setReaction(btn, wasPressed, count);
+                showToast(data.error || PFI18n.t('Community.Js.ReactFailed'));
+            }
+        } catch {
+            setReaction(btn, wasPressed, count);
+            showToast(PFI18n.t('Community.Js.ReactFailedRetry'));
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.community-react');
+        if (btn && !btn.disabled) {
+            toggleReaction(btn);
+        }
+    });
+
+    /**
+     * Adds a posted Comment to the end of its thread, from the page's template, and updates the thread's summary.
+     * @param {HTMLElement} thread - The thread (a details element).
+     * @param {object} comment - The posted Comment, with its author label.
+     */
+    function appendComment (thread, comment) {
+        const list = thread.querySelector('[data-thread-list]');
+        const template = document.getElementById('commentTemplate');
+        if (!list || !template || !comment) {
+            return;
+        }
+
+        const item = template.content.firstElementChild.cloneNode(true);
+        item.dataset.commentId = comment.id;
+        item.querySelectorAll('[data-comment]').forEach((slot) => {
+            slot.textContent = comment[slot.dataset.comment] || '';
+        });
+        item.querySelectorAll('.community-react').forEach((btn) => {
+            btn.dataset.commentId = comment.id;
+        });
+        list.appendChild(item);
+
+        const summary = thread.querySelector('[data-thread-summary]');
+        if (summary) {
+            summary.textContent = PFI18n.plural('Community.Js.Replies', list.children.length);
+        }
+    }
+
+    // --- Replies on Strategies and polls ---
+    document.addEventListener('submit', async (e) => {
+        const form = e.target.closest('[data-reply-form]');
         if (!form) {
             return;
         }
 
-        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-        toggle.setAttribute('aria-expanded', String(!isExpanded));
-        form.style.display = isExpanded ? 'none' : 'block';
-        if (!isExpanded) {
-            const input = form.querySelector('textarea');
-            if (input) {
-                input.focus();
-            }
-        }
-    }
-
-    /**
-     * Closes a comment form and marks its toggle collapsed.
-     * @param {HTMLElement} form - The comment form.
-     */
-    function closeCommentForm (form) {
-        form.style.display = 'none';
-        const toggle = form.previousElementSibling;
-        if (toggle) {
-            toggle.setAttribute('aria-expanded', 'false');
-        }
-    }
-
-    /**
-     * Sets a like button's state and count.
-     * @param {HTMLElement} likeBtn - The like button.
-     * @param {HTMLElement} countEl - Its count element.
-     * @param {boolean} liked - Whether it is liked.
-     * @param {number} count - The like count.
-     */
-    function setLike (likeBtn, countEl, liked, count) {
-        likeBtn.classList.toggle('liked', liked);
-        countEl.textContent = count;
-    }
-
-    /**
-     * Toggles a like optimistically, then confirms it with the server, reverting on failure.
-     * @param {HTMLElement} likeBtn - The like button.
-     * @param {string} countSelector - Selector of its count element.
-     * @param {string} url - The toggle endpoint.
-     * @param {object} payload - The request body.
-     */
-    async function toggleLike (likeBtn, countSelector, url, payload) {
-        const countEl = likeBtn.querySelector(countSelector);
-        if (!countEl) {
+        e.preventDefault();
+        const input = form.querySelector('textarea');
+        const button = form.querySelector('button[type="submit"]');
+        if (!input) {
             return;
         }
 
-        const wasLiked = likeBtn.classList.contains('liked');
-        const count = parseInt(countEl.textContent, 10) || 0;
-        setLike(likeBtn, countEl, !wasLiked, wasLiked ? count - 1 : count + 1);
-
-        try {
-            const data = await postJson(url, payload);
-            if (data.success) {
-                setLike(likeBtn, countEl, data.isLiked, data.likes);
-            } else {
-                setLike(likeBtn, countEl, wasLiked, count);
-                showToast(data.error || PFI18n.t('Community.Js.LikeFailed'));
-            }
-        } catch {
-            setLike(likeBtn, countEl, wasLiked, count);
-            showToast(PFI18n.t('Community.Js.LikeFailedRetry'));
-        }
-    }
-
-    /**
-     * Posts a comment from a form, prepends it to Recent Community Activity, and closes the form.
-     * @param {HTMLElement} form - The comment form.
-     * @param {object} target - { pollCode } or { strategyId }.
-     * @returns {Promise<boolean>} Whether the comment was posted.
-     */
-    async function postComment (form, target) {
-        const input = form.querySelector('textarea');
-        if (!input || !input.value.trim()) {
-            return false;
-        }
-
         const text = input.value.trim();
-        input.value = '';
+        input.classList.toggle('is-invalid', !text);
+        if (!text) {
+            input.focus();
+            return;
+        }
+
+        const target = form.dataset.strategyId
+            ? { strategyId: parseInt(form.dataset.strategyId, 10) }
+            : { pollCode: form.dataset.pollCode };
+        if (button) {
+            button.disabled = true;
+        }
 
         try {
             const data = await postJson('/Community/AddComment', { ...target, text: text });
-            if (!data.success) {
-                input.value = text;
+            if (data.success) {
+                input.value = '';
+                appendComment(form.closest('[data-thread]'), data.comment);
+                showToast(PFI18n.t('Community.Js.CommentPosted'));
+            } else {
                 showToast(data.error || PFI18n.t('Community.Js.CommentFailed'));
-                return false;
             }
-
-            showToast(PFI18n.t('Community.Js.CommentPosted'));
-            closeCommentForm(form);
-            prependComment(data.comment);
-            return true;
         } catch {
-            input.value = text;
             showToast(PFI18n.t('Community.Js.CommentFailedRetry'));
-            return false;
+        } finally {
+            if (button) {
+                button.disabled = false;
+            }
         }
-    }
+    });
 
     // --- Poll Voting ---
     document.addEventListener('click', async (e) => {
@@ -288,110 +295,6 @@
         if (totalVotesEl) {
             totalVotesEl.textContent = PFI18n.plural('Community.Js.Votes', pollData.totalVotes);
         }
-    }
-
-    // --- Comment form toggles (polls) ---
-    document.addEventListener('click', (e) => {
-        const toggle = e.target.closest('.community-poll-comment-toggle');
-        if (toggle) {
-            toggleCommentForm(toggle);
-        }
-    });
-
-    // --- Comment Like Buttons ---
-    document.addEventListener('click', (e) => {
-        const likeBtn = e.target.closest('.community-comment-like');
-        const commentId = likeBtn ? parseInt(likeBtn.dataset.commentId, 10) : 0;
-        if (commentId) {
-            toggleLike(likeBtn, '.community-comment-like-count', '/Community/ToggleLike', { commentId: commentId });
-        }
-    });
-
-    // --- Poll Comment Submit ---
-    document.addEventListener('click', (e) => {
-        const submitBtn = e.target.closest('.community-poll-comment-submit');
-        const form = submitBtn ? submitBtn.closest('.community-poll-comment-form') : null;
-        if (!form) {
-            return;
-        }
-
-        const pollCard = submitBtn.closest('.community-poll-card');
-        postComment(form, { pollCode: pollCard ? pollCard.dataset.pollId : '' });
-    });
-
-    /**
-     * Builds an element with a class and, optionally, text.
-     * @param {string} tag - The tag name.
-     * @param {string} className - The class.
-     * @param {string} [text] - Its text, set with textContent.
-     * @returns {HTMLElement} The element.
-     */
-    function el (tag, className, text) {
-        const node = document.createElement(tag);
-        node.className = className;
-        if (text !== undefined) {
-            node.textContent = text;
-        }
-        return node;
-    }
-
-    /**
-     * Builds the heart icon of a like button.
-     * @returns {SVGElement} The icon.
-     */
-    function heartIcon () {
-        const svg = document.createElementNS(SVG_NS, 'svg');
-        const attributes = {
-            width: '16', height: '16', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
-            'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round'
-        };
-        Object.keys(attributes).forEach((name) => svg.setAttribute(name, attributes[name]));
-        const path = document.createElementNS(SVG_NS, 'path');
-        path.setAttribute('d', HEART_PATH);
-        svg.appendChild(path);
-        return svg;
-    }
-
-    /**
-     * Prepends a new comment to the recent comments list.
-     * @param {object} comment - The posted comment.
-     */
-    function prependComment (comment) {
-        const list = document.getElementById('communityCommentsList');
-        if (!list || !comment) {
-            return;
-        }
-
-        const noComments = list.querySelector('.community-no-comments');
-        if (noComments) {
-            noComments.remove();
-        }
-
-        const card = el('div', 'community-comment-card');
-        card.dataset.commentId = comment.id;
-
-        const author = comment.author || '';
-        const header = el('div', 'community-comment-header');
-        const avatar = el('div', 'community-comment-avatar', initials(author, 1) || '?');
-        avatar.setAttribute('aria-hidden', 'true');
-        const authorEl = el('strong', 'community-comment-author', author);
-        if (comment.isOwn) {
-            avatar.dataset.pseudonymSelfInitials = '1';
-            authorEl.dataset.pseudonymSelf = '';
-        }
-
-        const info = el('div', 'community-comment-info');
-        info.append(authorEl, ' ', el('time', 'community-comment-time', PFI18n.t('Community.Js.JustNow')));
-
-        const like = el('button', 'community-comment-like');
-        like.type = 'button';
-        like.dataset.commentId = comment.id;
-        like.setAttribute('aria-label', PFI18n.t('Community.Js.LikeComment'));
-        like.append(heartIcon(), el('span', 'community-comment-like-count', String(comment.likes || 0)));
-
-        header.append(avatar, info, like);
-        card.append(header, el('p', 'community-comment-text', comment.text || ''));
-        list.prepend(card);
     }
 
     // --- Pin a Strategy ---

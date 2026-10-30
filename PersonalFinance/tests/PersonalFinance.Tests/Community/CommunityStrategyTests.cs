@@ -186,18 +186,19 @@ public class CommunityStrategyTests
     }
 
     [Fact]
-    public async Task RecentComments_LeaveOutCommentsOnAStrategyRejectedAfterApproval()
+    public async Task Threads_LeaveOutCommentsOnAStrategyRejectedAfterApproval()
     {
         await using AppDbContext db = CreateContext();
         CommunityService service = CreateService(db);
         CommunityStrategyDto strategy = await SubmitAsync(service, Author, "Approved, then rejected");
         await service.ReviewStrategyAsync(strategy.Id, CommunityStrategyStatus.Approved);
         await service.AddCommentAsync(Reader, new CommunityCommentRequestDto { Text = "Trying this", StrategyId = strategy.Id });
-        Assert.Single((await service.GetCommunityAsync(Reader)).RecentComments);
+        Assert.Single(Assert.Single((await service.GetCommunityAsync(Reader)).Strategies).Comments);
 
         await service.ReviewStrategyAsync(strategy.Id, CommunityStrategyStatus.Rejected);
 
-        Assert.Empty((await service.GetCommunityAsync(Reader)).RecentComments);
+        Assert.Empty((await service.GetCommunityAsync(Reader)).Strategies);
+        Assert.Empty(Assert.Single((await service.GetCommunityAsync(Author)).Strategies).Comments);
     }
 
     [Theory]

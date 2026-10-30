@@ -13,9 +13,10 @@ using PersonalFinance.Web.Models.Community;
 namespace PersonalFinance.Tests.Community;
 
 /// <summary>
-/// The Guild Hall page's controller over a faked ApiService: the view gets the viewer's Pseudonym and each post's
-/// author as the API reports it, the board is filtered only by a known category, a Former member's post is labelled in
-/// the request's Language, the re-roll answers with the new name, and a pinned Strategy answers with its waiting note.
+/// The Guild Hall page's controller over a faked ApiService: the view gets the viewer's Pseudonym, each post's author
+/// and each Strategy's Reactions and thread as the API reports them, the board is filtered only by a known category,
+/// the re-roll answers with the new name, a pinned Strategy answers with its waiting note (its category in the
+/// request's Language), and a Reaction is sent only with a known kind and one target.
 /// </summary>
 public class CommunityControllerTests
 {
@@ -29,9 +30,13 @@ public class CommunityControllerTests
             Strategies =
             [
                 new CommunityStrategyDto { Id = 1, AuthorPseudonym = "Steady Heron", IsOwn = true, Status = CommunityStrategyStatus.Pending },
-                new CommunityStrategyDto { Id = 2, AuthorPseudonym = null, Status = CommunityStrategyStatus.Approved },
+                new CommunityStrategyDto
+                {
+                    Id = 2, AuthorPseudonym = null, Status = CommunityStrategyStatus.Approved, HelpfulCount = 4,
+                    CheeringByViewer = true,
+                    Comments = [new CommunityCommentDto { Id = 3, AuthorPseudonym = "Steady Heron", IsOwn = true, HelpfulByViewer = true }],
+                },
             ],
-            RecentComments = [new CommunityCommentDto { Id = 3, AuthorPseudonym = "Steady Heron", IsOwn = true }],
         });
 
         ViewResult view = Assert.IsType<ViewResult>(await CreateController(api).Index());
@@ -46,10 +51,16 @@ public class CommunityControllerTests
                 Assert.True(strategy.IsOwn);
                 Assert.Equal(CommunityStrategyStatus.Pending, strategy.Status);
             },
-            strategy => Assert.Null(strategy.AuthorPseudonym));
-        CommunityComment comment = Assert.Single(model.RecentComments);
-        Assert.Equal("Steady Heron", comment.AuthorPseudonym);
-        Assert.True(comment.IsOwn);
+            strategy =>
+            {
+                Assert.Null(strategy.AuthorPseudonym);
+                Assert.Equal(4, strategy.HelpfulCount);
+                Assert.True(strategy.CheeringByViewer);
+                CommunityComment comment = Assert.Single(strategy.Comments);
+                Assert.Equal("Steady Heron", comment.AuthorPseudonym);
+                Assert.True(comment.IsOwn);
+                Assert.True(comment.HelpfulByViewer);
+            });
     }
 
     [Theory]
@@ -100,13 +111,6 @@ public class CommunityControllerTests
     }
 
     [Fact]
-    public void SubmitStrategy_ValidatesTheAntiforgeryToken()
-    {
-        Assert.NotNull(typeof(CommunityController).GetMethod(nameof(CommunityController.SubmitStrategy))!
-            .GetCustomAttributes(typeof(ValidateAntiForgeryTokenAttribute), inherit: false).SingleOrDefault());
-    }
-
-    [Fact]
     public async Task RerollPseudonym_AnswersWithTheNewName()
     {
         (ICommunityApi api, ApiProxy<ICommunityApi> proxy) = ApiProxy.Create<ICommunityApi>();
@@ -121,24 +125,49 @@ public class CommunityControllerTests
     }
 
     [Fact]
-    public async Task GetPollComments_LabelsAFormerMembersComment_InTheRequestLanguage()
+    public async Task React_SendsTheKindAndTarget_AndAnswersWithTheNewState()
     {
-        using var culture = new UiCultureScope("vi");
         (ICommunityApi api, ApiProxy<ICommunityApi> proxy) = ApiProxy.Create<ICommunityApi>();
-        proxy.Returns(nameof(ICommunityApi.GetPollCommentsAsync), new List<CommunityCommentDto>
+        proxy.Returns(nameof(ICommunityApi.ToggleReactionAsync), new CommunityReactionResultDto
         {
-            new() { Id = 1, AuthorPseudonym = null, Text = "Still here" },
-            new() { Id = 2, AuthorPseudonym = "Kind Otter", Text = "Hello", IsOwn = true },
+            Kind = CommunityReactionKind.Helpful, ByViewer = true, Count = 3,
         });
 
-        JsonResult json = Assert.IsType<JsonResult>(await CreateController(api).GetPollComments("habits"));
+        JsonResult json = Assert.IsType<JsonResult>(await CreateController(api).React(
+            new CommunityController.ReactionRequest { Kind = "Helpful", StrategyId = 7 }));
 
         using JsonDocument answer = JsonDocument.Parse(JsonSerializer.Serialize(json.Value));
-        JsonElement[] comments = answer.RootElement.GetProperty("comments").EnumerateArray().ToArray();
-        Assert.Equal(TestLocalization.Vietnamese("Community.FormerMember"), comments[0].GetProperty("author").GetString());
-        Assert.False(comments[0].GetProperty("isOwn").GetBoolean());
-        Assert.Equal("Kind Otter", comments[1].GetProperty("author").GetString());
-        Assert.True(comments[1].GetProperty("isOwn").GetBoolean());
+        Assert.True(answer.RootElement.GetProperty("byViewer").GetBoolean());
+        Assert.Equal(3, answer.RootElement.GetProperty("count").GetInt32());
+        Assert.Equal("Helpful", answer.RootElement.GetProperty("kind").GetString());
+        Assert.Equal([nameof(ICommunityApi.ToggleReactionAsync)], proxy.Calls);
+    }
+
+    [Theory]
+    [InlineData("Downvote", 7, null)]
+    [InlineData("3", 7, null)]
+    [InlineData("Helpful", null, null)]
+    [InlineData("Helpful", 7, 8)]
+    public async Task React_RejectsAnUnknownKindOrNotExactlyOneTarget_WithoutCallingTheApi(string kind, int? strategyId,
+        int? commentId)
+    {
+        (ICommunityApi api, ApiProxy<ICommunityApi> proxy) = ApiProxy.Create<ICommunityApi>();
+
+        IActionResult result = await CreateController(api).React(
+            new CommunityController.ReactionRequest { Kind = kind, StrategyId = strategyId, CommentId = commentId });
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(proxy.Calls);
+    }
+
+    [Theory]
+    [InlineData(nameof(CommunityController.SubmitStrategy))]
+    [InlineData(nameof(CommunityController.AddComment))]
+    [InlineData(nameof(CommunityController.React))]
+    public void PostingActions_ValidateTheAntiforgeryToken(string action)
+    {
+        Assert.NotNull(typeof(CommunityController).GetMethod(action)!
+            .GetCustomAttributes(typeof(ValidateAntiForgeryTokenAttribute), inherit: false).SingleOrDefault());
     }
 
     private static CommunityController CreateController(ICommunityApi api)

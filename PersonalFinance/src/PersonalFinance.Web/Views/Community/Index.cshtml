@@ -68,20 +68,7 @@
                             </div>
                         }
                     </div>
-                    <div class="community-poll-comment-section">
-                        <button type="button" class="community-poll-comment-toggle" aria-expanded="false">
-                            💬 @L["Community.Polls.ShareThoughts"]
-                        </button>
-                        <div class="community-poll-comment-form" style="display:none;">
-                            <textarea class="form-control community-poll-comment-input"
-                                      placeholder="@L["Community.Polls.CommentPlaceholder"]"
-                                      rows="2"
-                                      aria-label="@L["Community.Polls.CommentAria"]"></textarea>
-                            <div class="community-poll-comment-actions">
-                                <button type="button" class="btn community-poll-comment-submit">@L["Community.PostComment"]</button>
-                            </div>
-                        </div>
-                    </div>
+                    <partial name="_Thread" model="new CommunityThread(null, poll.Id, poll.Comments)" />
                 </div>
             }
         </div>
@@ -153,6 +140,22 @@
                             <strong data-pseudonym-self="@(strategy.IsOwn ? "" : null)">@strategyAuthor</strong>
                             · <time datetime="@strategy.CreatedAt.ToString("o")">@CommunityText.TimeAgo(L, strategy.CreatedAt, DateTime.UtcNow)</time>
                         </p>
+                        @if (strategy.Status == CommunityStrategyStatus.Approved)
+                        {
+                            <div class="community-reactions" role="group" aria-label="@L["Community.Reactions.StrategyAria"]">
+                                <button type="button" class="community-react" data-react-kind="Helpful"
+                                        data-strategy-id="@strategy.Id" aria-pressed="@(strategy.HelpfulByViewer ? "true" : "false")">
+                                    <span aria-hidden="true">🕯️</span> @L["Community.Reactions.Helpful"]
+                                    <span class="community-react-count" data-react-count>@strategy.HelpfulCount</span>
+                                </button>
+                                <button type="button" class="community-react" data-react-kind="CheeringYouOn"
+                                        data-strategy-id="@strategy.Id" aria-pressed="@(strategy.CheeringByViewer ? "true" : "false")">
+                                    <span aria-hidden="true">🙌</span> @L["Community.Reactions.CheeringYouOn"]
+                                    <span class="community-react-count" data-react-count>@strategy.CheeringCount</span>
+                                </button>
+                            </div>
+                            <partial name="_Thread" model="new CommunityThread(strategy.Id, null, strategy.Comments)" />
+                        }
                     </article>
                 }
             </div>
@@ -234,50 +237,24 @@
         </article>
     </template>
 
-    <!-- Recent Comments Section -->
-    <section class="community-section" aria-labelledby="comments-heading">
-        <h2 class="community-section-title" id="comments-heading">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
-            @L["Community.Activity.Heading"]
-        </h2>
-        <div class="community-comments-list" id="communityCommentsList">
-            @if (Model.RecentComments.Count == 0)
-            {
-                <div class="community-no-comments">
-                    <p>@L["Community.Activity.Empty"]</p>
-                </div>
-            }
-            @foreach (var comment in Model.RecentComments)
-            {
-                string commentAuthor = CommunityText.Author(L, comment.AuthorPseudonym);
-                <div class="community-comment-card" data-comment-id="@comment.Id">
-                    <div class="community-comment-header">
-                        <div class="community-comment-avatar" aria-hidden="true" data-pseudonym-self-initials="@(comment.IsOwn ? "1" : null)">
-                            @CommunityText.Initials(commentAuthor, 1)
-                        </div>
-                        <div class="community-comment-info">
-                            <strong class="community-comment-author" data-pseudonym-self="@(comment.IsOwn ? "" : null)">@commentAuthor</strong>
-                            <time class="community-comment-time" datetime="@comment.CreatedAt.ToString("o")">
-                                @CommunityText.TimeAgo(L, comment.CreatedAt, DateTime.UtcNow)
-                            </time>
-                        </div>
-                        <button type="button" class="community-comment-like@(comment.IsLikedByUser ? " liked" : "")"
-                                data-comment-id="@comment.Id"
-                                aria-label="@L["Community.Js.LikeComment"]">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                            </svg>
-                            <span class="community-comment-like-count">@comment.Likes</span>
-                        </button>
-                    </div>
-                    <p class="community-comment-text">@comment.Text</p>
-                </div>
-            }
-        </div>
-    </section>
-
+    <!-- A Comment the viewer posts, added to its thread at once (mirrors _Comment) -->
+    <template id="commentTemplate">
+        <li class="community-comment">
+            <p class="community-comment-meta">
+                <strong data-pseudonym-self data-comment="author"></strong>
+                · <time>@L["Community.Js.JustNow"]</time>
+            </p>
+            <p class="community-comment-text" data-comment="text"></p>
+            <div class="community-reactions" role="group" aria-label="@L["Community.Reactions.CommentAria"]">
+                <button type="button" class="community-react community-react--quiet" data-react-kind="Helpful" aria-pressed="false">
+                    <span aria-hidden="true">🕯️</span> @L["Community.Reactions.Helpful"]
+                </button>
+                <button type="button" class="community-react community-react--quiet" data-react-kind="CheeringYouOn" aria-pressed="false">
+                    <span aria-hidden="true">🙌</span> @L["Community.Reactions.Cheering"]
+                </button>
+            </div>
+        </li>
+    </template>
 </div>
 
 @section Scripts {

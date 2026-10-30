@@ -1,0 +1,24 @@
+@model CommunityThread
+@*
+    The reply thread under a Strategy or a poll: a collapsible list of Comments, oldest first, and the reply form.
+    A Comment shows only whether the viewer reacted, never a count (ADR 0018).
+*@
+<details class="community-thread" data-thread>
+    <summary class="community-thread-summary" data-thread-summary>
+        @(Model.Comments.Count == 0 ? L["Community.Thread.Reply"].Value : L.Plural("Community.Js.Replies", Model.Comments.Count))
+    </summary>
+    <ul class="community-comments" data-thread-list>
+        @foreach (CommunityComment comment in Model.Comments)
+        {
+            <partial name="_Comment" model="comment" />
+        }
+    </ul>
+    <form class="community-reply-form" data-reply-form novalidate
+          data-strategy-id="@Model.StrategyId" data-poll-code="@Model.PollCode">
+        <label class="visually-hidden" for="reply-@Model.Key">@L["Community.Thread.ReplyLabel"]</label>
+        <textarea class="form-control" id="reply-@Model.Key" rows="2" required
+                  maxlength="@CommunityCommentLimits.TextMaxLength"
+                  placeholder="@L["Community.Thread.Placeholder"]"></textarea>
+        <button type="submit" class="community-btn community-btn--small">@L["Community.Thread.Post"]</button>
+    </form>
+</details>

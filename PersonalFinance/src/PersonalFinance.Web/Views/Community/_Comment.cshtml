@@ -1,0 +1,22 @@
+@model CommunityComment
+@*
+    One Comment in a thread. Its Reactions are quiet toggles with no count. The page's comment template mirrors this
+    markup for Comments the viewer posts.
+*@
+<li class="community-comment" data-comment-id="@Model.Id">
+    <p class="community-comment-meta">
+        <strong data-pseudonym-self="@(Model.IsOwn ? "" : null)">@CommunityText.Author(L, Model.AuthorPseudonym)</strong>
+        · <time datetime="@Model.CreatedAt.ToString("o")">@CommunityText.TimeAgo(L, Model.CreatedAt, DateTime.UtcNow)</time>
+    </p>
+    <p class="community-comment-text">@Model.Text</p>
+    <div class="community-reactions" role="group" aria-label="@L["Community.Reactions.CommentAria"]">
+        <button type="button" class="community-react community-react--quiet" data-react-kind="Helpful"
+                data-comment-id="@Model.Id" aria-pressed="@(Model.HelpfulByViewer ? "true" : "false")">
+            <span aria-hidden="true">🕯️</span> @L["Community.Reactions.Helpful"]
+        </button>
+        <button type="button" class="community-react community-react--quiet" data-react-kind="CheeringYouOn"
+                data-comment-id="@Model.Id" aria-pressed="@(Model.CheeringByViewer ? "true" : "false")">
+            <span aria-hidden="true">🙌</span> @L["Community.Reactions.Cheering"]
+        </button>
+    </div>
+</li>

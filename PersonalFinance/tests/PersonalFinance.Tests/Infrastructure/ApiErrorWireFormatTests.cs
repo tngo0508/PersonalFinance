@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -30,8 +31,9 @@ public class ApiErrorWireFormatTests : IClassFixture<ApiErrorWireFormatTests.Api
     {
         using HttpClient client = ClientFor($"wire-format-{Guid.NewGuid():N}");
 
+        using var content = new StringContent("""{"kind":"Helpful","strategyId":999}""", Encoding.UTF8, "application/json");
         using HttpResponseMessage response =
-            await client.GetAsync(new Uri("/api/community/poll-comments?pollCode=no-such-poll", UriKind.Relative));
+            await client.PostAsync(new Uri("/api/community/reactions", UriKind.Relative), content);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
@@ -41,7 +43,7 @@ public class ApiErrorWireFormatTests : IClassFixture<ApiErrorWireFormatTests.Api
         Assert.Equal(JsonValueKind.Array, errors.ValueKind);
         JsonElement entry = Assert.Single(errors.EnumerateArray());
 
-        Assert.Equal(ApiErrorKeys.Community.PollNotFound, entry.GetProperty("key").GetString());
+        Assert.Equal(ApiErrorKeys.Community.InvalidStrategy, entry.GetProperty("key").GetString());
         Assert.False(string.IsNullOrWhiteSpace(entry.GetProperty("message").GetString()));
         Assert.False(entry.TryGetProperty("field", out _), "a whole-request error carries no field");
         Assert.False(entry.TryGetProperty("args", out _), "a message without placeholders carries no args");

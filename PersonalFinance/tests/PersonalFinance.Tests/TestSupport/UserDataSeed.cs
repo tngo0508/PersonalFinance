@@ -48,7 +48,8 @@ public static class UserDataSeed
         var strategy = new CommunityStrategy
         { UserId = userId, Title = $"{marker} strategy", Category = "Saving", Status = CommunityStrategyStatus.Approved };
         var comment = new CommunityComment { UserId = userId, Text = $"{marker} comment", Strategy = strategy };
-        db.CommunityCommentLikes.Add(new CommunityCommentLike { UserId = userId, Comment = comment });
+        db.CommunityReactions.Add(new CommunityReaction
+        { UserId = userId, Comment = comment, Kind = CommunityReactionKind.CheeringYouOn });
         var poll = new CommunityPoll { PollCode = $"{marker}-poll", Question = $"{marker} question?" };
         var option = new CommunityPollOption { Poll = poll, Text = "Yes" };
         db.CommunityPollVotes.Add(new CommunityPollVote { UserId = userId, Poll = poll, Option = option });

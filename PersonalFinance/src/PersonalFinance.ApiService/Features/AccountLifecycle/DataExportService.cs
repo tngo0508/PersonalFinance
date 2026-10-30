@@ -421,14 +421,23 @@ internal sealed class DataExportService : IDataExportService
                     Text = c.Text,
                     PollId = c.PollId,
                     StrategyId = c.StrategyId,
+                    IsHidden = !c.IsVisible,
                     CreatedAtUtc = c.CreatedAtUtc
                 })
                 .ToListAsync(cancellationToken),
-            CommentLikes = await _db.CommunityCommentLikes.AsNoTracking()
-                .Where(l => l.UserId == userId)
-                .OrderBy(l => l.CreatedAtUtc).ThenBy(l => l.Id)
-                .Select(l => new DataExportCommentLikeDto { CommentId = l.CommentId, CreatedAtUtc = l.CreatedAtUtc })
-                .ToListAsync(cancellationToken),
+            Reactions = (await _db.CommunityReactions.AsNoTracking()
+                    .Where(r => r.UserId == userId)
+                    .OrderBy(r => r.CreatedAt).ThenBy(r => r.Id)
+                    .Select(r => new { r.Kind, r.StrategyId, r.CommentId, r.CreatedAt })
+                    .ToListAsync(cancellationToken))
+                .Select(r => new DataExportReactionDto
+                {
+                    Kind = r.Kind.ToString(),
+                    StrategyId = r.StrategyId,
+                    CommentId = r.CommentId,
+                    CreatedAtUtc = r.CreatedAt
+                })
+                .ToList(),
             PollVotes = await PollVotesQuery(userId).ToListAsync(cancellationToken)
         };
     }

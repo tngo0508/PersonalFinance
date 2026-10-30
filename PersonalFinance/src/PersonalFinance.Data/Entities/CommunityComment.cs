@@ -22,7 +22,8 @@ public class CommunityComment : AuditableEntity
     public int? StrategyId { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the comment is approved and visible.
+    /// Gets or sets a value indicating whether the comment is shown. Comments are shown at once; an Admin can hide one
+    /// afterwards (and show it again).
     /// </summary>
     public bool IsVisible { get; set; } = true;
 
@@ -40,9 +41,4 @@ public class CommunityComment : AuditableEntity
     /// Navigation: the Strategy this comment belongs to, if any.
     /// </summary>
     public CommunityStrategy? Strategy { get; set; }
-
-    /// <summary>
-    /// Navigation: all likes on this comment.
-    /// </summary>
-    public ICollection<CommunityCommentLike> LikesList { get; set; } = new List<CommunityCommentLike>();
 }

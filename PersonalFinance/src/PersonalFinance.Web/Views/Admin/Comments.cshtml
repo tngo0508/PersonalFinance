@@ -1,0 +1,87 @@
+@model AdminCommentListViewModel
+@{
+    ViewData["Title"] = "Comment moderation";
+}
+
+<div class="py-3">
+    <header class="mb-4">
+        <p class="text-muted text-uppercase small mb-1"><a asp-action="Index">Admin</a></p>
+        <h1 class="h3 mb-1">Comment moderation</h1>
+        <p class="text-muted mb-0">
+            The newest Guild Hall Comments, hidden ones included. Comments go live at once; hide anything harmful,
+            flexing (amounts, totals, rankings) or identifying (employer, exact location, account details).
+        </p>
+    </header>
+
+    @if (TempData["AdminMessage"] is string adminMessage)
+    {
+        <div class="alert alert-success" role="status">@adminMessage</div>
+    }
+    @if (TempData["AdminError"] is string adminError)
+    {
+        <div class="alert alert-danger" role="alert">@adminError</div>
+    }
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-muted">No Comments yet.</div>
+        </div>
+    }
+    else
+    {
+        <ul class="list-group">
+            @foreach (var item in Model.Items)
+            {
+                <li class="list-group-item py-3@(item.IsHidden ? " bg-body-tertiary" : null)" data-comment-id="@item.Id">
+                    <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+                        <span class="small text-break">
+                            @if (item.StrategyTitle is not null)
+                            {
+                                <span class="text-muted">On the Strategy</span> <strong>@item.StrategyTitle</strong>
+                            }
+                            else if (item.PollQuestion is not null)
+                            {
+                                <span class="text-muted">On the poll</span> <strong>@item.PollQuestion</strong>
+                            }
+                            else
+                            {
+                                <span class="text-muted">On a post that no longer exists</span>
+                            }
+                            @if (item.IsHidden)
+                            {
+                                <span class="badge text-bg-secondary ms-1">Hidden</span>
+                            }
+                            @if (item.HasAmount)
+                            {
+                                <span class="badge text-bg-warning ms-1">Mentions a money amount</span>
+                            }
+                        </span>
+                        <time class="text-muted small" datetime="@item.CreatedAtUtc.ToString("o")">
+                            @item.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC
+                        </time>
+                    </div>
+                    <p class="mb-2 text-break">@item.Text</p>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div class="text-muted small">
+                            by @(string.IsNullOrEmpty(item.AuthorPseudonym) ? "Former member" : item.AuthorPseudonym)
+                        </div>
+                        <form asp-action="SetCommentVisibility" method="post">
+                            <input type="hidden" name="id" value="@item.Id" />
+                            @if (item.IsHidden)
+                            {
+                                <button type="submit" name="hidden" value="false"
+                                        class="btn btn-sm btn-outline-success">Show again</button>
+                            }
+                            else
+                            {
+                                <button type="submit" name="hidden" value="true"
+                                        class="btn btn-sm btn-outline-danger">Hide</button>
+                            }
+                        </form>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>

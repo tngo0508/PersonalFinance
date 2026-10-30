@@ -10,7 +10,8 @@ using PersonalFinance.Shared.Helpers;
 namespace PersonalFinance.ApiService.Features.Community;
 
 /// <summary>
-/// Service implementation of the Guild Hall (the Community Feature): Pseudonyms, polls, comments, Strategies and likes.
+/// Service implementation of the Guild Hall (the Community Feature): Pseudonyms, polls, Comments, Strategies and
+/// Reactions.
 /// An author is shown by its Pseudonym, resolved from the Account at read time, so a re-roll shows on every past post
 /// and no DTO carries a display name or email (ADR 0018). A post whose author has no Pseudonym any more (a Former
 /// member, ADR 0005) is returned with a null author.
@@ -42,15 +43,39 @@ internal sealed class CommunityService : ICommunityService
     {
         CommunityPseudonym pseudonym = await GetOrCreatePseudonymAsync(userId, cancellationToken);
         List<CommunityPoll> polls = await ActivePollsAsync(cancellationToken);
+        List<CommunityStrategyDto> strategies = await BoardStrategiesQuery(userId, category)
+            .Take(CommunityStrategyLimits.BoardSize)
+            .ToListAsync(cancellationToken);
+
+        List<int> strategyIds = strategies
+            .Where(s => s.Status == CommunityStrategyStatus.Approved)
+            .Select(s => s.Id)
+            .ToList();
+        List<int> pollIds = polls.Select(p => p.Id).ToList();
+        List<CommunityCommentDto> comments = await ThreadCommentsQuery(userId, strategyIds, pollIds)
+            .ToListAsync(cancellationToken);
+        ILookup<int, CommunityCommentDto> byStrategy = comments
+            .Where(c => c.StrategyId.HasValue)
+            .ToLookup(c => c.StrategyId!.Value);
+        ILookup<int, CommunityCommentDto> byPoll = comments
+            .Where(c => c.PollId.HasValue)
+            .ToLookup(c => c.PollId!.Value);
+
+        foreach (CommunityStrategyDto strategy in strategies)
+        {
+            strategy.Comments = byStrategy[strategy.Id].ToList();
+        }
 
         return new CommunityResponseDto
         {
             Pseudonym = pseudonym.Name,
-            ActivePolls = polls.Select(p => MapPollToDto(p, userId)).ToList(),
-            Strategies = await BoardStrategiesQuery(userId, category)
-                .Take(CommunityStrategyLimits.BoardSize)
-                .ToListAsync(cancellationToken),
-            RecentComments = await VisibleCommentsQuery(userId).Take(10).ToListAsync(cancellationToken),
+            ActivePolls = polls.Select(p =>
+            {
+                CommunityPollDto dto = MapPollToDto(p, userId);
+                dto.Comments = byPoll[p.Id].ToList();
+                return dto;
+            }).ToList(),
+            Strategies = strategies,
         };
     }
 
@@ -160,10 +185,10 @@ internal sealed class CommunityService : ICommunityService
             throw new ApiErrorException(ApiErrorKeys.Community.CommentEmpty, "Comment text cannot be empty.", "Text");
         }
 
-        if (trimmedText.Length > 2000)
+        if (trimmedText.Length > CommunityCommentLimits.TextMaxLength)
         {
             throw new ApiErrorException(ApiErrorKeys.Community.CommentTooLong, "Comment text is too long (max 2000 characters).", "Text",
-                ErrorArgs.Number("max", 2000));
+                ErrorArgs.Number("max", CommunityCommentLimits.TextMaxLength));
         }
 
         int? pollId = null;
@@ -222,58 +247,81 @@ internal sealed class CommunityService : ICommunityService
         };
     }
 
-    public async Task<CommentLikeResult> ToggleCommentLikeAsync(string userId, int commentId, CancellationToken cancellationToken = default)
+    public async Task<CommunityReactionResultDto> ToggleReactionAsync(string userId, CommunityReactionRequestDto request,
+        CancellationToken cancellationToken = default)
     {
-        CommunityComment? comment = await _dbContext.CommunityComments
-            .FirstOrDefaultAsync(c => c.Id == commentId && c.IsVisible, cancellationToken);
-
-        if (comment == null)
+        int? strategyId = request.StrategyId is > 0 ? request.StrategyId : null;
+        int? commentId = strategyId is null ? request.CommentId : null;
+        if (strategyId is not null)
         {
-            throw new ApiErrorException(ApiErrorKeys.Community.CommentNotFound, "Comment not found.", statusCode: StatusCodes.Status404NotFound);
-        }
-
-        CommunityCommentLike? existingLike = await _dbContext.CommunityCommentLikes
-            .FirstOrDefaultAsync(l => l.UserId == userId && l.CommentId == commentId, cancellationToken);
-
-        if (existingLike != null)
-        {
-            existingLike.SoftDelete();
+            bool approved = await _dbContext.CommunityStrategies.AnyAsync(
+                s => s.Id == strategyId && s.Status == CommunityStrategyStatus.Approved, cancellationToken);
+            if (!approved)
+            {
+                throw new ApiErrorException(ApiErrorKeys.Community.InvalidStrategy, "No approved Strategy matches this id.",
+                    statusCode: StatusCodes.Status404NotFound);
+            }
         }
         else
         {
-            var like = new CommunityCommentLike
+            bool shown = await _dbContext.CommunityComments.AnyAsync(
+                c => c.Id == commentId && c.IsVisible
+                     && (c.StrategyId == null || c.Strategy!.Status == CommunityStrategyStatus.Approved),
+                cancellationToken);
+            if (!shown)
+            {
+                throw new ApiErrorException(ApiErrorKeys.Community.CommentNotFound, "Comment not found.",
+                    statusCode: StatusCodes.Status404NotFound);
+            }
+        }
+
+        CommunityReaction? existing = await _dbContext.CommunityReactions.FirstOrDefaultAsync(
+            r => r.UserId == userId && r.Kind == request.Kind && r.StrategyId == strategyId && r.CommentId == commentId,
+            cancellationToken);
+        DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
+        if (existing is not null)
+        {
+            existing.IsDeleted = true;
+            existing.DeletedAt = now;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        else
+        {
+            var reaction = new CommunityReaction
             {
                 UserId = userId,
+                Kind = request.Kind,
+                StrategyId = strategyId,
                 CommentId = commentId,
+                CreatedAt = now,
             };
-            await _dbContext.CommunityCommentLikes.AddAsync(like, cancellationToken);
+            _dbContext.CommunityReactions.Add(reaction);
+            try
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                // The same Account's other request (a double click) gave this Reaction first: it is held either way.
+                _dbContext.Entry(reaction).State = EntityState.Detached;
+            }
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        return new CommentLikeResult
+        if (_logger.IsEnabled(LogLevel.Information))
         {
-            Success = true,
-            NewLikeCount = await _dbContext.CommunityCommentLikes.CountAsync(l => l.CommentId == commentId, cancellationToken),
-            IsLiked = existingLike == null,
+            _logger.LogInformation("Reaction toggled: UserId={UserId}, Kind={Kind}, StrategyId={StrategyId}, CommentId={CommentId}",
+                userId, request.Kind, strategyId, commentId);
+        }
+
+        return new CommunityReactionResultDto
+        {
+            Kind = request.Kind,
+            ByViewer = existing is null,
+            Count = strategyId is null
+                ? null
+                : await _dbContext.CommunityReactions.CountAsync(
+                    r => r.StrategyId == strategyId && r.Kind == request.Kind, cancellationToken),
         };
-    }
-
-    public async Task<List<CommunityCommentDto>> GetPollCommentsAsync(string userId, string pollCode, CancellationToken cancellationToken = default)
-    {
-        CommunityPoll? poll = await _dbContext.CommunityPolls
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.PollCode == pollCode, cancellationToken);
-
-        if (poll == null)
-        {
-            throw new ApiErrorException(ApiErrorKeys.Community.PollNotFound, "The poll was not found or is inactive.",
-                statusCode: StatusCodes.Status404NotFound);
-        }
-
-        return await VisibleCommentsQuery(userId)
-            .Where(c => c.PollId == poll.Id)
-            .ToListAsync(cancellationToken);
     }
 
     public async Task<CommunityStrategyDto> SubmitStrategyAsync(string userId, CommunityStrategyRequestDto request,
@@ -351,6 +399,41 @@ internal sealed class CommunityService : ICommunityService
         return true;
     }
 
+    public async Task<List<CommunityCommentReviewItemDto>> ListCommentsForReviewAsync(
+        CancellationToken cancellationToken = default)
+    {
+        List<CommunityCommentReviewItemDto> items = await CommentReviewQuery()
+            .Take(CommunityCommentLimits.ReviewListSize)
+            .ToListAsync(cancellationToken);
+        foreach (CommunityCommentReviewItemDto item in items)
+        {
+            item.HasAmount = MoneyAmountRule.ContainsAmount(item.Text);
+        }
+
+        return items;
+    }
+
+    public async Task<bool> SetCommentHiddenAsync(int commentId, bool isHidden, CancellationToken cancellationToken = default)
+    {
+        CommunityComment? comment = await _dbContext.CommunityComments
+            .FirstOrDefaultAsync(c => c.Id == commentId, cancellationToken);
+        if (comment is null)
+        {
+            return false;
+        }
+
+        comment.IsVisible = !isHidden;
+        comment.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Comment moderated: CommentId={CommentId}, Hidden={Hidden}", commentId, isHidden);
+        }
+
+        return true;
+    }
+
     // =========================================================================
     // Queries (internal so tests can check they translate to Azure SQL)
     // =========================================================================
@@ -359,7 +442,7 @@ internal sealed class CommunityService : ICommunityService
     /// The board as <paramref name="userId"/> sees it: Approved Strategies and the viewer's own in any status, only in
     /// <paramref name="category"/> when one is given. The viewer's Pending ones come first, then their Rejected ones,
     /// then the Approved ones, each newest first. Each carries its author's Pseudonym, null once the author is a
-    /// Former member.
+    /// Former member, and its Reaction counts; its Comments are filled in afterwards.
     /// </summary>
     internal IQueryable<CommunityStrategyDto> BoardStrategiesQuery(string userId, string? category)
     {
@@ -389,6 +472,14 @@ internal sealed class CommunityService : ICommunityService
                    Keeping = strategy.Keeping,
                    Status = strategy.Status,
                    CreatedAtUtc = strategy.CreatedAt,
+                   HelpfulCount = _dbContext.CommunityReactions.Count(
+                       r => r.StrategyId == strategy.Id && r.Kind == CommunityReactionKind.Helpful),
+                   CheeringCount = _dbContext.CommunityReactions.Count(
+                       r => r.StrategyId == strategy.Id && r.Kind == CommunityReactionKind.CheeringYouOn),
+                   HelpfulByViewer = _dbContext.CommunityReactions.Any(
+                       r => r.StrategyId == strategy.Id && r.UserId == userId && r.Kind == CommunityReactionKind.Helpful),
+                   CheeringByViewer = _dbContext.CommunityReactions.Any(
+                       r => r.StrategyId == strategy.Id && r.UserId == userId && r.Kind == CommunityReactionKind.CheeringYouOn),
                };
     }
 
@@ -417,16 +508,19 @@ internal sealed class CommunityService : ICommunityService
         };
 
     /// <summary>
-    /// The visible comments, newest first, each with its author's Pseudonym (null for a Former member). A comment on a
-    /// Strategy an Admin has since rejected is left out with it.
+    /// The shown Comments on the Strategies in <paramref name="strategyIds"/> and the polls in
+    /// <paramref name="pollIds"/>, oldest first so each thread reads in order, each with its author's Pseudonym (null
+    /// for a Former member) and whether the viewer reacted. No count of Reactions: a Comment shows none.
     /// </summary>
-    internal IQueryable<CommunityCommentDto> VisibleCommentsQuery(string userId) =>
+    internal IQueryable<CommunityCommentDto> ThreadCommentsQuery(string userId, IReadOnlyCollection<int> strategyIds,
+        IReadOnlyCollection<int> pollIds) =>
         from comment in _dbContext.CommunityComments.AsNoTracking()
         where comment.IsVisible
-              && (comment.StrategyId == null || comment.Strategy!.Status == CommunityStrategyStatus.Approved)
+              && ((comment.StrategyId != null && strategyIds.Contains(comment.StrategyId.Value))
+                  || (comment.PollId != null && pollIds.Contains(comment.PollId.Value)))
         join author in _dbContext.CommunityPseudonyms.AsNoTracking() on comment.UserId equals author.UserId into authors
         from author in authors.DefaultIfEmpty()
-        orderby comment.CreatedAt descending, comment.Id descending
+        orderby comment.CreatedAt, comment.Id
         select new CommunityCommentDto
         {
             Id = comment.Id,
@@ -434,10 +528,32 @@ internal sealed class CommunityService : ICommunityService
             IsOwn = comment.UserId == userId,
             Text = comment.Text,
             CreatedAtUtc = comment.CreatedAt,
-            Likes = comment.LikesList.Count,
-            IsLikedByUser = comment.LikesList.Any(l => l.UserId == userId),
+            HelpfulByViewer = _dbContext.CommunityReactions.Any(
+                r => r.CommentId == comment.Id && r.UserId == userId && r.Kind == CommunityReactionKind.Helpful),
+            CheeringByViewer = _dbContext.CommunityReactions.Any(
+                r => r.CommentId == comment.Id && r.UserId == userId && r.Kind == CommunityReactionKind.CheeringYouOn),
             PollId = comment.PollId,
             StrategyId = comment.StrategyId,
+        };
+
+    /// <summary>
+    /// Every Comment for the Admin moderation list, hidden ones included, newest first, with what it replies to and
+    /// without the amount flag (set in memory, like the Strategy queue's).
+    /// </summary>
+    internal IQueryable<CommunityCommentReviewItemDto> CommentReviewQuery() =>
+        from comment in _dbContext.CommunityComments.AsNoTracking()
+        join author in _dbContext.CommunityPseudonyms.AsNoTracking() on comment.UserId equals author.UserId into authors
+        from author in authors.DefaultIfEmpty()
+        orderby comment.CreatedAt descending, comment.Id descending
+        select new CommunityCommentReviewItemDto
+        {
+            Id = comment.Id,
+            AuthorPseudonym = author == null ? null : author.Name,
+            Text = comment.Text,
+            CreatedAtUtc = comment.CreatedAt,
+            IsHidden = !comment.IsVisible,
+            StrategyTitle = comment.Strategy == null ? null : comment.Strategy.Title,
+            PollQuestion = comment.Poll == null ? null : comment.Poll.Question,
         };
 
     // =========================================================================

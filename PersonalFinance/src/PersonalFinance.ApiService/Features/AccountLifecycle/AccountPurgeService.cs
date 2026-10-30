@@ -129,8 +129,8 @@ internal sealed class AccountPurgeService : IAccountPurgeService
     /// The Account's Approved Strategies and its comments stay under the placeholder id, and the ones the Deletion
     /// Request hid are shown again. Its Pseudonym row goes with every other user-owned row, so the Guild Hall shows
     /// them as written by "Former member" (ADR 0018). Ones the Account deleted itself are erased, with other people's
-    /// likes on them, and so are its Pending and Rejected Strategies: nobody else can see them, so keeping them would
-    /// only keep the Account's words.
+    /// Reactions on them, and so are its Pending and Rejected Strategies: nobody else can see them, so keeping them
+    /// would only keep the Account's words. The Account's own Reactions go with its other user-owned rows.
     /// </summary>
     private async Task AnonymizeCommunityContentAsync(string userId, DateTime requestedAt,
         CancellationToken cancellationToken)
@@ -140,6 +140,8 @@ internal sealed class AccountPurgeService : IAccountPurgeService
         {
             if (DeletedByTheAccount(strategy, requestedAt) || strategy.Status != CommunityStrategyStatus.Approved)
             {
+                _db.CommunityReactions.RemoveRange(await _db.CommunityReactions.IgnoreQueryFilters()
+                    .Where(r => r.StrategyId == strategy.Id).ToListAsync(cancellationToken));
                 _db.CommunityStrategies.Remove(strategy);
                 continue;
             }
@@ -152,8 +154,8 @@ internal sealed class AccountPurgeService : IAccountPurgeService
         {
             if (DeletedByTheAccount(comment, requestedAt))
             {
-                _db.CommunityCommentLikes.RemoveRange(await _db.CommunityCommentLikes.IgnoreQueryFilters()
-                    .Where(l => l.CommentId == comment.Id).ToListAsync(cancellationToken));
+                _db.CommunityReactions.RemoveRange(await _db.CommunityReactions.IgnoreQueryFilters()
+                    .Where(r => r.CommentId == comment.Id).ToListAsync(cancellationToken));
                 _db.CommunityComments.Remove(comment);
                 continue;
             }

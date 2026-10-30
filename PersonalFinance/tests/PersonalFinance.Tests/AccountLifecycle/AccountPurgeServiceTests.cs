@@ -209,7 +209,7 @@ public class AccountPurgeServiceTests
     }
 
     [Fact]
-    public async Task Purge_HardDeletesStrategiesAndCommentsTheAccountDeletedItself_WithOtherPeoplesLikes()
+    public async Task Purge_HardDeletesStrategiesAndCommentsTheAccountDeletedItself_WithOtherPeoplesReactions()
     {
         await using (AppDbContext seed = CreateContext())
         {
@@ -220,7 +220,14 @@ public class AccountPurgeServiceTests
             deletedStrategy.SoftDelete();
             deletedComment.SoftDelete();
             seed.CommunityStrategies.Add(deletedStrategy);
-            seed.CommunityCommentLikes.Add(new CommunityCommentLike { UserId = OtherUserId, Comment = deletedComment });
+            var pendingStrategy = new CommunityStrategy
+            { UserId = UserId, Title = "pending strategy", Status = CommunityStrategyStatus.Pending };
+            seed.CommunityReactions.Add(new CommunityReaction
+            { UserId = OtherUserId, Comment = deletedComment, Kind = CommunityReactionKind.CheeringYouOn });
+            seed.CommunityReactions.Add(new CommunityReaction
+            { UserId = OtherUserId, Strategy = deletedStrategy, Kind = CommunityReactionKind.Helpful });
+            seed.CommunityReactions.Add(new CommunityReaction
+            { UserId = OtherUserId, Strategy = pendingStrategy, Kind = CommunityReactionKind.Helpful });
             await seed.SaveChangesAsync();
             await new AccountDeletionService(seed, new FixedTimeProvider(RequestedAt)).RequestAsync(UserId);
         }
@@ -231,7 +238,7 @@ public class AccountPurgeServiceTests
         await using AppDbContext check = CreateContext();
         Assert.Empty(check.CommunityStrategies.IgnoreQueryFilters());
         Assert.Empty(check.CommunityComments.IgnoreQueryFilters());
-        Assert.Empty(check.CommunityCommentLikes.IgnoreQueryFilters());
+        Assert.Empty(check.CommunityReactions.IgnoreQueryFilters());
     }
 
     [Fact]

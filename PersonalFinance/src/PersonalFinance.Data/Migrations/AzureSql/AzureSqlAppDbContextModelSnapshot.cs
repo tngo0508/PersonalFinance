@@ -459,47 +459,6 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.ToTable("CommunityComments");
                 });
 
-            modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityCommentLike", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CommentId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CommentId");
-
-                    b.HasIndex("UserId", "CommentId")
-                        .IsUnique();
-
-                    b.ToTable("CommunityCommentLikes");
-                });
-
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityPoll", b =>
                 {
                     b.Property<int>("Id")
@@ -655,6 +614,60 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                         .IsUnique();
 
                     b.ToTable("CommunityPseudonyms");
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityReaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CommentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("StrategyId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommentId", "Kind");
+
+                    b.HasIndex("StrategyId", "Kind");
+
+                    b.HasIndex("UserId", "CommentId", "Kind")
+                        .IsUnique()
+                        .HasFilter("[CommentId] IS NOT NULL AND [IsDeleted] = 0");
+
+                    b.HasIndex("UserId", "StrategyId", "Kind")
+                        .IsUnique()
+                        .HasFilter("[StrategyId] IS NOT NULL AND [IsDeleted] = 0");
+
+                    b.ToTable("CommunityReactions", t =>
+                        {
+                            t.HasCheckConstraint("CK_CommunityReactions_OneTarget", "([StrategyId] IS NULL AND [CommentId] IS NOT NULL) OR ([StrategyId] IS NOT NULL AND [CommentId] IS NULL)");
+                        });
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityStrategy", b =>
@@ -2187,17 +2200,6 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.Navigation("Strategy");
                 });
 
-            modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityCommentLike", b =>
-                {
-                    b.HasOne("PersonalFinance.Data.Entities.CommunityComment", "Comment")
-                        .WithMany("LikesList")
-                        .HasForeignKey("CommentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Comment");
-                });
-
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityPollOption", b =>
                 {
                     b.HasOne("PersonalFinance.Data.Entities.CommunityPoll", "Poll")
@@ -2223,6 +2225,23 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.Navigation("Option");
 
                     b.Navigation("Poll");
+                });
+
+            modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityReaction", b =>
+                {
+                    b.HasOne("PersonalFinance.Data.Entities.CommunityComment", "Comment")
+                        .WithMany()
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("PersonalFinance.Data.Entities.CommunityStrategy", "Strategy")
+                        .WithMany()
+                        .HasForeignKey("StrategyId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Comment");
+
+                    b.Navigation("Strategy");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.Contribution", b =>
@@ -2292,11 +2311,6 @@ namespace PersonalFinance.Data.Migrations.AzureSql
                     b.Navigation("Connection");
 
                     b.Navigation("Snapshot");
-                });
-
-            modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityComment", b =>
-                {
-                    b.Navigation("LikesList");
                 });
 
             modelBuilder.Entity("PersonalFinance.Data.Entities.CommunityPoll", b =>
