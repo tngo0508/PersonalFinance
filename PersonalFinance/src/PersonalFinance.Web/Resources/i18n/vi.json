@@ -932,6 +932,7 @@
   "Shell.Js.Search.Group.Transactions": "Giao dịch",
   "Shell.Js.Search.Group.Categories": "Danh mục ngân sách",
   "Shell.Js.Search.Group.SavingsGoals": "Mục tiêu tiết kiệm",
+  "Shell.Js.Search.Group.Learning": "Học tập",
   "Shell.Js.Search.NoResults": "Không có kết quả cho \"{query}\"",
   "Shell.Js.IdleSignOut.Countdown": "Đăng xuất sau {time}",
   "Shell.Js.Search.Results.other": "{count} kết quả",

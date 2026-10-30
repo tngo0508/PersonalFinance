@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.8.0] - 2026-10-30
+
+### Added
+
+- **Global Search finds Atelier Term Entries**: the signed-in top-bar Search adds a Learning group after the user's own results, and each hit opens its Term Entry (#522, part of #513).
+  - It matches the Term in the reader's Language, the English Term, its aliases ("APR") and its Vietnamese name. Case and Vietnamese accents are ignored, so "lai kep" finds "lãi kép". It shows at most five entries, each with its one-line summary.
+  - Search reads the Library only through Learning's `ILearningLibraryService` (ADR 0007), and the Web passes the reader's Language with each search.
+  - A query that names no Term returns the same results as before.
+
 ## [16.7.0] - 2026-10-30
 
 ### Added
