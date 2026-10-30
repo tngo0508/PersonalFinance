@@ -1,0 +1,39 @@
+{
+  "slug": "know-the-sharp-tools",
+  "title": "Hiểu rõ các công cụ sắc bén",
+  "intro": "Một số công cụ có thể tạo ra lợi nhuận lớn hơn, và thua lỗ cũng lớn hơn. Bài học này chỉ ra việc vay để đầu tư và bán cổ phiếu mà bạn không sở hữu. Nó kết thúc hành trình.",
+  "check": [
+    {
+      "prompt": "tài khoản ký quỹ của bạn sẽ thấp hơn mức tối thiểu của công ty, và bạn không thêm tiền mặt. Tiếp theo sẽ ra sao?",
+      "options": [
+        "Công ty bán các khoản đầu tư của bạn",
+        "Không có gì xảy ra",
+        "Khoản vay được xóa bỏ"
+      ],
+      "explanation": "Công ty bán các khoản đầu tư của bạn. Họ làm vậy để đưa vốn chủ sở hữu của bạn trở lại."
+    },
+    {
+      "prompt": "Khi bạn bán khống cổ phiếu, mức lỗ của bạn có giới hạn.",
+      "options": [
+        "Lầm tưởng",
+        "Sự thật"
+      ],
+      "explanation": "Lầm tưởng. Giá có thể tiếp tục tăng, nên thua lỗ khi bán khống không có giới hạn."
+    },
+    {
+      "prompt": "Bạn bán khống ở mức 60 đô la, giá sẽ tăng lên 80 đô la. Điều gì xảy ra khi bạn mua lại?",
+      "options": [
+        "Bạn mất $20 một cổ phiếu",
+        "Bạn kiếm được 20 đô la một cổ phiếu",
+        "Bạn hòa vốn"
+      ],
+      "explanation": "Bạn mất 20 đô la một cổ phiếu. Bạn phải mua lại với giá cao hơn."
+    }
+  ],
+  "tryIt": {
+    "label": "Nghiên cứu"
+  },
+  "keepsake": {
+    "name": "Hộp dụng cụ"
+  }
+}
