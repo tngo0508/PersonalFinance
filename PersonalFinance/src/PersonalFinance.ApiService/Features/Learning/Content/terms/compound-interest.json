@@ -1,0 +1,32 @@
+{
+  "slug": "compound-interest",
+  "term": "Compound interest",
+  "vietnameseName": "lãi kép",
+  "alsoKnownAs": [],
+  "topic": "saving-banking",
+  "oneLine": "Interest you earn on your money and on the interest it already earned.",
+  "explanation": [
+    "Compound interest is interest paid on your money and on the interest it has already earned. Interest is the extra money a bank or an investment pays you.",
+    "Each year, the interest joins your money. The next year, you earn interest on the bigger amount. So your money grows faster over time.",
+    "The Rule of 72 gives a quick estimate. Divide 72 by the yearly rate. The answer is about how many years your money takes to double."
+  ],
+  "whyItMatters": "The longer money stays, the more compound interest adds. Starting early gives it more years to work, even with small amounts. At a 9% yearly return, money doubles about every 8 years, because 72 divided by 9 is 8.",
+  "workedExample": "You save $100 at 5% interest a year. After one year, you have $105. After two years, you have $110.25: $5 on the $100, and $0.25 on the first year's interest. After 10 years, you have more than $162, and you never added any money.",
+  "relatedTerms": [
+    "emergency-fund"
+  ],
+  "sources": [
+    {
+      "name": "U.S. SEC, Investor.gov, Compound interest",
+      "url": "https://www.investor.gov/introduction-investing/investing-basics/glossary/compound-interest",
+      "accessed": "2026-10-30"
+    },
+    {
+      "name": "U.S. SEC, Investor.gov, What is compound interest?",
+      "url": "https://www.investor.gov/additional-resources/information/youth/teachers-classroom-resources/what-compound-interest",
+      "accessed": "2026-10-30"
+    }
+  ],
+  "furtherReading": [],
+  "lastReviewed": "2026-10-30"
+}

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.11.0] - 2026-10-30
+
+### Added
+
+- **Atelier content: Lesson 1, Build a cushion**: the Journey's first Lesson and its Term Entries *Emergency fund* and *Compound interest*, drafted with `/atelier-draft` from CFPB and Investor.gov pages (#527, part of #513).
+  - The Check asks what an emergency fund is for, how interest grows in its second year, and what a credit card does to a surprise bill. Finishing it places the Coin jar keepsake.
+  - With these files the Library is no longer empty, so the nav shows Learning.
+
 ## [16.10.1] - 2026-10-30
 
 ### Added

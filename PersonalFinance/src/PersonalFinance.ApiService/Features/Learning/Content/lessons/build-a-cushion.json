@@ -1,0 +1,51 @@
+{
+  "slug": "build-a-cushion",
+  "day": 1,
+  "title": "Build a cushion",
+  "intro": "Surprise costs happen to everyone. This Lesson shows how a cushion of savings protects you. It also shows how savings can grow by themselves.",
+  "terms": [
+    "emergency-fund",
+    "compound-interest"
+  ],
+  "check": [
+    {
+      "format": "myth-or-fact",
+      "prompt": "An emergency fund is for planned costs, such as a holiday.",
+      "options": [
+        "Myth",
+        "Fact"
+      ],
+      "correctOption": 0,
+      "explanation": "Myth. An emergency fund is for unplanned costs, such as car repairs."
+    },
+    {
+      "format": "what-happens-next",
+      "prompt": "Minh saves $100 at 5% interest a year and adds nothing. What does he earn in the second year?",
+      "options": [
+        "More than $5",
+        "Exactly $5",
+        "Less than $5"
+      ],
+      "correctOption": 0,
+      "explanation": "More than $5. He earns interest on the $100 and on last year's $5."
+    },
+    {
+      "format": "myth-or-fact",
+      "prompt": "Paying a surprise bill with a credit card can make it cost more.",
+      "options": [
+        "Myth",
+        "Fact"
+      ],
+      "correctOption": 1,
+      "explanation": "Fact. Interest and fees can make the cost bigger than the first bill."
+    }
+  ],
+  "tryIt": {
+    "label": "Savings Goals",
+    "url": "/SavingsGoals"
+  },
+  "keepsake": {
+    "symbol": "🫙",
+    "name": "Coin jar"
+  }
+}
