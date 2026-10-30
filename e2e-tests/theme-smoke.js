@@ -3,11 +3,11 @@
  * by mouse and keyboard, checks that the root's theme attributes follow each choice, that System follows an emulated
  * device colour scheme, that the choice survives a reload and sign-in, and that the avatar menu holds no theme items.
  * In dark mode it checks key text against its effective background (4.5:1) on the Landing Page, a sign-in page,
- * Account settings and the Net Worth help modal (slice #482), the Google Drive sample-data notice and its Budget report
- * and Transactions modals (slice #484), Budget, Budget Tracker and Savings Goals (slice #487), and the Dashboard and
- * Money Priorities (slice #489), and that the Investment Calculator's, the Google Drive Transactions timeline's and the
- * Budget planner's Month Strip restyles on a theme switch without a reload (slices #483, #484 and #487). Run from ui-test.js
- * as Test 9j.
+ * Account settings and the Net Worth help modal (slice #482), the Net Worth page (slice #485), the Google Drive
+ * sample-data notice and its Budget report and Transactions modals (slice #484), Budget, Budget Tracker and Savings
+ * Goals (slice #487), and the Dashboard and Money Priorities (slice #489), and that the Investment Calculator's, the
+ * Google Drive Transactions timeline's, the Budget planner's Month Strip and the Net Worth runway restyle on a theme
+ * switch without a reload (slices #483, #484, #487 and #485). Run from ui-test.js as Test 9j.
  *
  * Expected labels are read from Resources/i18n/en.json, so a rewording does not break the test.
  */
@@ -31,6 +31,10 @@ const CONTRAST_PAGES = {
     signIn: ['.auth-page__title', '.auth-page__subtitle', '.auth-page .form-label', '#forgot-password', '#login-submit'],
     accountSettings: ['.account-page__title', '.account-page__subtitle', '.account-nav__link[aria-current="page"]',
         '.account-nav__link:not([aria-current="page"])', '.account-page__content .form-label'],
+    // The Net Worth page (#485): the answer, the runway's legend and readout, the story's typed-in amounts, the math
+    netWorth: ['.nw-title', '.nw-subtitle', '.nw-hero__lede', '.nw-view__btn[aria-pressed="true"]',
+        '.nw-view__btn[aria-pressed="false"]', '.nw-runway__legend li', '.nw-math > summary', '.nw-story__sentence',
+        '.nw-story__input', '.nw-years__head'],
     modal: ['#nwHelpModal .modal-title', '#nwHelpModal .nw-text', '#nwHelpModal .nw-help-note__title',
         '#nwHelpModal .modal-footer .btn'],
     // Budget, Budget Tracker and Savings Goals (#487); a fresh Account's Savings Goals shows its empty state
@@ -397,6 +401,65 @@ async function checkBudgetChartRestyles(page, report) {
 }
 
 /**
+ * The Net Worth runway, next to the token it should show: the Base path's stroke and the range band's fill as the
+ * browser paints them, and the ledger green they come from.
+ * @param {import('playwright').Page} page - The Net Worth page.
+ * @returns {Promise<{theme: string, marker: boolean, token: string, base: string|null, band: string|null}>}
+ *     marker: the page has not reloaded since the check set it. Colours are rgb(r, g, b) strings.
+ */
+async function runwayState(page) {
+    return page.evaluate(() => {
+        const root = document.documentElement;
+        const hex = getComputedStyle(root).getPropertyValue('--lp-ledger').trim().replace('#', '');
+        const full = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex;
+        const n = parseInt(full, 16);
+        const base = document.querySelector('#nwRunway .nw-rw-base');
+        const band = document.querySelector('#nwRunway .nw-rw-band');
+        return {
+            theme: root.getAttribute('data-theme'),
+            marker: window.__chartThemeCheck === true,
+            token: Number.isNaN(n) ? '' : `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`,
+            base: base ? getComputedStyle(base).stroke : null,
+            band: band ? getComputedStyle(band).fill : null
+        };
+    });
+}
+
+/**
+ * Whether the runway paints the token's colour.
+ * @param {object} state - From runwayState.
+ * @returns {boolean}
+ */
+function runwayMatchesToken(state) {
+    return state.token !== '' && state.base === state.token && state.band === state.token;
+}
+
+/**
+ * The Net Worth runway takes its colours from the Ledger tokens through css/networth.css (#485): switching the theme
+ * recolours it without a reload. Leaves the page in dark mode, as it found it.
+ * @param {import('playwright').Page} page - A signed-in page on Net Worth, in dark mode.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+async function checkRunwayRestyles(page, report) {
+    await page.locator('#nwRunway .nw-rw-base').waitFor({state: 'attached', timeout: TIMEOUT});
+    await page.evaluate(() => { window.__chartThemeCheck = true; });
+
+    const dark = await runwayState(page);
+    check(dark.theme === 'dark' && runwayMatchesToken(dark), 'Net Worth runway: the path and band hold the dark ledger green',
+        JSON.stringify(dark), report);
+
+    await chooseTheme(page, 'light');
+    const light = await runwayState(page);
+    check(light.theme === 'light' && light.marker && runwayMatchesToken(light) && light.base !== dark.base,
+        'Net Worth runway: switching to Light recolours it without a reload', JSON.stringify(light), report);
+
+    await chooseTheme(page, 'dark');
+    const back = await runwayState(page);
+    check(back.theme === 'dark' && back.marker && runwayMatchesToken(back),
+        'Net Worth runway: switching back to Dark recolours it again', JSON.stringify(back), report);
+}
+
+/**
  * The Google Drive Transactions timeline, next to the tokens it should show: its gridline colour and its spending
  * bars (the palette's second series), read from the Chart.js chart.
  * @param {import('playwright').Page} page - The Google Drive page with the Transactions modal open.
@@ -545,6 +608,9 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         await page.goto(`${base}/Identity/Account/Manage`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Account settings', CONTRAST_PAGES.accountSettings, report);
         await page.goto(`${base}/Networth`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        // Net Worth (#485): dark contrast on the page, and the runway recolours on a switch
+        await checkDarkContrast(page, 'Net Worth', CONTRAST_PAGES.netWorth, report);
+        await checkRunwayRestyles(page, report);
         await page.click('.nw-help-btn');
         await page.locator('#nwHelpModal.show .modal-title').waitFor({state: 'visible', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Net Worth help modal', CONTRAST_PAGES.modal, report);

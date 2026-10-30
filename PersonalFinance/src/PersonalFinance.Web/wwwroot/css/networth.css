@@ -7,7 +7,12 @@
 
 :root {
     --nw-money: var(--lp-ledger);
-    --nw-money-deep: var(--lp-ledger-deep);
+    /* Green as text: the deep green in light, the light mint in dark, where the deep green falls below 4.5:1 */
+    --nw-money-text: var(--lp-ledger-on-wash);
+    /* Green behind a white label: deepened in dark, where the lifted green falls below 4.5:1 under white */
+    --nw-money-fill: var(--lp-ledger-fill);
+    --nw-money-fill-hover: var(--lp-ledger-fill-hover);
+    --nw-on-money: var(--lp-on-ledger);
     --nw-wash: var(--lp-ledger-wash);
     --nw-fi: var(--lp-brass);
     --nw-fi-wash: color-mix(in srgb, var(--lp-brass) 13%, transparent);
@@ -334,7 +339,7 @@
 .nw-math > summary,
 .nw-assumptions > summary {
     cursor: pointer;
-    color: var(--nw-money-deep);
+    color: var(--nw-money-text);
     font-size: 0.9rem;
     font-weight: 600;
     width: max-content;
@@ -396,7 +401,7 @@
 
 .nw-breakdown__chip {
     background: var(--nw-wash);
-    color: var(--nw-money-deep);
+    color: var(--nw-money-text);
     border-radius: 999px;
     padding: 0.05rem 0.5rem;
     white-space: nowrap;
@@ -463,7 +468,7 @@
 }
 
 .nw-story__symbol {
-    color: var(--nw-money-deep);
+    color: var(--nw-money-text);
     font-weight: 600;
 }
 
@@ -474,7 +479,7 @@
     border: 0;
     padding: 0;
     background: transparent;
-    color: var(--nw-money-deep);
+    color: var(--nw-money-text);
     font: inherit;
     font-weight: 600;
     text-align: center;
@@ -679,7 +684,7 @@
 
 .nw-path:hover {
     border-color: var(--nw-money);
-    color: var(--nw-money-deep);
+    color: var(--nw-money-text);
 }
 
 .nw-form__actions {
@@ -692,18 +697,18 @@
 }
 
 .nw-btn-save {
-    background: var(--nw-money);
-    border: 1px solid var(--nw-money);
-    color: #fff;
+    background: var(--nw-money-fill);
+    border: 1px solid var(--nw-money-fill);
+    color: var(--nw-on-money);
     font-weight: 600;
     padding: 0.4rem 1.1rem;
 }
 
 .nw-btn-save:hover,
 .nw-btn-save:focus-visible {
-    background: var(--nw-money-deep);
-    border-color: var(--nw-money-deep);
-    color: #fff;
+    background: var(--nw-money-fill-hover);
+    border-color: var(--nw-money-fill-hover);
+    color: var(--nw-on-money);
 }
 
 .nw-btn-reset,
@@ -773,7 +778,7 @@
 .nw-lever__effect {
     font-size: 1.15rem;
     font-weight: 600;
-    color: var(--nw-money-deep);
+    color: var(--nw-money-text);
 }
 
 .nw-lever--worse .nw-lever__effect {
