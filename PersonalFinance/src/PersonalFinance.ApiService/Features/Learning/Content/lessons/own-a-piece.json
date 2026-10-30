@@ -1,0 +1,51 @@
+{
+  "slug": "own-a-piece",
+  "day": 3,
+  "title": "Own a piece",
+  "intro": "A stock makes you a part owner of a company. This Lesson shows what you get and what you risk. It also shows how spreading your money lowers that risk.",
+  "terms": [
+    "stock",
+    "diversification"
+  ],
+  "check": [
+    {
+      "format": "myth-or-fact",
+      "prompt": "A company's stock price can only go up.",
+      "options": [
+        "Myth",
+        "Fact"
+      ],
+      "correctOption": 0,
+      "explanation": "Myth. Stock prices go down as well as up, and you can lose money."
+    },
+    {
+      "format": "what-happens-next",
+      "prompt": "Mai puts $100 in each of ten companies, and one company's stock falls by half. How much of her $1,000 does she lose?",
+      "options": [
+        "$50",
+        "$500",
+        "Nothing"
+      ],
+      "correctOption": 0,
+      "explanation": "$50. Only $100 was in that company, so one fall matters less."
+    },
+    {
+      "format": "myth-or-fact",
+      "prompt": "A fund that holds only one industry is always well diversified.",
+      "options": [
+        "Myth",
+        "Fact"
+      ],
+      "correctOption": 0,
+      "explanation": "Myth. A fund focused on one industry may still not be diversified."
+    }
+  ],
+  "tryIt": {
+    "label": "Research",
+    "url": "/Research"
+  },
+  "keepsake": {
+    "symbol": "🧩",
+    "name": "Puzzle piece"
+  }
+}

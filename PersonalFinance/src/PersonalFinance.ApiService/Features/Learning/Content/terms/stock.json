@@ -1,0 +1,35 @@
+{
+  "slug": "stock",
+  "term": "Stock",
+  "vietnameseName": "cổ phiếu",
+  "alsoKnownAs": [
+    "shares",
+    "equities"
+  ],
+  "topic": "investing-basics",
+  "oneLine": "A share of ownership in a company.",
+  "explanation": [
+    "A stock gives you a share of ownership in a company. Stocks are also called equities, and the people who own them are stockholders.",
+    "Companies sell stock to get money, for example to pay off debt, launch new products or build new facilities.",
+    "People buy stocks for three main reasons. The price may rise. The company may pay dividends, which are part of its earnings paid to stockholders. Common stock also lets you vote at shareholder meetings."
+  ],
+  "whyItMatters": "Over long periods, such as 15 years, stocks have generally given strong returns. But stock prices go down as well as up, and you can lose money. Large company stocks as a group have lost money in about one year out of three. If a company fails, common stockholders are paid last and may get nothing.",
+  "workedExample": "You buy 10 shares at $50 each, so you pay $500. If the price rises to $60, your shares are worth $600. If you must sell on a day the price is $40, you get $400 and lose $100.",
+  "relatedTerms": [
+    "diversification"
+  ],
+  "sources": [
+    {
+      "name": "U.S. SEC, Investor.gov, Stocks",
+      "url": "https://www.investor.gov/introduction-investing/investing-basics/investment-products/stocks",
+      "accessed": "2026-10-30"
+    }
+  ],
+  "furtherReading": [
+    {
+      "name": "FINRA, Stocks",
+      "url": "https://www.finra.org/investors/investing/investment-products/stocks"
+    }
+  ],
+  "lastReviewed": "2026-10-30"
+}
