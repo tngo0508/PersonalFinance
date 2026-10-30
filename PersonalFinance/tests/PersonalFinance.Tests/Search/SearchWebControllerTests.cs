@@ -23,10 +23,12 @@ public class SearchWebControllerTests
         public Exception? Failure { get; init; }
         public SearchResultsDto Results { get; init; } = new();
         public string? LastQuery { get; private set; }
+        public string? LastLanguage { get; private set; }
 
-        public Task<SearchResultsDto> SearchAsync(string q, CancellationToken cancellationToken = default)
+        public Task<SearchResultsDto> SearchAsync(string q, string language, CancellationToken cancellationToken = default)
         {
             LastQuery = q;
+            LastLanguage = language;
             return Failure is null ? Task.FromResult(Results) : Task.FromException<SearchResultsDto>(Failure);
         }
     }
@@ -46,6 +48,19 @@ public class SearchWebControllerTests
 
         Assert.Same(results, Assert.IsType<OkObjectResult>(result).Value);
         Assert.Equal("car", api.LastQuery);
+    }
+
+    [Fact]
+    public async Task Get_AsksInTheReadersLanguage_SoTermEntriesAreNamedInIt()
+    {
+        var api = new FakeSearchApi();
+
+        using (new UiCultureScope("vi"))
+        {
+            await CreateController(api).Get("lai kep");
+        }
+
+        Assert.Equal("vi", api.LastLanguage);
     }
 
     [Fact]

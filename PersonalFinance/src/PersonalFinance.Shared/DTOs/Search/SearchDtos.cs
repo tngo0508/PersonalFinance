@@ -8,6 +8,12 @@ public class SearchResultsDto
     public List<SearchResultItemDto> Transactions { get; set; } = new();
     public List<SearchResultItemDto> Categories { get; set; } = new();
     public List<SearchResultItemDto> SavingsGoals { get; set; } = new();
+
+    /// <summary>
+    /// Published Term Entries of the Atelier (#522) whose Term, English Term, aliases or Vietnamese name match; shown
+    /// after the user's own results. Public content, the same for every Account.
+    /// </summary>
+    public List<SearchResultItemDto> Learning { get; set; } = new();
 }
 
 /// <summary>

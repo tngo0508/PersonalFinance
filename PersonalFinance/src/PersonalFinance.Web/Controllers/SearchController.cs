@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Web.Infrastructure;
+using PersonalFinance.Web.Infrastructure.Localization;
 
 namespace PersonalFinance.Web.Controllers;
 
@@ -28,6 +29,6 @@ public class SearchController : Controller
     [HttpGet]
     public async Task<IActionResult> Get([FromQuery] string? q, CancellationToken cancellationToken = default)
     {
-        return Ok(await _searchApi.SearchAsync(q ?? string.Empty, cancellationToken));
+        return Ok(await _searchApi.SearchAsync(q ?? string.Empty, AppLanguages.Current().Code, cancellationToken));
     }
 }

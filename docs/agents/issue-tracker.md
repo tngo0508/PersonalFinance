@@ -85,8 +85,8 @@ restarts it, but GitHub delays or drops many ticks, so do not rely on cron alone
 late run's timeout is cut so that it ends by 19:00. Trigger it by hand at any time with
 `gh workflow run claude-ticket-agent.yml` (it then chains), or `-f issue=<n>` for one issue only (no chain).
 
-- **Picks** the oldest open `ready-for-agent` issue with no assignee, no `agent:in-progress` or `wayfinder:map` label,
-  no sub-issues, no open blockers and no open PR that closes it. It pauses while 5 PRs from `agent/issue-*` branches
+- **Picks** the oldest open `ready-for-agent` issue with no assignee, no `agent:in-progress`, `wayfinder:map` or
+  `atelier:content` label, no sub-issues, no open blockers and no open PR that closes it. It pauses while 5 PRs from `agent/issue-*` branches
   are open (drafts included).
 - **Claims** it with `agent:in-progress`, then runs `/implement` (tdd, code-review), `dotnet test`, `npm run lint` and,
   when the change touches `e2e-tests/` or the Web project, the E2E suites through `.github/scripts/e2e-inmemory.sh`
@@ -102,6 +102,12 @@ late run's timeout is cut so that it ends by 19:00. Trigger it by hand at any ti
   It also waits until every PR workflow run on that commit has finished and passed, because a run whose jobs have not
   started yet shows no checks (#535, #537 and #539 merged red that way). A failing check or a draft waits for a human. The merge deploys like any other. This needs the `AGENT_GH_TOKEN`
   secret, because a merge made with `GITHUB_TOKEN` would not trigger the deploy or the Release.
+- **Leaves Atelier content to the owner** ([ADR 0019](../adr/0019-atelier-content-is-code.md)): Agent Auto-Merge lists
+  a PR's changed files (a renamed file's old path too) and never merges one that touches
+  `PersonalFinance/src/PersonalFinance.ApiService/Features/Learning/Content/`. It leaves one comment saying the owner
+  reviews and merges it, and the PR stays green. No commit counts as approval, the i18n bot's `i18n: translate N keys
+  (vi)` included: the guard looks only at the files. The ticket agent also never picks an issue labelled
+  `atelier:content`, even one that is `ready-for-agent`.
 - **Translates**: `.github/workflows/i18n-translate.yml` runs on every PR from a branch of this repository, drafts the
   missing or stale Vietnamese with `npm run i18n:translate` and pushes it to the PR branch as `i18n: translate N keys
   (vi)`, with `AGENT_GH_TOKEN` so the PR workflows re-run on that commit. Its `Translate (i18n)` check is required by

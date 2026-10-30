@@ -27,10 +27,11 @@ public class SearchController : ControllerBase
     /// </summary>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> Search([FromQuery] string q, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Search([FromQuery] string q, [FromQuery] string? language,
+        CancellationToken cancellationToken = default)
     {
         string userId = User.GetUserId();
-        SearchResultsDto results = await _searchService.SearchAsync(userId, q, cancellationToken);
+        SearchResultsDto results = await _searchService.SearchAsync(userId, q, language, cancellationToken);
         return Ok(results);
     }
 }

@@ -4,11 +4,13 @@
  * description and canonical link, gets a 404 for an unknown slug, finds the entries in /sitemap.xml and robots.txt,
  * is asked to sign in on a Lesson, and reads the entry in dark mode (key text at 4.5:1). A fresh Account then answers
  * Lesson 1's Check, sees its keepsake, and finds "Opens tomorrow" on Lesson 2. Unlock timing stays in the service
- * tests. Last, the fixture learner (E2E_SEED_LEARNING=true on both apps), past Lesson 1 since two days ago, opens
- * Lesson 2 in dark mode: the Review (#520) shows Lesson 1's cards, a card turns with Enter and takes a mark, its text
- * is readable, and Skip goes to the Lesson. The same learner, mid-Journey with Lesson 2 open, finds the quiet Atelier
- * card on the Dashboard (#523), hides it, and brings it back with the switch on the Atelier page. Run from ui-test.js
- * as Test 9k.
+ * tests. Ask the AI (#521): a guest is asked to sign in; a fresh Account opens the AI Assistant from the entry and
+ * sees the "About" chip, the two starter questions and, on the reply, "AI answer, not reviewed". The chat reply is
+ * faked in the browser (no AI key in E2E); the request is checked to carry only the Term's slug. Last, the fixture
+ * learner (E2E_SEED_LEARNING=true on both apps), past Lesson 1 since two days ago, opens Lesson 2 in dark mode: the
+ * Review (#520) shows Lesson 1's cards, a card turns with Enter and takes a mark, its text is readable, and Skip goes
+ * to the Lesson. The same learner, mid-Journey with Lesson 2 open, finds the quiet Atelier card on the Dashboard
+ * (#523), hides it, and brings it back with the switch on the Atelier page. Run from ui-test.js as Test 9k.
  *
  * ApiService must read the fixture content folder (Learning__ContentPath, set by e2e-inmemory.sh and CI's E2E job):
  * the real one holds no Term Entries until the content slices. Expected labels are read from Resources/i18n/en.json.
@@ -117,6 +119,9 @@ async function checkEntry(page, report) {
         'not visible', report);
     check(await page.locator('[data-test-id="atelier-disclaimer"]').isVisible(), 'Atelier: the entry links the Disclaimer',
         'not visible', report);
+    check(await page.locator('[data-test-id="atelier-ask-ai-sign-in"]').isVisible()
+            && !(await page.locator('[data-test-id="atelier-ask-ai-button"]').count()),
+        'Atelier: a guest is asked to sign in to Ask the AI', 'no sign-in prompt', report);
 
     const title = await page.title();
     check(title.startsWith(apr.term), 'Atelier: the entry has its title', title, report);
@@ -360,7 +365,53 @@ async function checkDashboardCard(page, base, report) {
 }
 
 /**
- * Runs the Atelier smoke as a guest, then as a fresh Account.
+ * Ask the AI as a fresh Account: the widget opens about the entry, and a reply is labelled as not reviewed.
+ * @param {import('playwright').Browser} browser - The browser.
+ * @param {string} base - The Web app's base URL.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+async function checkAskTheAi(browser, base, report) {
+    const context = await browser.newContext({ignoreHTTPSErrors: true, locale: 'en-US',
+        extraHTTPHeaders: {'Accept-Language': 'en-US,en;q=0.9'}});
+    try {
+        const page = await context.newPage();
+        if (!(await registerFreshAccount(page, base))) {
+            report.fail('Atelier: could not register an Account for the Ask the AI checks');
+            return;
+        }
+        const sent = [];
+        await page.route('**/api/AiAssistant/chat', async (route) => {
+            sent.push(route.request().postDataJSON());
+            await route.fulfill({status: 200, contentType: 'application/json',
+                body: JSON.stringify({response: 'APR is the yearly cost of a loan.', aboutTerm: apr.term})});
+        });
+        await page.goto(`${base}/Learning/Term/apr`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await page.click('[data-test-id="atelier-ask-ai-button"]');
+
+        const about = page.locator('[data-test-id="ai-chat-about"]');
+        await about.waitFor({state: 'visible', timeout: TIMEOUT});
+        const aboutText = (await about.textContent()).trim();
+        check(aboutText === en['Shell.Js.Ai.Term.About'].replace('{term}', apr.term),
+            'Atelier: Ask the AI opens the assistant with the "About" chip', aboutText, report);
+        const starters = page.locator('#ai-chat-messages [data-starter]');
+        check(await starters.count() === 2, 'Atelier: Ask the AI offers two starter questions',
+            `${await starters.count()} starters`, report);
+
+        await starters.first().click();
+        await page.locator('.ai-chat-message-note').waitFor({state: 'visible', timeout: TIMEOUT});
+        const note = (await page.locator('.ai-chat-message-note').textContent()).trim();
+        check(note === en['Shell.Js.Ai.Term.Unreviewed'], 'Atelier: the reply is labelled "AI answer, not reviewed"',
+            note, report);
+        const request = sent[0] || {};
+        check(request.termSlug === 'apr' && !('entry' in request),
+            'Atelier: the chat request carries only the Term slug', JSON.stringify(request), report);
+    } finally {
+        await context.close();
+    }
+}
+
+/**
+ * Runs the Atelier smoke as a guest, then as fresh Accounts.
  * @param {{browser: import('playwright').Browser, base: string, pass: Function, fail: Function}} options - The
  *     browser, the Web app's base URL and the suite's pass and fail.
  */
@@ -379,6 +430,7 @@ async function runLearningSmoke({browser, base, pass, fail}) {
     }
     await checkDarkMode(browser, base, report);
     await checkJourney(browser, base, report);
+    await checkAskTheAi(browser, base, report);
     await checkReview(browser, base, report);
 }
 

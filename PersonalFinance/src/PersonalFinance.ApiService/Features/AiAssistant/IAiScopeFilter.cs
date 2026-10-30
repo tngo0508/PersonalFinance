@@ -12,6 +12,10 @@ public interface IAiScopeFilter
     /// Returns null when the message is finance-related and should proceed to the LLM.
     /// </summary>
     /// <param name="message">The user's input message.</param>
+    /// <param name="aboutTerm">
+    /// The message asks about a Published Term Entry (Ask the AI), which is finance by construction: it needs no finance
+    /// keyword of its own, but the injection, greeting and off-topic checks still apply.
+    /// </param>
     /// <returns>A refusal or greeting response, or null if the message is in scope.</returns>
-    AiChatResponseDto? Evaluate(string message);
+    AiChatResponseDto? Evaluate(string message, bool aboutTerm = false);
 }

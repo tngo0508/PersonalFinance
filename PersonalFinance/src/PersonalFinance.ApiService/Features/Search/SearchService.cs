@@ -1,8 +1,11 @@
 using System.Globalization;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
+using PersonalFinance.ApiService.Features.Learning;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.DTOs.Learning;
 using PersonalFinance.Shared.DTOs.Search;
 using PersonalFinance.Shared.Enums;
 using PersonalFinance.Shared.Helpers;
@@ -11,7 +14,8 @@ namespace PersonalFinance.ApiService.Features.Search;
 
 /// <summary>
 /// Global Search across transactions, Budget Categories, and Savings Goals. Transactions and categories come only
-/// from the user's active Data Source (Google Sheet or Budget Tracker), so results never mix the two.
+/// from the user's active Data Source (Google Sheet or Budget Tracker), so results never mix the two. A Learning group
+/// of the Atelier's Term Entries follows, read through Learning's <see cref="ILearningLibraryService"/> (ADR 0007).
 /// </summary>
 internal sealed class SearchService : ISearchService
 {
@@ -24,22 +28,25 @@ internal sealed class SearchService : ISearchService
     internal const int MaxTransactions = 10;
     internal const int MaxCategories = 5;
     internal const int MaxSavingsGoals = 5;
+    internal const int MaxTerms = 5;
 
     private const string LikeEscape = "\\";
 
     private readonly AppDbContext _dbContext;
     private readonly IBudgetDataSourceService _dataSourceService;
     private readonly TimeProvider _timeProvider;
+    private readonly ILearningLibraryService? _learning;
 
     public SearchService(AppDbContext dbContext, IBudgetDataSourceService dataSourceService,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider, ILearningLibraryService? learning = null)
     {
         _dbContext = dbContext;
         _dataSourceService = dataSourceService;
         _timeProvider = timeProvider;
+        _learning = learning;
     }
 
-    public async Task<SearchResultsDto> SearchAsync(string userId, string query,
+    public async Task<SearchResultsDto> SearchAsync(string userId, string query, string? language = null,
         CancellationToken cancellationToken = default)
     {
         string? pattern = ToContainsPattern(query);
@@ -62,8 +69,58 @@ internal sealed class SearchService : ISearchService
         {
             Transactions = await transactionsQuery.ToListAsync(cancellationToken),
             Categories = await categoriesQuery.ToListAsync(cancellationToken),
-            SavingsGoals = await SavingsGoalsQuery(userId, pattern).ToListAsync(cancellationToken)
+            SavingsGoals = await SavingsGoalsQuery(userId, pattern).ToListAsync(cancellationToken),
+            Learning = SearchTerms(query, language)
         };
+    }
+
+    /// <summary>
+    /// The Term Entries whose Term (in <paramref name="language"/> or English), aliases or Vietnamese name contain
+    /// the query, ignoring case and Vietnamese diacritics as the Library filter does, so "lai kep" finds "lãi kép".
+    /// Ordered by Term, at most <see cref="MaxTerms"/>; each links to its public page.
+    /// </summary>
+    internal List<SearchResultItemDto> SearchTerms(string query, string? language)
+    {
+        string folded = Fold(query.Trim().Length > MaxQueryLength ? query.Trim()[..MaxQueryLength] : query);
+        if (_learning is null || folded.Length < MinQueryLength)
+        {
+            return [];
+        }
+
+        return _learning.GetLibrary(language).Topics
+            .SelectMany(t => t.Terms)
+            .Where(t => new[] { t.Term, t.EnglishTerm, t.VietnameseName }.Concat(t.AlsoKnownAs)
+                .Any(name => Fold(name).Contains(folded, StringComparison.Ordinal)))
+            .OrderBy(t => t.Term, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(t => t.Slug, StringComparer.Ordinal)
+            .Take(MaxTerms)
+            .Select(TermResult)
+            .ToList();
+    }
+
+    private static SearchResultItemDto TermResult(TermSummaryDto term) => new()
+    {
+        Id = term.Slug,
+        Title = term.Term,
+        Description = term.OneLine,
+        Source = "Learning",
+        Url = $"/Learning/Term/{Uri.EscapeDataString(term.Slug)}"
+    };
+
+    /// <summary>Folds text for matching: no diacritics, "đ" as "d", lower case, trimmed.</summary>
+    internal static string Fold(string? text)
+    {
+        string decomposed = (text ?? string.Empty).Normalize(NormalizationForm.FormD);
+        var builder = new StringBuilder(decomposed.Length);
+        foreach (char c in decomposed)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+            {
+                builder.Append(c is 'đ' or 'Đ' ? 'd' : c);
+            }
+        }
+
+        return builder.ToString().Normalize(NormalizationForm.FormC).ToLowerInvariant().Trim();
     }
 
     /// <summary>
