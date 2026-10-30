@@ -1,0 +1,153 @@
+{
+  "vi": {
+    "terms/apr": {
+      "term": "5ba8455571597b01",
+      "oneLine": "9fad48f51eeadf29",
+      "explanation.0": "cc35a6ea7d24a841",
+      "explanation.1": "57749acfe11bdc21",
+      "explanation.2": "c56c9ca39bb7182a",
+      "whyItMatters": "716cf01ce31cfa2a",
+      "workedExample": "bbd6610c1139ca77",
+      "inTheUs.text": "62e71a4385078f3d"
+    },
+    "terms/compound-interest": {
+      "term": "bb96b3917d6eb2d1",
+      "oneLine": "798ca753762b4a05",
+      "explanation.0": "4f60629f25a1ba4a",
+      "explanation.1": "f7f24c23bb6b6dc3",
+      "explanation.2": "559f06752bbe3a87",
+      "whyItMatters": "10611f92cdc7ddc6",
+      "workedExample": "d83ce49ef7008b53"
+    },
+    "terms/credit-score": {
+      "term": "96268e6201b45f18",
+      "oneLine": "f8ad12deb1733297",
+      "explanation.0": "f17209cbd0c32499",
+      "explanation.1": "2c6cd2d1598aa3b3",
+      "explanation.2": "86602e9cfc4bc643",
+      "whyItMatters": "231eabf0ea20665e",
+      "workedExample": "b450b9998f1ae2be"
+    },
+    "terms/diversification": {
+      "term": "70f51214079655c7",
+      "oneLine": "d346682b763a3654",
+      "explanation.0": "967fe8a66ef61fff",
+      "explanation.1": "fee11c287e4cc2ae",
+      "explanation.2": "5af8b04199b8009a",
+      "whyItMatters": "4a29252f50ed59ed",
+      "workedExample": "1b85992d5c80f120"
+    },
+    "terms/emergency-fund": {
+      "term": "dc169cd74e67d43d",
+      "oneLine": "d75de16d9f3d509e",
+      "explanation.0": "c5f1b5a28ce7ea24",
+      "explanation.1": "c3a80f5e4f8ce169",
+      "explanation.2": "b0cd2e82cdd18d5a",
+      "whyItMatters": "5bcc35c8f83f4052",
+      "workedExample": "765ef5c7838dd116"
+    },
+    "terms/etf": {
+      "term": "9ed1ac589f73b852",
+      "oneLine": "c85979bef528f23f",
+      "explanation.0": "761c9a2c5ff7eaa2",
+      "explanation.1": "a2b6d78e946adbb4",
+      "explanation.2": "6192cba10a1bef11",
+      "whyItMatters": "6b632601ca4ba783",
+      "workedExample": "8790cda283959f6d"
+    },
+    "terms/index-fund": {
+      "term": "d6f9fe8ed6186d5b",
+      "oneLine": "950cb4b7a76d67e3",
+      "explanation.0": "2db334d305c3f482",
+      "explanation.1": "c2d4b31a72a2b041",
+      "explanation.2": "48178bad727d85d4",
+      "whyItMatters": "3f5304d2fbb8fbdd",
+      "workedExample": "e6f65d278bedbee3"
+    },
+    "terms/stock": {
+      "term": "d5cade7ef3191690",
+      "oneLine": "9aea9780d98b1db2",
+      "explanation.0": "eb11f14ec6b7bc8a",
+      "explanation.1": "98e4084f4a99cde0",
+      "explanation.2": "b4e497bf93297fc9",
+      "whyItMatters": "45416a90f3af36c4",
+      "workedExample": "799348d77a8eebf9"
+    },
+    "lessons/borrow-wisely": {
+      "title": "e07907d5d19d3108",
+      "intro": "5892785bb8686248",
+      "check.0.prompt": "729864338161b9e6",
+      "check.0.options.0": "e50ea2d7737ee25a",
+      "check.0.options.1": "2558566c5e58d4c6",
+      "check.0.explanation": "aeeafbf6a1dd41a8",
+      "check.1.prompt": "81ed4188cfba9142",
+      "check.1.options.0": "5ea59e6435160e08",
+      "check.1.options.1": "34ea2fd06e33ed5e",
+      "check.1.options.2": "5f6af4efc4f42305",
+      "check.1.explanation": "54b287bc1aaf26c9",
+      "check.2.prompt": "381b1afd95a72997",
+      "check.2.options.0": "e50ea2d7737ee25a",
+      "check.2.options.1": "2558566c5e58d4c6",
+      "check.2.explanation": "df5a16c9384b48e2",
+      "tryIt.label": "1c6225ec7092ad2f",
+      "keepsake.name": "ee69eb4afc76aae0"
+    },
+    "lessons/build-a-cushion": {
+      "title": "90615cdf0a055f91",
+      "intro": "137b173c05051733",
+      "check.0.prompt": "5440445abc2079ea",
+      "check.0.options.0": "e50ea2d7737ee25a",
+      "check.0.options.1": "2558566c5e58d4c6",
+      "check.0.explanation": "8ece21be6fd30ef8",
+      "check.1.prompt": "160c93e2268ea9d7",
+      "check.1.options.0": "9f0e4ab4d63e80f8",
+      "check.1.options.1": "595084968471c5ac",
+      "check.1.options.2": "d799b14a8a8fea1e",
+      "check.1.explanation": "f832fbe8a51d074c",
+      "check.2.prompt": "c5ce13708038ce29",
+      "check.2.options.0": "e50ea2d7737ee25a",
+      "check.2.options.1": "2558566c5e58d4c6",
+      "check.2.explanation": "220afef3ad06c9dc",
+      "tryIt.label": "48b398ee2df71e67",
+      "keepsake.name": "a7b2013393048245"
+    },
+    "lessons/invest-the-easy-way": {
+      "title": "e9e478e7128e4165",
+      "intro": "c430a4e0b07e97a2",
+      "check.0.prompt": "89cb02a508c68051",
+      "check.0.options.0": "e50ea2d7737ee25a",
+      "check.0.options.1": "2558566c5e58d4c6",
+      "check.0.explanation": "8bba287382385e12",
+      "check.1.prompt": "0d5b8a5f0abc234a",
+      "check.1.options.0": "ede83e75d8a5955e",
+      "check.1.options.1": "81fa7a6eab27ee4a",
+      "check.1.options.2": "49d6bff7c4926990",
+      "check.1.explanation": "207f1a8282f47c0a",
+      "check.2.prompt": "9539893362e24f88",
+      "check.2.options.0": "e50ea2d7737ee25a",
+      "check.2.options.1": "2558566c5e58d4c6",
+      "check.2.explanation": "e3411255ee9e2f30",
+      "tryIt.label": "2e64c05ce4194cf3",
+      "keepsake.name": "f082ac980336071f"
+    },
+    "lessons/own-a-piece": {
+      "title": "69ca0f1994eefc8b",
+      "intro": "534b0c684d767001",
+      "check.0.prompt": "75bb141edebdcf39",
+      "check.0.options.0": "e50ea2d7737ee25a",
+      "check.0.options.1": "2558566c5e58d4c6",
+      "check.0.explanation": "ee6366ab2f2d583f",
+      "check.1.prompt": "2ffbca8ac4446696",
+      "check.1.options.0": "a4bb5df8e940d605",
+      "check.1.options.1": "15aebe143a3514d0",
+      "check.1.options.2": "67e1bca0889ba21c",
+      "check.1.explanation": "f0e8fa9e070242d2",
+      "check.2.prompt": "dc6126f6ddd819e3",
+      "check.2.options.0": "e50ea2d7737ee25a",
+      "check.2.options.1": "2558566c5e58d4c6",
+      "check.2.explanation": "c2bee86cdb073664",
+      "tryIt.label": "979d6300fd9884ff",
+      "keepsake.name": "a0a98923a1be0ff8"
+    }
+  }
+}
