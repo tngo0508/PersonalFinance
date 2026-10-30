@@ -1,0 +1,12 @@
+{
+  "slug": "credit-score",
+  "term": "Điểm tín dụng",
+  "oneLine": "Một con số dự đoán khả năng bạn trả nợ đúng hạn.",
+  "explanation": [
+    "Một điểm tín dụng là con số dự đoán cách bạn sẽ xử lý tín dụng. Điểm tín dụng là số tiền bạn vay và trả lại sau này. Điểm tín dụng đến từ thông tin trong báo cáo tín dụng của bạn.",
+    "Một công thức, gọi là mô hình điểm số, chuyển thông tin đó thành điểm số. Nó xem xét lịch sử thanh toán hóa đơn và khoản nợ chưa trả của bạn. Nó cũng xem xét bao lâu các tài khoản của bạn mở và bạn sử dụng bao nhiêu tín dụng.",
+    "Bạn không chỉ có một điểm tín dụng. Nó có thể khác nhau tùy theo mô hình, dữ liệu và thậm chí cả ngày được tính. Hầu hết các điểm tín dụng nằm trong khoảng từ 300 đến 850."
+  ],
+  "whyItMatters": "Các công ty sử dụng điểm tín dụng của bạn để quyết định có nên cấp thẻ tín dụng, vay mua xe hay vay mua nhà cho bạn hay không. Họ cũng dùng nó để thiết lập lãi suất và số tiền bạn có thể vay. Chủ nhà và công ty bảo hiểm cũng có thể sử dụng nó. Điểm tín dụng cao hơn thường giúp vay dễ dàng hơn và lãi suất thấp hơn.",
+  "workedExample": "Mai và Tuan mỗi người đều xin vay mua xe. Điểm của Mai là 780, còn Tuan là 600. Mai có khả năng vay với lãi suất thấp hơn. Không phải tất cả các bên cho vay đều đưa ra cùng một mức lãi suất, nên cả hai vẫn có thể so sánh các đề nghị."
+}

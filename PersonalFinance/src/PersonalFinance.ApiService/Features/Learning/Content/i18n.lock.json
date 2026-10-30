@@ -1,5 +1,15 @@
 {
   "vi": {
+    "terms/apr": {
+      "term": "5ba8455571597b01",
+      "oneLine": "9fad48f51eeadf29",
+      "explanation.0": "cc35a6ea7d24a841",
+      "explanation.1": "57749acfe11bdc21",
+      "explanation.2": "c56c9ca39bb7182a",
+      "whyItMatters": "716cf01ce31cfa2a",
+      "workedExample": "bbd6610c1139ca77",
+      "inTheUs.text": "62e71a4385078f3d"
+    },
     "terms/compound-interest": {
       "term": "bb96b3917d6eb2d1",
       "oneLine": "798ca753762b4a05",
@@ -9,6 +19,15 @@
       "whyItMatters": "10611f92cdc7ddc6",
       "workedExample": "d83ce49ef7008b53"
     },
+    "terms/credit-score": {
+      "term": "96268e6201b45f18",
+      "oneLine": "f8ad12deb1733297",
+      "explanation.0": "f17209cbd0c32499",
+      "explanation.1": "2c6cd2d1598aa3b3",
+      "explanation.2": "86602e9cfc4bc643",
+      "whyItMatters": "231eabf0ea20665e",
+      "workedExample": "b450b9998f1ae2be"
+    },
     "terms/emergency-fund": {
       "term": "dc169cd74e67d43d",
       "oneLine": "d75de16d9f3d509e",
@@ -17,6 +36,25 @@
       "explanation.2": "b0cd2e82cdd18d5a",
       "whyItMatters": "5bcc35c8f83f4052",
       "workedExample": "765ef5c7838dd116"
+    },
+    "lessons/borrow-wisely": {
+      "title": "e07907d5d19d3108",
+      "intro": "5892785bb8686248",
+      "check.0.prompt": "729864338161b9e6",
+      "check.0.options.0": "e50ea2d7737ee25a",
+      "check.0.options.1": "2558566c5e58d4c6",
+      "check.0.explanation": "aeeafbf6a1dd41a8",
+      "check.1.prompt": "81ed4188cfba9142",
+      "check.1.options.0": "5ea59e6435160e08",
+      "check.1.options.1": "34ea2fd06e33ed5e",
+      "check.1.options.2": "5f6af4efc4f42305",
+      "check.1.explanation": "54b287bc1aaf26c9",
+      "check.2.prompt": "381b1afd95a72997",
+      "check.2.options.0": "e50ea2d7737ee25a",
+      "check.2.options.1": "2558566c5e58d4c6",
+      "check.2.explanation": "df5a16c9384b48e2",
+      "tryIt.label": "1c6225ec7092ad2f",
+      "keepsake.name": "ee69eb4afc76aae0"
     },
     "lessons/build-a-cushion": {
       "title": "90615cdf0a055f91",
