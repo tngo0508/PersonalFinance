@@ -28,6 +28,15 @@
       "whyItMatters": "231eabf0ea20665e",
       "workedExample": "b450b9998f1ae2be"
     },
+    "terms/diversification": {
+      "term": "70f51214079655c7",
+      "oneLine": "d346682b763a3654",
+      "explanation.0": "967fe8a66ef61fff",
+      "explanation.1": "fee11c287e4cc2ae",
+      "explanation.2": "5af8b04199b8009a",
+      "whyItMatters": "4a29252f50ed59ed",
+      "workedExample": "1b85992d5c80f120"
+    },
     "terms/emergency-fund": {
       "term": "dc169cd74e67d43d",
       "oneLine": "d75de16d9f3d509e",
@@ -36,6 +45,15 @@
       "explanation.2": "b0cd2e82cdd18d5a",
       "whyItMatters": "5bcc35c8f83f4052",
       "workedExample": "765ef5c7838dd116"
+    },
+    "terms/stock": {
+      "term": "d5cade7ef3191690",
+      "oneLine": "9aea9780d98b1db2",
+      "explanation.0": "eb11f14ec6b7bc8a",
+      "explanation.1": "98e4084f4a99cde0",
+      "explanation.2": "b4e497bf93297fc9",
+      "whyItMatters": "45416a90f3af36c4",
+      "workedExample": "799348d77a8eebf9"
     },
     "lessons/borrow-wisely": {
       "title": "e07907d5d19d3108",
@@ -74,6 +92,25 @@
       "check.2.explanation": "220afef3ad06c9dc",
       "tryIt.label": "48b398ee2df71e67",
       "keepsake.name": "a7b2013393048245"
+    },
+    "lessons/own-a-piece": {
+      "title": "69ca0f1994eefc8b",
+      "intro": "534b0c684d767001",
+      "check.0.prompt": "75bb141edebdcf39",
+      "check.0.options.0": "e50ea2d7737ee25a",
+      "check.0.options.1": "2558566c5e58d4c6",
+      "check.0.explanation": "ee6366ab2f2d583f",
+      "check.1.prompt": "2ffbca8ac4446696",
+      "check.1.options.0": "a4bb5df8e940d605",
+      "check.1.options.1": "15aebe143a3514d0",
+      "check.1.options.2": "67e1bca0889ba21c",
+      "check.1.explanation": "f0e8fa9e070242d2",
+      "check.2.prompt": "dc6126f6ddd819e3",
+      "check.2.options.0": "e50ea2d7737ee25a",
+      "check.2.options.1": "2558566c5e58d4c6",
+      "check.2.explanation": "c2bee86cdb073664",
+      "tryIt.label": "979d6300fd9884ff",
+      "keepsake.name": "a0a98923a1be0ff8"
     }
   }
 }

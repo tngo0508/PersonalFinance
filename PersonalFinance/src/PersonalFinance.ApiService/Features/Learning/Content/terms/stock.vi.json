@@ -1,0 +1,12 @@
+{
+  "slug": "stock",
+  "term": "Cổ phiếu",
+  "oneLine": "Một phần sở hữu trong một công ty.",
+  "explanation": [
+    "Một cổ phiếu cho bạn một phần sở hữu trong công ty. Cổ phiếu còn được gọi là cổ phiếu, và những người sở hữu chúng là cổ đông.",
+    "Các công ty bán cổ phiếu để kiếm tiền, ví dụ như trả nợ, ra mắt sản phẩm mới hoặc xây dựng cơ sở mới.",
+    "Mọi người mua cổ phiếu vì ba lý do chính. Giá có thể tăng. Công ty có thể trả cổ tức, đây là một phần lợi nhuận trả cho cổ đông. Common cổ phiếu cũng cho phép bạn bỏ phiếu tại các cuộc họp cổ đông."
+  ],
+  "whyItMatters": "Trong thời gian dài, như 15 năm, cổ phiếu thường mang lại lợi nhuận mạnh. Nhưng giá cổ phiếu cũng giảm cũng như lên, và bạn có thể mất tiền. Cổ phiếu công ty lớn như một nhóm đã thua lỗ trong khoảng một năm trên ba năm. Nếu một công ty phá sản, cổ đông thường được trả cuối cùng và có thể không nhận được gì.",
+  "workedExample": "Bạn mua 10 cổ phần với giá 50 đô la mỗi chiếc, tức là bạn phải trả 500 đô la. Nếu giá tăng lên 60 đô la, cổ phần của bạn trị giá 600 đô la. Nếu bạn phải bán vào ngày giá 40 đô la, bạn nhận được 400 đô la và mất 100 đô la."
+}

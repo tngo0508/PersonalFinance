@@ -1,0 +1,38 @@
+{
+  "slug": "own-a-piece",
+  "title": "Sở hữu một tác phẩm",
+  "intro": "Một cổ phiếu khiến bạn trở thành đồng sở hữu của một công ty. Bài học này cho thấy bạn nhận được gì và rủi ro gì. Nó cũng cho thấy cách phân tán tiền giúp giảm rủi ro đó.",
+  "check": [
+    {
+      "prompt": "Giá cổ phiếu của một công ty chỉ có thể tăng lên.",
+      "options": [
+        "Lầm tưởng",
+        "Sự thật"
+      ],
+      "explanation": "Lầm tưởng. Cổ phiếu vừa giảm vừa tăng, và bạn có thể mất tiền."
+    },
+    {
+      "prompt": "Mai đặt 100 đô la vào mỗi công ty trong số mười công ty, và cổ phiếu của một công ty giảm một nửa. Cô mất bao nhiêu trong số 1.000 đô la của cô ấy?",
+      "options": [
+        "$50",
+        "$500",
+        "Không có gì"
+      ],
+      "explanation": "50 đô la. Chỉ có 100 đô la trong công ty đó, nên một lần ngã không quan trọng lắm."
+    },
+    {
+      "prompt": "Một quỹ chỉ nắm giữ một ngành luôn được đa dạng hóa tốt.",
+      "options": [
+        "Lầm tưởng",
+        "Sự thật"
+      ],
+      "explanation": "Lầm tưởng. Một quỹ tập trung vào một ngành có thể vẫn chưa đa dạng hóa."
+    }
+  ],
+  "tryIt": {
+    "label": "Nghiên cứu"
+  },
+  "keepsake": {
+    "name": "Mảnh ghép"
+  }
+}
