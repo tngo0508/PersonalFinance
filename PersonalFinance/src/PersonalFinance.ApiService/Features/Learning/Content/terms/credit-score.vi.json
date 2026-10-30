@@ -3,7 +3,7 @@
   "term": "Điểm tín dụng",
   "oneLine": "Một con số dự đoán khả năng bạn trả nợ đúng hạn.",
   "explanation": [
-    "Một điểm tín dụng là con số dự đoán cách bạn sẽ xử lý tín dụng. Điểm tín dụng là số tiền bạn vay và trả lại sau này. Điểm tín dụng đến từ thông tin trong báo cáo tín dụng của bạn.",
+    "Điểm tín dụng là con số dự đoán cách bạn sẽ xử lý tín dụng. Tín dụng là số tiền bạn vay và trả lại sau này. Điểm tín dụng đến từ thông tin trong báo cáo tín dụng của bạn.",
     "Một công thức, gọi là mô hình điểm số, chuyển thông tin đó thành điểm số. Nó xem xét lịch sử thanh toán hóa đơn và khoản nợ chưa trả của bạn. Nó cũng xem xét bao lâu các tài khoản của bạn mở và bạn sử dụng bao nhiêu tín dụng.",
     "Bạn không chỉ có một điểm tín dụng. Nó có thể khác nhau tùy theo mô hình, dữ liệu và thậm chí cả ngày được tính. Hầu hết các điểm tín dụng nằm trong khoảng từ 300 đến 850."
   ],

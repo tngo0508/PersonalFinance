@@ -12,13 +12,13 @@
       "explanation": "Lầm tưởng. APR cộng phí của bên cho vay vào lãi suất."
     },
     {
-      "prompt": "điểm tín dụng của Hoa tăng lên. Thường thì lãi suất mà các bên cho vay đưa ra sẽ ra sao?",
+      "prompt": "Điểm tín dụng của Hoa tăng lên. Lãi suất mà các bên cho vay đưa ra cho cô ấy thường sẽ ra sao?",
       "options": [
-        "Họ sẽ bị hạ gục",
-        "Chúng đi lên",
-        "Chúng vẫn giữ nguyên"
+        "Giảm xuống",
+        "Tăng lên",
+        "Giữ nguyên"
       ],
-      "explanation": "Chúng sẽ giảm. Điểm cao thường đồng nghĩa với lãi suất thấp hơn."
+      "explanation": "Giảm xuống. Điểm cao hơn thường đồng nghĩa với lãi suất thấp hơn."
     },
     {
       "prompt": "Mỗi người chỉ có một điểm tín dụng.",
@@ -33,6 +33,6 @@
     "label": "Ngân sách"
   },
   "keepsake": {
-    "name": "sổ cái"
+    "name": "Sổ cái"
   }
 }
