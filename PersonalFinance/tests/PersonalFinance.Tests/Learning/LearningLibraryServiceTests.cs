@@ -51,6 +51,44 @@ public class LearningLibraryServiceTests
     }
 
     [Fact]
+    public void FindTerm_NamesTheLessonThatTeachesIt()
+    {
+        TermEntryDto apr = Service(SoonAfterReview).FindTerm("apr", "vi")!;
+
+        Assert.Equal(("borrow-wisely", 2, "Vay tiền khôn ngoan"), (apr.Lesson!.Slug, apr.Lesson.Day, apr.Lesson.Title));
+    }
+
+    [Fact]
+    public void GetLessons_IsTheOutlineByDay()
+    {
+        List<LessonSummaryDto> lessons = Service(SoonAfterReview).GetLessons("en");
+
+        Assert.Equal([("build-a-cushion", 1, "Build a cushion"), ("borrow-wisely", 2, "Borrow wisely")],
+            lessons.Select(l => (l.Slug, l.Day, l.Title)));
+        Assert.Equal("Coin jar", lessons[0].Keepsake.Name);
+    }
+
+    [Fact]
+    public void FindLesson_ServesItsTermEntriesInOrder_AndItsCheck()
+    {
+        LessonDto lesson = Service(SoonAfterReview).FindLesson("borrow-wisely", "vi")!;
+
+        Assert.Equal(["apr", "credit-score"], lesson.Terms.Select(t => t.Slug));
+        Assert.Equal("Lãi suất phần trăm hằng năm", lesson.Terms[0].Term);
+        Assert.Equal(3, lesson.Check.Count);
+        Assert.Equal(("myth-or-fact", 0), (lesson.Check[0].Format, lesson.Check[0].CorrectOption));
+        Assert.Equal(["Lầm tưởng", "Sự thật"], lesson.Check[0].Options);
+        Assert.Equal("/Budget", lesson.TryIt.Url);
+        Assert.Equal("Sổ cái", lesson.Keepsake.Name);
+    }
+
+    [Fact]
+    public void FindLesson_UnknownSlug_IsNull()
+    {
+        Assert.Null(Service(SoonAfterReview).FindLesson("no-such-lesson", "en"));
+    }
+
+    [Fact]
     public void FindTerm_UnknownSlug_IsNull()
     {
         Assert.Null(Service(SoonAfterReview).FindTerm("mortgage", "en"));

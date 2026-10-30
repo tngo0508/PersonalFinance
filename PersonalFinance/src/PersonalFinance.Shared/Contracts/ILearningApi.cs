@@ -19,6 +19,15 @@ public interface ILearningApi
     Task<TermEntryDto> GetTermAsync(string slug, [Query] string language,
         CancellationToken cancellationToken = default);
 
+    /// <summary>The Journey's outline: every Lesson by day.</summary>
+    [Get("/api/learning/lessons")]
+    Task<List<LessonSummaryDto>> GetLessonsAsync([Query] string language, CancellationToken cancellationToken = default);
+
+    /// <summary>The Lesson with this slug and its Term Entries; an unknown slug gets 404.</summary>
+    [Get("/api/learning/lessons/{slug}")]
+    Task<LessonDto> GetLessonAsync(string slug, [Query] string language,
+        CancellationToken cancellationToken = default);
+
     /// <summary>The Account's Journey: every Lesson's status and when the next one opens.</summary>
     [Get("/api/learning/journey")]
     Task<JourneyStateDto> GetJourneyAsync([Query] string language, CancellationToken cancellationToken = default);

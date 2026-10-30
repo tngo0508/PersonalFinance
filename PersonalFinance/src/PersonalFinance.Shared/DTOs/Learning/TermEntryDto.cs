@@ -54,6 +54,9 @@ public sealed class TermEntryDto
     /// <summary>When the facts were last checked against the sources.</summary>
     public DateOnly LastReviewed { get; set; }
 
+    /// <summary>The Lesson that teaches this entry, or null when no Lesson does yet.</summary>
+    public LessonSummaryDto? Lesson { get; set; }
+
     /// <summary>
     /// The words that name another Term Entry (its Term in this Language, its English Term and its aliases), longest
     /// first, so the page can link the ones its text mentions.

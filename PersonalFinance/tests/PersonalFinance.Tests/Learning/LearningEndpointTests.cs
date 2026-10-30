@@ -53,6 +53,25 @@ public class LearningEndpointTests : IClassFixture<LearningEndpointTests.Fixture
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Lessons_Anonymous_ServeTheOutlineAndALesson()
+    {
+        List<LessonSummaryDto>? outline =
+            await Client().GetFromJsonAsync<List<LessonSummaryDto>>("/api/learning/lessons?language=en");
+        LessonDto? lesson = await Client().GetFromJsonAsync<LessonDto>("/api/learning/lessons/build-a-cushion");
+
+        Assert.Equal(["build-a-cushion", "borrow-wisely"], outline!.Select(l => l.Slug));
+        Assert.Equal(["emergency-fund", "compound-interest"], lesson!.Terms.Select(t => t.Slug));
+    }
+
+    [Fact]
+    public async Task Lesson_Unknown_IsNotFound()
+    {
+        HttpResponseMessage response = await Client().GetAsync("/api/learning/lessons/no-such-lesson");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     private HttpClient Client() =>
         _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 

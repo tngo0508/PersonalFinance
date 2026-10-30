@@ -77,8 +77,52 @@ internal sealed class LearningLibraryService : ILearningLibraryService
             Video = entry.Video is { } video ? new ContentVideoDto { Title = video.Title, Url = video.Url } : null,
             LastReviewed = entry.LastReviewed,
             Mentions = Mentions(entry.Slug, code),
+            Lesson = _content.GetLessons(code).FirstOrDefault(l => l.Terms.Contains(entry.Slug)) is { } lesson
+                ? Summary(lesson)
+                : null,
         };
     }
+
+    public List<LessonSummaryDto> GetLessons(string? language) =>
+        _content.GetLessons(LanguageOrEnglish(language)).Select(Summary).ToList();
+
+    public LessonDto? FindLesson(string slug, string? language)
+    {
+        string code = LanguageOrEnglish(language);
+        if (_content.FindLesson(slug, code) is not { } lesson)
+        {
+            return null;
+        }
+
+        return new LessonDto
+        {
+            Slug = lesson.Slug,
+            Day = lesson.Day,
+            Title = lesson.Title,
+            Intro = lesson.Intro,
+            Terms = lesson.Terms.Select(t => FindTerm(t, code)).OfType<TermEntryDto>().ToList(),
+            Check = lesson.Check.Select(q => new CheckQuestionDto
+            {
+                Format = q.Format,
+                Prompt = q.Prompt,
+                Options = q.Options.ToList(),
+                CorrectOption = q.CorrectOption,
+                Explanation = q.Explanation,
+            }).ToList(),
+            TryIt = new TryItDto { Label = lesson.TryIt.Label, Url = lesson.TryIt.Url },
+            Keepsake = KeepsakeOf(lesson.Keepsake),
+        };
+    }
+
+    private static LessonSummaryDto Summary(Lesson lesson) => new()
+    {
+        Slug = lesson.Slug,
+        Day = lesson.Day,
+        Title = lesson.Title,
+        Keepsake = KeepsakeOf(lesson.Keepsake),
+    };
+
+    private static KeepsakeDto KeepsakeOf(Keepsake keepsake) => new() { Symbol = keepsake.Symbol, Name = keepsake.Name };
 
     // The names of every other entry, longest first so "capital gains tax" wins over "tax".
     private List<TermMentionDto> Mentions(string slug, string language) =>
