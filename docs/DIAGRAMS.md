@@ -209,7 +209,7 @@ JavaScript paths are under `Web/wwwroot/js/`.
 | Analysis | `SpreadsheetAnalysisController` (`api/SpreadsheetAnalysis`) | `ISpreadsheetAnalysisService`, `IGoogleSheetRemovalService` | `SpreadsheetBudgetSnapshot`, `SpreadsheetTransactionRecord` | `ISpreadsheetAnalysisApi` | `Analysis` (also injects `IBudgetTrackerApi`) | `analysis/` | Depends on GoogleDrive's `ISpreadsheetReader`; see [13](#13-google-drive-and-spreadsheet-analysis) |
 | BudgetPlanner | `BudgetController` (`api/Budget`) | `IBudgetService` | `UserBudgetAllocation` | `IBudgetPlannerApi` | `Budget` | `budget/` | Raises Notifications; reads `IBudgetDataProvider` |
 | BudgetTracker | `BudgetTrackerController` (`api/budget-tracker`) | `IMonthlyBudgetService`, `IBudgetTrackerRemovalService` | `BudgetCategory`, `BudgetTransaction`, `MonthlyBudgetPlan`, `MonthlyBudgetLine` | `IBudgetTrackerApi` | `BudgetTracker` | `budget-tracker/`, `core/data-source-toggle.js` | Six Validators; the controller also injects `IBudgetDataSourceService` |
-| Community | `CommunityController` (`api/Community`; Strategy review RequireAdmin) | `ICommunityService` | `CommunityPseudonym`, `CommunityStrategy`, `CommunityComment`, `CommunityCommentLike`, `CommunityPoll`, `CommunityPollOption`, `CommunityPollVote` | `ICommunityApi` | `Community`; Strategy review in `Admin` | `community.js` | Two Validators (pinning and reviewing a Strategy); the Service throws keyed `ApiErrorException`s for votes and comments. `MoneyAmountRule` (Shared) is the no-amounts rule both the form's nudge and the Admin queue's flag use |
+| Community | `CommunityController` (`api/Community`; Strategy review RequireAdmin) | `ICommunityService` | `CommunityPseudonym`, `CommunityStrategy`, `CommunityComment`, `CommunityReaction`, `CommunityPoll`, `CommunityPollOption`, `CommunityPollVote` | `ICommunityApi` | `Community`; Strategy review and Comment moderation in `Admin` | `community.js` | Three Validators (pinning and reviewing a Strategy, toggling a Reaction); the Service throws keyed `ApiErrorException`s for votes, comments and Reaction targets. `MoneyAmountRule` (Shared) is the no-amounts rule both the form's nudge and the Admin queue's flag use |
 | CurrencyConverter | `CurrencyConverterController` (`api/CurrencyConverter`) | `ICurrencyConversionService` | none (reads `ExchangeRate` only through Infrastructure's `ICurrencyConverter`) | `ICurrencyConverterApi` | `CurrencyConverter` (plain GET form) | none | Stateless calculator: no Entity, no rate lookup of its own, no rate limit; see [16](#16-localization) |
 | Dashboard | `DashboardController` (`api/Dashboard`) | `IDashboardService` | none (reads `NetWorthParameters`, `SavingsGoal`, `UserBudgetAllocation`, `GoogleDriveConnection`) | `IDashboardApi` | `Dashboard` | `dashboard/` | Read-only aggregator over four Features plus `IBudgetDataProvider` |
 | Feedback | `FeedbackController` (`api/Feedback`) | `IFeedbackService` | `Feedback` | `IFeedbackApi` | `Feedback`; inbox in `Admin` | none | The canonical example ([2](#2-anatomy-of-a-feature)) |
@@ -439,14 +439,15 @@ erDiagram
         string Text
         int PollId FK "nullable"
         int StrategyId FK "nullable, indexed"
-        bool IsVisible
+        bool IsVisible "false once an Admin hides it"
         DateTime CreatedAtUtc "indexed"
     }
-    CommunityCommentLike {
+    CommunityReaction {
         int Id PK
-        string UserId "unique with CommentId"
-        int CommentId FK
-        DateTime CreatedAtUtc
+        string UserId "unique with the target and Kind among live rows"
+        int Kind "Helpful, CheeringYouOn"
+        int StrategyId FK "nullable; exactly one target"
+        int CommentId FK "nullable"
     }
     CommunityPoll {
         int Id PK
@@ -472,7 +473,8 @@ erDiagram
     }
 
     CommunityStrategy ||--o{ CommunityComment : "StrategyId, SetNull"
-    CommunityComment ||--o{ CommunityCommentLike : "CommentId, Cascade"
+    CommunityStrategy ||--o{ CommunityReaction : "StrategyId, NoAction"
+    CommunityComment ||--o{ CommunityReaction : "CommentId, NoAction"
     CommunityPoll ||--o{ CommunityPollOption : "PollId, SetNull"
     CommunityPoll ||--o{ CommunityPollVote : "PollId, SetNull"
     CommunityPoll ||--o{ CommunityComment : "PollId, SetNull"
@@ -480,8 +482,10 @@ erDiagram
 ```
 
 `CommunityPoll` and `CommunityPollOption` are shared data with no `UserId`, no soft delete, untouched by the Purge.
-Nothing is seeded: the Community starts empty (#422). Like and comment counts are counted from the like and comment
-rows; no table stores them. `CommunityPseudonym` is one row per Account, the name it posts under ([ADR
+Nothing is seeded: the Community starts empty (#422). Reaction counts are counted from the Reaction rows; no table
+stores them, and only Strategies show them: a Comment shows only whether the viewer reacted. Taking a Reaction back
+soft-deletes it, so its unique indexes skip deleted rows. Comments are shown at once; an Admin hides one (or shows it
+again) from the Comment moderation list. `CommunityPseudonym` is one row per Account, the name it posts under ([ADR
 0018](adr/0018-guild-hall-is-pseudonymous-and-amount-free.md)); Strategies and comments store no author name and are
 joined to it on `UserId` when read, so a re-roll shows on every past post. A `CommunityStrategy` starts Pending: the
 board shows other users only Approved ones, and its author sees their own in every status. An Admin approves or rejects
@@ -489,7 +493,8 @@ it from the Strategy review queue, which flags money amounts by `MoneyAmountRule
 Strategies and comments survive the Purge under the placeholder id ([ADR
 0005](adr/0005-account-purge-hard-deletes-after-grace-period.md)); the Pseudonym row is deleted with the Account's other
 rows, so they are shown as written by "Former member". Pending and Rejected Strategies are erased: nobody else has seen
-them.
+them. The Account's own Reactions are erased, and so are other people's Reactions on anything the Purge erases; the
+Reaction foreign keys do not cascade, so the Purge removes those first.
 
 ### 4.4 Account, consent and cross-cutting records
 

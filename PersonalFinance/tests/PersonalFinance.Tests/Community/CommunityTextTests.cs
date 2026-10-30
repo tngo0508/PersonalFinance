@@ -83,14 +83,4 @@ public class CommunityTextTests
             Assert.Equal("Former member", CommunityText.Author(TestLocalization.Localizer, " "));
         }
     }
-
-    [Theory]
-    [InlineData("Steady Heron", 2, "SH")]
-    [InlineData("Steady Heron", 1, "S")]
-    [InlineData("Wren", 2, "W")]
-    [InlineData("former member", 2, "FM")]
-    public void Initials_TakeTheFirstLetterOfEachWord(string author, int count, string expected)
-    {
-        Assert.Equal(expected, CommunityText.Initials(author, count));
-    }
 }

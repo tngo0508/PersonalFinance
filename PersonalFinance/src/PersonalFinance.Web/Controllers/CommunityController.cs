@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Community;
+using PersonalFinance.Shared.Enums;
 using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Infrastructure.Localization;
@@ -13,7 +15,7 @@ namespace PersonalFinance.Web.Controllers;
 
 /// <summary>
 /// MVC Controller for the Guild Hall page (the Community Feature): the viewer's Pseudonym, polls, the board of
-/// Strategies and comments. All data operations are delegated to the ApiService via the ICommunityApi Refit client, which knows the
+/// Strategies, their Comments and Reactions. All data operations are delegated to the ApiService via the ICommunityApi Refit client, which knows the
 /// Account from the forwarded user id; no name ever leaves this app.
 /// </summary>
 [Authorize]
@@ -36,8 +38,8 @@ public sealed class CommunityController : Controller
     }
 
     /// <summary>
-    /// Displays the Guild Hall with the viewer's Pseudonym, interactive polls, the board of Strategies (only
-    /// <paramref name="category"/>'s when it is one of the board's categories) and recent comments.
+    /// Displays the Guild Hall with the viewer's Pseudonym, interactive polls, and the board of Strategies (only
+    /// <paramref name="category"/>'s when it is one of the board's categories), each with its thread of Comments.
     /// When the ApiService is unavailable, shows the Unavailable State instead of an empty page.
     /// </summary>
     [HttpGet]
@@ -109,9 +111,11 @@ public sealed class CommunityController : Controller
     }
 
     /// <summary>
-    /// Handles a new comment submission via AJAX.
+    /// Posts a Comment on a poll or a Strategy via AJAX. It is shown at once; the answer carries what the page needs
+    /// to add it to the thread.
     /// </summary>
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Produces("application/json")]
     public async Task<IActionResult> AddComment([FromBody] CommentRequest request, CancellationToken cancellationToken = default)
     {
@@ -120,9 +124,13 @@ public sealed class CommunityController : Controller
             return BadRequest(new { success = false, error = _localizer["Community.Message.CommentRequired"].Value });
         }
 
-        if (request.Text!.Length > 2000)
+        if (request.Text!.Length > CommunityCommentLimits.TextMaxLength)
         {
-            return BadRequest(new { success = false, error = _localizer.Named("Community.Message.CommentTooLong", ("max", 2000)) });
+            return BadRequest(new
+            {
+                success = false,
+                error = _localizer.Named("Community.Message.CommentTooLong", ("max", CommunityCommentLimits.TextMaxLength)),
+            });
         }
 
         var commentRequest = new CommunityCommentRequestDto
@@ -144,7 +152,6 @@ public sealed class CommunityController : Controller
                 isOwn = comment.IsOwn,
                 text = comment.Text,
                 createdAt = comment.CreatedAtUtc,
-                likes = comment.Likes,
                 pollId = comment.PollId,
                 strategyId = comment.StrategyId,
             }
@@ -152,48 +159,33 @@ public sealed class CommunityController : Controller
     }
 
     /// <summary>
-    /// Handles toggling a like on a comment via AJAX.
+    /// Gives or takes back a Reaction on a Strategy or a Comment via AJAX. The answer carries the kind's new count only
+    /// for a Strategy: a Comment shows none.
     /// </summary>
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Produces("application/json")]
-    public async Task<IActionResult> ToggleLike([FromBody] LikeRequest request, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> React([FromBody] ReactionRequest request, CancellationToken cancellationToken = default)
     {
-        if (request.CommentId <= 0)
+        if (!Enum.TryParse(request.Kind, ignoreCase: false, out CommunityReactionKind kind) || !Enum.IsDefined(kind)
+            || (request.StrategyId is > 0) == (request.CommentId is > 0))
         {
-            return BadRequest(new { success = false, error = _localizer["Community.Message.CommentIdRequired"].Value });
+            return BadRequest(new { success = false, error = _localizer["Community.Message.ReactionInvalid"].Value });
         }
 
-        CommentLikeResult result = await _communityApi.ToggleCommentLikeAsync(request.CommentId, cancellationToken);
-
-        return Json(new
+        CommunityReactionResultDto result = await _communityApi.ToggleReactionAsync(new CommunityReactionRequestDto
         {
-            success = result.Success,
-            likes = result.NewLikeCount,
-            isLiked = result.IsLiked,
-        });
-    }
-
-    /// <summary>
-    /// Gets comments for a specific poll via AJAX.
-    /// </summary>
-    [HttpGet]
-    [Produces("application/json")]
-    public async Task<IActionResult> GetPollComments([FromQuery] string pollCode, CancellationToken cancellationToken = default)
-    {
-        List<CommunityCommentDto> comments = await _communityApi.GetPollCommentsAsync(pollCode, cancellationToken);
+            Kind = kind,
+            StrategyId = request.StrategyId,
+            CommentId = request.CommentId,
+        }, cancellationToken);
 
         return Json(new
         {
             success = true,
-            comments = comments.Select(c => new
-            {
-                id = c.Id,
-                author = CommunityText.Author(_localizer, c.AuthorPseudonym),
-                isOwn = c.IsOwn,
-                text = c.Text,
-                createdAt = c.CreatedAtUtc,
-                likes = c.Likes,
-            }),
+            kind = result.Kind.ToString(),
+            byViewer = result.ByViewer,
+            count = result.Count,
         });
     }
 
@@ -255,21 +247,25 @@ public sealed class CommunityController : Controller
                 IsOwn = s.IsOwn,
                 Status = s.Status,
                 CreatedAt = s.CreatedAtUtc,
-            }).ToList(),
-            RecentComments = response.RecentComments.Select(c => new CommunityComment
-            {
-                Id = c.Id,
-                AuthorPseudonym = c.AuthorPseudonym,
-                IsOwn = c.IsOwn,
-                Text = c.Text,
-                CreatedAt = c.CreatedAtUtc,
-                Likes = c.Likes,
-                IsLikedByUser = c.IsLikedByUser,
-                PollId = c.PollId,
-                StrategyId = c.StrategyId,
+                HelpfulCount = s.HelpfulCount,
+                CheeringCount = s.CheeringCount,
+                HelpfulByViewer = s.HelpfulByViewer,
+                CheeringByViewer = s.CheeringByViewer,
+                Comments = s.Comments.Select(MapComment).ToList(),
             }).ToList(),
         };
     }
+
+    private static CommunityComment MapComment(CommunityCommentDto c) => new()
+    {
+        Id = c.Id,
+        AuthorPseudonym = c.AuthorPseudonym,
+        IsOwn = c.IsOwn,
+        Text = c.Text,
+        CreatedAt = c.CreatedAtUtc,
+        HelpfulByViewer = c.HelpfulByViewer,
+        CheeringByViewer = c.CheeringByViewer,
+    };
 
     private static CommunityPoll MapPollToViewModel(CommunityPollDto dto)
     {
@@ -290,6 +286,7 @@ public sealed class CommunityController : Controller
                 Votes = o.Votes,
                 Percentage = o.Percentage,
             }).ToList(),
+            Comments = dto.Comments.Select(MapComment).ToList(),
         };
     }
 
@@ -317,11 +314,13 @@ public sealed class CommunityController : Controller
     }
 
     /// <summary>
-    /// Request model for toggling comment likes.
+    /// Request model for toggling a Reaction: its kind by name, and one of a Strategy or a Comment.
     /// </summary>
-    public sealed class LikeRequest
+    public sealed class ReactionRequest
     {
-        public int CommentId { get; set; }
+        public string? Kind { get; set; }
+        public int? StrategyId { get; set; }
+        public int? CommentId { get; set; }
     }
 
     /// <summary>

@@ -304,67 +304,120 @@
   margin-left: 0.5rem;
 }
 
-/* Poll comment section */
-.community-poll-comment-section {
-  border-top: 1px solid var(--app-border);
-  padding-top: 0.75rem;
-  margin-top: 0.5rem;
+/* --- Reactions: supportive toggles; Strategies show counts, Comments don't --- */
+.community-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.625rem;
 }
 
-.community-poll-comment-toggle,
-.community-casestudy-comment-toggle {
+.community-react {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  background: none;
-  border: none;
-  color: var(--app-brand);
-  font-size: var(--app-font-size-base);
-  font-weight: var(--app-font-weight-semibold);
+  gap: 0.3rem;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-text);
+  border-radius: 999px;
+  padding: 0.2rem 0.75rem;
+  font-size: var(--app-font-size-small);
   cursor: pointer;
-  padding: 0;
-  transition: color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.community-poll-comment-toggle:hover,
-.community-casestudy-comment-toggle:hover {
+.community-react:hover {
+  border-color: var(--app-brand);
+}
+
+.community-react[aria-pressed="true"] {
+  background: var(--app-brand-soft);
+  border-color: var(--app-brand);
+}
+
+.community-react:disabled {
+  cursor: progress;
+}
+
+.community-react--quiet {
+  border-color: transparent;
+  background: transparent;
+  padding-left: 0.25rem;
+  padding-right: 0.5rem;
+}
+
+.community-react-count {
+  color: var(--app-text-muted);
+}
+
+/* --- Reply threads under Strategies and polls --- */
+.community-thread {
+  margin-top: 0.625rem;
+}
+
+.community-thread-summary {
+  cursor: pointer;
+  color: var(--app-brand);
+  font-size: var(--app-font-size-small);
+  font-weight: var(--app-font-weight-semibold);
+}
+
+.community-thread-summary:hover {
   color: var(--app-brand-hover);
 }
 
-.community-poll-comment-form,
-.community-casestudy-comment-form {
-  margin-top: 0.75rem;
+.community-comments {
+  list-style: none;
+  padding: 0;
+  margin: 0.625rem 0 0;
 }
 
-.community-poll-comment-input,
-.community-casestudy-comment-input {
-  border-radius: var(--app-radius-s);
-  border: 1px solid var(--app-border);
+.community-comment {
+  border-left: 3px solid var(--app-border);
+  padding: 0.25rem 0 0.25rem 0.75rem;
+  margin-bottom: 0.625rem;
+}
+
+.community-comment-meta {
+  margin: 0;
+  font-size: var(--app-font-size-small);
+  color: var(--app-text-muted);
+}
+
+.community-comment-meta strong {
+  color: var(--app-text);
+}
+
+.community-comment-text {
+  margin: 0.125rem 0 0;
   font-size: var(--app-font-size-base);
-  padding: 0.5rem 0.75rem;
-  resize: vertical;
-  transition: border-color 0.15s ease;
+  color: var(--app-text);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
-.community-poll-comment-input:focus,
-.community-casestudy-comment-input:focus {
-  border-color: var(--app-brand);
-  box-shadow: 0 0 0 1px var(--app-brand);
-  outline: none;
+.community-comment .community-reactions {
+  margin-top: 0.25rem;
 }
 
-.community-poll-comment-actions,
-.community-casestudy-comment-actions {
+.community-reply-form {
+  display: grid;
+  gap: 0.5rem;
   margin-top: 0.5rem;
-  display: flex;
-  justify-content: flex-end;
 }
 
-.community-poll-comment-submit,
-.community-casestudy-comment-submit {
-  padding: 0.35rem 1rem;
+.community-reply-form textarea {
+  resize: vertical;
   font-size: var(--app-font-size-base);
-  border-radius: var(--app-radius-s);
+}
+
+.community-reply-form .community-btn {
+  justify-self: end;
+}
+
+.community-btn.community-btn--small {
+  padding: 0.3rem 0.875rem;
+  font-size: var(--app-font-size-small);
 }
 
 /* --- The hall: the corkboard of Strategies beside the rail --- */
@@ -609,99 +662,6 @@
   }
 }
 
-/* --- Comments --- */
-.community-comments-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.community-comment-card {
-  padding: 1rem 1.25rem;
-  border-radius: var(--app-radius-m);
-  background: var(--app-surface);
-  border: 1px solid var(--app-border);
-  box-shadow: var(--app-shadow-2);
-}
-
-.community-comment-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-}
-
-.community-comment-avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--app-brand-soft);
-  color: var(--app-brand);
-  font-size: var(--app-font-size-base);
-  font-weight: var(--app-font-weight-semibold);
-  flex-shrink: 0;
-}
-
-.community-comment-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.community-comment-author {
-  font-size: var(--app-font-size-base);
-  color: var(--app-text);
-}
-
-.community-comment-time {
-  font-size: var(--app-font-size-small);
-  color: var(--app-text-muted);
-}
-
-.community-comment-like {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  background: none;
-  border: none;
-  color: var(--app-text-muted);
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: var(--app-radius-s);
-  transition: all 0.15s ease;
-}
-
-.community-comment-like:hover {
-  color: var(--app-accent-negative);
-  background: var(--app-accent-negative-soft);
-}
-
-.community-comment-like.liked {
-  color: var(--app-accent-negative);
-}
-
-.community-comment-like.liked svg {
-  fill: var(--app-accent-negative);
-}
-
-.community-comment-like-count {
-  font-size: var(--app-font-size-small);
-  font-weight: var(--app-font-weight-semibold);
-}
-
-.community-comment-text {
-  font-size: var(--app-font-size-base);
-  color: var(--app-text);
-  line-height: 1.5;
-  margin: 0;
-  padding-left: calc(32px + 0.75rem);
-}
-
 /* --- Toast Notification --- */
 .community-toast {
   position: fixed;
@@ -737,14 +697,6 @@
   z-index: 2;
 }
 
-/* --- No Comments State --- */
-.community-no-comments {
-  text-align: center;
-  padding: 2rem 1rem;
-  color: var(--app-text-muted);
-  font-size: var(--app-font-size-base);
-}
-
 /* --- Responsive --- */
 @media (max-width: 768px) {
   .community-polls-grid {
@@ -766,14 +718,5 @@
   .community-section-header {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .community-comment-text {
-    padding-left: 0;
-    margin-top: 0.5rem;
-  }
-
-  .community-comment-header {
-    flex-wrap: wrap;
   }
 }

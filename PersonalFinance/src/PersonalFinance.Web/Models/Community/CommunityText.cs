@@ -67,18 +67,4 @@ public static class CommunityText
         ArgumentNullException.ThrowIfNull(localizer);
         return string.IsNullOrWhiteSpace(pseudonym) ? localizer["Community.FormerMember"] : pseudonym;
     }
-
-    /// <summary>
-    /// The avatar letters of an author label: the first letter of up to <paramref name="count"/> words, upper-cased
-    /// ("Steady Heron" gives "SH").
-    /// </summary>
-    public static string Initials(string author, int count)
-    {
-        ArgumentNullException.ThrowIfNull(author);
-        IEnumerable<char> letters = author
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Take(count)
-            .Select(word => char.ToUpperInvariant(word[0]));
-        return string.Concat(letters);
-    }
 }

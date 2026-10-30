@@ -57,9 +57,9 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<CommunityComment> CommunityComments => Set<CommunityComment>();
 
     /// <summary>
-    /// Community comment likes (user -> comment) table set.
+    /// Community Reactions (user -> Strategy or comment, by kind) table set.
     /// </summary>
-    public DbSet<CommunityCommentLike> CommunityCommentLikes => Set<CommunityCommentLike>();
+    public DbSet<CommunityReaction> CommunityReactions => Set<CommunityReaction>();
 
     /// <summary>
     /// Guild Hall Strategies table set: Pending until an Admin approves or rejects them.
@@ -197,7 +197,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         builder.Entity<SpreadsheetTransactionRecord>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<CommunityStrategy>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<CommunityComment>().HasQueryFilter(e => !e.IsDeleted);
-        builder.Entity<CommunityCommentLike>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<CommunityReaction>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<CommunityPollVote>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<CommunityPseudonym>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Notification>().HasQueryFilter(e => !e.IsDeleted);
@@ -647,7 +647,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     }
 
     /// <summary>
-    /// The Community entities (the Guild Hall): Pseudonyms, polls, options and votes, Strategies, comments and likes.
+    /// The Community entities (the Guild Hall): Pseudonyms, polls, options and votes, Strategies, comments and Reactions.
     /// Strategies and comments store no author name: the author is the row's <c>UserId</c>, shown by its Pseudonym.
     /// </summary>
     private static void ConfigureCommunity(ModelBuilder builder)
@@ -702,7 +702,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
-            entity.Property(e => e.Text).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.Text).IsRequired().HasMaxLength(CommunityCommentLimits.TextMaxLength);
             entity.HasIndex(e => e.PollId);
             entity.HasIndex(e => e.StrategyId);
             entity.HasIndex(e => e.CreatedAtUtc);
@@ -716,20 +716,36 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
                 .WithMany()
                 .HasForeignKey(e => e.StrategyId)
                 .OnDelete(DeleteBehavior.SetNull);
-
-            entity.HasMany(e => e.LikesList)
-                .WithOne(e => e.Comment)
-                .HasForeignKey(e => e.CommentId)
-                .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // Configure CommunityCommentLike entity — one like per user per comment
-        builder.Entity<CommunityCommentLike>(entity =>
+        // Configure CommunityReaction entity — one live Reaction per Account, kind and target. Taking one back
+        // soft-deletes it, so the unique indexes skip deleted rows and the target's counts read by target and kind.
+        // The foreign keys do not cascade: the Purge removes the Reactions on what it erases.
+        builder.Entity<CommunityReaction>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
-            entity.HasIndex(e => new { e.UserId, e.CommentId }).IsUnique();
-            entity.HasIndex(e => e.CommentId);
+            entity.Property(e => e.Kind).IsRequired();
+            entity.HasIndex(e => new { e.StrategyId, e.Kind });
+            entity.HasIndex(e => new { e.CommentId, e.Kind });
+            entity.HasIndex(e => new { e.UserId, e.StrategyId, e.Kind })
+                .IsUnique()
+                .HasFilter("[StrategyId] IS NOT NULL AND [IsDeleted] = 0");
+            entity.HasIndex(e => new { e.UserId, e.CommentId, e.Kind })
+                .IsUnique()
+                .HasFilter("[CommentId] IS NOT NULL AND [IsDeleted] = 0");
+            entity.ToTable(t => t.HasCheckConstraint("CK_CommunityReactions_OneTarget",
+                "([StrategyId] IS NULL AND [CommentId] IS NOT NULL) OR ([StrategyId] IS NOT NULL AND [CommentId] IS NULL)"));
+
+            entity.HasOne(e => e.Strategy)
+                .WithMany()
+                .HasForeignKey(e => e.StrategyId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.Comment)
+                .WithMany()
+                .HasForeignKey(e => e.CommentId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         // Configure CommunityStrategy entity — the board reads Approved ones by category, newest first, plus the

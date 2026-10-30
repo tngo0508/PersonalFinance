@@ -3,7 +3,8 @@ using PersonalFinance.Shared.Enums;
 namespace PersonalFinance.Web.Models.Community;
 
 /// <summary>
-/// View model for the Guild Hall page: the viewer's Pseudonym, polls, the board of Strategies and comments.
+/// View model for the Guild Hall page: the viewer's Pseudonym, polls and the board of Strategies, each with its
+/// Comments.
 /// </summary>
 public sealed class CommunityViewModel
 {
@@ -26,11 +27,6 @@ public sealed class CommunityViewModel
     /// Gets or sets the category the board is filtered to, or null for every category.
     /// </summary>
     public string? Category { get; set; }
-
-    /// <summary>
-    /// Gets or sets the list of recent community comments.
-    /// </summary>
-    public List<CommunityComment> RecentComments { get; set; } = new();
 }
 
 /// <summary>
@@ -82,6 +78,11 @@ public sealed class CommunityPoll
     /// Gets or sets the ID of the option the current user voted for.
     /// </summary>
     public int? VotedOptionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the poll's shown Comments, oldest first.
+    /// </summary>
+    public List<CommunityComment> Comments { get; set; } = new();
 }
 
 /// <summary>
@@ -164,6 +165,31 @@ public sealed class CommunityStrategy
     /// Gets or sets when it was pinned.
     /// </summary>
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many Accounts found it Helpful.
+    /// </summary>
+    public int HelpfulCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many Accounts are Cheering its author on.
+    /// </summary>
+    public int CheeringCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the viewer reacted Helpful.
+    /// </summary>
+    public bool HelpfulByViewer { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the viewer reacted Cheering you on.
+    /// </summary>
+    public bool CheeringByViewer { get; set; }
+
+    /// <summary>
+    /// Gets or sets its shown Comments, oldest first; empty unless it is Approved.
+    /// </summary>
+    public List<CommunityComment> Comments { get; set; } = new();
 }
 
 /// <summary>
@@ -197,22 +223,12 @@ public sealed class CommunityComment
     public DateTime CreatedAt { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of likes on the comment.
+    /// Gets or sets whether the viewer reacted Helpful. A Comment shows no counts.
     /// </summary>
-    public int Likes { get; set; }
+    public bool HelpfulByViewer { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the current user liked this comment.
+    /// Gets or sets whether the viewer reacted Cheering you on.
     /// </summary>
-    public bool IsLikedByUser { get; set; }
-
-    /// <summary>
-    /// Gets or sets the optional poll ID if this comment is on a poll.
-    /// </summary>
-    public int? PollId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the optional Strategy ID if this comment is on a Strategy.
-    /// </summary>
-    public int? StrategyId { get; set; }
+    public bool CheeringByViewer { get; set; }
 }

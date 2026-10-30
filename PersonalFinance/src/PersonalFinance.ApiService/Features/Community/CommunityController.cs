@@ -11,10 +11,10 @@ using PersonalFinance.Shared.Helpers;
 namespace PersonalFinance.ApiService.Features.Community;
 
 /// <summary>
-/// RESTful API controller for the Guild Hall (the Community Feature): the Pseudonym, polls, comments, Strategies and
-/// likes. All endpoints are scoped to the current user identified by the authenticated Account (see
-/// XUserIdAuthenticationHandler); the author of a post is always that Account. Reviewing Strategies requires the
-/// Admin Policy.
+/// RESTful API controller for the Guild Hall (the Community Feature): the Pseudonym, polls, Comments, Strategies and
+/// Reactions. All endpoints are scoped to the current user identified by the authenticated Account (see
+/// XUserIdAuthenticationHandler); the author of a post is always that Account. Reviewing Strategies and moderating
+/// Comments require the Admin Policy.
 /// </summary>
 [Authorize]
 [ApiController]
@@ -25,18 +25,21 @@ public class CommunityController : ControllerBase
     private readonly ICommunityService _communityService;
     private readonly IValidator<CommunityStrategyRequestDto> _strategyValidator;
     private readonly IValidator<CommunityStrategyReviewRequestDto> _reviewValidator;
+    private readonly IValidator<CommunityReactionRequestDto> _reactionValidator;
 
     public CommunityController(ICommunityService communityService,
         IValidator<CommunityStrategyRequestDto> strategyValidator,
-        IValidator<CommunityStrategyReviewRequestDto> reviewValidator)
+        IValidator<CommunityStrategyReviewRequestDto> reviewValidator,
+        IValidator<CommunityReactionRequestDto> reactionValidator)
     {
         _communityService = communityService;
         _strategyValidator = strategyValidator;
         _reviewValidator = reviewValidator;
+        _reactionValidator = reactionValidator;
     }
 
     /// <summary>
-    /// Gets the full Guild Hall data (the viewer's Pseudonym, polls, the board's Strategies, comments) for a user,
+    /// Gets the full Guild Hall data (the viewer's Pseudonym, polls, the board's Strategies, their Comments) for a user,
     /// with the board limited to <paramref name="category"/> when one is given.
     /// </summary>
     [HttpGet]
@@ -92,31 +95,23 @@ public class CommunityController : ControllerBase
     }
 
     /// <summary>
-    /// Toggles a like on a comment.
+    /// Gives or takes back a Reaction on an Approved Strategy or a shown Comment.
     /// </summary>
-    [HttpPost("comment/{commentId}/like")]
+    [HttpPost("reactions")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<CommentLikeResult>> ToggleCommentLike(
-        int commentId,
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CommunityReactionResultDto>> ToggleReaction(
+        [FromBody] CommunityReactionRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        string userId = User.GetUserId();
-        CommentLikeResult result = await _communityService.ToggleCommentLikeAsync(userId, commentId, cancellationToken);
-        return Ok(result);
-    }
+        ValidationResult validation = await _reactionValidator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
+        {
+            return BadRequest(validation.ToApiError());
+        }
 
-    /// <summary>
-    /// Gets comments for a specific poll.
-    /// </summary>
-    [HttpGet("poll-comments")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<CommunityCommentDto>>> GetPollComments(
-        [FromQuery] string pollCode,
-        CancellationToken cancellationToken = default)
-    {
-        string userId = User.GetUserId();
-        List<CommunityCommentDto> comments = await _communityService.GetPollCommentsAsync(userId, pollCode, cancellationToken);
-        return Ok(comments);
+        return Ok(await _communityService.ToggleReactionAsync(User.GetUserId(), request, cancellationToken));
     }
 
     /// <summary>
@@ -181,6 +176,36 @@ public class CommunityController : ControllerBase
         }
 
         return await _communityService.ReviewStrategyAsync(strategyId, request.Status, cancellationToken)
+            ? NoContent()
+            : NotFound();
+    }
+
+    /// <summary>
+    /// Lists the newest Comments for the Admin moderation list, hidden ones included.
+    /// </summary>
+    [HttpGet("comments/review")]
+    [Authorize(Policy = AppPolicies.RequireAdmin)]
+    [ProducesResponseType(typeof(List<CommunityCommentReviewItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<List<CommunityCommentReviewItemDto>>> ListCommentsForReview(
+        CancellationToken cancellationToken = default)
+    {
+        return Ok(await _communityService.ListCommentsForReviewAsync(cancellationToken));
+    }
+
+    /// <summary>
+    /// Hides a Comment or shows it again. Unknown (or soft-deleted) Comments return 404.
+    /// </summary>
+    [HttpPut("comments/{commentId:int}/visibility")]
+    [Authorize(Policy = AppPolicies.RequireAdmin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetCommentVisibility(int commentId,
+        [FromBody] CommunityCommentVisibilityRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        return await _communityService.SetCommentHiddenAsync(commentId, request.IsHidden, cancellationToken)
             ? NoContent()
             : NotFound();
     }

@@ -229,7 +229,7 @@ public class DataExportServiceTests
         Assert.Single(export.PriorityWalks);
         Assert.Equal("Approved", Assert.Single(export.Community.Strategies).Status);
         Assert.Single(export.Community.Comments);
-        Assert.Single(export.Community.CommentLikes);
+        Assert.Equal("CheeringYouOn", Assert.Single(export.Community.Reactions).Kind);
         Assert.Equal("Yes", Assert.Single(export.Community.PollVotes).Answer);
         Assert.Equal("Idea", Assert.Single(export.Feedback).Category);
         Assert.Single(export.Notifications);

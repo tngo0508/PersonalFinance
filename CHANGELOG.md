@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [15.0.0] - 2026-10-29
+
+### Added
+
+- **Guild Hall Reactions**: Strategies and Comments take supportive Reactions, Helpful and Cheering you on, with no downvotes (#420, slice 4).
+  - Each Account gives each kind at most once to a Strategy or a Comment, and a second tap takes it back. Strategies show how many of each kind they have; Comments show only whether you reacted, never a count.
+  - New signed-in endpoint `POST api/community/reactions` and `ICommunityApi.ToggleReactionAsync`. A Reaction on a Strategy that isn't Approved, or on a hidden Comment, gets 404; one with an unknown kind or not exactly one target gets 400 with the new `Community.Validation.ReactionKind` or `Community.Validation.ReactionTarget` key.
+- **Reply threads**: each Approved Strategy on the board and each poll has a collapsible thread of its Comments, oldest first, with a reply form. A reply shows at once.
+- **Comment moderation**: Admins get a Comment moderation page (Admin → Comment moderation) that lists the newest 100 Comments, hidden ones included, flags money amounts, and hides a Comment or shows it again.
+  - New Admin-only endpoints `GET api/community/comments/review` and `PUT api/community/comments/{id}/visibility`.
+
+### Changed
+
+- **Schema migration** `ReplaceCommentLikesWithReactions`: adds the `CommunityReactions` table (filtered unique indexes per Account, target and kind among live rows, and a check that each row names exactly one target), copies every live comment like into it as a Cheering you on Reaction, then drops `CommunityCommentLikes`.
+- **Recent activity removed**: the Guild Hall's "Recent activity" list is gone; Comments now sit in the thread of the Strategy or poll they reply to. The `GET api/community/poll-comments` and comment-like endpoints are removed with it.
+- **Data Export**: the Guild Hall section lists `reactions` (kind and target) in place of `commentLikes`, and each comment says whether an Admin hid it.
+- **Purge**: other people's Reactions on Strategies and Comments the Purge erases are erased with them; the Account's own Reactions go with its other rows.
+- **Antiforgery**: posting a Comment and toggling a Reaction now validate the antiforgery token.
+
 ## [14.0.0] - 2026-10-28
 
 ### Added

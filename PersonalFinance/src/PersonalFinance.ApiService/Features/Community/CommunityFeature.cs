@@ -8,7 +8,7 @@ namespace PersonalFinance.ApiService.Features.Community;
 /// </summary>
 internal static class CommunityFeature
 {
-    /// <summary>Pseudonyms, Strategies, polls and comments.</summary>
+    /// <summary>Pseudonyms, Strategies, polls, Comments and Reactions.</summary>
     public static IServiceCollection AddCommunityFeature(this IServiceCollection services)
     {
         services.TryAddSingleton(TimeProvider.System);

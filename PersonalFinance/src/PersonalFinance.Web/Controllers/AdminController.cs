@@ -175,6 +175,55 @@ public class AdminController : Controller
     }
 
     /// <summary>
+    /// Displays the Comment moderation list: the newest Guild Hall Comments, hidden ones included, each flagged when
+    /// it names a money amount. Comments go live at once, so this is where an Admin hides a harmful one afterwards.
+    /// A failed load shows the Unavailable State, never an empty list.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Comments(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            List<CommunityCommentReviewItemDto> items = await _communityApi.ListCommentsForReviewAsync(cancellationToken);
+            return View(new AdminCommentListViewModel { Items = items });
+        }
+        catch (Exception ex) when ((ex is ApiException or HttpRequestException or TaskCanceledException)
+                                   && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to load the Comment moderation list.");
+            return this.UnavailableView("Comment moderation", "We couldn't load the Comment moderation list", "Admin",
+                nameof(Comments));
+        }
+    }
+
+    /// <summary>
+    /// Hides one Comment from everyone, or shows it again, then returns to the moderation list.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetCommentVisibility(int id, bool hidden, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _communityApi.SetCommentVisibilityAsync(id, new CommunityCommentVisibilityRequestDto { IsHidden = hidden },
+                cancellationToken);
+            TempData["AdminMessage"] = hidden ? "Comment hidden." : "Comment shown again.";
+        }
+        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            TempData["AdminError"] = "That Comment no longer exists.";
+        }
+        catch (Exception ex) when ((ex is ApiException or HttpRequestException or TaskCanceledException)
+                                   && !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to moderate a Comment.");
+            TempData["AdminError"] = ApiErrorMessages.ForUser(_localizer, ex, "The Comment could not be updated. Try again later.");
+        }
+
+        return RedirectToAction(nameof(Comments));
+    }
+
+    /// <summary>
     /// Assigns a role to an account.
     /// </summary>
     [HttpPost]

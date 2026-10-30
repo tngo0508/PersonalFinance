@@ -99,8 +99,14 @@ public static class ApiErrorKeys
         /// <summary>A comment named a Strategy that does not exist or is not Approved.</summary>
         public const string InvalidStrategy = "Community.Error.InvalidStrategy";
 
-        /// <summary>The liked comment does not exist or is hidden.</summary>
+        /// <summary>The Comment reacted to does not exist, or is hidden.</summary>
         public const string CommentNotFound = "Community.Error.CommentNotFound";
+
+        /// <summary>A Reaction's kind was not Helpful or Cheering you on.</summary>
+        public const string ReactionKind = "Community.Validation.ReactionKind";
+
+        /// <summary>A Reaction named neither a Strategy nor a Comment, or both.</summary>
+        public const string ReactionTarget = "Community.Validation.ReactionTarget";
 
         /// <summary>A Strategy's category was not one of the board's categories.</summary>
         public const string StrategyCategory = "Community.Validation.StrategyCategory";

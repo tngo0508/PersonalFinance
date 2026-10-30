@@ -367,7 +367,8 @@ public class DataExportCommunityDto
 
     public List<DataExportCommentDto> Comments { get; set; } = [];
 
-    public List<DataExportCommentLikeDto> CommentLikes { get; set; } = [];
+    /// <summary>The Reactions the Account gave to Strategies and Comments, oldest first.</summary>
+    public List<DataExportReactionDto> Reactions { get; set; } = [];
 
     public List<DataExportPollVoteDto> PollVotes { get; set; } = [];
 }
@@ -400,12 +401,21 @@ public class DataExportCommentDto
     /// <summary>The Strategy the comment was posted on, if any.</summary>
     public int? StrategyId { get; set; }
 
+    /// <summary>Whether an Admin has hidden it from the Guild Hall.</summary>
+    public bool IsHidden { get; set; }
+
     public DateTime CreatedAtUtc { get; set; }
 }
 
-public class DataExportCommentLikeDto
+/// <summary>A Reaction the Account gave: its kind, and the Strategy or the Comment it was given to.</summary>
+public class DataExportReactionDto
 {
-    public int CommentId { get; set; }
+    /// <summary>Helpful or CheeringYouOn.</summary>
+    public string Kind { get; set; } = string.Empty;
+
+    public int? StrategyId { get; set; }
+
+    public int? CommentId { get; set; }
 
     public DateTime CreatedAtUtc { get; set; }
 }
