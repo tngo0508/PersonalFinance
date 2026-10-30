@@ -1,0 +1,51 @@
+{
+  "slug": "invest-the-easy-way",
+  "day": 4,
+  "title": "Invest the easy way",
+  "intro": "One stock carries the risk of one company. This Lesson shows funds that hold many investments at once. It also shows why their fees matter.",
+  "terms": [
+    "etf",
+    "index-fund"
+  ],
+  "check": [
+    {
+      "format": "myth-or-fact",
+      "prompt": "The government guarantees that an ETF will not lose money.",
+      "options": [
+        "Myth",
+        "Fact"
+      ],
+      "correctOption": 0,
+      "explanation": "Myth. ETFs are not guaranteed or insured, and you can lose money."
+    },
+    {
+      "format": "what-happens-next",
+      "prompt": "Two funds follow the same index and earn the same before fees, but one has lower fees. Which gives you more?",
+      "options": [
+        "The fund with lower fees",
+        "Both give the same",
+        "The fund with higher fees"
+      ],
+      "correctOption": 0,
+      "explanation": "The fund with lower fees. Fees reduce your return."
+    },
+    {
+      "format": "myth-or-fact",
+      "prompt": "You can buy a market index directly.",
+      "options": [
+        "Myth",
+        "Fact"
+      ],
+      "correctOption": 0,
+      "explanation": "Myth. You cannot buy an index itself, but an index fund follows one."
+    }
+  ],
+  "tryIt": {
+    "label": "Net Worth",
+    "url": "/Networth"
+  },
+  "keepsake": {
+    "symbol": "🧭",
+    "name": "Compass"
+  }
+}
