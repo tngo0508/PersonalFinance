@@ -253,7 +253,7 @@ const {runChallengeSmoke} = require('./challenge-smoke');
             const coreCount = await page.locator('.lp-tool').count().catch(() => 0);
             const moreCount = await page.locator('.lp-more__item').count().catch(() => 0);
             if (coreCount === 6 && moreCount === 7) {
-                pass('Landing Page ledger lists 6 plan tools and 7 resources');
+                pass('Landing Page lists 6 plan tools and 7 resources');
             } else {
                 fail(`Expected 6 plan tools and 7 resources, found ${coreCount} and ${moreCount}`);
             }
