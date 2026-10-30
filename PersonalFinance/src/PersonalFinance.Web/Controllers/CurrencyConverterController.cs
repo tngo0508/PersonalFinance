@@ -108,7 +108,9 @@ public class CurrencyConverterController : Controller
         {
             return BadRequest(Errors(FieldMessages(ex)));
         }
-        catch (Exception ex) when (ex is ApiException or HttpRequestException or TaskCanceledException)
+        // The page aborts a quote in flight whenever the inputs change: that cancellation propagates, it is not a failure.
+        catch (Exception ex) when (ex is ApiException or HttpRequestException or TaskCanceledException
+                                   && !cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Currency conversion quote failed.");
             return StatusCode(StatusCodes.Status502BadGateway, new CurrencyConverterErrorsViewModel

@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`GET /CurrencyConverter/Quote`**: the Web endpoint the page's live quote calls; it returns the ApiService's conversion as JSON, 400 with the field messages for a rejected input, and 502 when the conversion fails.
+- **`GET /CurrencyConverter/Quote`**: the Web endpoint the page's live quote calls; it returns the ApiService's conversion as JSON, 400 with the field messages for a rejected input, and 502 when the conversion fails or times out. A quote the page abandons for a newer one is not logged as a failure.
 - **`PFI18n.formatConvertible`**: the client mirror of `MoneyFormatter.FormatConvertible` (symbol for US dollars and đồng, the ISO code otherwise).
 
 ## [16.0.2] - 2026-10-30

@@ -149,6 +149,27 @@ public class CurrencyConverterWebControllerTests
         Assert.Equal(StatusCodes.Status502BadGateway, Assert.IsType<ObjectResult>(result).StatusCode);
     }
 
+    [Fact]
+    public async Task Quote_TimedOut_Answers502()
+    {
+        var api = new FakeConverterApi { Failure = new TaskCanceledException("HttpClient timeout") };
+
+        IActionResult result = await CreateController(api).Quote(1m, "JPY", "VND", null);
+
+        Assert.Equal(StatusCodes.Status502BadGateway, Assert.IsType<ObjectResult>(result).StatusCode);
+    }
+
+    [Fact]
+    public async Task Quote_AbortedByThePage_PropagatesTheCancellation()
+    {
+        using var aborted = new CancellationTokenSource();
+        await aborted.CancelAsync();
+        var api = new FakeConverterApi { Failure = new TaskCanceledException("aborted", null, aborted.Token) };
+
+        await Assert.ThrowsAsync<TaskCanceledException>(() =>
+            CreateController(api).Quote(1m, "JPY", "VND", null, aborted.Token));
+    }
+
     [Theory]
     [InlineData("164.213472", "164.213")]
     [InlineData("25500", "25,500")]
