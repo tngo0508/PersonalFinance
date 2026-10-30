@@ -6,10 +6,10 @@
     {
       "prompt": "Một quỹ dự phòng khẩn cấp dành cho các chi phí đã lên kế hoạch, chẳng hạn như kỳ nghỉ.",
       "options": [
-        "Truyền thuyết",
+        "Lầm tưởng",
         "Sự thật"
       ],
-      "explanation": "Quan niệm sai lầm. Một quỹ dự phòng khẩn cấp dành cho các chi phí ngoài kế hoạch, như sửa chữa xe."
+      "explanation": "Lầm tưởng. Một quỹ dự phòng khẩn cấp dành cho các chi phí ngoài kế hoạch, như sửa chữa xe."
     },
     {
       "prompt": "Minh tiết kiệm được 100 đô la với lãi suất 5% mỗi năm và không thêm gì. Năm thứ hai anh ấy kiếm được bao nhiêu?",
@@ -23,7 +23,7 @@
     {
       "prompt": "Thanh toán hóa đơn bất ngờ bằng thẻ tín dụng có thể khiến chi phí tăng lên.",
       "options": [
-        "Truyền thuyết",
+        "Lầm tưởng",
         "Sự thật"
       ],
       "explanation": "Sự thật. Lãi suất và phí có thể làm chi phí lớn hơn hóa đơn đầu tiên."
