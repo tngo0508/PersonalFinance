@@ -1496,7 +1496,6 @@
   "CurrencyConverter.Form.Date": "Ngày",
   "CurrencyConverter.Form.DateHelp": "Để trống cho mức giá mới nhất.",
   "CurrencyConverter.Form.Submit": "Chuyển đổi",
-  "CurrencyConverter.Form.Swap": "Tiền tệ hoán đổi",
   "CurrencyConverter.Form.Latest": "Mới nhất",
   "CurrencyConverter.Form.ToAmount": "Số tiền đã chuyển đổi",
   "CurrencyConverter.Result.Title": "Kết quả",
