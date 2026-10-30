@@ -1,0 +1,51 @@
+{
+  "slug": "borrow-wisely",
+  "day": 2,
+  "title": "Borrow wisely",
+  "intro": "Borrowing money has a price. This Lesson shows how to read that price. It also shows how lenders decide what to charge you.",
+  "terms": [
+    "apr",
+    "credit-score"
+  ],
+  "check": [
+    {
+      "format": "myth-or-fact",
+      "prompt": "A loan's APR and its interest rate are always the same.",
+      "options": [
+        "Myth",
+        "Fact"
+      ],
+      "correctOption": 0,
+      "explanation": "Myth. The APR adds the lender's fees to the interest rate."
+    },
+    {
+      "format": "what-happens-next",
+      "prompt": "Hoa's credit score goes up. What usually happens to the rates lenders offer her?",
+      "options": [
+        "They go down",
+        "They go up",
+        "They stay the same"
+      ],
+      "correctOption": 0,
+      "explanation": "They go down. A higher score usually means a lower rate."
+    },
+    {
+      "format": "myth-or-fact",
+      "prompt": "Each person has just one credit score.",
+      "options": [
+        "Myth",
+        "Fact"
+      ],
+      "correctOption": 0,
+      "explanation": "Myth. Your score can differ by the model, the data and the day."
+    }
+  ],
+  "tryIt": {
+    "label": "Budget",
+    "url": "/Budget"
+  },
+  "keepsake": {
+    "symbol": "📒",
+    "name": "Ledger"
+  }
+}

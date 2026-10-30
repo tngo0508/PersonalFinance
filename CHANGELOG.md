@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.12.0] - 2026-10-30
+
+### Added
+
+- **Atelier content: Lesson 2, Borrow wisely**: the Term Entries *Annual percentage rate* (with an *In the US* note on the Truth in Lending Act) and *Credit score*, drafted with `/atelier-draft` from CFPB pages (#528, part of #513).
+  - The Check asks how APR differs from the interest rate, what a higher score does to rates, and whether a person has one score. Finishing it places the Ledger keepsake.
+
 ## [16.11.0] - 2026-10-30
 
 ### Added
