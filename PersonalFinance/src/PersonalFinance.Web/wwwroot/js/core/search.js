@@ -15,7 +15,9 @@
         const groups = [
             { key: 'transactions', labelKey: 'Shell.Js.Search.Group.Transactions' },
             { key: 'categories', labelKey: 'Shell.Js.Search.Group.Categories' },
-            { key: 'savingsGoals', labelKey: 'Shell.Js.Search.Group.SavingsGoals' }
+            { key: 'savingsGoals', labelKey: 'Shell.Js.Search.Group.SavingsGoals' },
+            // The Atelier's Term Entries (#522) come after the user's own results.
+            { key: 'learning', labelKey: 'Shell.Js.Search.Group.Learning' }
         ];
 
         let input;
@@ -169,7 +171,7 @@
 
         /**
          * Render the grouped results as listbox options.
-         * @param {Object} data - Search results keyed by group (transactions, categories, savingsGoals).
+         * @param {Object} data - Search results keyed by group (transactions, categories, savingsGoals, learning).
          * @param {string} query - The query the results are for.
          * @returns {void}
          */

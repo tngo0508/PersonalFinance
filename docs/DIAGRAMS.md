@@ -205,7 +205,7 @@ JavaScript paths are under `Web/wwwroot/js/`.
 |---|---|---|---|---|---|---|---|
 | AccountLifecycle | `AccountDeletionController` (`api/account-deletion`), `DataExportController` (`api/data-export`) | `IAccountDeletionService`, `IAccountPurgeService`, `IDataExportService` | `DeletionRequest` (every user-owned Entity on purge and export) | `IAccountDeletionApi`, `IDataExportApi` | none: Identity Razor Pages under `Areas/Identity/Pages/Account/` | none | `AccountPurgeJob` runs the image with `--purge-only`; see [7](#7-account-lifecycle) |
 | Admin | `AdminController` (`api/Admin`, RequireAdmin) | `IAdminService` | none (Identity tables) | `IAdminApi` | `Admin` (also injects `IFeedbackApi`, `ICommunityApi`) | none | `UserManager`/`RoleManager`, `AdminRoleLock`; no Validators |
-| AiAssistant | `AiAssistantController` (`api/AiAssistant`) | `IAiAssistantService`, `IAiQuotaService`, `IAiScopeFilter` | `AiUsageRecord` (reads `NetWorthParameters`, `SavingsGoal`, `UserBudgetAllocation`, `UserPreference`) | `IAiAssistantApi` | `AiAssistant` (JSON only) | `core/ai-chat-widget.js`, `news/news-summary.js` | OpenAI through `IChatClient`; see [12](#12-ai-assistant) |
+| AiAssistant | `AiAssistantController` (`api/AiAssistant`) | `IAiAssistantService`, `IAiQuotaService`, `IAiScopeFilter`; uses Learning's `ILearningLibraryService` for Ask the AI | `AiUsageRecord` (reads `NetWorthParameters`, `SavingsGoal`, `UserBudgetAllocation`, `UserPreference`) | `IAiAssistantApi` | `AiAssistant` (JSON only) | `core/ai-chat-widget.js` (`PFAiChat.openWithTerm`), `news/news-summary.js`, `learning/ask-the-ai.js` | OpenAI through `IChatClient`; see [12](#12-ai-assistant) |
 | Analysis | `SpreadsheetAnalysisController` (`api/SpreadsheetAnalysis`) | `ISpreadsheetAnalysisService`, `IGoogleSheetRemovalService` | `SpreadsheetBudgetSnapshot`, `SpreadsheetTransactionRecord` | `ISpreadsheetAnalysisApi` | `Analysis` (also injects `IBudgetTrackerApi`) | `analysis/` | Depends on GoogleDrive's `ISpreadsheetReader`; see [13](#13-google-drive-and-spreadsheet-analysis) |
 | BudgetPlanner | `BudgetController` (`api/Budget`) | `IBudgetService` | `UserBudgetAllocation` | `IBudgetPlannerApi` | `Budget` | `budget/` | Raises Notifications; reads `IBudgetDataProvider` |
 | BudgetTracker | `BudgetTrackerController` (`api/budget-tracker`) | `IMonthlyBudgetService`, `IBudgetTrackerRemovalService` | `BudgetCategory`, `BudgetTransaction`, `MonthlyBudgetPlan`, `MonthlyBudgetLine` | `IBudgetTrackerApi` | `BudgetTracker` | `budget-tracker/`, `core/data-source-toggle.js` | Six Validators; the controller also injects `IBudgetDataSourceService` |
@@ -218,7 +218,7 @@ JavaScript paths are under `Web/wwwroot/js/`.
 | NetWorth | `NetWorthController` (`api/NetWorth`) | `INetWorthParametersService` | `NetWorthParameters` | `INetWorthApi` | `Networth` | `networth/` | `calculate` is pure: a static Validator and the static `NetWorthProjectionService`, no Service, no database |
 | Research | `ResearchController` (`api/Research`), `CompaniesController` (`api/Research/companies`) | `IResearchService`, `ICompanyProfileService`, ten `IResearchDatasetRefresher` (one fills the exchange rates), `ResearchSnapshotStore` | `ResearchSnapshot`, `ExchangeRate` (not user-owned) | `IResearchApi` | `Research` | `research/` (12 files) | The largest Feature: five external adapters, `Domain/` with 56 pure types, a refresh job; see [10](#10-research-pipeline) |
 | SavingsGoals | `SavingsGoalsController` (`api/SavingsGoals`, Contributions under `{goalId}/contributions`) | `ISavingsGoalService` | `SavingsGoal`, `Contribution` | `ISavingsGoalsApi` | `SavingsGoals` | `savingsgoals/` | Validators for a new goal, a Contribution and a balance correction; the saved amount is the Contribution total, cached on the goal in the same save; each goal's Pace is worked out on read (`SavingsGoalPace`); raises each milestone Notification once |
-| Search | `SearchController` (`api/Search`) | `ISearchService` | none (reads `BudgetTransaction`, `BudgetCategory`, `SpreadsheetTransactionRecord`, `SavingsGoal`) | `ISearchApi` | `Search` (JSON only) | `core/search.js` | Read-only; picks the source through `IBudgetDataSourceService` |
+| Search | `SearchController` (`api/Search`) | `ISearchService` | none (reads `BudgetTransaction`, `BudgetCategory`, `SpreadsheetTransactionRecord`, `SavingsGoal`) | `ISearchApi` | `Search` (JSON only) | `core/search.js` | Read-only; picks the source through `IBudgetDataSourceService`; a Learning group of Term Entries comes last, read through Learning's `ILearningLibraryService` (#522) |
 | Watchlist | `WatchlistController` (`api/Watchlist`), `NewsController` (`api/News`) | `IWatchlistService`, `INewsService`, `INewsFeedClient` (internal) | `SavedArticle` | `IWatchlistApi`, `INewsApi` | `Watchlist` (JSON only), `News` | `news/` | RSS adapter with `IMemoryCache` (5 minutes); `NewsService` has no database |
 | Notifications (Infrastructure) | `NotificationController` (`api/Notification`) | `INotificationService` | `Notification` | `INotificationApi` | `Notification` (JSON only) | `core/notifications.js` | Shared by three Features; see [9](#9-notifications) |
 
@@ -1077,12 +1077,14 @@ sequenceDiagram
     participant Q as IAiQuotaService
     participant S as AiAssistantService
     participant P as IBudgetDataProvider / AppDbContext
+    participant L as ILearningLibraryService (Learning)
     participant O as IChatClient (OpenAI gpt-4o-mini)
 
-    JS->>WC: POST /api/AiAssistant/chat: message, last 10 history items, antiforgery token
+    JS->>WC: POST /api/AiAssistant/chat: message, last 10 history items, Term slug from Ask the AI, antiforgery token
     WC->>AC: IAiAssistantApi.SendChatMessageAsync (30 s timeout)
     AC->>AC: empty message is 400, over 2000 characters is 400
-    AC->>SF: Evaluate(message)
+    AC->>L: FindTerm(slug): a Published Term Entry?
+    AC->>SF: Evaluate(message, aboutTerm): a Term question needs no finance keyword
     alt greeting or off-topic
         SF-->>AC: canned reply, no model call
     else in scope
@@ -1093,7 +1095,10 @@ sequenceDiagram
             AC->>S: SendChatMessageAsync(userId, request)
             S->>P: financial snapshot: NetWorthParameters, projection, allocations, savings goals
             S->>P: UserPreference.Language (English when unset)
-            S->>O: GetResponseAsync(system prompt with reply Language + snapshot + history, 4 tools, MaxOutputTokens 400)
+            opt Term slug names a Published entry
+                S->>L: FindTerm(slug, en): the entry text, never the client's
+            end
+            S->>O: GetResponseAsync(system prompt with reply Language + snapshot + Term Entry and plain-English rule + history, 4 tools, MaxOutputTokens 400)
             loop function calls, at most 3 iterations
                 O-->>S: get_budget_summary, get_recent_transactions, get_savings_goals, get_net_worth_details
                 S->>P: read
@@ -1104,7 +1109,7 @@ sequenceDiagram
             S-->>AC: AiChatResponseDto
         end
     end
-    AC-->>WC: reply + Disclaimer (+ BudgetWarning above 90% of the monthly budget)
+    AC-->>WC: reply + Disclaimer (+ BudgetWarning above 90% of the monthly budget, + AboutTerm for the "AI answer, not reviewed" label)
     WC-->>JS: JSON
 ```
 

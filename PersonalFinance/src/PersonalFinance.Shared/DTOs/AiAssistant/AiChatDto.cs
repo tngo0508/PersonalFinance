@@ -16,6 +16,12 @@ public class AiChatRequestDto
     /// Optional conversation history for context (previous messages).
     /// </summary>
     public List<ChatMessageDto>? ConversationHistory { get; set; }
+
+    /// <summary>
+    /// The slug of the Term Entry the reader is asking about (Ask the AI, #521), or null. Only the slug is sent:
+    /// ApiService loads the entry's Published text itself.
+    /// </summary>
+    public string? TermSlug { get; set; }
 }
 
 /// <summary>
@@ -50,6 +56,12 @@ public class AiChatResponseDto
     /// Non-fiduciary disclaimer shown with AI-generated financial guidance, or null for canned responses.
     /// </summary>
     public string? Disclaimer { get; set; }
+
+    /// <summary>
+    /// The Term the reply is about when the request named a Published Term Entry, so the Web app labels it "AI answer,
+    /// not reviewed"; null otherwise, including for an unknown slug.
+    /// </summary>
+    public string? AboutTerm { get; set; }
 
     /// <summary>
     /// Timestamp of the response in UTC.
