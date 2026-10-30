@@ -1,14 +1,17 @@
 /**
- * Atelier Library smoke test (#517): a guest opens /Learning, finds an entry with the filter by abbreviation and by
- * Vietnamese name, reads a Term Entry with its title, meta description and canonical link, gets a 404 for an unknown
- * slug, finds the entries in /sitemap.xml and robots.txt, and reads the entry in dark mode (key text at 4.5:1). Run
- * from ui-test.js as Test 9k.
+ * Atelier smoke test (#517, #519): a guest opens /Learning, sees the Journey's outline with a Start the Journey link,
+ * finds an entry with the filter by abbreviation and by Vietnamese name, reads a Term Entry with its title, meta
+ * description and canonical link, gets a 404 for an unknown slug, finds the entries in /sitemap.xml and robots.txt,
+ * is asked to sign in on a Lesson, and reads the entry in dark mode (key text at 4.5:1). A fresh Account then answers
+ * Lesson 1's Check, sees its keepsake, and finds "Opens tomorrow" on Lesson 2. Unlock timing stays in the service
+ * tests. Run from ui-test.js as Test 9k.
  *
  * ApiService must read the fixture content folder (Learning__ContentPath, set by e2e-inmemory.sh and CI's E2E job):
  * the real one holds no Term Entries until the content slices. Expected labels are read from Resources/i18n/en.json.
  */
 
 const path = require('path');
+const {registerFreshAccount} = require('./reporting-currency-smoke');
 
 const TIMEOUT = 15000;
 const WEB = path.join(__dirname, '..', 'PersonalFinance', 'src', 'PersonalFinance.Web');
@@ -64,6 +67,11 @@ async function checkLibrary(page, base, report) {
         console.log('  (Atelier entry checks skipped: ApiService is not on the fixture content folder)');
         return false;
     }
+    check(await page.locator('[data-test-id="stop-build-a-cushion"]').isVisible()
+            && await page.locator('[data-test-id="stop-borrow-wisely"]').isVisible(),
+        'Atelier: a guest sees the Journey outline', 'stops missing', report);
+    check(await page.locator('[data-test-id="atelier-start"]').isVisible(),
+        `Atelier: a guest sees "${en['Learning.Road.Start']}"`, 'not visible', report);
     check(await spineVisible(page, 'apr'), 'Atelier: the Library shows the fixture entries as book spines',
         'no apr spine; is Learning__ContentPath the fixture folder?', report);
     check(await page.locator('[data-test-id="nav-learning"]').isVisible(),
@@ -125,6 +133,11 @@ async function checkDiscoverability(page, base, report) {
             && sitemapText.includes('/Learning</loc>'),
         'Atelier: /sitemap.xml lists /Learning and the entries', `HTTP ${sitemap.status()}`, report);
 
+    await page.goto(`${base}/Learning/Lesson/build-a-cushion`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+    check(await page.locator('[data-test-id="atelier-sign-in"]').isVisible()
+            && !(await page.locator('[data-test-id="atelier-check"]').count()),
+        'Atelier: a guest on a Lesson sees its title and a sign-in prompt, not the Check', 'gate missing', report);
+
     const robots = await page.request.get(`${base}/robots.txt`);
     const robotsText = await robots.text();
     check(robots.status() === 200 && /Sitemap: \S+\/sitemap\.xml/.test(robotsText),
@@ -172,7 +185,52 @@ async function checkDarkMode(browser, base, report) {
 }
 
 /**
- * Runs the Atelier Library smoke as a guest.
+ * A fresh Account answers Lesson 1's Check, sees its keepsake, and finds Lesson 2 opening tomorrow.
+ * @param {import('playwright').Browser} browser - The browser.
+ * @param {string} base - The Web app's base URL.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+async function checkJourney(browser, base, report) {
+    const context = await browser.newContext({ignoreHTTPSErrors: true, colorScheme: 'light', locale: 'en-US',
+        extraHTTPHeaders: {'Accept-Language': 'en-US,en;q=0.9'}});
+    try {
+        const page = await context.newPage();
+        if (!(await registerFreshAccount(page, base))) {
+            report.fail('Atelier: could not register an Account for the Journey checks');
+            return;
+        }
+        await page.goto(`${base}/Learning`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        const first = await page.locator('[data-test-id="stop-build-a-cushion"]').getAttribute('data-state');
+        check(first === 'open', 'Atelier: Lesson 1 is open for a new learner', `state=${first}`, report);
+
+        await page.goto(`${base}/Learning/Lesson/build-a-cushion`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        const questions = page.locator('[data-question]');
+        const count = await questions.count();
+        const finish = page.waitForResponse((r) => r.url().endsWith('/Learning/Lesson/build-a-cushion/Finish'),
+            {timeout: TIMEOUT});
+        for (let i = 0; i < count; i++) {
+            await questions.nth(i).locator('[data-option]').first().click();
+            check(await questions.nth(i).locator('[data-explanation]').isVisible(),
+                `Atelier: question ${i + 1} shows its explanation once answered`, 'hidden', report);
+        }
+        const response = await finish;
+        check(response.status() === 204, 'Atelier: answering every question finishes the Lesson',
+            `HTTP ${response.status()}`, report);
+        await page.locator('[data-test-id="atelier-keepsake"]').waitFor({state: 'visible', timeout: TIMEOUT});
+        report.pass('Atelier: the keepsake appears once the Lesson is finished');
+
+        await page.goto(`${base}/Learning`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        const status = (await page.locator('[data-test-id="stop-status-borrow-wisely"]').textContent()).trim();
+        check(status === en['Learning.Road.Status.OpensTomorrow'], 'Atelier: Lesson 2 opens tomorrow', status, report);
+        check(await page.locator('[data-test-id="atelier-desk"]').isVisible(),
+            'Atelier: the finished Lesson\'s keepsake is on the desk', 'no desk', report);
+    } finally {
+        await context.close();
+    }
+}
+
+/**
+ * Runs the Atelier smoke as a guest, then as a fresh Account.
  * @param {{browser: import('playwright').Browser, base: string, pass: Function, fail: Function}} options - The
  *     browser, the Web app's base URL and the suite's pass and fail.
  */
@@ -190,6 +248,7 @@ async function runLearningSmoke({browser, base, pass, fail}) {
         await context.close();
     }
     await checkDarkMode(browser, base, report);
+    await checkJourney(browser, base, report);
 }
 
 module.exports = {runLearningSmoke};

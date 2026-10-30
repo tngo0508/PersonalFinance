@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.6.0] - 2026-10-30
+
+### Added
+
+- **The Atelier: the Journey's road and the Lesson page**: `/Learning` shows the Journey as a dotted road of Lessons, and `/Learning/Lesson/{slug}` teaches one as stacked paper sheets ending in a playful Check (#519, part of #513).
+  - Finished stops show their keepsake, today's stop is ringed, and locked stops are faded and say "Opens tomorrow". The keepsakes of finished Lessons sit on a desk under the road. The road runs across when it has room for every stop and becomes a vertical list otherwise.
+  - Guests see the outline with a Start the Journey link to sign in; on a Lesson they see its title and a sign-in prompt.
+  - A Lesson has its intro, one sheet per Term Entry, the Check, a Try it link into the app and a finished note. Each Check question takes one answer and then explains it, with no score. Once every question is answered the page posts "finish" with the browser's time zone and the keepsake appears. A finished Lesson can be reopened and its Check retaken.
+  - Each Term Entry names the Lesson that teaches it, with a Start the Journey link.
+  - ApiService serves the Journey's outline and each Lesson anonymously (`GET api/learning/lessons`, `GET api/learning/lessons/{slug}`); finishing still needs the signed-in Account.
+
 ## [16.5.1] - 2026-10-30
 
 ### Fixed

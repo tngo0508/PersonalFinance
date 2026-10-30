@@ -27,6 +27,7 @@
 }
 
 .atelier h1,
+.atelier h3,
 .atelier h2 {
     font-family: var(--atelier-serif);
     color: var(--app-atelier-ink);
@@ -285,4 +286,331 @@
 .atelier-disclaimer {
     margin: 1.25rem 0 0;
     font-size: 0.95rem;
+}
+
+/* Section headings, buttons and the eyebrow */
+.atelier-section-title {
+    font-size: 1.5rem;
+    margin: 2rem 0 0.25rem;
+}
+
+.atelier-header + .atelier-journey .atelier-section-title,
+.atelier-header + .atelier-section-title {
+    margin-top: 1.5rem;
+}
+
+.atelier-eyebrow {
+    margin: 0;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--app-atelier-moss);
+}
+
+.atelier-button {
+    display: inline-block;
+    padding: 0.4rem 1rem;
+    font: inherit;
+    font-weight: 600;
+    color: var(--app-atelier-sheet) !important;
+    text-decoration: none;
+    background: var(--app-atelier-clay);
+    border: 1px solid var(--app-atelier-clay);
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.atelier-button:hover,
+.atelier-button:focus-visible {
+    background: var(--app-atelier-clay-hover);
+    border-color: var(--app-atelier-clay-hover);
+}
+
+.atelier-button:focus-visible,
+.atelier-option:focus-visible,
+.atelier-stop-title:focus-visible {
+    outline: 2px solid var(--app-atelier-clay);
+    outline-offset: 2px;
+}
+
+/*
+ * The Journey's road: a dotted road with one stop per Lesson. It runs across when the road's own width fits six stops
+ * of about 7rem, and down as a list otherwise (a container query, so the threshold follows the road, not the window).
+ */
+.atelier-road-start {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+}
+
+.atelier-road {
+    container: atelier-road / inline-size;
+    margin: 1rem 0 1.5rem;
+}
+
+.atelier-stops {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 0;
+    padding: 0 0 0 0.25rem;
+    list-style: none;
+}
+
+/* The dotted road behind the markers */
+.atelier-stops::before {
+    content: "";
+    position: absolute;
+    top: 1.25rem;
+    bottom: 1.25rem;
+    left: 1.5rem;
+    border-left: 3px dotted var(--app-atelier-spine-edge);
+}
+
+.atelier-stop {
+    position: relative;
+    display: grid;
+    grid-template-columns: 2.5rem 1fr;
+    column-gap: 0.75rem;
+    align-items: center;
+}
+
+.atelier-stop-marker {
+    grid-row: span 3;
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    font-weight: 600;
+    background: var(--app-atelier-sheet);
+    border: 2px solid var(--app-atelier-spine-edge);
+    border-radius: 50%;
+}
+
+.atelier-stop-day {
+    font-size: 0.85rem;
+    color: var(--app-atelier-ink-soft);
+}
+
+.atelier-stop-title {
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.atelier-stop-status {
+    font-size: 0.9rem;
+    color: var(--app-atelier-ink-soft);
+}
+
+.atelier-stop--finished .atelier-stop-marker {
+    border-color: var(--app-atelier-moss);
+}
+
+.atelier-stop--finished .atelier-stop-status {
+    color: var(--app-atelier-moss);
+}
+
+/* Today's stop is ringed */
+.atelier-stop--open .atelier-stop-marker {
+    border-color: var(--app-atelier-clay);
+    box-shadow: 0 0 0 4px var(--app-atelier-paper), 0 0 0 6px var(--app-atelier-clay);
+}
+
+.atelier-stop--open .atelier-stop-status {
+    color: var(--app-atelier-clay);
+    font-weight: 600;
+}
+
+/* Locked stops are faded: a dashed marker and soft ink, which keeps the text readable */
+.atelier-stop--locked .atelier-stop-marker {
+    color: var(--app-atelier-ink-soft);
+    border-style: dashed;
+}
+
+.atelier-stop--locked .atelier-stop-title {
+    color: var(--app-atelier-ink-soft);
+    font-weight: 400;
+}
+
+@container atelier-road (min-width: 44rem) {
+    .atelier-stops {
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 0;
+    }
+
+    .atelier-stops::before {
+        top: 1.25rem;
+        bottom: auto;
+        left: 1.25rem;
+        right: 1.25rem;
+        border-left: 0;
+        border-top: 3px dotted var(--app-atelier-spine-edge);
+    }
+
+    .atelier-stop {
+        flex: 1 1 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.2rem;
+        text-align: center;
+    }
+
+    .atelier-stop-marker {
+        margin-bottom: 0.4rem;
+    }
+}
+
+/* The desk: the keepsakes of finished Lessons */
+.atelier-desk {
+    padding: 0.75rem 1rem;
+    background: var(--app-atelier-spine);
+    border: 1px solid var(--app-atelier-spine-edge);
+    border-radius: 0.375rem;
+}
+
+.atelier-desk-title {
+    margin: 0 0 0.25rem;
+    font-size: 1rem;
+}
+
+.atelier-keepsakes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* A Term Entry's Lesson */
+.atelier-entry-lesson {
+    margin: 0.75rem 0 0;
+    font-size: 0.95rem;
+    color: var(--app-atelier-ink-soft);
+}
+
+/* The Lesson page: stacked sheets */
+.atelier-sheet-title {
+    margin-top: 0;
+    font-size: 1.35rem;
+}
+
+.atelier-lesson .atelier-one-line {
+    margin-bottom: 1rem;
+}
+
+.atelier-reading h3 {
+    font-size: 1.1rem;
+    margin: 1.25rem 0 0.5rem;
+}
+
+.atelier-gate-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-bottom: 0;
+}
+
+.atelier-finished-banner {
+    margin: 0.75rem 0 0;
+    color: var(--app-atelier-moss);
+    font-weight: 600;
+}
+
+/* The Check */
+.atelier-question {
+    padding: 1rem 0;
+    border-top: 1px solid var(--app-atelier-rule);
+}
+
+.atelier-question-format {
+    margin: 0;
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--app-atelier-moss);
+}
+
+.atelier-question-prompt {
+    margin: 0.25rem 0 0.75rem;
+    font-weight: 600;
+}
+
+.atelier-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.atelier-option {
+    padding: 0.4rem 1rem;
+    font: inherit;
+    color: var(--app-atelier-ink);
+    background: var(--app-atelier-paper);
+    border: 1px solid var(--app-atelier-spine-edge);
+    border-radius: 0.375rem;
+    cursor: pointer;
+}
+
+.atelier-option:hover:not(:disabled) {
+    border-color: var(--app-atelier-clay);
+}
+
+.atelier-option:disabled {
+    cursor: default;
+}
+
+.atelier-option.is-correct {
+    border: 2px solid var(--app-atelier-moss);
+    font-weight: 600;
+}
+
+.atelier-option.is-wrong {
+    border: 2px dashed var(--app-atelier-clay);
+}
+
+.atelier-explanation {
+    margin: 0.75rem 0 0;
+}
+
+.atelier-explanation[hidden],
+.atelier-check-error[hidden],
+.atelier-finished[hidden] {
+    display: none;
+}
+
+.atelier-check-error {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin: 1rem 0 0;
+    color: var(--app-atelier-clay);
+    font-weight: 600;
+}
+
+/* The finished note with its keepsake */
+.atelier-finished {
+    border-color: var(--app-atelier-moss);
+}
+
+.atelier-finished:focus {
+    outline: none;
+}
+
+.atelier-keepsake-large {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.1rem;
+}
+
+.atelier-keepsake-symbol {
+    font-size: 2.5rem;
+    line-height: 1;
 }

@@ -1,3 +1,4 @@
+@using PersonalFinance.Shared.Enums
 @using PersonalFinance.Web.Models.Learning
 @model LearningIndexViewModel
 @{
@@ -15,9 +16,81 @@
 
 <div class="atelier" data-test-id="atelier-library">
     <header class="atelier-header">
-        <h1 class="atelier-title">@L["Learning.Library.Heading"]</h1>
-        <p class="atelier-lede">@L["Learning.Library.Lede"]</p>
+        <h1 class="atelier-title">@L["Learning.Atelier.Heading"]</h1>
+        <p class="atelier-lede">@L["Learning.Atelier.Lede"]</p>
     </header>
+
+    @if (Model.Road.Count > 0)
+    {
+        <section class="atelier-journey" id="journey" aria-labelledby="journeyHeading" data-test-id="atelier-road">
+            <h2 class="atelier-section-title" id="journeyHeading">@L["Learning.Road.Heading"]</h2>
+            <p class="atelier-lede">@L["Learning.Road.Lede"]</p>
+            @if (!Model.IsSignedIn)
+            {
+                <p class="atelier-road-start">
+                    @L["Learning.Road.GuestLede"]
+                    <a class="atelier-button" asp-area="Identity" asp-page="/Account/Login"
+                       asp-route-returnUrl="@Url.Action("Index", "Learning")" data-test-id="atelier-start">@L["Learning.Road.Start"]</a>
+                </p>
+            }
+
+            <div class="atelier-road">
+                <ol class="atelier-stops" aria-label="@L["Learning.Road.Label"]">
+                    @foreach (var stop in Model.Road)
+                    {
+                        var state = stop.Status switch
+                        {
+                            LessonStatus.Finished => "finished",
+                            LessonStatus.Open => "open",
+                            LessonStatus.Locked => "locked",
+                            _ => "outline",
+                        };
+                        <li class="atelier-stop atelier-stop--@state" data-test-id="stop-@stop.Slug" data-state="@state"
+                            aria-current="@(stop.Status == LessonStatus.Open ? "step" : null)">
+                            <span class="atelier-stop-marker" aria-hidden="true">@(stop.Status == LessonStatus.Finished ? stop.Keepsake.Symbol : stop.Day.ToString(System.Globalization.CultureInfo.CurrentCulture))</span>
+                            <span class="atelier-stop-day">@L.Named("Learning.Road.LessonDay", ("day", stop.Day))</span>
+                            @if (stop.Status == LessonStatus.Locked)
+                            {
+                                <span class="atelier-stop-title">@stop.Title</span>
+                            }
+                            else
+                            {
+                                <a class="atelier-stop-title" asp-action="Lesson" asp-route-slug="@stop.Slug">@stop.Title</a>
+                            }
+                            @if (stop.Status is { } status)
+                            {
+                                <span class="atelier-stop-status" data-test-id="stop-status-@stop.Slug">
+                                    @(status switch
+                                    {
+                                        LessonStatus.Finished => L["Learning.Road.Status.Finished"],
+                                        LessonStatus.Open => L["Learning.Road.Status.Open"],
+                                        _ when stop.OpensTomorrow => L["Learning.Road.Status.OpensTomorrow"],
+                                        _ => L["Learning.Road.Status.Locked"],
+                                    })
+                                </span>
+                            }
+                        </li>
+                    }
+                </ol>
+            </div>
+
+            @if (Model.Keepsakes.Any())
+            {
+                <div class="atelier-desk" data-test-id="atelier-desk">
+                    <h3 class="atelier-desk-title">@L["Learning.Desk.Heading"]</h3>
+                    <ul class="atelier-keepsakes">
+                        @foreach (var keepsake in Model.Keepsakes)
+                        {
+                            <li class="atelier-keepsake"><span aria-hidden="true">@keepsake.Symbol</span> @keepsake.Name</li>
+                        }
+                    </ul>
+                </div>
+            }
+        </section>
+    }
+
+    <h2 class="atelier-section-title">@L["Learning.Library.Heading"]</h2>
+    <p class="atelier-lede">@L["Learning.Library.Lede"]</p>
 
     @if (Model.IsEmpty)
     {
@@ -37,7 +110,7 @@
         @foreach (var topic in Model.Topics.Where(t => t.Terms.Count > 0))
         {
             <section class="atelier-shelf" aria-labelledby="shelf-@topic.Slug" data-shelf>
-                <h2 class="atelier-shelf-title" id="shelf-@topic.Slug">@L[LearningTopicNames.KeyFor(topic.Slug)]</h2>
+                <h3 class="atelier-shelf-title" id="shelf-@topic.Slug">@L[LearningTopicNames.KeyFor(topic.Slug)]</h3>
                 <ul class="atelier-spines">
                     @foreach (var term in topic.Terms)
                     {
