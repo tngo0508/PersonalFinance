@@ -64,7 +64,7 @@ public class LearningContentChecksTests
         ["related term that does not exist"] = new("terms/apr.json", "relatedTerms[0]",
             e => e["relatedTerms"]![0] = "mortgage"),
         ["related to itself"] = new("terms/apr.json", "relatedTerms[0]", e => e["relatedTerms"]![0] = "apr"),
-        ["one related term"] = new("terms/apr.json", "relatedTerms", e => e["relatedTerms"] = new JsonArray("credit-score")),
+        ["no related terms"] = new("terms/apr.json", "relatedTerms", e => e["relatedTerms"] = new JsonArray()),
         ["six related terms"] = new("terms/apr.json", "relatedTerms", e => e["relatedTerms"] =
             new JsonArray("credit-score", "compound-interest", "emergency-fund", "a", "b", "c")),
         ["alias of another entry"] = new("terms/credit-score.json", "alsoKnownAs[0]",
@@ -115,10 +115,22 @@ public class LearningContentChecksTests
 
     public static TheoryData<string> MutationNames => new(Mutations.Keys);
 
+    // ATELIER_CONTENT_DIR points this at a dry-run copy instead (the /atelier-draft skill); the allowlist and
+    // plain-English lists still come from the real folder.
     [Fact]
     public void TheRealContentFolder_PassesEveryCheck()
     {
-        AssertNoProblems(LearningContentChecker.Check(LearningContentFolders.Real, Rules));
+        AssertNoProblems(LearningContentChecker.Check(LearningContentFolders.UnderCheck, Rules));
+    }
+
+    [Fact]
+    public void TheAtelierDraftSample_PassesEveryCheck_BesideTheFixture()
+    {
+        using LearningContentFolders.TempFolder folder = LearningContentFolders.CopyOfFixture();
+        File.Copy(Path.Combine(LearningContentFolders.AtelierDraftSkill, "samples", "diversification.json"),
+            Path.Combine(folder.Path, "terms", "diversification.json"));
+
+        AssertNoProblems(LearningContentChecker.Check(folder.Path, Rules));
     }
 
     [Fact]

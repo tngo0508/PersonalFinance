@@ -111,9 +111,9 @@ internal sealed partial class LearningContentChecker
         CheckLinks(path, entry);
 
         int related = entry.RelatedTerms?.Count ?? 0;
-        if (related is < 2 or > 5)
+        if (related is < 1 or > 5)
         {
-            Add(path, "relatedTerms", $"has {related}; an entry has 2–5 related terms");
+            Add(path, "relatedTerms", $"has {related}; an entry has 1–5 related terms");
         }
     }
 
