@@ -154,8 +154,11 @@ async function runInvestmentCalculatorSmoke({browser, base, pass, fail}) {
         await page.click('#icViewOverviewTab');
 
         // 8. A saved Investment Scenario survives a reload and loads back into the rail.
+        // Today's money is a view, not part of the scenario: a reload opens in future money, so compare that balance
+        // (the bar's other figure while the switch is on).
         const savedMonthly = await page.inputValue('#icMonthly');
-        const savedFinal = await textOf(page, '#icFinal');
+        const todaysOn = await page.isChecked('#icTodaysMoney');
+        const savedFinal = await textOf(page, todaysOn ? '#icOther' : '#icFinal');
         const scenarioName = `E2E plan ${Date.now()}`;
         await page.click('#icSave');
         await page.fill('#icSaveName', scenarioName);
