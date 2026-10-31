@@ -329,8 +329,10 @@
                         <p class="ic-preview__text" id="icPreviewText"></p>
                         <div class="ic-preview__actions">
                             <button type="button" class="ic-action ic-action--primary" id="icPreviewApply">@L["InvestmentCalculator.WhatIf.Apply"]</button>
-                            <button type="button" class="ic-action" id="icPreviewAdd">@L["InvestmentCalculator.WhatIf.Add"]</button>
+                            <button type="button" class="ic-action" id="icPreviewAdd"
+                                    aria-describedby="icPreviewFull">@L["InvestmentCalculator.WhatIf.Add"]</button>
                         </div>
+                        <p class="ic-tile__hint ic-preview__full" id="icPreviewFull" hidden>@L["InvestmentCalculator.WhatIf.Full"]</p>
                     </div>
                 </article>
 

@@ -730,14 +730,14 @@
      * @param {object} scenario - The scenario, as the server sends it.
      */
     function loadScenario (scenario) {
-        const isGoal = scenario.mode === 'Goal' && Number(scenario.goalTarget) > 0;
+        const isGoal = scenario.mode === InvestmentScenarios.MODES.goal && Number(scenario.goalTarget) > 0;
         goalTouched = isGoal;
         if (isGoal) {
             const field = byId('icGoal');
             if (field) {
                 field.value = String(Number(scenario.goalTarget));
             }
-            const mode = byId(scenario.goalSolveFor === 'Years' ? 'icGoalModeYears' : 'icGoalModeMonthly');
+            const mode = byId(InvestmentScenarios.goalModeOf(scenario.goalSolveFor) === 'years' ? 'icGoalModeYears' : 'icGoalModeMonthly');
             if (mode) {
                 mode.checked = true;
             }

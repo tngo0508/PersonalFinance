@@ -265,7 +265,7 @@
      * The what-if levers (#591), in the order the Compare view lists them. Each changes one input of the plan (field):
      * monthly adds options.monthlyStep (100 by default; the page passes 100 US dollars in the Reporting Currency),
      * rate adds 1 point, delay starts 5 years later, stop stops the deposits at options.stopAt (by default half way
-     * through the plan), fee adds half a point.
+     * through the plan, and never before a delayed plan's first year of deposits), fee adds half a point.
      */
     const LEVERS = Object.freeze([
         Object.freeze({ key: 'monthly', field: 'monthly' }),
@@ -298,7 +298,7 @@
             delay: () => plan.delay + LEVER_STEPS.delay,
             stop: () => (Number.isFinite(Number(settings.stopAt)) && settings.stopAt !== null
                 ? Number(settings.stopAt)
-                : Math.max(1, Math.round(plan.years / 2))),
+                : Math.max(plan.delay + 1, Math.round(plan.years / 2))),
             fee: () => plan.fee + LEVER_STEPS.fee
         };
         const changed = Object.assign({}, plan, { [found.field]: values[key]() });

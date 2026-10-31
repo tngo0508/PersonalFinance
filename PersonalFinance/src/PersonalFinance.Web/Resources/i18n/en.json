@@ -1697,6 +1697,7 @@
   "InvestmentCalculator.WhatIf.Hint": "Pick a change to preview it as a dashed line on the comparison chart. Apply it to your plan, or add it to the comparison.",
   "InvestmentCalculator.WhatIf.Apply": "Apply to my plan",
   "InvestmentCalculator.WhatIf.Add": "Add to comparison",
+  "InvestmentCalculator.WhatIf.Full": "The comparison already shows three lines, so this what-if is not drawn there. Remove a what-if from the comparison to add this one.",
   "InvestmentCalculator.Comparison.Title": "Comparison",
   "InvestmentCalculator.Timing.Reset": "Start now, keep adding",
   "InvestmentCalculator.Js.Lever.Monthly": "+{amount} a month",

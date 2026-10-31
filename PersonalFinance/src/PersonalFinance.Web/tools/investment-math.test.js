@@ -336,6 +336,11 @@ test('a starting amount that covers the goal only arrives when a delayed plan st
     }
 });
 
+test('the stop lever stops after a delayed start, never before it', () => {
+    assert.strictEqual(math.lever(plan({ delay: 15 }), 'stop').inputs.stopAt, 16);
+    assert.strictEqual(math.lever(plan({ delay: 3 }), 'stop').inputs.stopAt, 10);
+});
+
 test('a goal is unreachable when the deposits stop before they start, with the shortfall at the end of the plan', () => {
     // 1,000 at 0% for 10 years never moves: no monthly contribution changes that.
     const stopped = plan({ initial: 1000, monthly: 500, rate: 0, years: 10, stopAt: 0 });

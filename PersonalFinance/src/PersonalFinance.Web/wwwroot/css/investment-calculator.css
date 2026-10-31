@@ -775,6 +775,15 @@
     gap: 0.5rem;
 }
 
+.ic-preview__full {
+    flex: 1 1 100%;
+    margin: 0;
+}
+
+.ic-preview__full[hidden] {
+    display: none;
+}
+
 .ic-action {
     min-height: 2.75rem;
     padding: 0.4rem 1rem;
