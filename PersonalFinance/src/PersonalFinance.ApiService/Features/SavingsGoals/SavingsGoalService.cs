@@ -77,6 +77,7 @@ internal sealed class SavingsGoalService : ISavingsGoalService
             goal.SavedThisMonth = SavingsGoalPace.SavedThisMonth(goal.Contributions, today);
             goal.Pace = SavingsGoalPace.Calculate(goal.CurrentAmount, goal.TargetAmount, goal.CreatedAtUtc,
                 goal.TargetDate, goal.Contributions, today);
+            goal.History = SavingsGoalPace.History(goal.Pace.Start, goal.Contributions, today);
         }
 
         // Each goal keeps its own currency; the page's totals need every amount in the Reporting Currency, converted

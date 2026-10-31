@@ -90,16 +90,103 @@ public sealed partial class SavingsGoalsRenderingTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GoalWithNothingSaved_ShowsItsPercentage_BesideAnEmptyFill()
+    public async Task GoalWithNothingSaved_ShowsARingAtZero_WithNoArc()
     {
         _api.Goals.Add(EmptyGoal());
 
         (HttpStatusCode status, string html) = await GetPageAsync();
 
         Assert.Equal(HttpStatusCode.OK, status);
-        Assert.Matches(EmptyFill(), html);
-        Assert.Matches(LabelAfterTrack(), html);
-        Assert.Contains("role=\"progressbar\"", ProgressTrack().Match(html).Value, StringComparison.Ordinal);
+        string ring = Ring().Match(html).Value;
+        Assert.Contains("role=\"img\" aria-label=\"0% complete\"", ring, StringComparison.Ordinal);
+        Assert.Contains(">0%</text>", ring, StringComparison.Ordinal);
+        Assert.DoesNotContain("savings-goal-ring__arc", ring, StringComparison.Ordinal);
+        Assert.DoesNotContain("savings-goal-progress", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Ring_DrawsItsArcToTheSavedShare()
+    {
+        _api.Goals.Add(new SavingsGoalDto { Id = 4, Name = "Vacation", TargetAmount = 2_000m, CurrentAmount = 500m });
+
+        (_, string html) = await GetPageAsync();
+
+        string ring = Ring().Match(html).Value;
+        // A quarter of a circle of radius 34: 2 * pi * 34 / 4.
+        Assert.Matches("class=\"savings-goal-ring__arc\"[^>]*stroke-dasharray=\"53\\.41 213\\.63\"", ring);
+        Assert.Contains(">25%</text>", ring, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(PaceStatus.Behind, "Behind")]
+    [InlineData(PaceStatus.Reached, "Reached")]
+    [InlineData(PaceStatus.JustStarted, "Just started")]
+    public async Task Card_CarriesItsStatusAsATextPill_AndIsColouredByIt(PaceStatus status, string label)
+    {
+        _api.Goals.Add(PacedGoal(new SavingsGoalPaceDto { Status = status }));
+
+        (_, string html) = await GetPageAsync();
+
+        Assert.Contains($"<span class=\"savings-goal-pill\" data-pace-status=\"{status}\">{label}</span>", html,
+            StringComparison.Ordinal);
+        Assert.Contains($"savings-goal-card--pace-{status.ToString().ToLowerInvariant()}", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Chart_ForADatedGoal_DrawsTheSteppedSavedLine_TheIdealLine_TheTargetAndToday()
+    {
+        SavingsGoalDto goal = PacedGoal(new SavingsGoalPaceDto
+        {
+            Status = PaceStatus.Behind,
+            Start = new DateOnly(2026, 6, 1),
+            StartingAmount = 500m
+        });
+        goal.TargetDate = new DateTime(2027, 6, 1);
+        goal.History =
+        [
+            new SavingsGoalHistoryPointDto { Date = new DateOnly(2026, 6, 1), Saved = 500m },
+            new SavingsGoalHistoryPointDto { Date = new DateOnly(2026, 9, 1), Saved = 650m }
+        ];
+        _api.Goals.Add(goal);
+
+        (_, string html) = await GetPageAsync();
+
+        string chart = Chart().Match(html).Value;
+        Assert.Contains("aria-hidden=\"true\"", chart, StringComparison.Ordinal);
+        // 2026-06-01 to the 2027-06-01 target is 365 days across 272 units; the top is 2,000 * 1.05 across 64.
+        Assert.Contains("points=\"4,52.76 72.56,52.76 72.56,48.19 112.8,48.19\"", chart, StringComparison.Ordinal);
+        Assert.Contains("class=\"savings-goal-chart__ideal\" x1=\"4\" y1=\"52.76\" x2=\"276\" y2=\"7.05\"", chart,
+            StringComparison.Ordinal);
+        Assert.Matches("class=\"savings-goal-chart__target\"[^>]*y1=\"7.05\"", chart);
+        Assert.Contains("class=\"savings-goal-chart__today\" cx=\"112.8\" cy=\"48.19\"", chart, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Chart_ForAnUndatedGoal_HasNoIdealLine()
+    {
+        SavingsGoalDto goal = PacedGoal(new SavingsGoalPaceDto
+        {
+            Status = PaceStatus.NoTargetDate,
+            Start = new DateOnly(2026, 6, 1)
+        });
+        goal.History = [new SavingsGoalHistoryPointDto { Date = new DateOnly(2026, 6, 1), Saved = 650m }];
+        _api.Goals.Add(goal);
+
+        (_, string html) = await GetPageAsync();
+
+        string chart = Chart().Match(html).Value;
+        Assert.Contains("savings-goal-chart__saved", chart, StringComparison.Ordinal);
+        Assert.DoesNotContain("savings-goal-chart__ideal", chart, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Chart_IsLeftOut_WithoutAHistory()
+    {
+        _api.Goals.Add(EmptyGoal());
+
+        (_, string html) = await GetPageAsync();
+
+        Assert.DoesNotContain("savings-goal-chart", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -226,7 +313,7 @@ public sealed partial class SavingsGoalsRenderingTests : IAsyncLifetime
 
         string pace = PaceBlock().Match(html).Value;
         Assert.Contains($"data-pace-status=\"{status}\"", pace, StringComparison.Ordinal);
-        Assert.Contains($"<span class=\"savings-goal-pace__label\">{label}</span>", pace, StringComparison.Ordinal);
+        Assert.Contains($"data-pace-status=\"{status}\">{label}</span>", html, StringComparison.Ordinal);
         Assert.Contains(sentence, pace, StringComparison.Ordinal);
     }
 
@@ -395,14 +482,11 @@ public sealed partial class SavingsGoalsRenderingTests : IAsyncLifetime
     private static SavingsGoalDto EmptyGoal() =>
         new() { Id = 1, Name = "Emergency Fund", TargetAmount = 27000m, CurrentAmount = 0m, ProgressPercent = 0 };
 
-    [GeneratedRegex("""<div class="savings-goal-progress-fill[^"]*"\s+style="width:0%"></div>""")]
-    private static partial Regex EmptyFill();
+    [GeneratedRegex("""<svg class="savings-goal-ring"[\s\S]*?</svg>""")]
+    private static partial Regex Ring();
 
-    [GeneratedRegex("""</div>\s*</div>\s*<span class="savings-goal-progress-label"[^>]*>0%</span>""")]
-    private static partial Regex LabelAfterTrack();
-
-    [GeneratedRegex("""<div class="savings-goal-progress-track"[^>]*>""")]
-    private static partial Regex ProgressTrack();
+    [GeneratedRegex("""<svg class="savings-goal-chart"[\s\S]*?</svg>""")]
+    private static partial Regex Chart();
 
     [GeneratedRegex("""<form [^>]*action="/SavingsGoals/AddContribution"[\s\S]*?</form>""")]
     private static partial Regex AddContributionForm();

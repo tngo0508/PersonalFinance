@@ -98,4 +98,7 @@ public sealed class SavingsGoalResponseDto
     public decimal? ReportingSavedThisMonth { get; set; }
 
     public SavingsGoalPaceDto Pace { get; set; } = new();
+
+    /// <summary>The saved amount over time for the card's chart, oldest first, at most the last 24 months.</summary>
+    public List<SavingsGoalHistoryPointDto> History { get; set; } = [];
 }

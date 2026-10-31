@@ -197,6 +197,63 @@ public sealed class SavingsGoalPaceTests : IDisposable
         Assert.Equal(30m, goal.SavedThisMonth);
     }
 
+    [Fact]
+    public async Task History_StartsAtTheGoalsStart_WithOnePointPerContributionDate_AsTheRunningTotal()
+    {
+        Seed(2_000m, new DateTime(2026, 6, 1, 9, 0, 0, DateTimeKind.Utc), new DateTime(2027, 6, 1),
+            Opening(500m, new DateOnly(2026, 6, 1)), Regular(100m, new DateOnly(2026, 7, 15)),
+            Regular(50m, new DateOnly(2026, 7, 15)), Regular(-30m, new DateOnly(2026, 9, 2)),
+            Adjustment(20m, new DateOnly(2026, 10, 1)));
+
+        SavingsGoalResponseDto goal = Assert.Single(await Service().GetSavingsGoalsAsync(UserId));
+
+        Assert.Equal(
+            [
+                (new DateOnly(2026, 6, 1), 500m), (new DateOnly(2026, 7, 15), 650m), (new DateOnly(2026, 9, 2), 620m),
+                (new DateOnly(2026, 10, 1), 640m)
+            ],
+            goal.History.Select(p => (p.Date, p.Saved)));
+        Assert.Equal(new DateOnly(2026, 6, 1), goal.Pace!.Start);
+        Assert.Equal(500m, goal.Pace.StartingAmount);
+    }
+
+    [Fact]
+    public async Task History_OfAGoalWithNoContributions_IsItsStartAtZero()
+    {
+        Seed(2_000m, new DateTime(2026, 10, 20, 9, 0, 0, DateTimeKind.Utc), null);
+
+        SavingsGoalResponseDto goal = Assert.Single(await Service().GetSavingsGoalsAsync(UserId));
+
+        Assert.Equal([(new DateOnly(2026, 10, 20), 0m)], goal.History.Select(p => (p.Date, p.Saved)));
+    }
+
+    [Fact]
+    public async Task History_StartsBeforeTheFirstContribution_WhenTheGoalWasCreatedEarlier()
+    {
+        Seed(2_000m, new DateTime(2026, 5, 1, 9, 0, 0, DateTimeKind.Utc), null, Regular(100m, new DateOnly(2026, 6, 1)));
+
+        SavingsGoalResponseDto goal = Assert.Single(await Service().GetSavingsGoalsAsync(UserId));
+
+        Assert.Equal([(new DateOnly(2026, 5, 1), 0m), (new DateOnly(2026, 6, 1), 100m)],
+            goal.History.Select(p => (p.Date, p.Saved)));
+    }
+
+    [Fact]
+    public async Task History_KeepsTheLast24Months_CarryingTheEarlierTotalIntoItsFirstPoint()
+    {
+        Seed(10_000m, new DateTime(2023, 1, 1, 9, 0, 0, DateTimeKind.Utc), null,
+            Opening(1_000m, new DateOnly(2023, 1, 1)), Regular(200m, new DateOnly(2024, 3, 1)),
+            Regular(300m, new DateOnly(2025, 1, 10)), Regular(400m, new DateOnly(2026, 10, 1)));
+
+        SavingsGoalResponseDto goal = Assert.Single(await Service().GetSavingsGoalsAsync(UserId));
+
+        Assert.Equal(
+            [(new DateOnly(2024, 10, 25), 1_200m), (new DateOnly(2025, 1, 10), 1_500m), (new DateOnly(2026, 10, 1), 1_900m)],
+            goal.History.Select(p => (p.Date, p.Saved)));
+        // The Pace still measures from the goal's own start.
+        Assert.Equal(new DateOnly(2023, 1, 1), goal.Pace!.Start);
+    }
+
     private void Seed(decimal target, DateTime createdAt, DateTime? targetDate, params Contribution[] contributions)
     {
         var goal = new SavingsGoal

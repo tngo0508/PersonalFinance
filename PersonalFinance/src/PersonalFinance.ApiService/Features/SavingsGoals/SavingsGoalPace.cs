@@ -21,6 +21,9 @@ internal static class SavingsGoalPace
     /// <summary>The On track band either side of the ideal line, as a share of the target.</summary>
     public const decimal OnTrackBand = 0.05m;
 
+    /// <summary>How far back the chart's history series reaches.</summary>
+    public const int HistoryMonths = 24;
+
     /// <summary>A projection further out than this is not shown.</summary>
     private const int MaxProjectionDays = 100 * 365;
 
@@ -41,8 +44,14 @@ internal static class SavingsGoalPace
         decimal remaining = Math.Max(0m, target - saved);
         bool reached = target > 0 && saved >= target;
         DateOnly? due = targetDate is { } date ? DateOnly.FromDateTime(date) : null;
+        decimal startingAmount = contributions.Where(c => c.Kind == ContributionKind.Opening).Sum(c => c.Amount);
 
-        var pace = new SavingsGoalPaceDto { Status = Status(saved, target, start, ageDays, due, contributions, today) };
+        var pace = new SavingsGoalPaceDto
+        {
+            Status = Status(saved, target, start, startingAmount, ageDays, due, today),
+            Start = start,
+            StartingAmount = startingAmount
+        };
 
         if (!reached && due is { } dueDate && dueDate >= today)
         {
@@ -68,8 +77,44 @@ internal static class SavingsGoalPace
                         && c.Date <= today)
             .Sum(c => c.Amount);
 
-    private static PaceStatus Status(decimal saved, decimal target, DateOnly start, int ageDays, DateOnly? due,
-        IReadOnlyCollection<ContributionDto> contributions, DateOnly today)
+    /// <summary>
+    /// The saved amount over time, oldest first: <paramref name="start"/>, then each Contribution date with the running
+    /// total after that day. Points older than <see cref="HistoryMonths"/> months fold into one point at the cutoff
+    /// that carries their total, so the line still starts at the right height.
+    /// </summary>
+    public static List<SavingsGoalHistoryPointDto> History(DateOnly start, IEnumerable<ContributionDto> contributions,
+        DateOnly today)
+    {
+        var points = new List<SavingsGoalHistoryPointDto> { new() { Date = start, Saved = 0m } };
+        decimal running = 0m;
+        foreach (IGrouping<DateOnly, ContributionDto> day in contributions.GroupBy(c => c.Date).OrderBy(g => g.Key))
+        {
+            running += day.Sum(c => c.Amount);
+            if (day.Key <= start)
+            {
+                points[0].Saved = running;
+                continue;
+            }
+
+            points.Add(new SavingsGoalHistoryPointDto { Date = day.Key, Saved = running });
+        }
+
+        DateOnly cutoff = today.AddMonths(-HistoryMonths);
+        int older = points.Count(p => p.Date < cutoff);
+        if (older == 0) return points;
+
+        decimal carried = points[older - 1].Saved;
+        points.RemoveRange(0, older);
+        if (points.Count == 0 || points[0].Date != cutoff)
+        {
+            points.Insert(0, new SavingsGoalHistoryPointDto { Date = cutoff, Saved = carried });
+        }
+
+        return points;
+    }
+
+    private static PaceStatus Status(decimal saved, decimal target, DateOnly start, decimal startingAmount,
+        int ageDays, DateOnly? due, DateOnly today)
     {
         if (target > 0 && saved >= target) return PaceStatus.Reached;
         if (due is not { } dueDate) return PaceStatus.NoTargetDate;
@@ -77,7 +122,6 @@ internal static class SavingsGoalPace
         if (ageDays < JustStartedDays) return PaceStatus.JustStarted;
 
         // The ideal line runs from (start, starting amount) to (target date, target).
-        decimal startingAmount = contributions.Where(c => c.Kind == ContributionKind.Opening).Sum(c => c.Amount);
         int span = dueDate.DayNumber - start.DayNumber;
         decimal ideal = span <= 0
             ? target

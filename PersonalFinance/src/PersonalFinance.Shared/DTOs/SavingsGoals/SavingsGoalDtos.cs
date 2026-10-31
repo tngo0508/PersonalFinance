@@ -46,6 +46,20 @@ public class SavingsGoalDto
 
     /// <summary>The goal's Pace, worked out from its Contribution log at today's date; null from an older ApiService.</summary>
     public SavingsGoalPaceDto? Pace { get; set; }
+
+    /// <summary>
+    /// The saved amount over time, oldest first, for the card's chart: the goal's start, then one point per
+    /// Contribution date with the running total after that day. Only the last 24 months are kept; when older points
+    /// are dropped, the first point carries their total. Empty from an older ApiService.
+    /// </summary>
+    public List<SavingsGoalHistoryPointDto> History { get; set; } = [];
+}
+
+/// <summary>The goal's saved amount at the end of one day.</summary>
+public class SavingsGoalHistoryPointDto
+{
+    public DateOnly Date { get; set; }
+    public decimal Saved { get; set; }
 }
 
 /// <summary>
@@ -55,6 +69,12 @@ public class SavingsGoalDto
 public class SavingsGoalPaceDto
 {
     public PaceStatus Status { get; set; }
+
+    /// <summary>The earlier of the goal's creation date and its earliest Contribution: where the ideal line starts.</summary>
+    public DateOnly Start { get; set; }
+
+    /// <summary>The goal's Opening Contribution, or 0: the ideal line's starting amount.</summary>
+    public decimal StartingAmount { get; set; }
 
     /// <summary>Remaining amount per month until the target date; only for dated goals not reached or past due.</summary>
     public decimal? NeededPerMonth { get; set; }
