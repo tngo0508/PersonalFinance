@@ -86,4 +86,25 @@ public sealed class ResearchSnapshotCacheTests
         Assert.Equal("A", a);
         Assert.Equal("B", b);
     }
+
+    [Fact]
+    public async Task GetOrReadAsync_WhenTheValueIsRejectedByKeep_ReturnsItButReadsAgainNextTime()
+    {
+        (ResearchSnapshotCache cache, FakeClock _) = Create();
+        int reads = 0;
+        Task<string> Read(CancellationToken _)
+        {
+            reads++;
+            return Task.FromResult(reads == 1 ? "partial" : "complete");
+        }
+
+        string first = await cache.GetOrReadAsync("a", Read, CancellationToken.None, keep: v => v == "complete");
+        string second = await cache.GetOrReadAsync("a", Read, CancellationToken.None, keep: v => v == "complete");
+        string third = await cache.GetOrReadAsync("a", Read, CancellationToken.None, keep: v => v == "complete");
+
+        Assert.Equal("partial", first);
+        Assert.Equal("complete", second);
+        Assert.Equal("complete", third);
+        Assert.Equal(2, reads);
+    }
 }

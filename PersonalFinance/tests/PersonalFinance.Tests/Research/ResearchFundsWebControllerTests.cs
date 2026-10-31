@@ -201,10 +201,18 @@ public class ResearchFundsWebControllerTests
         Assert.Same(industries, Assert.IsType<JsonResult>(result).Value);
     }
 
+    private static ResearchSearchIndexDto CompleteIndex() => new()
+    {
+        Funds = [new TrackedFundDto { Ticker = "SPY", Name = "SPDR S&P 500 ETF Trust" }],
+        Offices = ["Technology"],
+        Industries = [new ResearchSearchIndustryDto { Name = "Semiconductors", Office = "Technology" }],
+        Countries = ["Brazil"],
+    };
+
     [Fact]
     public async Task SearchIndex_ReturnsTheIndexAsJson_ReadingApiServiceOnceThroughTheCache()
     {
-        var index = new ResearchSearchIndexDto { Countries = ["Brazil"] };
+        ResearchSearchIndexDto index = CompleteIndex();
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
         proxy.Returns(nameof(IResearchApi.GetSearchIndexAsync), index);
         ResearchController controller = CreateController(api);
@@ -215,6 +223,26 @@ public class ResearchFundsWebControllerTests
         Assert.Same(index, Assert.IsType<JsonResult>(first).Value);
         Assert.Same(index, Assert.IsType<JsonResult>(second).Value);
         Assert.Equal([nameof(IResearchApi.GetSearchIndexAsync)], proxy.Calls);
+    }
+
+    [Fact]
+    public async Task SearchIndex_WhenAPartIsEmpty_ReadsApiServiceAgainOnTheNextRequest()
+    {
+        ResearchSearchIndexDto complete = CompleteIndex();
+        ResearchSearchIndexDto partial = new() { Countries = ["Brazil"] };
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSearchIndexAsync), partial);
+        ResearchController controller = CreateController(api);
+
+        IActionResult first = await controller.SearchIndex();
+        proxy.Returns(nameof(IResearchApi.GetSearchIndexAsync), complete);
+        IActionResult second = await controller.SearchIndex();
+        IActionResult third = await controller.SearchIndex();
+
+        Assert.Same(partial, Assert.IsType<JsonResult>(first).Value);
+        Assert.Same(complete, Assert.IsType<JsonResult>(second).Value);
+        Assert.Same(complete, Assert.IsType<JsonResult>(third).Value);
+        Assert.Equal(2, proxy.Calls.Count);
     }
 
     [Fact]

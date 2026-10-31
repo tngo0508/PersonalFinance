@@ -23,7 +23,7 @@ public sealed class ResearchSnapshotCache : IResearchSnapshotCache
 
     /// <inheritdoc />
     public async Task<T> GetOrReadAsync<T>(string dataset, Func<CancellationToken, Task<T>> read,
-        CancellationToken cancellationToken) where T : class
+        CancellationToken cancellationToken, Func<T, bool>? keep = null) where T : class
     {
         string key = $"research:{dataset}";
         if (_cache.TryGetValue(key, out T? cached) && cached is not null)
@@ -32,7 +32,11 @@ public sealed class ResearchSnapshotCache : IResearchSnapshotCache
         }
 
         T snapshot = await read(cancellationToken);
-        _cache.Set(key, snapshot, Lifetime);
+        if (keep is null || keep(snapshot))
+        {
+            _cache.Set(key, snapshot, Lifetime);
+        }
+
         return snapshot;
     }
 }

@@ -7,16 +7,16 @@ namespace PersonalFinance.Shared.DTOs.Research;
 /// </summary>
 public sealed class ResearchSearchIndexDto
 {
-    /// <summary>The Tracked Funds, in the configured order.</summary>
+    /// <summary>The Tracked Funds, in the snapshot's order.</summary>
     public List<TrackedFundDto> Funds { get; set; } = [];
 
-    /// <summary>The SEC industry offices, e.g. <c>Technology</c>, in office-number order.</summary>
+    /// <summary>The SEC industry offices, e.g. <c>Technology</c>, in the snapshot's order.</summary>
     public List<string> Offices { get; set; } = [];
 
-    /// <summary>The SIC industries, each with its office, in office order and then SIC code order.</summary>
+    /// <summary>The SIC industries, each with its office, in the snapshot's order.</summary>
     public List<ResearchSearchIndustryDto> Industries { get; set; } = [];
 
-    /// <summary>The names of the countries with a market cap in any year, in ISO numeric order.</summary>
+    /// <summary>The names of the countries with a market cap in any year, in the snapshot's order.</summary>
     public List<string> Countries { get; set; } = [];
 }
 
