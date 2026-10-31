@@ -3,8 +3,8 @@
  * balance chart show a projection; moving the monthly contribution slider changes the headline balance; a rate preset
  * sets the assumed return; the fee tile reacts to a higher fund fee; and the Today's money switch shows the headline
  * and the year-by-year table in today's money; the goal tile returns a monthly contribution that "Use this amount"
- * puts in the rail. Run from ui-test.js as Test 9m.
- * Later slices extend it: a lever previewed into Compare, a saved scenario that survives a reload.
+ * puts in the rail; on Compare what-ifs a lever previews a dashed line and joins the comparison. Run from ui-test.js as
+ * Test 9m. A later slice extends it: a saved scenario that survives a reload.
  *
  * Expected texts are read from Resources/i18n/en.json, so a rewording does not break the test.
  */
@@ -128,7 +128,32 @@ async function runInvestmentCalculatorSmoke({browser, base, pass, fail}) {
         const goalLines = await page.locator('#icBalanceChart .ic-goal-line').count();
         check(goalLines === 1, 'The balance chart draws the goal line', `${goalLines} goal lines`);
 
-        // 7. The educational-estimate note links to the Disclaimer.
+        // 7. Compare what-ifs: a lever previews as a dashed line without changing the plan, then joins the comparison.
+        await page.click('#icViewCompareTab');
+        await page.waitForFunction(() => !document.getElementById('icCompare')?.hidden, null, {timeout: TIMEOUT}).catch(() => {});
+        check(new URL(page.url()).searchParams.get('view') === 'compare', 'The Compare view is kept in the query string', page.url());
+        const planBefore = await textOf(page, '#icFinal');
+        const monthlyBefore = await page.inputValue('#icMonthly');
+        await page.click('[data-lever="monthly"]');
+        await page.locator('#icCompareChart path.ic-series[stroke-dasharray]').first()
+            .waitFor({state: 'attached', timeout: TIMEOUT}).catch(() => {});
+        const ghosts = await page.locator('#icCompareChart path.ic-series[stroke-dasharray]').count();
+        check(ghosts === 1, 'A lever previews a dashed line on the comparison chart', `${ghosts} dashed lines`);
+        check(await textOf(page, '#icFinal') === planBefore && await page.inputValue('#icMonthly') === monthlyBefore,
+            'The preview leaves the plan unchanged', `monthly ${await page.inputValue('#icMonthly')}`);
+        const more = en['InvestmentCalculator.Js.Diff.More'].replace('{amount}', '');
+        check((await textOf(page, '#icPreviewText')).includes(more.trim()), 'The preview says how much more it ends with',
+            `"${await textOf(page, '#icPreviewText')}"`);
+        await page.click('#icPreviewAdd');
+        await page.locator('#icCmpList .ic-cmp__item').nth(1).waitFor({state: 'attached', timeout: TIMEOUT}).catch(() => {});
+        const items = await page.locator('#icCmpList .ic-cmp__item').count();
+        const lines = await page.locator('#icCompareChart path.ic-series').count();
+        check(items === 2 && lines === 2, 'The variant appears in the comparison beside the plan', `${items} rows, ${lines} lines`);
+        check((await textOf(page, '#icCmpList .ic-cmp__item--1 .ic-cmp__diff')).includes(more.trim()),
+            'The variant shows its difference from the plan', `"${await textOf(page, '#icCmpList .ic-cmp__item--1 .ic-cmp__diff')}"`);
+        await page.click('#icViewOverviewTab');
+
+        // 8. The educational-estimate note links to the Disclaimer.
         const disclaimer = await page.locator('.ic-disclaimer a').getAttribute('href').catch(() => null);
         check(disclaimer === '/disclaimer', 'The estimate note links to the Disclaimer', `${disclaimer}`);
     } catch (error) {

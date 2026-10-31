@@ -1,4 +1,4 @@
-/* global PFI18n, ChartPalette, InvestmentMath, InvestmentCharts */
+/* global PFI18n, ChartPalette, InvestmentMath, InvestmentCharts, InvestmentCompare */
 /**
  * Investment Calculator page (#587): reads the slider rail, projects the plan with investment-math.js and hands the
  * result to the summary bar and the Overview tiles (investment-charts.js). Every amount is in the Reporting Currency
@@ -9,6 +9,9 @@
  *
  * The Reach a goal tile (#590) holds its own goal amount and solves it with InvestmentMath.solveGoal, in today's money
  * when the switch is on; the balance chart draws the goal as a horizontal line with a marker at the year it is reached.
+ *
+ * Compare what-ifs (#591) lives in investment-compare.js; this script hands it every new plan. An applied lever can
+ * start the plan later or stop its deposits (timing); the rail has no field for those, so a note there says so.
  */
 (function () {
     'use strict';
@@ -29,6 +32,10 @@
     let goalTarget = 0;
     /** Set by the goal tile's own controls, so only they announce its answer. */
     let announceGoal = false;
+    /** When the plan starts and stops adding, set by an applied what-if: InvestmentMath's delay and stopAt. */
+    let timing = { delay: 0, stopAt: null };
+    /** The Compare what-ifs controller (investment-compare.js), or null without it. */
+    let compare = null;
 
     /**
      * The element with this id, or null.
@@ -108,7 +115,7 @@
      * @returns {object} The inputs.
      */
     function readInputs () {
-        const raw = {};
+        const raw = Object.assign({}, timing);
         KEYS.forEach((key) => {
             const field = byId(`ic${stem(key)}`);
             raw[key] = field ? parseFloat(field.value) : NaN;
@@ -415,6 +422,67 @@
             frame = null;
             drawCharts();
             drawTable();
+            if (compare) {
+                compare.draw();
+            }
+        });
+    }
+
+    /**
+     * Say in the rail when the plan starts later or stops adding (an applied what-if), with a way back.
+     * @param {object} plan - The normalized inputs.
+     */
+    function showTiming (plan) {
+        const note = byId('icTiming');
+        if (!note) {
+            return;
+        }
+        const parts = [];
+        if (plan.delay > 0) {
+            parts.push(PFI18n.t('InvestmentCalculator.Js.Timing.Delay', { year: PFI18n.formatNumber(plan.delay) }));
+        }
+        if (plan.stopAt !== null) {
+            parts.push(PFI18n.t('InvestmentCalculator.Js.Timing.Stop', { year: PFI18n.formatNumber(plan.stopAt) }));
+        }
+        note.hidden = parts.length === 0;
+        setText('icTimingText', parts.join(' '));
+    }
+
+    /**
+     * Make the given inputs the plan: write them to the rail (and the timing the rail has no field for), then update.
+     * @param {object} inputs - The inputs (an applied what-if).
+     */
+    function applyPlan (inputs) {
+        const plan = InvestmentMath.normalize(inputs);
+        KEYS.forEach((key) => {
+            const field = byId(`ic${stem(key)}`);
+            const range = byId(`ic${stem(key)}Range`);
+            if (field) {
+                field.value = String(plan[key]);
+            }
+            if (range) {
+                range.value = String(plan[key]);
+            }
+        });
+        timing = { delay: plan.delay, stopAt: plan.stopAt };
+        update();
+    }
+
+    /**
+     * Wire the timing note's reset: the plan starts now and keeps adding.
+     */
+    function bindTiming () {
+        const reset = byId('icTimingReset');
+        if (!reset) {
+            return;
+        }
+        reset.addEventListener('click', () => {
+            timing = { delay: 0, stopAt: null };
+            update();
+            const years = byId('icYears');
+            if (years) {
+                years.focus();
+            }
         });
     }
 
@@ -452,6 +520,10 @@
             : PFI18n.t('InvestmentCalculator.Js.Fee.None'));
 
         const goalText = updateGoal(plan);
+        showTiming(plan);
+        if (compare) {
+            compare.update(plan);
+        }
 
         // The goal tile's own controls announce its answer; everything else announces the plan.
         const goalOnly = announceGoal;
@@ -603,14 +675,30 @@
         bindPresets();
         bindTodaysMoney();
         bindGoal();
+        bindTiming();
+        if (typeof InvestmentCompare !== 'undefined') {
+            compare = InvestmentCompare.create(root, {
+                money,
+                compact,
+                percent,
+                colours,
+                yearFormats,
+                shown,
+                applyPlan,
+                monthlyMax: () => {
+                    const field = byId('icMonthly');
+                    return field ? parseFloat(field.max) : NaN;
+                },
+                onView: scheduleCharts
+            });
+        }
         update();
 
-        const tiles = root.querySelector('.ic-tiles');
         const bar = root.querySelector('.ic-bar');
         if (typeof ResizeObserver !== 'undefined') {
-            if (tiles) {
-                new ResizeObserver(scheduleCharts).observe(tiles);
-            }
+            // Both views' tiles: a view that was hidden draws once it has a size.
+            const resized = new ResizeObserver(scheduleCharts);
+            root.querySelectorAll('.ic-tiles').forEach((tiles) => resized.observe(tiles));
             // The rail pins below the bar, whose height changes as its numbers wrap.
             if (bar) {
                 new ResizeObserver(() => root.style.setProperty('--ic-bar-height', `${bar.offsetHeight}px`)).observe(bar);

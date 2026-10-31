@@ -46,7 +46,7 @@
      * @param {HTMLElement} host - The container; its width sets the chart's.
      * @param {object} options - The chart.
      * @param {Array<{name: string, color: string, values: Array<{x: number, y: number}>, area?: boolean,
-     *     dash?: string, width?: number}>} options.series - The lines, drawn in order; values share the same x.
+     *     dash?: string, width?: number}>} options.series - The lines, drawn in order; values are by year from 0.
      * @param {Array<{x: number, label: string, color: string}>} [options.markers] - Vertical markers at a year.
      * @param {{y: number, label: string, color: string}} [options.goal] - A horizontal goal line at an amount; left
      *     out when it is more than GOAL_HEADROOM times the highest point of the series.
@@ -72,8 +72,8 @@
             : Math.round(Math.min(Math.max(width * 0.45, r * 13), r * 22));
         const m = { top: r * 1.6, right: r, bottom: r * 1.8, left: r * 3.6 };
         const palette = options.palette;
-        const xs = options.series[0].values.map((v) => v.x);
-        const maxX = d3.max(xs) || 1;
+        // Series may span different years (the comparison's variants); the axis covers the longest.
+        const maxX = d3.max(options.series, (s) => d3.max(s.values, (v) => v.x)) || 1;
         const seriesMax = d3.max(options.series, (s) => d3.max(s.values, (v) => v.y)) || 1;
         // A goal far above the lines would flatten them; past twice the highest point the line is left out.
         const goal = options.goal && options.goal.y > 0 && options.goal.y <= seriesMax * GOAL_HEADROOM ? options.goal : null;

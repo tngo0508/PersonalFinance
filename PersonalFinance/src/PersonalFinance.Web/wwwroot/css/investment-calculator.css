@@ -600,6 +600,277 @@
     display: none;
 }
 
+/* ---------- View switch (Overview / Compare what-ifs) ---------- */
+
+.ic-bar__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+}
+
+.ic-views {
+    display: inline-flex;
+    gap: 0.25rem;
+    padding: 0.2rem;
+    background: var(--app-bg);
+    border: 1px solid var(--app-border);
+    border-radius: 999px;
+}
+
+.ic-view {
+    min-height: 2.75rem;
+    padding: 0.3rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text-muted);
+    background: transparent;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.ic-view:hover {
+    color: var(--app-text);
+}
+
+.ic-view[aria-selected="true"] {
+    color: var(--app-brand-on-soft);
+    background: var(--app-brand-soft);
+    box-shadow: inset 0 0 0 1px var(--app-brand);
+}
+
+.ic-main[hidden] {
+    display: none;
+}
+
+/* ---------- Timing note in the rail (an applied "start later" or "stop adding") ---------- */
+
+.ic-timing {
+    margin: 0 0 1rem;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.8rem;
+    background: var(--app-brand-soft);
+    color: var(--app-brand-on-soft);
+    border-radius: var(--app-radius-m);
+}
+
+.ic-timing[hidden] {
+    display: none;
+}
+
+.ic-timing__text {
+    margin: 0 0 0.25rem;
+}
+
+.ic-timing__reset {
+    min-height: 2.75rem;
+    padding: 0;
+    font-weight: var(--app-font-weight-semibold);
+    color: inherit;
+    text-decoration: underline;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+/* ---------- What-if levers and preview ---------- */
+
+.ic-whatif__hint {
+    margin: 0 0 0.75rem;
+}
+
+.ic-levers {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
+    gap: 0.5rem;
+}
+
+.ic-lever {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+    min-height: 2.75rem;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+    text-align: left;
+    color: var(--app-text);
+    background: var(--app-bg);
+    border: 1px solid var(--app-border-control);
+    border-radius: var(--app-radius-m);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ic-lever:hover {
+    border-color: var(--app-border-hover);
+}
+
+.ic-lever[aria-pressed="true"] {
+    background: var(--app-brand-soft);
+    border-color: var(--app-brand);
+    box-shadow: inset 0 0 0 1px var(--app-brand);
+}
+
+.ic-lever__diff {
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.ic-lever__diff--up,
+.ic-cmp__diff--up {
+    color: var(--app-positive-text);
+}
+
+.ic-lever__diff--down,
+.ic-cmp__diff--down {
+    color: var(--app-negative-text);
+}
+
+.ic-preview {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    border: 1px dashed var(--app-brand);
+    border-radius: var(--app-radius-m);
+}
+
+.ic-preview[hidden] {
+    display: none;
+}
+
+.ic-preview__text {
+    flex: 1 1 16rem;
+    margin: 0;
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.ic-preview__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.ic-action {
+    min-height: 2.75rem;
+    padding: 0.4rem 1rem;
+    font-size: 0.875rem;
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-brand-on-soft);
+    background: var(--app-surface);
+    border: 1px solid var(--app-brand);
+    border-radius: var(--app-radius-m);
+    cursor: pointer;
+}
+
+.ic-action--primary {
+    color: var(--app-text-on-brand);
+    background: var(--app-brand);
+}
+
+.ic-action:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* ---------- Comparison ---------- */
+
+.ic-cmp {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: 0.5rem;
+    margin: 0 0 0.5rem;
+    padding: 0;
+    list-style: none;
+}
+
+.ic-cmp__item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: start;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--app-bg);
+    border: 1px solid var(--app-border-subtle);
+    border-radius: var(--app-radius-m);
+}
+
+.ic-cmp__swatch {
+    width: 1rem;
+    height: 0;
+    margin-top: 0.6rem;
+    border-top: 3px solid var(--app-chart-1);
+}
+
+.ic-cmp__item--1 .ic-cmp__swatch { border-top-color: var(--app-chart-2); }
+.ic-cmp__item--2 .ic-cmp__swatch { border-top-color: var(--app-chart-5); }
+
+.ic-cmp__body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    font-size: 0.85rem;
+}
+
+.ic-cmp__final {
+    font-size: 1.05rem;
+    font-weight: var(--app-font-weight-bold);
+    font-variant-numeric: tabular-nums;
+}
+
+.ic-cmp__diff {
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.ic-cmp__edit {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    margin-top: 0.4rem;
+}
+
+.ic-cmp__edit label {
+    font-size: 0.75rem;
+    color: var(--app-text-muted);
+}
+
+.ic-cmp__input {
+    max-width: 10rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.ic-cmp__remove {
+    width: 2.75rem;
+    height: 2.75rem;
+    margin: -0.5rem -0.5rem 0 0;
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--app-text-muted);
+    background: none;
+    border: 0;
+    border-radius: var(--app-radius-m);
+    cursor: pointer;
+}
+
+.ic-cmp__remove:hover {
+    color: var(--app-text);
+    background: var(--app-surface);
+}
+
+.ic-view:focus-visible,
+.ic-lever:focus-visible,
+.ic-action:focus-visible,
+.ic-cmp__remove:focus-visible,
+.ic-timing__reset:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
 /* ---------- Wide screens: rail beside the grid, bar and rail pinned ---------- */
 
 @media (min-width: 62em) {
@@ -624,6 +895,8 @@
 
 @media (prefers-reduced-motion: reduce) {
     .ic-preset,
+    .ic-view,
+    .ic-lever,
     .ic-goal__mode,
     .ic-progress__fill,
     .ic-years__summary::before {

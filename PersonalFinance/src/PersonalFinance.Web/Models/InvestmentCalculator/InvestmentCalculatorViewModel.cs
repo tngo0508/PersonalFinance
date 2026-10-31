@@ -29,6 +29,9 @@ public sealed class InvestmentCalculatorViewModel
 
     public decimal MonthlyMax => Scaled(InvestmentCalculatorLimits.MonthlyMax);
 
+    /// <summary>What the "more a month" what-if lever adds to the monthly contribution.</summary>
+    public decimal LeverMonthly => Scaled(InvestmentCalculatorLimits.LeverMonthly);
+
     public decimal Goal => Scaled(InvestmentCalculatorLimits.DefaultGoal);
 
     public decimal GoalMax => Scaled(InvestmentCalculatorLimits.GoalMax);

@@ -26,6 +26,9 @@ public static class InvestmentCalculatorLimits
     /// <summary>The monthly contribution slider's step, in US dollars.</summary>
     public const long MonthlyStep = 50;
 
+    /// <summary>What the "more a month" what-if lever adds to the monthly contribution, in US dollars.</summary>
+    public const long LeverMonthly = 100;
+
     /// <summary>The largest starting amount the field takes, in US dollars.</summary>
     public const long InitialMax = 100_000_000;
 
