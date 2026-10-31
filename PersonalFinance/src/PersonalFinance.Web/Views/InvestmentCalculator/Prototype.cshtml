@@ -1,0 +1,26 @@
+@* PROTOTYPE (#587) - throwaway. Three variants of the Investment Calculator redesign on /InvestmentCalculator?variant=A|B|C.
+   Lives only on branch prototype/investment-calculator-587. Not for main. *@
+@{
+    ViewData["Title"] = "Investment Calculator (prototype)";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/investment-calculator-prototype.css" asp-append-version="true"/>
+}
+
+<div id="protoRoot" class="proto"></div>
+
+<div class="proto-switcher" role="toolbar" aria-label="Prototype variant switcher">
+    <button type="button" class="proto-switcher__btn" data-step="-1" aria-label="Previous variant">&larr;</button>
+    <span class="proto-switcher__label" id="protoSwitcherLabel">A</span>
+    <button type="button" class="proto-switcher__btn" data-step="1" aria-label="Next variant">&rarr;</button>
+</div>
+
+@section Scripts {
+    <script src="~/lib/d3/d3.min.js"></script>
+    <script src="~/js/investment-calculator/prototype/proto-core.js" asp-append-version="true"></script>
+    <script src="~/js/investment-calculator/prototype/variant-a.js" asp-append-version="true"></script>
+    <script src="~/js/investment-calculator/prototype/variant-b.js" asp-append-version="true"></script>
+    <script src="~/js/investment-calculator/prototype/variant-c.js" asp-append-version="true"></script>
+    <script src="~/js/investment-calculator/prototype/proto-boot.js" asp-append-version="true"></script>
+}

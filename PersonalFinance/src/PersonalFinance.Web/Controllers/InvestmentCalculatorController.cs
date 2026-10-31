@@ -9,14 +9,20 @@ namespace PersonalFinance.Web.Controllers;
 /// This is a client-side calculator with no server-side persistence.
 /// </summary>
 [Authorize]
-public class InvestmentCalculatorController : Controller
+public class InvestmentCalculatorController(IWebHostEnvironment environment) : Controller
 {
     /// <summary>
     /// Displays the Investment Calculator page with compound growth projection tools.
+    /// PROTOTYPE (#587, throwaway branch): ?variant=A|B|C renders the UI prototype, Development only.
     /// </summary>
     [HttpGet]
-    public IActionResult Index()
+    public IActionResult Index(string? variant)
     {
+        if (environment.IsDevelopment() && !string.IsNullOrEmpty(variant))
+        {
+            return View("Prototype");
+        }
+
         return View();
     }
 }
