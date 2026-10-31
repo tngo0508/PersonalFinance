@@ -45,7 +45,10 @@
                             <span class="atelier-card-hint">@L["Learning.Review.Turn"]</span>
                         </button>
                         <div class="atelier-card-back" id="card-back-@card.Slug" data-card-back hidden>
-                            <p class="atelier-vi-name" lang="vi">@card.VietnameseName</p>
+                            @if (card.EnglishTerm != card.Term)
+                            {
+                                <p class="atelier-en-name" lang="en">@card.EnglishTerm</p>
+                            }
                             <p class="atelier-card-one-line">@card.OneLine</p>
                             <div class="atelier-card-marks" role="group" aria-label="@L["Learning.Review.Marks"]">
                                 <button type="button" class="atelier-option" data-mark="true">@L["Learning.Review.KnewIt"]</button>
@@ -114,7 +117,10 @@
         {
             <section class="atelier-sheet atelier-reading" aria-labelledby="term-@term.Slug" data-test-id="lesson-term-@term.Slug">
                 <h2 class="atelier-sheet-title" id="term-@term.Slug">@term.Term</h2>
-                <p class="atelier-vi-name" lang="vi">@term.VietnameseName</p>
+                @if (term.EnglishTerm != term.Term)
+                {
+                    <p class="atelier-en-name" lang="en">@term.EnglishTerm</p>
+                }
                 <p class="atelier-one-line">@term.OneLine</p>
                 @foreach (var paragraph in term.Explanation)
                 {

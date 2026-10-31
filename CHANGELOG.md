@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.16.1] - 2026-10-30
+
+### Changed
+
+- **Atelier second name**: a Learning page shows only the language you chose, with the English Term under the Term on Vietnamese pages instead of the Vietnamese name on every page.
+  - English pages show no second name; the Library filter and Global Search still find a Term by its Vietnamese name.
+
 ## [16.16.0] - 2026-10-30
 
 ### Added

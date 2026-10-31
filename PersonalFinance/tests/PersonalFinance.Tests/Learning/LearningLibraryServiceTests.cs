@@ -59,6 +59,17 @@ public class LearningLibraryServiceTests
     }
 
     [Fact]
+    public void FindTerm_CarriesTheEnglishTerm_SameAsTheTermOnlyInEnglish()
+    {
+        LearningLibraryService service = Service(SoonAfterReview);
+        TermEntryDto english = service.FindTerm("apr", "en")!;
+        TermEntryDto vietnamese = service.FindTerm("apr", "vi")!;
+
+        Assert.Equal(("Annual percentage rate", "Annual percentage rate"), (english.Term, english.EnglishTerm));
+        Assert.Equal(("Lãi suất phần trăm hằng năm", "Annual percentage rate"), (vietnamese.Term, vietnamese.EnglishTerm));
+    }
+
+    [Fact]
     public void GetLessons_IsTheOutlineByDay()
     {
         List<LessonSummaryDto> lessons = Service(SoonAfterReview).GetLessons("en");
