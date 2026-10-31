@@ -650,15 +650,21 @@ internal sealed class CommunityService : ICommunityService
 
     /// <summary>
     /// How many Accounts checked in to each of <paramref name="challengeIds"/> for each period starting on or after
-    /// <paramref name="from"/>. Counts only: no Account id leaves this query.
+    /// <paramref name="from"/>, by the time zone of their membership, so each can be matched to its own current period.
+    /// Counts only: no Account id leaves this query.
     /// </summary>
     internal IQueryable<CheckInCountRow> CheckInCountsQuery(IReadOnlyCollection<int> challengeIds, DateOnly from) =>
         _dbContext.CommunityCheckIns.AsNoTracking()
             .Where(c => challengeIds.Contains(c.ChallengeId) && c.PeriodStart >= from)
-            .GroupBy(c => new { c.ChallengeId, c.PeriodStart })
+            .Join(_dbContext.CommunityChallengeMembers.AsNoTracking(),
+                c => new { c.ChallengeId, c.UserId },
+                m => new { m.ChallengeId, m.UserId },
+                (c, m) => new { c.ChallengeId, m.TimeZoneId, c.PeriodStart })
+            .GroupBy(c => new { c.ChallengeId, c.TimeZoneId, c.PeriodStart })
             .Select(g => new CheckInCountRow
             {
                 ChallengeId = g.Key.ChallengeId,
+                TimeZoneId = g.Key.TimeZoneId,
                 PeriodStart = g.Key.PeriodStart,
                 Count = g.Count(),
             });
@@ -1000,11 +1006,16 @@ internal sealed class CommunityService : ICommunityService
             .Where(c => !c.Ended)
             .ToList();
 
-        List<DateOnly> currents = shown.Where(c => c.Current.HasValue).Select(c => c.Current!.Value).ToList();
-        Dictionary<(int, DateOnly), int> counts = currents.Count == 0
-            ? []
-            : (await CheckInCountsQuery(ids, currents.Min()).ToListAsync(cancellationToken))
-            .ToDictionary(r => (r.ChallengeId, r.PeriodStart), r => r.Count);
+        // Each member kept it "today" when it checked in for the current period in its own time zone, which can be a
+        // day behind the viewer's: no zone is more than a day behind the UTC date.
+        DateOnly earliestToday = DateOnly.FromDateTime(utcNow.UtcDateTime).AddDays(-1);
+        List<DateOnly> froms = shown.Where(c => c.Current.HasValue)
+            .Select(c => ChallengeCalendar.CurrentPeriod(c.Challenge.Period, c.Challenge.StartDate, c.Challenge.EndDate,
+                earliestToday) ?? c.Challenge.StartDate)
+            .ToList();
+        ILookup<int, CheckInCountRow> counts = froms.Count == 0
+            ? Enumerable.Empty<CheckInCountRow>().ToLookup(r => r.ChallengeId)
+            : (await CheckInCountsQuery(ids, froms.Min()).ToListAsync(cancellationToken)).ToLookup(r => r.ChallengeId);
 
         return shown
             .OrderBy(c => c.Current is null)
@@ -1027,14 +1038,22 @@ internal sealed class CommunityService : ICommunityService
                     Streak = c.Current.HasValue
                         ? ChallengeCalendar.Streak(c.Challenge.Period, c.Challenge.StartDate, c.Current.Value, kept)
                         : 0,
-                    CheckedInCount = c.Current.HasValue
-                        ? counts.GetValueOrDefault((c.Challenge.Id, c.Current.Value))
-                        : 0,
+                    CheckedInCount = c.Current.HasValue ? KeptToday(c.Challenge, counts[c.Challenge.Id], utcNow) : 0,
                     MemberCount = members.GetValueOrDefault(c.Challenge.Id),
                 };
             })
             .ToList();
     }
+
+    /// <summary>
+    /// How many members checked in for the period that is current in their own time zone at <paramref name="utcNow"/>.
+    /// </summary>
+    private static int KeptToday(CommunityChallenge challenge, IEnumerable<CheckInCountRow> counts,
+        DateTimeOffset utcNow) =>
+        counts
+            .Where(r => r.PeriodStart == ChallengeCalendar.CurrentPeriod(challenge.Period, challenge.StartDate,
+                challenge.EndDate, BrowserTimeZone.Today(utcNow, BrowserTimeZone.Zone(r.TimeZoneId))))
+            .Sum(r => r.Count);
 
     /// <summary>
     /// An open Poll as the viewer sees it. Each option's share is a whole percentage, the shares adding up to 100 by
@@ -1088,12 +1107,13 @@ internal sealed class CommunityService : ICommunityService
     }
 
     /// <summary>
-    /// How many Accounts checked in to a Challenge for one period (<see cref="CheckInCountsQuery"/>), or joined it
-    /// (<see cref="MemberCountsQuery"/>, with no period).
+    /// How many Accounts in one time zone checked in to a Challenge for one period (<see cref="CheckInCountsQuery"/>), or
+    /// joined it (<see cref="MemberCountsQuery"/>, with no zone or period).
     /// </summary>
     internal sealed class CheckInCountRow
     {
         public int ChallengeId { get; init; }
+        public string TimeZoneId { get; init; } = string.Empty;
         public DateOnly PeriodStart { get; init; }
         public int Count { get; init; }
     }

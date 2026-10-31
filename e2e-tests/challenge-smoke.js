@@ -7,6 +7,10 @@
  * Only an Admin writes Challenges, and an E2E run has none, so the ApiService must store the fixture Challenge
  * (E2E_SEED_COMMUNITY=true, set by e2e-inmemory.sh and CI's E2E job). COMMUNITY_FIXTURE=true on the test process says
  * it does; without it a missing Challenge skips the checks. Expected texts are read from Resources/i18n/en.json.
+ *
+ * The first Account's browser runs in a time zone whose date is not the UTC date, while the second one's has not joined
+ * and so sees the Challenge in UTC: the shared count must still include the first Account's Check-in, whatever time of
+ * day the suite runs.
  */
 
 const path = require('path');
@@ -47,14 +51,24 @@ async function act(page, action) {
 }
 
 /**
+ * A time zone whose date differs from the UTC date now: a day behind before 11:00 UTC, a day ahead from 10:00 UTC.
+ * @returns {string} The IANA zone id.
+ */
+function zoneOffTheUtcDate() {
+    return new Date().getUTCHours() < 11 ? 'Pacific/Pago_Pago' : 'Pacific/Kiritimati';
+}
+
+/**
  * Open the Guild Hall as a fresh Account.
  * @param {import('playwright').Browser} browser - The browser.
  * @param {string} base - The Web app's base URL.
+ * @param {string} [timezoneId] - The browser's time zone; the machine's when omitted.
  * @returns {Promise<{context: import('playwright').BrowserContext, page: import('playwright').Page, ok: boolean}>}
  *   The signed-in page, with ok false when registering failed.
  */
-async function openAsNewAccount(browser, base) {
-    const context = await browser.newContext({locale: 'en-US', extraHTTPHeaders: {'Accept-Language': 'en-US,en;q=0.9'}});
+async function openAsNewAccount(browser, base, timezoneId) {
+    const context = await browser.newContext({locale: 'en-US', extraHTTPHeaders: {'Accept-Language': 'en-US,en;q=0.9'},
+        timezoneId});
     const page = await context.newPage();
     const ok = await registerFreshAccount(page, base);
     if (ok) {
@@ -70,7 +84,7 @@ async function openAsNewAccount(browser, base) {
  */
 async function runChallengeSmoke({browser, base, pass, fail}) {
     const check = (ok, message, detail) => (ok ? pass(message) : fail(`${message}: ${detail}`));
-    const member = await openAsNewAccount(browser, base);
+    const member = await openAsNewAccount(browser, base, zoneOffTheUtcDate());
     let other = null;
     try {
         if (!member.ok) {
