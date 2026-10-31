@@ -1415,3 +1415,284 @@ button.research-ranked__row:focus-visible {
         transition: color 0.15s ease, border-color 0.15s ease;
     }
 }
+
+/* --------------------------------------------------------------------------
+   Research Home (Home.cshtml, research-home.js): the large search box with
+   starting points, the first-visit strip, the basket card beside the explore
+   links, and the freshness list. Stacks to one column at narrow widths.
+   -------------------------------------------------------------------------- */
+
+.research-search--large .research-search__input {
+    min-height: 3.25rem;
+    padding: 0 var(--app-spacing-l) 0 2.75rem;
+    border-width: 2px;
+    font-size: var(--app-font-size-medium);
+}
+
+.research-search--large .research-search__icon {
+    left: var(--app-spacing-m);
+}
+
+.research-home__hero {
+    padding: var(--app-spacing-l) 0 var(--app-spacing-s);
+    text-align: center;
+}
+
+.research-home__title {
+    margin: 0;
+    font-size: var(--app-font-size-xxl);
+    font-weight: var(--app-font-weight-bold);
+}
+
+.research-home__lead {
+    margin: var(--app-spacing-xs) 0 0;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-medium);
+}
+
+.research-home__search {
+    max-width: 40rem;
+    margin: var(--app-spacing-m) auto 0;
+    text-align: left;
+}
+
+.research-home__starters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--app-spacing-s);
+    margin-top: var(--app-spacing-m);
+}
+
+.research-home__starters-label {
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-home__starter-list,
+.research-home__mix-list,
+.research-home__chips,
+.research-home__explore-list,
+.research-home__fresh-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.research-home__starter-list,
+.research-home__mix-list,
+.research-home__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--app-spacing-s);
+}
+
+.research-home__starter {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0 var(--app-spacing-m);
+    border: 1px solid var(--app-border-hover);
+    border-radius: 999px;
+    background: var(--app-bg);
+    color: var(--app-text);
+    font-size: var(--app-font-size-small);
+    text-decoration: none;
+}
+
+.research-home__starter:hover {
+    border-color: var(--app-brand);
+    color: var(--app-brand-text);
+}
+
+.research-home__steps {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-s) var(--app-spacing-l);
+    padding: var(--app-spacing-m) var(--app-spacing-l);
+    border-radius: var(--app-radius-l);
+    background: var(--app-brand-soft);
+}
+
+.research-home__steps[hidden] {
+    display: none;
+}
+
+.research-home__steps-title {
+    margin: 0;
+    font-size: var(--app-font-size-base);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-home__steps-list {
+    display: flex;
+    flex: 1 1 30rem;
+    flex-wrap: wrap;
+    gap: var(--app-spacing-xs) var(--app-spacing-l);
+    margin: 0;
+    padding-left: var(--app-spacing-m);
+    font-size: var(--app-font-size-small);
+}
+
+.research-home__steps-close {
+    margin-left: auto;
+}
+
+.research-home__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: var(--app-spacing-m);
+    align-items: start;
+}
+
+@media (max-width: 56rem) {
+    .research-home__grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.research-home__basket-empty {
+    margin: 0 0 var(--app-spacing-m);
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-home__basket-empty[hidden],
+.research-home__basket-filled[hidden],
+.research-home__mixes[hidden],
+.research-home__mix-list > li[hidden] {
+    display: none;
+}
+
+.research-home__chips {
+    margin-bottom: var(--app-spacing-m);
+}
+
+.research-home__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    padding: var(--app-spacing-xs) var(--app-spacing-xs) var(--app-spacing-xs) var(--app-spacing-m);
+    border: 1px solid var(--app-border-hover);
+    border-radius: 999px;
+    font-size: var(--app-font-size-small);
+}
+
+.research-home__chip-link {
+    color: var(--app-text);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-home__chip-share {
+    color: var(--app-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.research-home__chip-remove {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: var(--app-surface-secondary);
+    color: var(--app-text);
+    line-height: 1;
+}
+
+.research-home__chip-remove:hover {
+    background: var(--app-border);
+}
+
+.research-home__mixes {
+    margin-top: var(--app-spacing-l);
+}
+
+.research-home__mixes-label {
+    margin: 0 0 var(--app-spacing-s);
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-home__explore-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: var(--app-spacing-m);
+}
+
+.research-home__explore-link {
+    display: grid;
+    gap: var(--app-spacing-xs);
+    height: 100%;
+    padding: var(--app-spacing-m) var(--app-spacing-l);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-l);
+    background: var(--app-bg);
+    color: var(--app-text);
+    text-decoration: none;
+}
+
+.research-home__explore-link:hover {
+    border-color: var(--app-brand);
+}
+
+.research-home__explore-title {
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-home__explore-text {
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-home__fresh-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 0 var(--app-spacing-l);
+    font-size: var(--app-font-size-small);
+}
+
+.research-home__fresh-item {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--app-spacing-s);
+    padding: var(--app-spacing-xs) 0;
+    border-bottom: 1px dashed var(--app-border);
+}
+
+.research-home__fresh-date {
+    color: var(--app-text-muted);
+    white-space: nowrap;
+}
+
+.research-home__fresh-missing {
+    padding: 0 var(--app-spacing-s);
+    border-radius: 999px;
+    background: var(--app-warning-bg);
+    color: var(--app-warning-text);
+    white-space: nowrap;
+}
+
+.research-home__advice {
+    margin: var(--app-spacing-m) 0 0;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-home__starter:focus-visible,
+.research-home__chip-link:focus-visible,
+.research-home__chip-remove:focus-visible,
+.research-home__explore-link:focus-visible,
+.research-home__open:focus-visible,
+.research-home h2[tabindex="-1"]:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .research-home__starter,
+    .research-home__explore-link {
+        transition: border-color 0.15s ease, color 0.15s ease;
+    }
+}

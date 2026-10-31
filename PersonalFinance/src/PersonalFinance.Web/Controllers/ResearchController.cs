@@ -69,6 +69,19 @@ public sealed class ResearchController : Controller
     }
 
     /// <summary>
+    /// The Research Home page: the search box, starting points, the Fund Basket and when each dataset is as of. It reads
+    /// only the datasets' status, through the snapshot cache, never a dataset itself; when the status cannot be read the
+    /// page still renders, with every dataset not loaded.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Home(CancellationToken cancellationToken = default)
+    {
+        ResearchStatusDto? status = await ReadAsync(_researchApi.GetStatusAsync, ResearchCacheKeys.Status, "status",
+            cancellationToken);
+        return View(new ResearchHomeViewModel(status));
+    }
+
+    /// <summary>
     /// The fund industries snapshot, as JSON, from ApiService: the Sectors tab's basket view fetches it the first time
     /// it is shown, so the page itself does not carry it (some 600 KB). An ApiService failure (503 when it has never
     /// loaded) keeps its status code with a safe message.

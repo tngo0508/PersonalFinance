@@ -11,7 +11,9 @@
  * through a polite live region), Enter opens one (or the Fund page of a typed Tracked Fund ticker), Escape closes the list, and `/`
  * focuses the first box unless the user is typing in a field. Every navigation carries the Fund Basket.
  *
- * `match` and `latestOnly` need no page, so they are exposed on `window.ResearchSearch` for the tests.
+ * `match` and `latestOnly` need no page, so they are exposed on `window.ResearchSearch` for the tests. `searchIndex(url)`
+ * is the same once-per-page load, for a page script that needs the index too (Home hides the basket mixes whose funds
+ * it does not list), so the page reads it only once.
  */
 (function () {
     'use strict';
@@ -19,6 +21,7 @@
     const MAX_RESULTS = 8;
     const SUGGEST_DELAY_MS = 200;
     const SUGGEST_MIN_LENGTH = 2;
+    const DEFAULT_INDEX_URL = '/Research/SearchIndex';
     const KIND_ORDER = ['fund', 'company', 'office', 'industry', 'country'];
     const GROUP_KEYS = {
         fund: 'Research.Js.Search.Funds',
@@ -121,6 +124,16 @@
     }
 
     /**
+     * The search index, read once per page and shared with every search box; a failed read is tried again on the next
+     * call.
+     * @param {string} [url] - The index's address; defaults to `/Research/SearchIndex`.
+     * @returns {Promise<Object>} The index; rejects when it cannot be read.
+     */
+    function searchIndex (url) {
+        return loadIndex(url || DEFAULT_INDEX_URL);
+    }
+
+    /**
      * Go to a Research page, carrying the Fund Basket.
      * @param {string} href - The page.
      * @returns {void}
@@ -177,7 +190,7 @@
         box.append(status);
         // A press on the popup's padding or scrollbar must not blur the input and close it.
         popup.addEventListener('mousedown', (event) => event.preventDefault());
-        const indexUrl = box.dataset.indexUrl || '/Research/SearchIndex';
+        const indexUrl = box.dataset.indexUrl || DEFAULT_INDEX_URL;
         const suggestUrl = box.dataset.suggestUrl || '/Research/Suggest';
         let index = null;
         let indexState = 'idle';
@@ -452,7 +465,7 @@
         });
     }
 
-    window.ResearchSearch = { match, latestOnly };
+    window.ResearchSearch = { match, latestOnly, searchIndex };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

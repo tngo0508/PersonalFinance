@@ -1,7 +1,7 @@
 @model string
 @*
     The Research sub-navigation: Home, Sectors, World, Funds and Your basket (with how many funds it holds), and the
-    compact search box on every page but Home, which has its own large one. The model is the active page: home,
+    compact search box (_ResearchSearch) on every page but Home, which has its own large one. The model is the active page: home,
     sectors, world, funds or basket. Links carry data-research-link so research-basket.js adds the Fund Basket to them;
     the page loads research-basket.js and research-search.js, with <js-strings prefix="Research.Js." />.
 *@
@@ -34,19 +34,6 @@
     </ul>
     @if (activePage != "home")
     {
-        <div class="research-search research-search--compact research-nav__search" data-research-search
-             data-index-url="@Url.Action("SearchIndex", "Research")" data-suggest-url="@Url.Action("Suggest", "Research")">
-            <svg class="research-search__icon" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16">
-                <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/>
-                <path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-            </svg>
-            <label class="visually-hidden" for="research-nav-search">@L["Research.Search.Label"]</label>
-            <input id="research-nav-search" class="research-search__input" type="search" role="combobox"
-                   aria-expanded="false" aria-controls="research-nav-search-list" aria-autocomplete="list"
-                   autocomplete="off" spellcheck="false" placeholder="@L["Research.Search.PlaceholderShort"]"/>
-            <kbd class="research-search__kbd" aria-hidden="true">/</kbd>
-            <div class="research-search__results" id="research-nav-search-list" role="listbox"
-                 aria-label="@L["Research.Search.Label"]" hidden></div>
-        </div>
+        <partial name="_ResearchSearch" model="@(new ResearchSearchViewModel("research-nav-search", Large: false, CssClass: "research-nav__search"))"/>
     }
 </nav>

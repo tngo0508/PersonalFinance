@@ -1,0 +1,28 @@
+@model PersonalFinance.Web.Models.Research.ResearchSearchViewModel
+@*
+    One Research search box: a combobox input and its listbox, inside [data-research-search]. research-search.js wires
+    it (it adds the dropdown around the listbox and the status region). Compact in the Research navigation, large on
+    Home.
+*@
+@{
+    string listId = $"{Model.InputId}-list";
+    string boxClass = $"research-search {(Model.Large ? "research-search--large" : "research-search--compact")} {Model.CssClass}".TrimEnd();
+}
+<div class="@boxClass" data-research-search
+     data-index-url="@Url.Action("SearchIndex", "Research")" data-suggest-url="@Url.Action("Suggest", "Research")">
+    <svg class="research-search__icon" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16">
+        <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    </svg>
+    <label class="visually-hidden" for="@Model.InputId">@L["Research.Search.Label"]</label>
+    <input id="@Model.InputId" class="research-search__input" type="search" role="combobox"
+           aria-expanded="false" aria-controls="@listId" aria-autocomplete="list"
+           autocomplete="off" spellcheck="false"
+           placeholder="@(Model.Large ? L["Research.Search.Placeholder"] : L["Research.Search.PlaceholderShort"])"/>
+    @if (!Model.Large)
+    {
+        <kbd class="research-search__kbd" aria-hidden="true">/</kbd>
+    }
+    <div class="research-search__results" id="@listId" role="listbox"
+         aria-label="@L["Research.Search.Label"]" hidden></div>
+</div>

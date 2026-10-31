@@ -19,7 +19,8 @@
  * and edited only by the "Add to basket" buttons. On every page the basket follows the user between Research pages:
  * `withBasket(href, funds)` puts it on a link, `linkify(root)` rewrites each `a[data-research-link]` on load and on
  * every change, a `[data-research-basket-toggle="TICKER"]` button adds or removes its fund (pressed while in the
- * basket, disabled while the basket is full), and `[data-research-basket-count]` shows how many funds it holds.
+ * basket, disabled while the basket is full), and `[data-research-basket-count]` shows how many funds it holds. On a
+ * page without the bar, `ResearchBasket.remove(ticker)` and `ResearchBasket.set(value)` also edit it.
  */
 (function () {
     'use strict';
@@ -243,8 +244,9 @@
      * Wire the Fund Basket bar over the Tracked Funds.
      * @param {HTMLElement} bar - The bar element.
      * @param {{ticker: string, name: string, role: (string|null)}[]} tracked - The Tracked Funds, in list order.
-     * @returns {{get: function(): Object[], add: function(string): void, remove: function(string): void}} The
-     *     basket's reader and editors.
+     * @returns {{get: function(): Object[], add: function(string): void, remove: function(string): void,
+     *     set: function(string): void}} The basket's reader and editors; `set` replaces the whole basket with an
+     *     address value such as `VTI:60,BND:40` (a starting mix).
      */
     function createBasket (bar, tracked) {
         const chips = document.getElementById(CHIPS_ID);
@@ -551,8 +553,9 @@
     /**
      * The basket of a page without the bar: read from the address as it is (any well-formed ticker, since the page
      * does not carry the Tracked Funds) and edited by the "Add to basket" buttons.
-     * @returns {{get: function(): Object[], add: function(string): void, remove: function(string): void}} The
-     *     basket's reader and editors.
+     * @returns {{get: function(): Object[], add: function(string): void, remove: function(string): void,
+     *     set: function(string): void}} The basket's reader and editors; `set` replaces the whole basket with an
+     *     address value such as `VTI:60,BND:40` (a starting mix).
      */
     function createAddressBasket () {
         let funds = parse(new URL(window.location.href).searchParams.get(PARAM), null).funds;
@@ -580,6 +583,10 @@
                 funds = funds.filter((f) => f.ticker !== ticker);
                 publishBasket(funds, get());
                 announceRemoved(ticker);
+            },
+            set (value) {
+                funds = parse(value, null).funds;
+                publishBasket(funds, get());
             }
         };
     }
@@ -683,6 +690,11 @@
             store = createAddressBasket();
         }
         window.ResearchBasket.get = store.get;
+        if (store.set) {
+            // Only a page without the bar edits the basket from outside it: Home's chips and starting mixes.
+            window.ResearchBasket.remove = store.remove;
+            window.ResearchBasket.set = store.set;
+        }
         wireShell();
     }
 
