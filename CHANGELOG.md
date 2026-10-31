@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.4.0] - 2026-10-31
+
+### Added
+
+- **Research Funds page**: a Funds page of the Research redesign at `/Research/Funds`, not linked from anywhere yet, compares every tracked fund.
+  - A table of each fund's role, annualized return, volatility, Sharpe ratio, expense ratio and net assets over 1, 3 or 5 years; choose a column to sort by it. A fund that files no expense ratio, such as SPY, reads "not filed".
+  - The risk vs return chart, the correlation matrix (opening on every tracked fund) and what the funds hold, each on its own view.
+  - `?view=`, `?window=`, `?sort=` and `?quarter=` open the page as you left it; an unknown value opens the defaults. When the fund returns have not loaded, the table still lists the funds and only the views that need returns are unavailable.
+
+### Changed
+
+- **What the tracked funds hold**: the Funds tab now shows an expandable list (fund, then asset category, then its largest holdings and "Other"), not a tree of circles.
+  - Each holding's name links to the company search by name, keeping your Fund Basket.
+
+### Removed
+
+- **Holdings tree**: the circle tree, its quarter scrubber and its table are gone; the list shows the same holdings for the latest quarter, and the Funds page lets you pick any quarter.
+
 ## [17.3.0] - 2026-10-31
 
 ### Added

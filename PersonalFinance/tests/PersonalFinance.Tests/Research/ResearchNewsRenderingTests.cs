@@ -43,7 +43,7 @@ public sealed partial class ResearchNewsRenderingTests : IAsyncLifetime
         "Fund Basket", "Use equal weights", "Add a fund: type a ticker or name", "Largest SEC filers by Public float",
         "largest of", "Show as table", "Key takeaways", "View options", "SEC industry offices", "About this data",
         "Data as of", "Play through the years", "Overlap: same holdings", "Correlation: move together",
-        "All tracked funds", "What the tracked funds hold", "How to read the tree", "Play through the quarters",
+        "All tracked funds", "What the tracked funds hold", "How to read the list", "Play through the quarters",
         "Growth of 100", "Adjusted for inflation", "Compare your basket with", "Returns to", "Inflation to",
         "Stock-market value by country", "Colour the map by", "Market cap", "World market", "Your basket by issuer country",
         "Look up a company", "Ticker or company name", "e.g. MSFT or Microsoft", ">Look up<", "Press releases",
@@ -209,6 +209,68 @@ public sealed partial class ResearchNewsRenderingTests : IAsyncLifetime
         AssertShows(english, ResearchEnglish);
         AssertHides(html, ResearchEnglish);
         Assert.Contains(TestLocalization.Vietnamese("Research.Title"), html);
+    }
+
+    [Theory]
+    [InlineData("/Research/Funds", "Compare the tracked funds")]
+    [InlineData("/Research/Funds?view=risk", "research-risk-chart")]
+    [InlineData("/Research/Funds?view=correlation", "data-correlation-all=\"true\"")]
+    [InlineData("/Research/Funds?view=holdings", "research-holdings-list")]
+    public async Task FundsPage_RendersEachView(string url, string expected)
+    {
+        LoadEveryDataset();
+
+        string html = await GetAsync(url, vietnamese: false);
+
+        Assert.Contains(expected, html, StringComparison.Ordinal);
+        // The fee of a fund without filed facts reads "not filed" in the table.
+        if (url == "/Research/Funds")
+        {
+            Assert.Contains(">not filed<", html, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public async Task FundsPage_HoldingsList_LinksEachHoldingByName_AndCarriesNoIdentifier()
+    {
+        LoadEveryDataset();
+        _research.Returns(nameof(IResearchApi.GetFundsAsync), new FundsSnapshotDto
+        {
+            AsOf = new DateOnly(2025, 12, 31),
+            Periods = ["2025 Q4"],
+            Funds = [new TrackedFundDto { Ticker = "VTI", Name = "Vanguard Total Stock Market ETF" }],
+            Values =
+            [
+                new FundsPeriodDto
+                {
+                    Period = "2025 Q4",
+                    Funds =
+                    [
+                        new FundHoldingsDto
+                        {
+                            Ticker = "VTI", ReportDate = new DateOnly(2025, 12, 31), NetAssets = 1m, HoldingCount = 3,
+                            Categories =
+                            [
+                                new FundCategoryDto
+                                {
+                                    Code = "EC", Name = "Equity, common", Percent = 99m, HoldingCount = 3,
+                                    Top = [new FundHoldingDto { Name = "NVIDIA CORP", Percent = 7m }],
+                                    OtherCount = 2, OtherPercent = 92m,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        });
+
+        string html = await GetAsync("/Research/Funds?view=holdings", vietnamese: false);
+
+        Assert.Contains("href=\"/Research/Company?q=NVIDIA%20CORP\"", html, StringComparison.Ordinal);
+        Assert.Contains("Other (2)", html, StringComparison.Ordinal);
+        string list = html[html.IndexOf("research-holdings-list", StringComparison.Ordinal)..];
+        Assert.DoesNotMatch(new Regex(@"\b[0-9A-Z]{8}[0-9]\b"), list);
+        Assert.DoesNotMatch(new Regex(@"\b[A-Z]{2}[0-9A-Z]{9}[0-9]\b"), list);
     }
 
     [Fact]

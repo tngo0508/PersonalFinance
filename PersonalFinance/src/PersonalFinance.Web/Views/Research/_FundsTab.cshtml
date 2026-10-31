@@ -17,9 +17,9 @@
 }
 
 @* The Funds tab: the overlap of the Fund Basket's funds (js/research/research-overlap.js, from each fund's latest
-   report) and how closely their returns move together (js/research/research-correlation.js), then a collapsible tree of what the Tracked Funds hold (fund, then N-PORT asset category, then holdings), one
-   quarter at a time. Drawn by js/research/research-funds.js from the data island below; the scrubber, live region and
-   table view are wired by js/research/research-page.js. Hidden until its tab is chosen. *@
+   report) and how closely their returns move together (js/research/research-correlation.js), then the list of what
+   the Tracked Funds hold in the latest quarter (_FundHoldingsList, shared with the Funds page: fund, then N-PORT asset
+   category, then holdings). Hidden until its tab is chosen. *@
 <section class="research-deck research-deck--stacked" id="research-panel-funds" data-research-basket role="tabpanel" aria-labelledby="research-tab-funds"
          hidden="@(!Model.IsSelected(ResearchViewModel.FundsTab))">
     @if (showFunds)
@@ -81,26 +81,8 @@
             }
             <p class="research-card__source">@L["Research.Source.NportReturns"]</p>
         </div>
-        <div class="research-scrubber" data-research-scrubber>
-            <button type="button" class="research-scrubber__play" data-research-play data-state="paused"
-                    aria-label="@L["Research.Js.Page.PlayQuarters"]">
-                <svg class="research-scrubber__icon research-scrubber__icon--play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 4v16l13-8z"/></svg>
-                <svg class="research-scrubber__icon research-scrubber__icon--pause" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
-            </button>
-            <div class="research-scrubber__track">
-                <label class="visually-hidden" for="research-funds-quarter">@L["Research.Funds.Quarter"]</label>
-                <input type="range" class="research-scrubber__range" id="research-funds-quarter" data-research-range
-                       min="0" max="@(Model.Funds.Snapshot!.Periods.Count - 1)" step="1" value="@(Model.Funds.Snapshot.Periods.Count - 1)"
-                       aria-valuetext="@latest!.Period"/>
-                <div class="research-scrubber__ends" aria-hidden="true">
-                    <span>@Model.Funds.Snapshot.Periods[0]</span>
-                    <span>@Model.Funds.Snapshot.Periods[^1]</span>
-                </div>
-            </div>
-            <p class="research-scrubber__period" data-research-period aria-hidden="true">@latest.Period</p>
-        </div>
     }
-    <div class="research-card">
+    <div class="research-card" id="research-holdings">
         <h2 class="research-card__title">@L["Research.Funds.Holdings.Title"]</h2>
         @if (!showFunds)
         {
@@ -108,16 +90,8 @@
         }
         else
         {
-            <p class="research-card__subtitle" id="research-funds-subtitle">
-                @L.Named("Research.Js.Funds.Subtitle", ("period", latest!.Period))
-            </p>
-            <div class="research-funds-tree" id="research-funds-tree"></div>
-            <div class="research-tooltip" id="research-funds-tooltip" aria-hidden="true" hidden></div>
-            <div class="research-card__actions">
-                <button type="button" class="research-chip" data-research-table-toggle aria-pressed="false"
-                        aria-controls="research-funds-table">@L["Research.Js.Common.ShowTable"]</button>
-            </div>
-            <div class="research-table-host" id="research-funds-table" data-research-table hidden></div>
+            <p class="research-card__subtitle">@L.Named("Research.Funds.Holdings.Subtitle", ("period", latest!.Period))</p>
+            <partial name="_FundHoldingsList" model="@(new FundHoldingsListViewModel { Period = latest, Funds = Model.Funds.Snapshot!.Funds })"/>
         }
         <p class="research-card__source">@L["Research.Source.Nport"]</p>
     </div>
@@ -140,7 +114,7 @@
 
 @if (showFunds)
 {
-    @* The funds snapshot as a JSON data island (camelCase, HTML-safe encoding), read by research-funds.js. *@
+    @* The funds snapshot as a JSON data island (camelCase, HTML-safe encoding): the Tracked Funds, read by research-basket.js, research-performance.js and research-risk.js. *@
     <script type="application/json" id="research-funds-data">@Json.Serialize(Model.Funds.Snapshot)</script>
     if (overlap is not null)
     {

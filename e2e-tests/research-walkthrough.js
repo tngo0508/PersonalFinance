@@ -1,7 +1,8 @@
 /**
  * Research first-session walkthrough (spec #217, Testing Decisions): the steps a new Account takes through the
  * Sectors page (Sectors 1 to 7, which were Research 2 to 6e on the Sectors tab before the Sectors page shared its panel)
- * and the Funds and World tabs, then the Companies tab's 8 steps (spec #242, Company 1 to 8). Run from ui-test.js as
+ * the Funds page (Funds 1 to 4: table sort, risk roles, correlation, holdings list), the tabbed page's Funds and World
+ * tabs, then the Companies tab's 8 steps (spec #242, Company 1 to 8). Run from ui-test.js as
  * Test 9c.
  *
  * Needs the ApiService started in Development with E2E_SEED_RESEARCH=true, which stores small fixture snapshots
@@ -558,26 +559,116 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
-        // Step 7: Funds opens with SPY expanded; QQQ expands with Enter; the scrubber shows quarters. Back on the tabbed page.
+        // The Funds steps run on the Funds page (/Research/Funds): the comparison table, the risk view's role filter,
+        // the correlation view on every tracked fund, and the holdings list.
+        const tickersInTable = () => page.locator('#research-compare-table tbody tr').evaluateAll(
+            (rows) => rows.map((r) => r.dataset.ticker));
+
+        // Funds 1: the table opens on 3 years sorted by return; a column header sorts by it (the address keeps it), SPY's
+        // fee reads "not filed", and unknown values in the address fall back to the defaults.
+        await step('Funds 1', fail, async () => {
+            await page.goto(`${base}/Research/Funds?view=nope&window=9&sort=bogus&quarter=1999 Q1`,
+                {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const current = (await page.locator('.research-funds-page__views [aria-current="page"]').textContent()).trim();
+            const window = await page.locator('[data-funds-window][aria-current]').getAttribute('data-funds-window');
+            const sortedBy = await page.locator('#research-compare-table th[aria-sort]').getAttribute('data-sort-key');
+            const byReturn = await tickersInTable();
+            await page.locator('#research-compare-table th[data-sort-key="ticker"] a').click();
+            await page.waitForLoadState('networkidle');
+            const byTicker = await tickersInTable();
+            const sortParam = new URL(page.url()).searchParams.get('sort');
+            const ascending = await page.locator('#research-compare-table th[data-sort-key="ticker"]').getAttribute('aria-sort');
+            const spyFee = (await page.locator('#research-compare-table tr[data-ticker="SPY"] [data-fee]').textContent()).trim();
+            const qqqFee = (await page.locator('#research-compare-table tr[data-ticker="QQQ"] [data-fee]').textContent()).trim();
+            const ok = current === 'Compare' && window === '3' && sortedBy === 'return' && byReturn.length === 2 &&
+                byTicker.join(',') === 'QQQ,SPY' && sortParam === 'ticker' && ascending === 'ascending' &&
+                spyFee === 'not filed' && qqqFee === '0.19%';
+            if (ok) {
+                pass(`Funds 1: unknown values fall back to Compare, 3 years, by return (${byReturn.join(', ')}); Fund sorts A to Z; SPY's fee is "not filed", QQQ's ${qqqFee}`);
+            } else {
+                fail(`Funds 1: view "${current}", window ${window}, sorted ${sortedBy} ${JSON.stringify(byReturn)}, ` +
+                    `by ticker ${JSON.stringify(byTicker)} (${sortParam}, ${ascending}), fees "${spyFee}"/"${qqqFee}"`);
+            }
+        });
+
+        // Funds 2: the risk view draws both funds; a role chip narrows them and pressing it again shows every fund.
+        await step('Funds 2', fail, async () => {
+            await page.goto(`${base}/Research/Funds?view=risk`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.waitForSelector('#research-risk-chart svg', {timeout: TIMEOUT});
+            const chips = (await page.locator('#research-risk-roles button').allTextContents()).map((t) => t.trim());
+            const role = page.locator('#research-risk-roles button', {hasText: 'US broad'});
+            await role.click();
+            const pressed = await role.getAttribute('aria-pressed');
+            const shownNarrowed = (await page.locator('#research-risk-note').textContent()).trim();
+            await role.click();
+            const released = await role.getAttribute('aria-pressed');
+            const ok = chips.includes('US broad') && pressed === 'true' && released === 'false';
+            if (ok) {
+                pass(`Funds 2: the risk view's role chips (${chips.join(', ')}) narrow the funds and release again`);
+            } else {
+                fail(`Funds 2: chips ${JSON.stringify(chips)}, pressed ${pressed}/${released}, note "${shownNarrowed}"`);
+            }
+        });
+
+        // Funds 3: the correlation view opens on every tracked fund, without a basket.
+        await step('Funds 3', fail, async () => {
+            await page.goto(`${base}/Research/Funds?view=correlation`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const shown = await page.locator('#research-correlation-view').isVisible();
+            const allPressed = await page.locator('#research-correlation-all').getAttribute('aria-pressed');
+            const columns = await page.locator('#research-correlation-matrix thead th').count();
+            const promptHidden = !(await page.locator('#research-correlation-prompt').isVisible());
+            if (shown && allPressed === 'true' && columns === 2 && promptHidden) {
+                pass('Funds 3: the correlation view opens on all tracked funds, with no basket');
+            } else {
+                fail(`Funds 3: shown ${shown}, all "${allPressed}", columns ${columns}, prompt hidden ${promptHidden}`);
+            }
+        });
+
+        // Funds 4: the holdings list opens a fund, then a category; each holding links to the company search by name
+        // (never an identifier) and keeps the basket; a quarter link shows that quarter.
+        await step('Funds 4', fail, async () => {
+            await page.goto(`${base}/Research/Funds?view=holdings&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const latest = await page.locator('#research-holdings-list').getAttribute('data-period');
+            const fund = page.locator('#research-holdings-list [data-ticker="SPY"] > details');
+            await fund.locator(':scope > summary').click();
+            const fundOpen = await fund.evaluate((d) => d.open);
+            const category = fund.locator('.research-holdings__category > details').first();
+            await category.locator(':scope > summary').click();
+            const categoryOpen = await category.evaluate((d) => d.open);
+            const link = category.locator('.research-holdings__link').first();
+            const linkVisible = await link.isVisible();
+            const href = await link.getAttribute('href');
+            const url = new URL(href, base);
+            const name = (await link.textContent()).trim();
+            const identifierFree = !/\b[0-9A-Z]{8}[0-9]\b/.test(href) && !/\b[A-Z]{2}[0-9A-Z]{9}[0-9]\b/.test(href);
+            await page.locator('[data-funds-quarter="2025 Q4"]').click();
+            await page.waitForLoadState('networkidle');
+            const earlier = await page.locator('#research-holdings-list').getAttribute('data-period');
+            const keptBasket = new URL(page.url()).searchParams.get('basket');
+            const ok = latest === '2026 Q2' && fundOpen && categoryOpen && linkVisible &&
+                url.pathname.endsWith('/Research/Company') && url.searchParams.get('q') === name &&
+                url.searchParams.get('basket') === 'SPY:60,QQQ:40' && identifierFree && earlier === '2025 Q4' &&
+                keptBasket === 'SPY:60,QQQ:40';
+            if (ok) {
+                pass(`Funds 4: SPY opens to its categories and holdings; "${name}" links to the company search by name with the basket; 2025 Q4 shows on its link`);
+            } else {
+                fail(`Funds 4: latest ${latest}, open ${fundOpen}/${categoryOpen}, link ${linkVisible} "${href}" ("${name}"), ` +
+                    `identifier-free ${identifierFree}, earlier ${earlier}, basket ${keptBasket}`);
+            }
+        });
+
+        // Step 7: back on the tabbed page, the Funds tab shows the same holdings list at the latest quarter.
         await step('Research 7', fail, async () => {
             await page.goto(`${base}/Research`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             await page.click('#research-tab-funds');
-            await page.waitForSelector('#research-funds-tree [role="tree"]', {timeout: TIMEOUT});
-            const spy = page.locator('#research-funds-tree [role="treeitem"][aria-label^="SPY "]');
-            const qqq = page.locator('#research-funds-tree [role="treeitem"][aria-label^="QQQ "]');
-            const spyOpen = await spy.getAttribute('aria-expanded');
-            const qqqBefore = await qqq.getAttribute('aria-expanded');
-            await qqq.focus();
-            await page.keyboard.press('Enter');
-            await page.waitForFunction(() => {
-                const node = document.querySelector('#research-funds-tree [role="treeitem"][aria-label^="QQQ "]');
-                return node && node.getAttribute('aria-expanded') === 'true';
-            }, null, {timeout: 5000});
-            const quarter = await periodLabel(page, 'funds');
-            if (spyOpen === 'true' && qqqBefore === 'false' && /^\d{4} Q[1-4]$/.test(quarter)) {
-                pass(`Research 7: SPY starts open, QQQ opens with Enter, the scrubber shows ${quarter}`);
+            const list = page.locator('#research-panel-funds #research-holdings-list');
+            const shown = await list.isVisible();
+            const quarter = await list.getAttribute('data-period');
+            const funds = await list.locator(':scope > li').evaluateAll((items) => items.map((i) => i.dataset.ticker));
+            if (shown && /^\d{4} Q[1-4]$/.test(quarter) && funds.join(',') === 'SPY,QQQ') {
+                pass(`Research 7: the Funds tab lists what SPY and QQQ hold in ${quarter}`);
             } else {
-                fail(`Research 7: SPY expanded "${spyOpen}", QQQ before "${qqqBefore}", quarter "${quarter}"`);
+                fail(`Research 7: shown ${shown}, quarter "${quarter}", funds ${JSON.stringify(funds)}`);
             }
         });
 
@@ -1136,10 +1227,10 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
-        // Step 9: "Show as table" lists rows on each tab.
+        // Step 9: "Show as table" lists rows on each chart tab (the Funds tab's holdings are a list already).
         await step('Research 9', fail, async () => {
             const counts = {};
-            for (const tabId of ['sectors', 'funds', 'world']) {
+            for (const tabId of ['sectors', 'world']) {
                 await page.click(`#research-tab-${tabId}`);
                 // With a basket set, World opens on the basket map: the table belongs to the market view.
                 if (tabId === 'world' && await page.locator('[data-world-view="market"][aria-pressed="false"]').count()) {

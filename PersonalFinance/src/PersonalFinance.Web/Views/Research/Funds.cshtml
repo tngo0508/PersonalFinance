@@ -1,0 +1,315 @@
+@model ResearchFundsPageViewModel
+@using System.Globalization
+@using PersonalFinance.Shared.DTOs.Research
+@using PersonalFinance.Shared.Helpers
+
+@{
+    ViewData["Title"] = L["Research.Nav.Funds"].Value + " · " + L["Research.Title"].Value;
+    CultureInfo culture = CultureInfo.CurrentCulture;
+    bool showFunds = !Model.Funds.Unavailable;
+    FundReturnsSnapshotDto? returns = Model.FundReturns;
+    FundFactsSnapshotDto? facts = Model.FundFacts;
+    bool showRisk = Model.View == ResearchFundsPageViewModel.RiskView && !Model.RiskUnavailable;
+    bool showCorrelation = Model.View == ResearchFundsPageViewModel.CorrelationView && showFunds && returns is not null;
+    string? quarter = Model.HoldingsPeriod is { } period && !ReferenceEquals(period, Model.Funds.LatestPeriod) ? period.Period : null;
+    // Every link of the page keeps the other choices; data-research-link adds the Fund Basket.
+    string Href(string view, int? window = null, string? sort = null, string? toQuarter = null) =>
+        Url.Action("Funds", "Research", new
+        {
+            view = view == ResearchFundsPageViewModel.TableView ? null : view,
+            window = (window ?? Model.Window) == ResearchFundsPageViewModel.DefaultWindow ? (int?)null : window ?? Model.Window,
+            sort = (sort ?? Model.Sort) == ResearchFundsPageViewModel.SortReturn ? null : sort ?? Model.Sort,
+            quarter = toQuarter ?? quarter,
+        })!;
+    string Percent(decimal? value, int digits) => value is { } v
+        ? (v / 100m).ToString("P" + digits.ToString(CultureInfo.InvariantCulture), culture)
+        : "—";
+    (string View, string LabelKey)[] views =
+    [
+        (ResearchFundsPageViewModel.TableView, "Research.Funds.Page.View.Table"),
+        (ResearchFundsPageViewModel.RiskView, "Research.Funds.Page.View.Risk"),
+        (ResearchFundsPageViewModel.CorrelationView, "Research.Funds.Page.View.Correlation"),
+        (ResearchFundsPageViewModel.HoldingsView, "Research.Funds.Page.View.Holdings"),
+    ];
+    (string Key, string LabelKey)[] columns =
+    [
+        (ResearchFundsPageViewModel.SortTicker, "Research.Funds.Page.Column.Ticker"),
+        (ResearchFundsPageViewModel.SortRole, "Research.Funds.Page.Column.Role"),
+        (ResearchFundsPageViewModel.SortReturn, "Research.Funds.Page.Column.Return"),
+        (ResearchFundsPageViewModel.SortVolatility, "Research.Funds.Page.Column.Volatility"),
+        (ResearchFundsPageViewModel.SortSharpe, "Research.Funds.Page.Column.Sharpe"),
+        (ResearchFundsPageViewModel.SortFee, "Research.Funds.Page.Column.Fee"),
+        (ResearchFundsPageViewModel.SortAssets, "Research.Funds.Page.Column.Assets"),
+    ];
+    (int Years, string LabelKey)[] windows =
+    [
+        (1, "Research.Common.OneYear"), (3, "Research.Common.ThreeYears"), (5, "Research.Common.FiveYears"),
+    ];
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/research.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/research-funds.css" asp-append-version="true"/>
+}
+
+@* Research Funds: every Tracked Fund side by side. ?view= picks the table (default), the risk vs return chart, the
+   correlation matrix or the holdings list; ?window= (1, 3, 5 years), ?sort= and ?quarter= come from the address and
+   are checked by ResearchFundsPageViewModel. It reads the funds, fund returns and fund facts data only. *@
+<div class="research research-funds-page">
+    <partial name="_ResearchNav" model="@("funds")"/>
+
+    <header class="research-header">
+        <div>
+            <h1 class="research-header__title">@L["Research.Nav.Funds"]</h1>
+            <p class="research-header__subtitle">@L["Research.Funds.Page.Lead"]</p>
+        </div>
+        <p class="research-header__pill">@L["Research.Header.Disclaimer"]</p>
+    </header>
+
+    <nav class="research-funds-page__views" aria-label="@L["Research.Funds.Page.ViewsLabel"]">
+        <ul class="research-view-toggle">
+            @foreach ((string view, string labelKey) in views)
+            {
+                <li>
+                    <a class="research-view-toggle__button" href="@Href(view)" data-research-link data-funds-view="@view"
+                       aria-current="@(view == Model.View ? "page" : null)">@L[labelKey]</a>
+                </li>
+            }
+        </ul>
+    </nav>
+
+    <section class="research-deck" id="research-panel-funds-page" data-funds-view-shown="@Model.View">
+        @if (Model.View == ResearchFundsPageViewModel.TableView)
+        {
+            <div class="research-card research-compare" id="research-compare">
+                <h2 class="research-card__title">@L["Research.Funds.Page.Table.Title"]</h2>
+                @if (!showFunds)
+                {
+                    <partial name="_UnavailableState" model="Model.Funds.UnavailableState"/>
+                }
+                else
+                {
+                    <p class="research-card__subtitle">@L["Research.Funds.Page.Table.Subtitle"]</p>
+                    <div class="research-correlation__controls">
+                        <ul class="research-view-toggle" aria-label="@L["Research.Common.Window"]">
+                            @foreach ((int years, string labelKey) in windows)
+                            {
+                                <li>
+                                    <a class="research-view-toggle__button" href="@Href(Model.View, window: years)" data-research-link
+                                       data-funds-window="@years" aria-current="@(years == Model.Window ? "true" : null)">@L[labelKey]</a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                    @if (returns is null)
+                    {
+                        @* The returns have never loaded: the table still lists the funds, with their fees and sizes. *@
+                        <partial name="_UnavailableState" model="Model.ReturnsUnavailableState"/>
+                    }
+                    <div class="research-compare__scroll">
+                        <table class="table research-compare__table" id="research-compare-table">
+                            <caption class="visually-hidden">@L.Named("Research.Funds.Page.Table.Caption", ("span", L.Plural("Research.Funds.Page.Years", Model.Window)))</caption>
+                            <thead>
+                            <tr>
+                                @foreach ((string key, string labelKey) in columns)
+                                {
+                                    bool sorted = key == Model.Sort;
+                                    string direction = ResearchFundsPageViewModel.SortsDescending(key) ? "descending" : "ascending";
+                                    <th scope="col" data-sort-key="@key" aria-sort="@(sorted ? direction : null)"
+                                        class="@(key is ResearchFundsPageViewModel.SortTicker or ResearchFundsPageViewModel.SortRole ? null : "research-compare__number")">
+                                        <a class="research-compare__sort" href="@Href(Model.View, sort: key)" data-research-link>
+                                            <span>@L[labelKey]</span>
+                                            @if (sorted)
+                                            {
+                                                <span aria-hidden="true">@(direction == "descending" ? "↓" : "↑")</span>
+                                            }
+                                        </a>
+                                    </th>
+                                }
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (FundCompareRow row in Model.Rows)
+                            {
+                                <tr data-ticker="@row.Ticker">
+                                    <th scope="row"><span class="research-compare__ticker">@row.Ticker</span> <span class="research-compare__name">@row.Name</span></th>
+                                    <td>@(row.Role ?? "—")</td>
+                                    <td class="research-compare__number">@Percent(row.AnnualReturn, 1)</td>
+                                    <td class="research-compare__number">@Percent(row.Volatility, 1)</td>
+                                    <td class="research-compare__number">@(row.Sharpe is { } sharpe ? sharpe.ToString("N2", culture) : "—")</td>
+                                    <td class="research-compare__number" data-fee>@(row.ExpenseRatio is null ? L["Research.Funds.Page.NotFiled"].Value : Percent(row.ExpenseRatio, 2))</td>
+                                    <td class="research-compare__number">@(row.NetAssets > 0 ? MoneyFormatter.FormatWhole(row.NetAssets, "USD", culture) : "—")</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="research-overlap__note">@L["Research.Funds.Page.Table.Note"]</p>
+                }
+                <p class="research-card__source">@L["Research.Source.Risk"]</p>
+            </div>
+        }
+        else if (Model.View == ResearchFundsPageViewModel.RiskView)
+        {
+            <div class="research-card research-risk" id="research-risk">
+                <h2 class="research-card__title">@L["Research.Tab.Risk"]</h2>
+                @if (!showRisk)
+                {
+                    <partial name="_UnavailableState" model="@(showFunds ? Model.ReturnsUnavailableState : Model.Funds.UnavailableState)"/>
+                }
+                else
+                {
+                    <p class="research-card__subtitle">@L["Research.Risk.Subtitle"]</p>
+                    <div class="research-correlation__controls">
+                        <div class="research-view-toggle" role="group" aria-label="@L["Research.Common.Window"]">
+                            @foreach ((int years, string labelKey) in windows)
+                            {
+                                <button type="button" class="research-view-toggle__button" data-risk-years="@years"
+                                        aria-pressed="@(years == Model.Window ? "true" : "false")">@L[labelKey]</button>
+                            }
+                        </div>
+                        <button type="button" class="research-chip" id="research-risk-table-toggle" aria-pressed="false"
+                                aria-controls="research-risk-table">@L["Research.Js.Common.ShowTable"]</button>
+                    </div>
+                    <div class="research-risk__roles" id="research-risk-roles" role="group" aria-label="@L["Research.Risk.RolesLabel"]"></div>
+                    @if (facts is null)
+                    {
+                        <p class="research-overlap__note">@L["Research.Risk.FactsMissing"]</p>
+                    }
+                    <figure class="research-risk__figure">
+                        <div class="research-risk__chart" id="research-risk-chart" role="group"></div>
+                        <ul class="research-performance__legend" id="research-risk-legend" aria-label="@L["Research.Risk.LegendLabel"]"></ul>
+                    </figure>
+                    <p class="research-overlap__note" id="research-risk-note"></p>
+                    <div class="research-overlap__table" id="research-risk-table" hidden></div>
+                    <div class="research-tooltip research-risk__card" id="research-risk-card" aria-hidden="true" hidden></div>
+                }
+                <p class="research-card__source">@L["Research.Source.Risk"]</p>
+            </div>
+        }
+        else if (Model.View == ResearchFundsPageViewModel.CorrelationView)
+        {
+            <div class="research-card research-correlation" id="research-correlation" data-correlation-all="true">
+                <h2 class="research-card__title">@L["Research.Funds.Correlation.Title"]</h2>
+                @if (!showCorrelation)
+                {
+                    <partial name="_UnavailableState" model="@(showFunds ? Model.ReturnsUnavailableState : Model.Funds.UnavailableState)"/>
+                }
+                else
+                {
+                    <p class="research-card__subtitle">
+                        @L.Named("Research.Funds.Correlation.Subtitle", ("month", returns!.AsOf.ToString(ResearchViewModel.MonthYear, culture)))
+                    </p>
+                    <div class="research-correlation__controls">
+                        <div class="research-view-toggle" role="group" aria-label="@L["Research.Common.Window"]">
+                            @foreach ((int years, string labelKey) in windows)
+                            {
+                                <button type="button" class="research-view-toggle__button" data-correlation-years="@years"
+                                        aria-pressed="@(years == Model.Window ? "true" : "false")">@L[labelKey]</button>
+                            }
+                        </div>
+                        <button type="button" class="research-chip" id="research-correlation-all" aria-pressed="true">@L["Research.Funds.Correlation.All"]</button>
+                    </div>
+                    <p class="research-overlap__prompt" id="research-correlation-prompt" hidden>@L["Research.Funds.Correlation.Prompt"]</p>
+                    <div class="research-overlap__view" id="research-correlation-view">
+                        <ul class="research-overlap__callouts" id="research-correlation-callouts" aria-label="@L["Research.Funds.Correlation.CalloutsLabel"]"></ul>
+                        <div class="research-overlap__matrix" id="research-correlation-matrix"></div>
+                        <p class="research-overlap__note">@L["Research.Funds.Correlation.Note"]</p>
+                    </div>
+                    <div class="research-tooltip" id="research-correlation-tooltip" aria-hidden="true" hidden></div>
+                }
+                <p class="research-card__source">@L["Research.Source.NportReturns"]</p>
+            </div>
+        }
+        else
+        {
+            <div class="research-card" id="research-holdings">
+                <h2 class="research-card__title">@L["Research.Funds.Holdings.Title"]</h2>
+                @if (Model.Holdings is not { } holdings)
+                {
+                    <partial name="_UnavailableState" model="Model.Funds.UnavailableState"/>
+                }
+                else
+                {
+                    <p class="research-card__subtitle">@L.Named("Research.Funds.Holdings.Subtitle", ("period", holdings.Period.Period))</p>
+                    <nav class="research-holdings__quarters" aria-label="@L["Research.Funds.Quarter"]">
+                        <ul class="research-view-toggle">
+                            @foreach (string q in holdings.Quarters)
+                            {
+                                <li>
+                                    <a class="research-view-toggle__button" href="@Href(Model.View, toQuarter: q)" data-research-link
+                                       data-funds-quarter="@q" aria-current="@(q == holdings.Period.Period ? "true" : null)">@q</a>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                    <partial name="_FundHoldingsList" model="holdings"/>
+                }
+                <p class="research-card__source">@L["Research.Source.Nport"]</p>
+            </div>
+        }
+
+        <aside class="research-panel" aria-label="@L["Research.Funds.PanelLabel"]">
+            <h2 class="research-panel__title">@L["Research.Common.HowToRead"]</h2>
+            @if (Model.View == ResearchFundsPageViewModel.RiskView)
+            {
+                <p>@L["Research.Risk.HowToRead1"]</p>
+                <p>@L["Research.Risk.HowToRead2"]</p>
+                <p>@L["Research.Risk.HowToRead3"]</p>
+            }
+            else if (Model.View == ResearchFundsPageViewModel.HoldingsView)
+            {
+                <p>@L["Research.Funds.HowToReadText"]</p>
+            }
+            else
+            {
+                <p>@L["Research.Funds.Page.HowToRead"]</p>
+            }
+            <h2 class="research-panel__title">@L["Research.Common.AboutThisData"]</h2>
+            <p>@L["Research.Funds.About1"]</p>
+            <p>@L["Research.Risk.About"]</p>
+            <h2 class="research-panel__title">@L["Research.Common.DataAsOf"]</h2>
+            <p class="research-panel__as-of">
+                @(Model.Funds.AsOf is { } asOf ? asOf.ToString(ResearchViewModel.LongDate, culture) : L["Research.Common.NotLoadedYet"].Value)
+            </p>
+            <p class="research-panel__as-of">
+                @(returns is null ? L["Research.Common.NotLoadedYet"].Value : L.Named("Research.Common.ReturnsTo", ("month", returns.AsOf.ToString(ResearchViewModel.MonthYear, culture))))
+            </p>
+        </aside>
+    </section>
+
+    @* Summarises each change of window for screen readers. *@
+    <p class="visually-hidden" id="research-live" aria-live="polite"></p>
+</div>
+
+@if (showFunds)
+{
+    @* The funds snapshot's fund list, read by research-basket.js (the Fund Basket's choices) and research-risk.js
+       (names and roles). Only the fund list: the holdings are drawn above, server-side. *@
+    <script type="application/json" id="research-funds-data">@Json.Serialize(new { funds = Model.Funds.Snapshot!.Funds })</script>
+}
+@if (showRisk || showCorrelation)
+{
+    <script type="application/json" id="research-fund-returns-data">@Json.Serialize(returns)</script>
+}
+@if (showRisk && facts is not null)
+{
+    <script type="application/json" id="research-fund-facts-data">@Json.Serialize(facts)</script>
+}
+
+@section Scripts {
+    <js-strings prefix="Research.Js." />
+    <script src="~/js/research/research-page.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-basket.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-search.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-glossary.js" asp-append-version="true"></script>
+    @if (showRisk)
+    {
+        <script src="~/lib/d3/d3.min.js"></script>
+        <script src="~/js/research/research-risk.js" asp-append-version="true"></script>
+    }
+    @if (showCorrelation)
+    {
+        <script src="~/js/research/research-correlation.js" asp-append-version="true"></script>
+    }
+}
