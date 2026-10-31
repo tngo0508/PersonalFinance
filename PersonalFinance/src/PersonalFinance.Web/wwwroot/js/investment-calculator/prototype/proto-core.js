@@ -262,7 +262,7 @@
             return;
         }
         el.innerHTML = '';
-        const size = Math.min(220, Math.max(140, el.clientWidth));
+        const size = Math.min(180, Math.max(140, el.clientWidth));
         const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${size} ${size}`).attr('width', size).attr('height', size)
             .attr('role', 'img').attr('aria-label', parts.map(p => `${p.name} ${money(p.value)}`).join(', '));
         const g = svg.append('g').attr('transform', `translate(${size / 2},${size / 2})`);

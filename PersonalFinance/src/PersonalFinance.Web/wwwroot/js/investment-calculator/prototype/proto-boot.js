@@ -5,11 +5,11 @@
 (function () {
     'use strict';
 
-    const KEYS = ['A', 'B', 'C'];
+    const KEYS = ['A', 'B', 'C', 'D'];
 
     /**
      * Current variant key from the URL.
-     * @returns {string} A, B or C.
+     * @returns {string} A, B, C or D.
      */
     function current () {
         const v = (new URLSearchParams(window.location.search).get('variant') || 'A').toUpperCase();
