@@ -128,8 +128,11 @@
             line(PFI18n.t('Research.Js.Correlation.Months',
                 { count: PFI18n.formatNumber(cell.years * 12), month: formatMonth(cell.end) }), 'research-tooltip__muted')
         ]);
-        let years = DEFAULT_YEARS;
-        let all = false;
+        // The Funds page opens on its window and on every tracked fund (data-correlation-all); the tabbed page on
+        // 3 years and the basket's funds.
+        const pressed = yearButtons.find((button) => button.getAttribute('aria-pressed') === 'true');
+        let years = pressed ? Number(pressed.dataset.correlationYears) : DEFAULT_YEARS;
+        let all = card.dataset.correlationAll === 'true';
 
         /**
          * The funds to show, in their order: every fund with returns, or the basket's that have them.

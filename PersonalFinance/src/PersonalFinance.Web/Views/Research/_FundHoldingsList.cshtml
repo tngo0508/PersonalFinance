@@ -1,0 +1,70 @@
+@model FundHoldingsListViewModel
+@using System.Globalization
+@using PersonalFinance.Shared.DTOs.Research
+
+@{
+    CultureInfo culture = CultureInfo.CurrentCulture;
+    string companyPath = Url.Content("~/Research/Company");
+    string Percent(decimal value) => (value / 100m).ToString("P1", culture);
+}
+
+@* What the Tracked Funds hold in one quarter: each fund opens to its N-PORT asset categories, each category to its
+   largest holdings and "Other (n)". Plain <details> elements, so it works with the keyboard and without script. A
+   holding links to the company search by its name only, never a CUSIP or ISIN (ADR 0010); data-research-link lets
+   research-basket.js add the Fund Basket to the link. *@
+<ul class="research-holdings" id="research-holdings-list" aria-label="@L["Research.Funds.Holdings.Title"]" data-period="@Model.Period.Period">
+    @foreach (TrackedFundDto fund in Model.Funds)
+    {
+        FundHoldingsDto? report = Model.ReportOf(fund.Ticker);
+        <li class="research-holdings__fund" data-ticker="@fund.Ticker">
+            @if (report is null)
+            {
+                <p class="research-holdings__summary research-holdings__summary--missing">
+                    <span class="research-holdings__ticker">@fund.Ticker</span>
+                    <span class="research-holdings__name">@fund.Name</span>
+                    <span class="research-holdings__figure">@L["Research.Funds.Holdings.NoReport"]</span>
+                </p>
+            }
+            else
+            {
+                <details class="research-holdings__details">
+                    <summary class="research-holdings__summary">
+                        <span class="research-holdings__ticker">@fund.Ticker</span>
+                        <span class="research-holdings__name">@fund.Name</span>
+                        <span class="research-holdings__figure">@L.Plural("Research.Funds.Holdings.Count", report.HoldingCount)</span>
+                    </summary>
+                    <ul class="research-holdings__categories">
+                        @foreach (FundCategoryDto category in report.Categories)
+                        {
+                            <li class="research-holdings__category" data-category="@category.Code">
+                                <details class="research-holdings__details">
+                                    <summary class="research-holdings__summary">
+                                        <span class="research-holdings__name">@category.Name</span>
+                                        <span class="research-holdings__figure">@Percent(category.Percent)</span>
+                                    </summary>
+                                    <ol class="research-holdings__top">
+                                        @foreach (FundHoldingDto holding in category.Top)
+                                        {
+                                            <li class="research-holdings__holding">
+                                                <a class="research-holdings__link" href="@(companyPath + FundHoldingsListViewModel.CompanySearchQuery(holding.Name))"
+                                                   data-research-link>@holding.Name</a>
+                                                <span class="research-holdings__figure">@Percent(holding.Percent)</span>
+                                            </li>
+                                        }
+                                        @if (category.OtherCount > 0)
+                                        {
+                                            <li class="research-holdings__holding research-holdings__holding--other">
+                                                <span class="research-holdings__name">@L.Named("Research.Funds.Holdings.Other", ("count", category.OtherCount.ToString("N0", culture)))</span>
+                                                <span class="research-holdings__figure">@Percent(category.OtherPercent)</span>
+                                            </li>
+                                        }
+                                    </ol>
+                                </details>
+                            </li>
+                        }
+                    </ul>
+                </details>
+            }
+        </li>
+    }
+</ul>

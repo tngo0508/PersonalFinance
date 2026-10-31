@@ -120,6 +120,27 @@ public sealed class ResearchController : Controller
     }
 
     /// <summary>
+    /// The Research Funds page: every Tracked Fund compared in a sortable table, the risk and correlation views and the
+    /// holdings list. It reads the funds, fund returns and fund facts data through the snapshot cache; each that cannot
+    /// be read leaves only the views that need it unavailable. <paramref name="view"/> (table, risk, correlation,
+    /// holdings), <paramref name="window"/> (1, 3 or 5 years), <paramref name="sort"/> and <paramref name="quarter"/>
+    /// come from the address; an unknown value falls back to the table, 3 years, return and the latest quarter.
+    /// A well-formed <c>basket</c> is kept on the Unavailable State's Retry.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Funds([FromQuery] string? view = null, [FromQuery] int? window = null,
+        [FromQuery] string? sort = null, [FromQuery] string? quarter = null, [FromQuery] string? basket = null,
+        CancellationToken cancellationToken = default)
+    {
+        Task<FundsSnapshotDto?> funds = ReadAsync(_researchApi.GetFundsAsync, ResearchCacheKeys.Funds, "funds", cancellationToken);
+        Task<FundReturnsSnapshotDto?> returns = ReadAsync(_researchApi.GetFundReturnsAsync, ResearchCacheKeys.FundReturns, "fund returns", cancellationToken);
+        Task<FundFactsSnapshotDto?> facts = ReadAsync(_researchApi.GetFundFactsAsync, ResearchCacheKeys.FundFacts, "fund facts", cancellationToken);
+        await Task.WhenAll(funds, returns, facts);
+        return View(new ResearchFundsPageViewModel(_localizer, await funds, await returns, await facts, view, window, sort,
+            quarter, basket));
+    }
+
+    /// <summary>
     /// The fund industries snapshot, as JSON, from ApiService: the Sectors basket view fetches it the first time
     /// it is shown, so the page itself does not carry it (some 600 KB). An ApiService failure (503 when it has never
     /// loaded) keeps its status code with a safe message.

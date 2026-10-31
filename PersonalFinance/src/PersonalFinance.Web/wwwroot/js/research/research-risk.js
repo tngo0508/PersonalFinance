@@ -258,7 +258,9 @@
         const slotOf = (ticker) => (window.ResearchBasket && window.ResearchBasket.slotOf ? window.ResearchBasket.slotOf(ticker) : 0);
         const tooltip = page.createTooltip(document.getElementById(TOOLTIP_ID), (line, point) => cardRows(point)
             .map((row, i) => line(row, i === 0 ? 'research-tooltip__name' : 'research-tooltip__muted')));
-        let years = DEFAULT_YEARS;
+        // The window the page marked as pressed (the Funds page's ?window=), else 3 years.
+        const pressed = yearButtons.find((button) => button.getAttribute('aria-pressed') === 'true');
+        let years = pressed ? Number(pressed.dataset.riskYears) : DEFAULT_YEARS;
         let points = [];
         let allPoints = [];
         let lastWidth = 0;
