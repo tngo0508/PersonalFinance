@@ -1,4 +1,4 @@
-/* global PFI18n, ChartPalette, InvestmentMath, InvestmentCharts, InvestmentCompare */
+/* global PFI18n, ChartPalette, InvestmentMath, InvestmentCharts, InvestmentCompare, InvestmentScenarios */
 /**
  * Investment Calculator page (#587): reads the slider rail, projects the plan with investment-math.js and hands the
  * result to the summary bar and the Overview tiles (investment-charts.js). Every amount is in the Reporting Currency
@@ -12,6 +12,10 @@
  *
  * Compare what-ifs (#591) lives in investment-compare.js; this script hands it every new plan. An applied lever can
  * start the plan later or stop its deposits (timing); the rail has no field for those, so a note there says so.
+ *
+ * Saved Investment Scenarios (#592) live in investment-scenarios.js: this script hands it the plan and the goal, and
+ * loads a scenario's inputs back into the rail and the goal tile. A scenario saves the goal only once the goal tile
+ * has been used (or a goal scenario was loaded).
  */
 (function () {
     'use strict';
@@ -36,6 +40,10 @@
     let timing = { delay: 0, stopAt: null };
     /** The Compare what-ifs controller (investment-compare.js), or null without it. */
     let compare = null;
+    /** The Saved panel's controller (investment-scenarios.js), or null without it. */
+    let scenarios = null;
+    /** True once the goal tile was used or a goal scenario loaded: a saved scenario then keeps the goal. */
+    let goalTouched = false;
 
     /**
      * The element with this id, or null.
@@ -524,6 +532,9 @@
         if (compare) {
             compare.update(plan);
         }
+        if (scenarios) {
+            scenarios.update(plan);
+        }
 
         // The goal tile's own controls announce its answer; everything else announces the plan.
         const goalOnly = announceGoal;
@@ -661,6 +672,7 @@
                 if (from) {
                     from.value = '';
                 }
+                goalTouched = true;
                 announceGoal = true;
                 update();
             });
@@ -673,12 +685,16 @@
         }
         root.querySelectorAll('input[name="icGoalMode"]').forEach((radio) => {
             radio.addEventListener('change', () => {
+                goalTouched = true;
                 announceGoal = true;
                 update();
             });
         });
         if (from) {
-            from.addEventListener('change', () => startFromSavingsGoal(from.selectedOptions[0]));
+            from.addEventListener('change', () => {
+                goalTouched = true;
+                startFromSavingsGoal(from.selectedOptions[0]);
+            });
         }
         const use = byId('icGoalUse');
         if (use) {
@@ -705,6 +721,50 @@
                 clearTimeout(statusTimer);
                 setText('icGoalStatus', used);
             });
+        }
+    }
+
+    /**
+     * Load a saved Investment Scenario (#592): its inputs become the plan (with the timing an applied what-if left),
+     * a goal scenario also sets the goal tile, and the page shows Overview, with the goal tile in view for a goal.
+     * @param {object} scenario - The scenario, as the server sends it.
+     */
+    function loadScenario (scenario) {
+        const isGoal = scenario.mode === 'Goal' && Number(scenario.goalTarget) > 0;
+        goalTouched = isGoal;
+        if (isGoal) {
+            const field = byId('icGoal');
+            if (field) {
+                field.value = String(Number(scenario.goalTarget));
+            }
+            const mode = byId(scenario.goalSolveFor === 'Years' ? 'icGoalModeYears' : 'icGoalModeMonthly');
+            if (mode) {
+                mode.checked = true;
+            }
+            const from = byId('icGoalFrom');
+            if (from) {
+                from.value = '';
+            }
+        }
+        const overview = byId('icViewOverviewTab');
+        if (overview && overview.getAttribute('aria-selected') !== 'true') {
+            overview.click();
+        }
+        applyPlan({
+            initial: Number(scenario.initialAmount),
+            monthly: Number(scenario.monthlyContribution),
+            rate: Number(scenario.assumedReturn),
+            years: Number(scenario.years),
+            increase: Number(scenario.contributionIncrease),
+            inflation: Number(scenario.inflation),
+            fee: Number(scenario.fee),
+            delay: Number(scenario.delayYears) || 0,
+            stopAt: scenario.stopAfterYear === null || scenario.stopAfterYear === undefined ? null : Number(scenario.stopAfterYear)
+        });
+        const tile = isGoal ? root.querySelector('.ic-goal') : null;
+        if (tile && typeof tile.scrollIntoView === 'function') {
+            const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            tile.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
         }
     }
 
@@ -736,6 +796,16 @@
                     return field ? parseFloat(field.max) : NaN;
                 },
                 onView: scheduleCharts
+            });
+        }
+        if (typeof InvestmentScenarios !== 'undefined') {
+            scenarios = InvestmentScenarios.create(root, {
+                currency,
+                plan: readInputs,
+                goal: () => ({ target: readTarget(), mode: goalMode(), touched: goalTouched }),
+                load: loadScenario,
+                compare,
+                money: (amount, code) => PFI18n.formatMoney(amount, code || currency, { whole: true })
             });
         }
         update();

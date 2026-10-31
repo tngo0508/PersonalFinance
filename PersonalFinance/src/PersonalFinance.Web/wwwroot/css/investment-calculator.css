@@ -890,6 +890,266 @@
     outline-offset: 2px;
 }
 
+/* ---------- Saved scenarios (#592) ---------- */
+
+.ic-bar__saved {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.ic-bar__saved .ic-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.ic-bar__saved .ic-action svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.ic-count {
+    min-width: 1.5rem;
+    padding: 0 0.4rem;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.5rem;
+    text-align: center;
+    color: var(--app-brand-on-soft);
+    background: var(--app-bg);
+    border-radius: 999px;
+}
+
+.ic-count:empty {
+    display: none;
+}
+
+.ic-bar__current {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--app-text-muted);
+}
+
+.ic-bar__current[hidden] {
+    display: none;
+}
+
+/* On a phone the panel is a section at the end of the page. */
+.ic-saved {
+    margin-top: var(--ic-gap);
+    padding: 1rem;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--ic-radius);
+}
+
+.ic-saved:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+.ic-saved__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.ic-saved__title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: var(--app-font-weight-bold);
+}
+
+.ic-saved__close {
+    width: 2.75rem;
+    height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--app-text-muted);
+    background: none;
+    border: 0;
+    border-radius: var(--app-radius-m);
+    cursor: pointer;
+}
+
+.ic-saved__close:hover {
+    color: var(--app-text);
+    background: var(--app-bg);
+}
+
+.ic-saved__close[hidden],
+.ic-saved__empty[hidden],
+.ic-saved__error[hidden],
+.ic-saved__backdrop[hidden] {
+    display: none;
+}
+
+.ic-saved__room,
+.ic-saved__empty {
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+    color: var(--app-text-muted);
+}
+
+.ic-saved__error {
+    margin: 0.5rem 0 0;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    color: var(--app-negative-text);
+    background: var(--app-negative-bg);
+    border-radius: var(--app-radius-m);
+}
+
+.ic-saved__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ic-saved__item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.75rem;
+    background: var(--app-bg);
+    border: 1px solid var(--app-border-subtle);
+    border-radius: var(--app-radius-m);
+}
+
+/* The scenario the plan came from: a brand edge, not colour alone (the bar also names it). */
+.ic-saved__item.is-current {
+    border-color: var(--app-brand);
+    box-shadow: inset 4px 0 0 var(--app-brand);
+}
+
+.ic-saved__name {
+    margin: 0;
+    font-weight: var(--app-font-weight-semibold);
+    overflow-wrap: anywhere;
+}
+
+.ic-saved__headline {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: var(--app-font-weight-bold);
+    font-variant-numeric: tabular-nums;
+    color: var(--app-brand-text);
+}
+
+.ic-saved__meta,
+.ic-saved__note,
+.ic-saved__other {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--app-text-muted);
+    overflow-wrap: anywhere;
+}
+
+.ic-saved__other {
+    color: var(--app-text);
+}
+
+.ic-saved__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+}
+
+.ic-saved__act {
+    min-height: 2.75rem;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.8rem;
+}
+
+.ic-action--danger,
+.ic-saved__act--delete {
+    color: var(--app-negative-text);
+    border-color: var(--app-negative-text);
+}
+
+.ic-action--primary.ic-action--danger {
+    color: var(--app-surface);
+    background: var(--app-negative-text);
+}
+
+.ic-saved__unavailable .unavailable-state {
+    margin: 0;
+}
+
+/* Save, rename and delete: a native modal dialog. */
+.ic-dialog {
+    width: min(28rem, calc(100vw - 2rem));
+    padding: 1.25rem;
+    color: var(--app-text);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--ic-radius);
+    box-shadow: var(--app-shadow-16);
+}
+
+.ic-dialog::backdrop {
+    background: var(--app-overlay);
+}
+
+.ic-dialog__title {
+    margin: 0 0 0.75rem;
+    font-size: 1.15rem;
+    font-weight: var(--app-font-weight-bold);
+}
+
+.ic-dialog__text {
+    margin: 0 0 0.75rem;
+    font-size: 0.9rem;
+}
+
+.ic-dialog__fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.ic-dialog__fields .form-control {
+    margin-bottom: 0.5rem;
+}
+
+.ic-dialog__text[hidden],
+.ic-dialog__fields[hidden],
+.ic-dialog__error[hidden],
+.ic-dialog__actions [hidden] {
+    display: none;
+}
+
+.ic-dialog__error {
+    margin: 0 0 0.75rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    color: var(--app-negative-text);
+    background: var(--app-negative-bg);
+    border-radius: var(--app-radius-m);
+}
+
+.ic-dialog__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.ic-saved__close:focus-visible,
+.ic-dialog .form-control:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
 /* ---------- Wide screens: rail beside the grid, bar and rail pinned ---------- */
 
 @media (min-width: 62em) {
@@ -901,6 +1161,39 @@
 
     .ic-layout {
         grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+    }
+
+    /* From the wide layout up the panel is a drawer on the right, opened by Saved (investment-scenarios.js). */
+    .ic-saved {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1045;
+        width: min(26rem, 90vw);
+        margin: 0;
+        overflow-y: auto;
+        border-radius: var(--ic-radius) 0 0 var(--ic-radius);
+        box-shadow: var(--app-shadow-16);
+        transform: translateX(100%);
+        visibility: hidden;
+        transition: transform 0.2s ease, visibility 0.2s;
+    }
+
+    .ic-saved.is-open {
+        transform: none;
+        visibility: visible;
+    }
+
+    .ic-saved__list {
+        grid-template-columns: 1fr;
+    }
+
+    .ic-saved__backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1040;
+        background: var(--app-overlay);
     }
 
     .ic-rail {
@@ -918,7 +1211,8 @@
     .ic-lever,
     .ic-goal__mode,
     .ic-progress__fill,
-    .ic-years__summary::before {
+    .ic-years__summary::before,
+    .ic-saved {
         transition: none;
     }
 }

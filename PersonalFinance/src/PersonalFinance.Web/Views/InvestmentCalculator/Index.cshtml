@@ -1,4 +1,5 @@
 @using System.Globalization
+@using System.Text.Json
 @model InvestmentCalculatorViewModel
 @{
     ViewData["Title"] = L["InvestmentCalculator.Title"].Value;
@@ -21,6 +22,10 @@
     bool compareView = string.Equals(Context.Request.Query["view"], "compare", StringComparison.OrdinalIgnoreCase);
     // The what-if levers, in InvestmentMath.LEVERS order; the script writes each one's label and difference.
     string[] levers = ["monthly", "rate", "delay", "stop", "fee"];
+
+    // Saved Investment Scenarios (#592): the page script lists them from this attribute (Razor encodes it).
+    string scenarioJson = JsonSerializer.Serialize(Model.Scenarios, JsonSerializerOptions.Web);
+    bool savingOff = Model.ScenariosUnavailable;
 }
 
 @section Styles {
@@ -83,8 +88,25 @@
                 <dd id="icOther">&nbsp;</dd>
             </div>
         </dl>
-        @* The bar's tools: a later slice adds Saved / Save here. *@
+        @* The bar's tools: Today's money, and the saved scenarios (#592): Saved opens the drawer, Save saves the plan. *@
         <div class="ic-bar__tools">
+            <div class="ic-bar__saved">
+                <button type="button" class="ic-action" id="icSavedOpen" aria-controls="icSaved" aria-expanded="false">
+                    <i data-lucide="bookmark" aria-hidden="true"></i>
+                    <span>@L["InvestmentCalculator.Saved.Open"]</span>
+                    <span class="ic-count" id="icSavedCount">@(savingOff ? "" : Model.Scenarios.Count.ToString(CultureInfo.CurrentCulture))</span>
+                </button>
+                <button type="button" class="ic-action ic-action--primary" id="icSave" disabled="@savingOff"
+                        aria-describedby="@(savingOff ? "icSaveOff" : null)">
+                    <i data-lucide="save" aria-hidden="true"></i>
+                    <span>@L["InvestmentCalculator.Saved.Save"]</span>
+                </button>
+                @if (savingOff)
+                {
+                    <span class="visually-hidden" id="icSaveOff">@L["InvestmentCalculator.Saved.SaveOff"]</span>
+                }
+            </div>
+            <p class="ic-bar__current" id="icSavedCurrent" hidden></p>
             <div class="form-check form-switch ic-switch">
                 <input class="form-check-input" type="checkbox" role="switch" id="icTodaysMoney"
                        aria-describedby="icTodaysMoneyHint"/>
@@ -325,6 +347,62 @@
             <p class="visually-hidden" id="icCompareStatus" role="status" aria-live="polite" aria-atomic="true"></p>
         </section>
     </div>
+
+    @* Saved scenarios (#592): a section at the end of the page on a phone, a slide-out drawer beside the page from the
+       wide layout up (investment-scenarios.js opens it as a dialog). Each scenario is inputs only; the script works out
+       its headline result. *@
+    <section class="ic-saved" id="icSaved" aria-labelledby="icSavedTitle" tabindex="-1"
+             data-scenarios="@(savingOff ? "[]" : scenarioJson)" data-max="@Model.MaxScenarios"
+             data-unavailable="@(savingOff ? "true" : "false")">
+        <header class="ic-saved__head">
+            <h2 class="ic-saved__title" id="icSavedTitle">@L["InvestmentCalculator.Saved.Title"]</h2>
+            <button type="button" class="ic-saved__close" id="icSavedClose" aria-label="@L["InvestmentCalculator.Saved.Close"]" hidden>
+                <i data-lucide="x" aria-hidden="true"></i>
+            </button>
+        </header>
+        @if (savingOff)
+        {
+            <div class="ic-saved__unavailable" id="icSavedUnavailable">
+                <partial name="_UnavailableState" model="@(new PersonalFinance.Web.Infrastructure.UnavailableStateViewModel
+                {
+                    PageTitle = L["InvestmentCalculator.Title"].Value,
+                    Heading = L["InvestmentCalculator.Saved.Unavailable"].Value,
+                    RetryController = "InvestmentCalculator"
+                })"/>
+            </div>
+        }
+        else
+        {
+            <p class="ic-saved__room" id="icSavedRoom"></p>
+            <p class="ic-saved__empty" id="icSavedEmpty" hidden="@(Model.Scenarios.Count > 0)">@L["InvestmentCalculator.Saved.Empty"]</p>
+            <ul class="ic-saved__list" id="icSavedList" aria-labelledby="icSavedTitle"></ul>
+            <p class="ic-saved__error" id="icSavedError" role="alert" hidden></p>
+        }
+        <p class="visually-hidden" id="icSavedStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+    </section>
+    <div class="ic-saved__backdrop" id="icSavedBackdrop" hidden></div>
+
+    @* Save, rename and delete ask here: a native modal dialog keeps focus inside and closes on Escape. *@
+    <dialog class="ic-dialog" id="icSaveDialog" aria-labelledby="icSaveDialogTitle">
+        <form class="ic-dialog__form" id="icSaveForm" novalidate>
+            <h2 class="ic-dialog__title" id="icSaveDialogTitle">@L["InvestmentCalculator.Saved.SaveTitle"]</h2>
+            <p class="ic-dialog__text" id="icSaveDialogText" hidden></p>
+            <div class="ic-dialog__fields" id="icSaveFields">
+                <label class="ic-field__label" for="icSaveName">@L["InvestmentCalculator.Saved.Name"]</label>
+                <input type="text" class="form-control" id="icSaveName" maxlength="@InvestmentCalculatorLimits.ScenarioNameMaxLength"
+                       autocomplete="off" required aria-describedby="icSaveError"/>
+                <label class="ic-field__label" for="icSaveNote">@L["InvestmentCalculator.Saved.Note"]</label>
+                <textarea class="form-control" id="icSaveNote" rows="3" maxlength="@InvestmentCalculatorLimits.ScenarioNoteMaxLength"></textarea>
+            </div>
+            <p class="ic-dialog__error" id="icSaveError" role="alert" hidden></p>
+            <div class="ic-dialog__actions">
+                <button type="submit" class="ic-action ic-action--primary" id="icSaveUpdate" value="update" hidden></button>
+                <button type="submit" class="ic-action ic-action--primary" id="icSaveNew" value="new">@L["InvestmentCalculator.Saved.SaveNew"]</button>
+                <button type="button" class="ic-action" id="icSaveCancel">@L["InvestmentCalculator.Saved.Cancel"]</button>
+            </div>
+        </form>
+    </dialog>
+    @Html.AntiForgeryToken()
 </div>
 
 <js-strings prefix="InvestmentCalculator.Js." />
@@ -334,5 +412,6 @@
     <script src="~/js/investment-calculator/investment-math.js" asp-append-version="true"></script>
     <script src="~/js/investment-calculator/investment-charts.js" asp-append-version="true"></script>
     <script src="~/js/investment-calculator/investment-compare.js" asp-append-version="true"></script>
+    <script src="~/js/investment-calculator/investment-scenarios.js" asp-append-version="true"></script>
     <script src="~/js/investment-calculator/calculator.js" asp-append-version="true"></script>
 }

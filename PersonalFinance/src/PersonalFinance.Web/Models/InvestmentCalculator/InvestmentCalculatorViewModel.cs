@@ -1,4 +1,5 @@
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.DTOs.InvestmentScenarios;
 using PersonalFinance.Shared.Helpers;
 
 namespace PersonalFinance.Web.Models.InvestmentCalculator;
@@ -44,6 +45,18 @@ public sealed class InvestmentCalculatorViewModel
     /// keeps working.
     /// </summary>
     public bool SavingsGoalsUnavailable { get; init; }
+
+    /// <summary>The Account's saved Investment Scenarios, last edited first (#592); the page script lists them.</summary>
+    public IReadOnlyList<InvestmentScenarioDto> Scenarios { get; init; } = [];
+
+    /// <summary>
+    /// True when the scenarios could not be loaded: the Saved panel shows the unavailable notice and Save is disabled;
+    /// the calculator keeps working.
+    /// </summary>
+    public bool ScenariosUnavailable { get; init; }
+
+    /// <summary>The most scenarios an Account keeps.</summary>
+    public int MaxScenarios => InvestmentCalculatorLimits.MaxScenariosPerUser;
 
     /// <summary>The model for <paramref name="currencyCode"/>; an unsupported code reads as US dollars.</summary>
     public static InvestmentCalculatorViewModel For(string? currencyCode) =>

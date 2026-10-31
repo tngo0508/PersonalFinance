@@ -218,6 +218,32 @@ internal sealed class DataExportService : IDataExportService
             })
             .ToListAsync(cancellationToken);
 
+        export.InvestmentScenarios = (await _db.InvestmentScenarios.AsNoTracking()
+                .Where(s => s.UserId == userId)
+                .OrderBy(s => s.CreatedAt).ThenBy(s => s.Id)
+                .ToListAsync(cancellationToken))
+            .Select(s => new DataExportInvestmentScenarioDto
+            {
+                Name = s.Name,
+                Note = s.Note,
+                Mode = s.Mode.ToString(),
+                CurrencyCode = s.CurrencyCode,
+                InitialAmount = s.InitialAmount,
+                MonthlyContribution = s.MonthlyContribution,
+                AssumedReturn = s.AssumedReturn,
+                Years = s.Years,
+                ContributionIncrease = s.ContributionIncrease,
+                Inflation = s.Inflation,
+                Fee = s.Fee,
+                DelayYears = s.DelayYears,
+                StopAfterYear = s.StopAfterYear,
+                GoalTarget = s.GoalTarget,
+                GoalSolveFor = s.GoalSolveFor?.ToString(),
+                CreatedAtUtc = s.CreatedAt,
+                UpdatedAtUtc = s.UpdatedAt
+            })
+            .ToList();
+
         export.Community = await CommunityAsync(userId, cancellationToken);
 
         export.Feedback = (await _db.Feedback.AsNoTracking()

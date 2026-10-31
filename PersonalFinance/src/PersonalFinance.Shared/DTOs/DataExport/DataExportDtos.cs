@@ -49,6 +49,9 @@ public class DataExportDto
     /// <summary>Money Priorities answers, path and Purpose Note; dollar figures are never stored, so none appear.</summary>
     public List<DataExportPriorityWalkDto> PriorityWalks { get; set; } = [];
 
+    /// <summary>Saved Investment Calculator inputs, oldest first; results are never stored, so none appear.</summary>
+    public List<DataExportInvestmentScenarioDto> InvestmentScenarios { get; set; } = [];
+
     public DataExportCommunityDto Community { get; set; } = new();
 
     public List<DataExportFeedbackDto> Feedback { get; set; } = [];
@@ -315,6 +318,50 @@ public class DataExportSavedArticleDto
     public string? Notes { get; set; }
 
     public DateTime SavedAtUtc { get; set; }
+}
+
+/// <summary>An Investment Scenario: the inputs as saved, every amount in <see cref="CurrencyCode"/>.</summary>
+public class DataExportInvestmentScenarioDto
+{
+    public string Name { get; set; } = string.Empty;
+
+    public string? Note { get; set; }
+
+    /// <summary><c>Grow</c> or <c>Goal</c>.</summary>
+    public string Mode { get; set; } = string.Empty;
+
+    public string CurrencyCode { get; set; } = string.Empty;
+
+    public decimal InitialAmount { get; set; }
+
+    public decimal MonthlyContribution { get; set; }
+
+    /// <summary>Percent a year.</summary>
+    public decimal AssumedReturn { get; set; }
+
+    public int Years { get; set; }
+
+    /// <summary>Percent a year.</summary>
+    public decimal ContributionIncrease { get; set; }
+
+    /// <summary>Percent a year.</summary>
+    public decimal Inflation { get; set; }
+
+    /// <summary>Percent a year.</summary>
+    public decimal Fee { get; set; }
+
+    public int DelayYears { get; set; }
+
+    public int? StopAfterYear { get; set; }
+
+    public decimal? GoalTarget { get; set; }
+
+    /// <summary><c>Monthly</c> or <c>Years</c>; null without a goal.</summary>
+    public string? GoalSolveFor { get; set; }
+
+    public DateTime CreatedAtUtc { get; set; }
+
+    public DateTime? UpdatedAtUtc { get; set; }
 }
 
 /// <summary>A Priority Walk. A null answer means the question was not asked on the Walk's path.</summary>

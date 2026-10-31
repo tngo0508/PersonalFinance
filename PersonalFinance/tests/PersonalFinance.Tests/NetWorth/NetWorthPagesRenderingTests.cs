@@ -79,6 +79,11 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
         (ISavingsGoalsApi savingsGoalsApi, ApiProxy<ISavingsGoalsApi> goalsProxy) = ApiProxy.Create<ISavingsGoalsApi>();
         goalsProxy.Returns(nameof(ISavingsGoalsApi.GetSavingsGoalsAsync), new List<SavingsGoalDto>());
         builder.Services.AddSingleton(savingsGoalsApi);
+        (IInvestmentScenariosApi scenariosApi, ApiProxy<IInvestmentScenariosApi> scenariosProxy) =
+            ApiProxy.Create<IInvestmentScenariosApi>();
+        scenariosProxy.Returns(nameof(IInvestmentScenariosApi.GetScenariosAsync),
+            new List<PersonalFinance.Shared.DTOs.InvestmentScenarios.InvestmentScenarioDto>());
+        builder.Services.AddSingleton(scenariosApi);
         builder.Services.AddSingleton<IUserPreferenceService, InMemoryUserPreferenceService>();
         builder.Services.AddSingleton<IFeedbackApi, NoFeedbackApi>();
         builder.Services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(Guid.NewGuid().ToString()));

@@ -102,6 +102,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
     public DbSet<Contribution> Contributions => Set<Contribution>();
 
     /// <summary>
+    /// Investment Scenarios — saved, named sets of Investment Calculator inputs, never results (#592).
+    /// </summary>
+    public DbSet<InvestmentScenario> InvestmentScenarios => Set<InvestmentScenario>();
+
+    /// <summary>
     /// User saved articles (watchlist) table set.
     /// </summary>
     public DbSet<SavedArticle> SavedArticles => Set<SavedArticle>();
@@ -229,6 +234,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         builder.Entity<PriorityWalk>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<LessonCompletion>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<ReviewCardState>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<InvestmentScenario>().HasQueryFilter(e => !e.IsDeleted);
 
         // Configure AiUsageRecord entity — usage records are never soft-deleted
         builder.Entity<AiUsageRecord>(entity =>
@@ -616,6 +622,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
         ConfigureResearchSnapshot(builder);
         ConfigureExchangeRate(builder);
         ConfigurePriorityWalk(builder);
+        ConfigureInvestmentScenario(builder);
         ConfigureJourneyProgress(builder);
     }
 
@@ -886,6 +893,31 @@ public class AppDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyC
             entity.Property(e => e.PurposeNote).HasMaxLength(2000);
             ConfigureCurrencyCode(entity);
             entity.HasIndex(e => new { e.UserId, e.CreatedAt });
+        });
+    }
+
+    /// <summary>
+    /// InvestmentScenario: inputs only, every amount in the row's currency (ADR 0016); the Saved panel lists an
+    /// Account's scenarios, so they are indexed by Account.
+    /// </summary>
+    private static void ConfigureInvestmentScenario(ModelBuilder builder)
+    {
+        builder.Entity<InvestmentScenario>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(InvestmentCalculatorLimits.ScenarioNameMaxLength);
+            entity.Property(e => e.Note).HasMaxLength(InvestmentCalculatorLimits.ScenarioNoteMaxLength);
+            entity.Property(e => e.Mode).IsRequired();
+            entity.Property(e => e.InitialAmount).HasPrecision(18, 2);
+            entity.Property(e => e.MonthlyContribution).HasPrecision(18, 2);
+            entity.Property(e => e.GoalTarget).HasPrecision(18, 2);
+            entity.Property(e => e.AssumedReturn).HasPrecision(5, 2);
+            entity.Property(e => e.ContributionIncrease).HasPrecision(5, 2);
+            entity.Property(e => e.Inflation).HasPrecision(5, 2);
+            entity.Property(e => e.Fee).HasPrecision(5, 2);
+            ConfigureCurrencyCode(entity);
+            entity.HasIndex(e => e.UserId);
         });
     }
 

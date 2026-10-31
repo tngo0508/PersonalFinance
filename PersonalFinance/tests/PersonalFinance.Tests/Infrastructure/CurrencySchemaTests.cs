@@ -20,6 +20,7 @@ public class CurrencySchemaTests
         { typeof(NetWorthParameters), nameof(NetWorthParameters.CurrencyCode) },
         { typeof(UserBudgetAllocation), nameof(UserBudgetAllocation.CurrencyCode) },
         { typeof(PriorityWalk), nameof(PriorityWalk.CurrencyCode) },
+        { typeof(InvestmentScenario), nameof(InvestmentScenario.CurrencyCode) },
         { typeof(BudgetTransaction), nameof(BudgetTransaction.CurrencyCode) },
         { typeof(MonthlyBudgetLine), nameof(MonthlyBudgetLine.CurrencyCode) },
         { typeof(SavingsGoal), nameof(SavingsGoal.CurrencyCode) },

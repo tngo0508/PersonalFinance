@@ -15,6 +15,7 @@ using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Feedback;
+using PersonalFinance.Shared.DTOs.InvestmentScenarios;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Shared.Enums;
 using PersonalFinance.Tests.TestSupport;
@@ -36,6 +37,7 @@ public sealed partial class InvestmentCalculatorRenderingTests : IAsyncLifetime
 
     private readonly InMemoryUserPreferenceService _preferences = new();
     private readonly GoalsApi _goals = new();
+    private readonly ScenariosApi _scenarios = new();
     private WebApplication _app = null!;
     private HttpClient _client = null!;
 
@@ -50,6 +52,7 @@ public sealed partial class InvestmentCalculatorRenderingTests : IAsyncLifetime
         builder.Logging.ClearProviders();
         builder.Services.AddSingleton<TimeProvider>(new FixedTimeProvider(new DateTimeOffset(2026, 10, 30, 12, 0, 0, TimeSpan.Zero)));
         builder.Services.AddSingleton<ISavingsGoalsApi>(_goals);
+        builder.Services.AddSingleton<IInvestmentScenariosApi>(_scenarios);
         builder.Services.AddSingleton<IUserPreferenceService>(_preferences);
         builder.Services.AddSingleton<IFeedbackApi, NoFeedbackApi>();
         builder.Services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
@@ -344,6 +347,50 @@ public sealed partial class InvestmentCalculatorRenderingTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SavedPanel_WhenTheApiIsDown_ShowsTheUnavailableNotice_DisablesSave_AndTheCalculatorStillRenders()
+    {
+        _scenarios.Unavailable = true;
+
+        string page = Calculator(await GetPageAsync());
+
+        Assert.Contains("id=\"icSavedUnavailable\"", page, StringComparison.Ordinal);
+        Assert.Contains("We couldn't load your saved scenarios", page, StringComparison.Ordinal);
+        Assert.Contains("href=\"/InvestmentCalculator\"", page, StringComparison.Ordinal);
+        Assert.Contains("disabled", Tag(page, "id=\"icSave\""), StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"icSaveOff\"", Tag(page, "id=\"icSave\""), StringComparison.Ordinal);
+        Assert.Contains("data-unavailable=\"true\"", Tag(page, "id=\"icSaved\""), StringComparison.Ordinal);
+        Assert.DoesNotContain("id=\"icSavedList\"", page, StringComparison.Ordinal);
+        Assert.Contains("id=\"icMonthlyRange\"", page, StringComparison.Ordinal);
+        Assert.Contains("id=\"icBalanceChart\"", page, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SavedPanel_ListsTheAccountsScenarios_ForThePageScript_AndSaveIsEnabled()
+    {
+        _scenarios.Scenarios.Add(new InvestmentScenarioDto
+        {
+            Id = 7, Name = "Retire </script> at 60", Mode = InvestmentScenarioMode.Goal, CurrencyCode = "USD",
+            InitialAmount = 10_000m, MonthlyContribution = 500m, AssumedReturn = 7m, Years = 20,
+            GoalTarget = 500_000m, GoalSolveFor = InvestmentGoalSolveFor.Years
+        });
+
+        string raw = await GetRawPageAsync();
+        string page = Calculator(WebUtility.HtmlDecode(raw));
+
+        string saved = Tag(page, "id=\"icSaved\"");
+        Assert.Contains("\"name\":\"Retire \\u003C/script\\u003E at 60\"", saved, StringComparison.Ordinal);
+        Assert.Contains("\"mode\":\"Goal\"", saved, StringComparison.Ordinal);
+        Assert.Contains("\"goalSolveFor\":\"Years\"", saved, StringComparison.Ordinal);
+        Assert.Contains("data-max=\"20\"", saved, StringComparison.Ordinal);
+        Assert.DoesNotContain("</script> at 60", raw, StringComparison.Ordinal);
+        Assert.DoesNotContain("disabled", Tag(page, "id=\"icSave\""), StringComparison.Ordinal);
+        Assert.Contains("id=\"icSavedList\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("id=\"icSavedUnavailable\"", page, StringComparison.Ordinal);
+        Assert.Contains("name=\"__RequestVerificationToken\"", page, StringComparison.Ordinal);
+        Assert.Equal(["GetScenariosAsync"], _scenarios.Calls);
+    }
+
+    [Fact]
     public async Task EveryElementId_IsUnique()
     {
         string page = Calculator(await GetPageAsync());
@@ -372,14 +419,16 @@ public sealed partial class InvestmentCalculatorRenderingTests : IAsyncLifetime
         return end > start ? html[start..end] : html[start..];
     }
 
-    private async Task<string> GetPageAsync(string query = "")
+    private async Task<string> GetPageAsync(string query = "") => WebUtility.HtmlDecode(await GetRawPageAsync(query));
+
+    private async Task<string> GetRawPageAsync(string query = "")
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, $"/InvestmentCalculator{query}");
         request.Headers.Add("Accept-Language", "en-US");
         HttpResponseMessage response = await _client.SendAsync(request);
         string html = await response.Content.ReadAsStringAsync();
         Assert.True(response.StatusCode == HttpStatusCode.OK, $"The page returned {response.StatusCode}: {html}");
-        return WebUtility.HtmlDecode(html);
+        return html;
     }
 
     [GeneratedRegex(@"\b(expected|will earn)\b", RegexOptions.IgnoreCase)]
@@ -461,6 +510,44 @@ public sealed partial class InvestmentCalculatorRenderingTests : IAsyncLifetime
         {
             Calls.Add(caller);
             throw new NotSupportedException($"The calculator called {caller}.");
+        }
+    }
+
+    /// <summary>The Investment Scenarios API: lists <see cref="Scenarios"/> (or fails), and every write fails the test.</summary>
+    private sealed class ScenariosApi : IInvestmentScenariosApi
+    {
+        public List<InvestmentScenarioDto> Scenarios { get; } = [];
+
+        public List<string> Calls { get; } = [];
+
+        public bool Unavailable { get; set; }
+
+        public Task<List<InvestmentScenarioDto>> GetScenariosAsync(CancellationToken cancellationToken = default)
+        {
+            Calls.Add(nameof(GetScenariosAsync));
+            return Unavailable
+                ? throw new HttpRequestException("The ApiService is down.")
+                : Task.FromResult(Scenarios);
+        }
+
+        public Task<InvestmentScenarioDto> GetScenarioAsync(int id, CancellationToken cancellationToken = default) =>
+            Write<InvestmentScenarioDto>();
+
+        public Task<InvestmentScenarioDto> CreateScenarioAsync(SaveInvestmentScenarioRequestDto request,
+            CancellationToken cancellationToken = default) => Write<InvestmentScenarioDto>();
+
+        public Task<InvestmentScenarioDto> UpdateScenarioAsync(int id, SaveInvestmentScenarioRequestDto request,
+            CancellationToken cancellationToken = default) => Write<InvestmentScenarioDto>();
+
+        public Task<InvestmentScenarioDto> DuplicateScenarioAsync(int id, DuplicateInvestmentScenarioRequestDto request,
+            CancellationToken cancellationToken = default) => Write<InvestmentScenarioDto>();
+
+        public Task DeleteScenarioAsync(int id, CancellationToken cancellationToken = default) => Write<object>();
+
+        private Task<T> Write<T>([System.Runtime.CompilerServices.CallerMemberName] string caller = "")
+        {
+            Calls.Add(caller);
+            throw new NotSupportedException($"The page called {caller}.");
         }
     }
 
