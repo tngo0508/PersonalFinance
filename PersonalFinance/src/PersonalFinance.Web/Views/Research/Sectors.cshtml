@@ -1,0 +1,63 @@
+@model ResearchSectorsPageViewModel
+
+@{
+    ViewData["Title"] = L["Research.Nav.Sectors"].Value + " · " + L["Research.Title"].Value;
+    bool showSectors = !Model.Sectors.Unavailable && Model.Sectors.LatestPeriod is not null;
+    ResearchSectorsPanelViewModel panel = Model.Panel;
+    bool showBasket = showSectors && panel.BasketView;
+    // The lead keeps its two glossary terms as {office} and {float} placeholders, so it translates whole.
+    string[] lead = L["Research.Sectors.Page.Lead"].Value.Split("{office}", 2);
+    string[] leadRest = lead.Length == 2 ? lead[1].Split("{float}", 2) : [];
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/research.css" asp-append-version="true"/>
+}
+
+@* Research Sectors: what the largest US companies do, by SEC office, as a treemap with a ranked list. It reads the
+   Sectors data and the funds data only (the basket view fetches its fund industries when first shown). ?focus=
+   opens the chart zoomed into an office or industry (matched by name in research-sectors.js), ?view=basket the basket
+   view. *@
+<div class="research research-sectors-page">
+    <partial name="_ResearchNav" model="@("sectors")"/>
+
+    <header class="research-header">
+        <div>
+            <h1 class="research-header__title">@L["Research.Nav.Sectors"]</h1>
+            <p class="research-header__subtitle">
+                @if (leadRest.Length == 2)
+                {
+                    @lead[0]<research-term key="office">@L["Research.Sectors.Page.OfficeTerm"]</research-term>@leadRest[0]<research-term key="publicFloat">@L["Research.Sectors.Page.FloatTerm"]</research-term>@leadRest[1]
+                }
+                else
+                {
+                    @L["Research.Sectors.Page.Lead"].Value.Replace("{office}", L["Research.Sectors.Page.OfficeTerm"].Value, StringComparison.Ordinal).Replace("{float}", L["Research.Sectors.Page.FloatTerm"].Value, StringComparison.Ordinal)
+                }
+            </p>
+        </div>
+        <p class="research-header__pill">@L["Research.Header.Disclaimer"]</p>
+    </header>
+
+    <partial name="_SectorsPanel" model="panel"/>
+
+    @* Summarises each change of year or zoom for screen readers. *@
+    <p class="visually-hidden" id="research-live" aria-live="polite"></p>
+</div>
+
+@section Scripts {
+    <js-strings prefix="Research.Js." />
+    @* research-page.js first: it holds the helpers, the scrubber and the table the chart registers with. *@
+    <script src="~/js/research/research-page.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-basket.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-search.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-glossary.js" asp-append-version="true"></script>
+    @if (showSectors)
+    {
+        <script src="~/lib/d3/d3.min.js"></script>
+        <script src="~/js/research/research-sectors.js" asp-append-version="true"></script>
+    }
+    @if (showBasket)
+    {
+        <script src="~/js/research/research-sectors-basket.js" asp-append-version="true"></script>
+    }
+}

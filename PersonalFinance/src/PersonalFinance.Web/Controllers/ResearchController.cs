@@ -82,7 +82,24 @@ public sealed class ResearchController : Controller
     }
 
     /// <summary>
-    /// The fund industries snapshot, as JSON, from ApiService: the Sectors tab's basket view fetches it the first time
+    /// The Research Sectors page: the treemap of the largest SEC filers by Public float, and the Fund Basket's view of
+    /// it. It reads the Sectors data and the funds data (which the basket view needs) through the snapshot cache; each
+    /// that cannot be read shows only its own section's Unavailable State. <paramref name="focus"/>
+    /// (<c>Office</c> or <c>Office/Industry</c>) opens the chart zoomed into that group, and <paramref name="view"/>
+    /// <c>basket</c> opens the basket view; a malformed value of either is ignored.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Sectors([FromQuery] string? focus = null, [FromQuery] string? view = null,
+        CancellationToken cancellationToken = default)
+    {
+        Task<SectorsSnapshotDto?> sectors = ReadAsync(_researchApi.GetSectorsAsync, ResearchCacheKeys.Sectors, "Sectors", cancellationToken);
+        Task<FundsSnapshotDto?> funds = ReadAsync(_researchApi.GetFundsAsync, ResearchCacheKeys.Funds, "funds", cancellationToken);
+        await Task.WhenAll(sectors, funds);
+        return View(new ResearchSectorsPageViewModel(_localizer, await sectors, await funds, focus, view));
+    }
+
+    /// <summary>
+    /// The fund industries snapshot, as JSON, from ApiService: the Sectors basket view fetches it the first time
     /// it is shown, so the page itself does not carry it (some 600 KB). An ApiService failure (503 when it has never
     /// loaded) keeps its status code with a safe message.
     /// </summary>

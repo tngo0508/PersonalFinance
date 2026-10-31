@@ -1,6 +1,7 @@
 /**
- * Research first-session walkthrough (spec #217, Testing Decisions): the 11 steps a new Account takes through the
- * Sectors, Funds and World tabs, then the Companies tab's 8 steps (spec #242, Company 1 to 8). Run from ui-test.js as
+ * Research first-session walkthrough (spec #217, Testing Decisions): the steps a new Account takes through the
+ * Sectors page (Sectors 1 to 7, which were Research 2 to 6e on the Sectors tab before the Sectors page shared its panel)
+ * and the Funds and World tabs, then the Companies tab's 8 steps (spec #242, Company 1 to 8). Run from ui-test.js as
  * Test 9c.
  *
  * Needs the ApiService started in Development with E2E_SEED_RESEARCH=true, which stores small fixture snapshots
@@ -117,7 +118,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             await page.goto(`${base}/Dashboard`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             await page.locator('#sidebar a.sidebar-link', {hasText: 'Research'}).click();
             await page.waitForURL(/\/Research/, {timeout: TIMEOUT});
-            await page.waitForSelector('#research-sunburst svg', {timeout: TIMEOUT});
+            await page.waitForSelector('#research-treemap svg', {timeout: TIMEOUT});
             const active = await page.locator('#sidebar a.sidebar-link.active', {hasText: 'Research'}).count();
             if (active === 1) {
                 pass('Research 1: opened from the sidebar, which marks Research active');
@@ -134,20 +135,31 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
         const latest = sectorsPeriods[sectorsPeriods.length - 1];
         const earliest = sectorsPeriods[0];
 
-        // Step 2: Sectors opens on the latest year, says "Public float" and credits its source.
-        await step('Research 2', fail, async () => {
+        // The Sectors steps run on the Sectors page (/Research/Sectors), which shares its panel and scripts with the
+        // tabbed page's Sectors tab; steps 7b, 9, 10 and 11 below still cover that tab.
+        const crumbCurrent = page.locator('#research-sectors-breadcrumb [aria-current="location"]');
+        const allSectors = page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'All sectors'});
+
+        // Sectors 1: the page opens on the latest year, says "Public float", credits its source, and the Research nav
+        // marks Sectors as the current page.
+        await step('Sectors 1', fail, async () => {
+            await page.goto(`${base}/Research/Sectors`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.waitForSelector('#research-treemap svg', {timeout: TIMEOUT});
             const label = await periodLabel(page, 'sectors');
             const title = await page.locator('#research-panel-sectors .research-card__title').textContent();
             const source = await page.locator('#research-panel-sectors .research-card__source').textContent();
-            if (label === latest && /Public float/.test(title) && /Source: SEC EDGAR/.test(source)) {
-                pass(`Research 2: Sectors shows ${latest} with "Public float" wording and a source credit`);
+            const current = ((await page.locator('.research-nav a[aria-current="page"]').textContent()) || '').trim();
+            const tabs = await page.locator('[role="tablist"]').count();
+            if (label === latest && /Public float/.test(title) && /Source: SEC EDGAR/.test(source) && current === 'Sectors' &&
+                tabs === 0) {
+                pass(`Sectors 1: the Sectors page shows ${latest} with "Public float" wording and a source credit, Sectors current in the nav`);
             } else {
-                fail(`Research 2: label "${label}", title "${title}", source "${source}"`);
+                fail(`Sectors 1: label "${label}", title "${title}", source "${source}", nav current "${current}", tablists ${tabs}`);
             }
         });
 
-        // Step 3: drag the slider to the earliest year; the label and the live region follow.
-        await step('Research 3', fail, async () => {
+        // Sectors 2: drag the slider to the earliest year; the label and the live region follow.
+        await step('Sectors 2', fail, async () => {
             const box = await page.locator('#research-sectors-year').boundingBox();
             await page.mouse.move(box.x + box.width - 4, box.y + box.height / 2);
             await page.mouse.down();
@@ -156,14 +168,14 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             const label = await periodLabel(page, 'sectors');
             const live = await page.locator('#research-live').textContent();
             if (label === earliest && live.startsWith(`${earliest}:`)) {
-                pass(`Research 3: dragging to the start shows ${earliest} and announces it`);
+                pass(`Sectors 2: dragging to the start shows ${earliest} and announces it`);
             } else {
-                fail(`Research 3: label "${label}", live region "${live}"`);
+                fail(`Sectors 2: label "${label}", live region "${live}"`);
             }
         });
 
-        // Step 4: play runs to the latest year and stops.
-        await step('Research 4', fail, async () => {
+        // Sectors 3: play runs to the latest year and stops.
+        await step('Sectors 3', fail, async () => {
             const play = page.locator('#research-panel-sectors [data-research-play]');
             await play.click();
             await page.waitForFunction((last) => {
@@ -171,43 +183,42 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                 return panel.querySelector('[data-research-period]').textContent.trim() === last &&
                     panel.querySelector('[data-research-play]').dataset.state === 'paused';
             }, latest, {timeout: TIMEOUT});
-            pass(`Research 4: play advances to ${latest} and stops`);
+            pass(`Sectors 3: play advances to ${latest} and stops`);
         });
 
-        // Step 5: the Technology highlight.
-        await step('Research 5', fail, async () => {
+        // Sectors 4: the Technology highlight.
+        await step('Sectors 4', fail, async () => {
             const toggle = page.locator('#research-tech-toggle');
             await toggle.click();
             const pressed = await toggle.getAttribute('aria-pressed');
             const share = page.locator('#research-tech-share');
             if (pressed === 'true' && await share.isVisible() && (await share.textContent()).trim().length > 0) {
-                pass('Research 5: "Technology (incl. chip makers)" lights up and states its share');
+                pass('Sectors 4: "Technology (incl. chip makers)" lights up and states its share');
             } else {
-                fail(`Research 5: aria-pressed "${pressed}", share visible ${await share.isVisible()}`);
+                fail(`Sectors 4: aria-pressed "${pressed}", share visible ${await share.isVisible()}`);
             }
         });
 
-        // Step 6: zoom into an office from the legend; the breadcrumb shows it and its "All filers" link returns.
-        await step('Research 6', fail, async () => {
+        // Sectors 5: zoom into an office from the legend; the breadcrumb shows it and its "All sectors" link returns.
+        await step('Sectors 5', fail, async () => {
             const office = page.locator('#research-sectors-legend button').first();
             const officeName = (await office.textContent()).trim();
-            const current = page.locator('#research-sectors-breadcrumb [aria-current="location"]');
             await office.click();
             const zoomedIn = await office.getAttribute('aria-pressed') === 'true' &&
-                (await current.textContent()).startsWith(officeName);
-            await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'All filers'}).click();
-            const zoomedOut = (await current.textContent()).startsWith('All filers') &&
+                (await crumbCurrent.textContent()).startsWith(officeName);
+            await allSectors.click();
+            const zoomedOut = (await crumbCurrent.textContent()).startsWith('All sectors') &&
                 await office.getAttribute('aria-pressed') === 'false' &&
                 await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link').count() === 0;
             if (zoomedIn && zoomedOut) {
-                pass(`Research 6: a legend button zooms into ${officeName}; the breadcrumb's "All filers" link returns`);
+                pass(`Sectors 5: a legend button zooms into ${officeName}; the breadcrumb's "All sectors" link returns`);
             } else {
-                fail(`Research 6: zoomed in ${zoomedIn}, zoomed out ${zoomedOut}`);
+                fail(`Sectors 5: zoomed in ${zoomedIn}, zoomed out ${zoomedOut}`);
             }
         });
 
-        // Step 6a: the takeaway cards follow the zoom, and the tooltip gives the share of all filers and a rank.
-        await step('Research 6a', fail, async () => {
+        // Sectors 5a: the takeaway cards follow the zoom, and the tooltip gives the share of all filers and a rank.
+        await step('Sectors 5a', fail, async () => {
             const cards = page.locator('#research-sectors-takeaways .research-takeaway');
             const labels = await cards.locator('.research-takeaway__label').allTextContents();
             const totalNote = page.locator('#research-sectors-takeaways .research-takeaway').first()
@@ -217,77 +228,70 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             await page.locator('#research-sectors-legend button').first().click();
             const zoomedNote = (await totalNote.textContent()).includes('of all filers');
             // The chart hides its tooltip on scroll, and the legend click may have scrolled: bring the chart into view
-            // and let any scroll event fire first. A ring segment's bounding-box centre often lies off the arc, so the
-            // pointer event goes to the arc itself.
-            await page.locator('#research-sunburst').scrollIntoViewIfNeeded();
+            // and let any scroll event fire first.
+            await page.locator('#research-treemap').scrollIntoViewIfNeeded();
             await page.evaluate(() => new Promise((resolve) => {
                 requestAnimationFrame(() => requestAnimationFrame(resolve));
             }));
-            await page.locator('#research-sunburst path.research-sunburst__arc:not([pointer-events="none"])').first()
+            await page.locator('#research-treemap g.research-treemap__tile').first()
                 .dispatchEvent('pointermove', {clientX: 200, clientY: 200, pointerType: 'mouse', bubbles: true});
             const tooltip = page.locator('#research-tooltip');
             await tooltip.waitFor({state: 'visible', timeout: TIMEOUT});
             const tip = await tooltip.textContent();
-            await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'All filers'}).click();
+            await allSectors.click();
             if (atRoot && zoomedNote && /of all filers/.test(tip) && /#\d+ of \d+ in /.test(tip)) {
-                pass(`Research 6a: cards (${labels.join(', ')}) follow the zoom; the tooltip shows the share of all and a rank`);
+                pass(`Sectors 5a: cards (${labels.join(', ')}) follow the zoom; the tooltip shows the share of all and a rank`);
             } else {
-                fail(`Research 6a: cards ${JSON.stringify(labels)}, zoomed note ${zoomedNote}, tooltip "${tip}"`);
+                fail(`Sectors 5a: cards ${JSON.stringify(labels)}, zoomed note ${zoomedNote}, tooltip "${tip}"`);
             }
         });
 
-        // Step 6b: both keyboard paths. Arcs: arrow keys move between siblings, Enter zooms in, Escape zooms out and
-        // returns focus to the group left. Ranked list: a row fades the other slices, and Enter zooms into it.
-        await step('Research 6b', fail, async () => {
-            const current = page.locator('#research-sectors-breadcrumb [aria-current="location"]');
+        // Sectors 5b: both keyboard paths. Tiles: one tab stop, arrow keys move between them, Enter zooms in, Escape
+        // zooms out and returns focus to the group left. Ranked list: a row fades the other tiles, and Enter zooms into it.
+        await step('Sectors 5b', fail, async () => {
             const activeKey = () => page.evaluate(() => document.activeElement.getAttribute('data-key'));
-            await page.locator('#research-sunburst path[tabindex="0"]').focus();
+            const stops = await page.locator('#research-treemap g.research-treemap__tile[tabindex="0"]').count();
+            await page.locator('#research-treemap g.research-treemap__tile[tabindex="0"]').focus();
             const first = await activeKey();
             await page.keyboard.press('ArrowRight');
             const second = await activeKey();
             const moved = Boolean(first) && Boolean(second) && first !== second;
             const office = second;
             await page.keyboard.press('Enter');
-            const zoomedName = (await current.textContent()).split(' · ')[0];
+            const zoomedName = (await crumbCurrent.textContent()).split(' · ')[0];
             const inside = await activeKey();
             await page.keyboard.press('Escape');
             const back = await activeKey();
-            const arcsOk = moved && zoomedName !== 'All filers' && Boolean(inside) && inside !== office &&
-                (await current.textContent()).startsWith('All filers') && back === office;
+            const tilesOk = stops === 1 && moved && zoomedName !== 'All sectors' && Boolean(inside) && inside !== office &&
+                (await crumbCurrent.textContent()).startsWith('All sectors') && back === office;
 
             const row = page.locator('#research-sectors-ranked button').first();
             const rowName = (await row.locator('.research-ranked__name').textContent()).trim();
             await row.focus();
-            const faded = await page.locator('#research-sunburst .research-sunburst__arc--faded').count();
+            const faded = await page.locator('#research-treemap .research-treemap__tile--faded').count();
             await page.keyboard.press('Enter');
-            const listZoom = (await current.textContent()).startsWith(rowName);
+            const listZoom = (await crumbCurrent.textContent()).startsWith(rowName);
             const listFocus = await page.evaluate(() => {
                 const list = document.getElementById('research-sectors-ranked');
                 const title = document.getElementById('research-sectors-ranked-title');
                 return list.contains(document.activeElement) || document.activeElement === title;
             });
-            await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'All filers'}).click();
-            if (arcsOk && faded > 0 && listZoom && listFocus) {
-                pass(`Research 6b: arrows, Enter and Escape drive the arcs (back to ${office}); the ranked list zooms into ${rowName}`);
+            await allSectors.click();
+            if (tilesOk && faded > 0 && listZoom && listFocus) {
+                pass(`Sectors 5b: arrows, Enter and Escape drive the tiles (back to ${office}); the ranked list zooms into ${rowName}`);
             } else {
-                fail(`Research 6b: arcs ${arcsOk} (${first}→${second}, in ${zoomedName}/${inside}, back ${back}), ` +
+                fail(`Sectors 5b: tiles ${tilesOk} (stops ${stops}, ${first}→${second}, in ${zoomedName}/${inside}, back ${back}), ` +
                     `faded ${faded}, list zoom ${listZoom}, list focus ${listFocus}`);
             }
         });
 
-        // Step 6c: the treemap toggle keeps the focus and the year; tiles drill in with Enter and back with Escape;
-        // inside one office, neighbouring tiles differ in fill.
-        await step('Research 6c', fail, async () => {
-            const current = page.locator('#research-sectors-breadcrumb [aria-current="location"]');
+        // Sectors 5c: inside one office, neighbouring tiles differ in fill, and the zoom keeps the year; a zoomable tile
+        // drills in with Enter and back with Escape. There is no sunburst and no chart-type toggle.
+        await step('Sectors 5c', fail, async () => {
             const period = await periodLabel(page, 'sectors');
             await page.locator('#research-sectors-legend button').first().click();
-            const office = (await current.textContent()).split(' · ')[0];
-            await page.click('[data-research-view="treemap"]');
-            const shown = await page.locator('#research-treemap').isVisible() &&
-                !(await page.locator('#research-sunburst').isVisible()) &&
-                await page.getAttribute('[data-research-view="treemap"]', 'aria-pressed') === 'true';
-            const keptFocus = (await current.textContent()).startsWith(office) &&
-                await periodLabel(page, 'sectors') === period;
+            const office = (await crumbCurrent.textContent()).split(' · ')[0];
+            const keptYear = await periodLabel(page, 'sectors') === period;
             const fills = await page.locator('#research-treemap .research-treemap__rect').evaluateAll(
                 (rects) => rects.map((r) => r.getAttribute('fill')));
             const distinct = fills.length < 2 || new Set(fills).size === fills.length;
@@ -296,29 +300,27 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             if (await zoomable.count() > 0) {
                 await zoomable.focus();
                 await page.keyboard.press('Enter');
-                drilled = !(await current.textContent()).startsWith(office);
+                drilled = !(await crumbCurrent.textContent()).startsWith(office);
                 await page.locator('#research-treemap g.research-treemap__tile').first().focus();
                 await page.keyboard.press('Escape');
-                drilled = drilled && (await current.textContent()).startsWith(office);
+                drilled = drilled && (await crumbCurrent.textContent()).startsWith(office);
             }
-            await page.click('[data-research-view="sunburst"]');
-            const back = await page.locator('#research-sunburst').isVisible() &&
-                (await current.textContent()).startsWith(office);
-            await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'All filers'}).click();
-            if (shown && keptFocus && distinct && drilled && back) {
-                pass(`Research 6c: the treemap shows ${office} for ${period} (${fills.length} tiles, all distinct), drills with Enter/Escape, and toggles back`);
+            const noSunburst = await page.locator('#research-sunburst, [data-research-view]').count() === 0;
+            await allSectors.click();
+            if (keptYear && distinct && drilled && noSunburst && fills.length > 0) {
+                pass(`Sectors 5c: the treemap shows ${office} for ${period} (${fills.length} tiles, all distinct), drills with Enter/Escape; no sunburst`);
             } else {
-                fail(`Research 6c: shown ${shown}, kept focus ${keptFocus}, fills ${JSON.stringify(fills)}, drilled ${drilled}, back ${back}`);
+                fail(`Sectors 5c: kept year ${keptYear}, fills ${JSON.stringify(fills)}, drilled ${drilled}, no sunburst ${noSunburst}`);
             }
         });
 
-        // Step 7: Funds opens with SPY expanded; QQQ expands with Enter; the scrubber shows quarters.
-        // Step 6d: the Sectors basket view. Without a basket the switch opens on Market with Your basket disabled; with
-        // SPY 60 and QQQ 40 it opens on Your basket, every figure a share of the basket, stocks SEC does not classify
-        // hatched grey (never in an office colour), and International Corp Fin neutral. A drill-down reaches an
-        // industry's companies and "Other (n companies)", the unclassified card names the largest countries, the treemap
-        // keeps the hatch, and the table lists the basket's largest companies.
-        await step('Research 6d', fail, async () => {
+        // Sectors 6: the basket view. Without a basket the switch opens on Market with Your basket disabled; with SPY 60
+        // and QQQ 40 it still opens on Market unless the address asks for ?view=basket. In the basket view every figure
+        // is a share of the basket, stocks SEC does not classify are hatched grey (never in an office colour), and
+        // International Corp Fin is neutral. A drill-down reaches an industry's companies and "Other (n companies)", the
+        // unclassified card names the largest countries, their tiles keep the hatch, and the table lists the basket's
+        // largest companies. Back on Market, the address drops ?view.
+        await step('Sectors 6', fail, async () => {
             // Without a basket the page neither carries nor fetches the basket's data.
             const fetched = [];
             const onRequest = (request) => {
@@ -327,13 +329,16 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                 }
             };
             page.on('request', onRequest);
-            await page.goto(`${base}/Research?tab=sectors`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.goto(`${base}/Research/Sectors`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             const notCarried = await page.locator('script#research-fund-industries-data').count() === 0 && fetched.length === 0;
             const marketFirst = await page.locator('[data-sectors-view="market"]').getAttribute('aria-pressed') === 'true';
             const basketOff = await page.locator('[data-sectors-view="basket"]').isDisabled();
-            const barShown = await page.locator('#research-basket').isVisible();
-            await page.goto(`${base}/Research?tab=sectors&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
-            await page.waitForSelector('#research-sunburst svg path[data-key="bu"]', {timeout: TIMEOUT});
+            const noBar = await page.locator('#research-basket').count() === 0;
+            await page.goto(`${base}/Research/Sectors?basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const marketWithBasket = await page.locator('[data-sectors-view="market"]').getAttribute('aria-pressed') === 'true' &&
+                !(await page.locator('[data-sectors-view="basket"]').isDisabled()) && fetched.length === 0;
+            await page.goto(`${base}/Research/Sectors?view=basket&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.waitForSelector('#research-treemap g.research-treemap__tile[data-key="bu"]', {timeout: TIMEOUT});
             const fetchedOnce = fetched.length === 1;
             page.off('request', onRequest);
             const asOf = (await page.locator('#research-sectors-holdings-as-of').textContent()).trim();
@@ -365,7 +370,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             // The scrubber stays: the basket's lean section follows its year.
             const scrubberShown = await page.locator('#research-panel-sectors [data-research-scrubber]').isVisible();
             const subtitle = await page.locator('#research-sectors-subtitle').textContent();
-            const centre = (await page.locator('.research-sunburst__centre').textContent()).replace(/\s+/g, ' ');
+            const top = (await crumbCurrent.textContent()).trim();
             const cards = await page.locator('#research-sectors-takeaways .research-takeaway').evaluateAll((items) => items.map((i) => ({
                 label: i.querySelector('.research-takeaway__label').textContent,
                 value: i.querySelector('.research-takeaway__value').textContent,
@@ -373,31 +378,28 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             })));
             const card = (label) => cards.find((c) => c.label === label) || { value: '', note: '' };
             const fills = await page.evaluate(async () => {
-                const fillOf = (key) => document.querySelector(`#research-sunburst path[data-key="${key}"]`)?.getAttribute('fill');
-                const hatchedKeys = Array.from(document.querySelectorAll('#research-sunburst path[data-key^="bu"]')).map((p) => p.getAttribute('fill'));
+                const fillOf = (key) => document.querySelector(`#research-treemap g.research-treemap__tile[data-key="${key}"] rect`)?.getAttribute('fill');
                 const neutral = getComputedStyle(document.querySelector('.research')).getPropertyValue('--research-office-neutral').trim();
                 const data = await (await fetch(document.getElementById('research-sectors-views').dataset.industriesUrl)).json();
                 const intl = data.offices.indexOf('International Corp Fin');
-                return { unclassified: fillOf('bu'), allHatched: hatchedKeys.every((f) => f === 'url(#research-hatch-sunburst)'), intl: fillOf(`bo${intl}`), neutral };
+                return { unclassified: fillOf('bu'), intl: fillOf(`bo${intl}`), neutral };
             });
             const hatchedSwatch = await page.locator('#research-sectors-legend .research-legend__button', {hasText: 'Not classified by the SEC'})
                 .locator('.research-legend__swatch--hatched').count();
 
             // Drill: the Technology office, then its software industry from the ranked list.
             await page.locator('#research-sectors-legend .research-legend__button', {hasText: 'Technology'}).click();
-            const crumb = (await page.locator('#research-sectors-breadcrumb [aria-current="location"]').textContent()).trim();
+            const crumb = (await crumbCurrent.textContent()).trim();
             await page.locator('#research-sectors-ranked button', {hasText: 'Services-Prepackaged Software'}).click();
             const leaves = (await page.locator('#research-sectors-ranked .research-ranked__name').allTextContents()).map((t) => t.trim());
-            // The unclassified stocks: their card names the largest countries; the treemap keeps the hatch.
+            // The unclassified stocks: their card names the largest countries; their tiles keep the hatch.
             await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'Your basket'}).click();
             await page.locator('#research-sectors-legend .research-legend__button', {hasText: 'Not classified by the SEC'}).click();
             const unclassifiedNote = await page.locator('#research-sectors-takeaways .research-takeaway').evaluateAll((items) => {
                 const item = items.find((i) => i.querySelector('.research-takeaway__label').textContent === 'Not classified by the SEC');
                 return item ? item.querySelector('.research-takeaway__note').textContent : '';
             });
-            await page.click('[data-research-view="treemap"]');
             const tileFills = await page.locator('#research-treemap .research-treemap__rect').evaluateAll((rects) => rects.map((r) => r.getAttribute('fill')));
-            await page.click('[data-research-view="sunburst"]');
             await page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'Your basket'}).click();
             await page.click('#research-panel-sectors [data-research-table-toggle]');
             const caption = await page.locator('#research-sectors-table caption').textContent();
@@ -406,45 +408,46 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             const words = (await page.locator('#research-panel-sectors').innerText()).toLowerCase();
             const advice = ['best', 'efficient', ' buy'].filter((w) => words.includes(w));
 
-            // Back to Market: the title, the scrubber and the year return.
+            // Back to Market: the title, the scrubber and the year return, and the address drops ?view.
             await page.click('[data-sectors-view="market"]');
             const marketTitle = (await page.locator('#research-sectors-title').textContent()).trim();
             const scrubberBack = await page.locator('#research-panel-sectors [data-research-scrubber]').isVisible() &&
                 !(await page.locator('#research-lean').isVisible());
-            await page.locator('#research-basket-chips [data-ticker="QQQ"] .research-basket__remove').click();
-            await page.locator('#research-basket-chips [data-ticker="SPY"] .research-basket__remove').click();
+            const viewDropped = !new URL(page.url()).searchParams.has('view') &&
+                new URL(page.url()).searchParams.get('basket') === 'SPY:60,QQQ:40';
 
-            const ok = notCarried && fetchedOnce && asOf === 'Fund holdings as of 30 June 2026' && marketFirst && basketOff && barShown && basketOn && title === 'Your basket by SEC industry' && scrubberShown &&
-                subtitle.includes('Every percent is of your basket') && centre.includes('Your basket') && centre.includes('100.0%') &&
+            const ok = notCarried && fetchedOnce && asOf === 'Fund holdings as of 30 June 2026' && marketFirst && basketOff && noBar &&
+                marketWithBasket && basketOn && title === 'Your basket by SEC industry' && scrubberShown &&
+                subtitle.includes('Every percent is of your basket') && top.startsWith('Your basket') && top.includes('100.0%') &&
                 card('Classified by the SEC').value === expected.classified &&
                 card('Not classified by the SEC').value === expected.unclassified &&
                 card('Not classified by the SEC').note.includes(`Netherlands ${expected.nl}`) &&
                 card('Largest SEC industry office').value === expected.technology &&
                 card('Largest company').value === expected.nvidia && card('Largest company').note.includes('Nvidia Corp') &&
-                fills.unclassified === 'url(#research-hatch-sunburst)' && fills.allHatched && fills.intl === fills.neutral &&
+                fills.unclassified === 'url(#research-hatch-treemap)' && fills.intl === fills.neutral &&
                 hatchedSwatch === 1 && crumb === `Technology · ${expected.technology}` &&
                 leaves.includes('Microsoft Corp (MSFT)') && leaves.includes(`Other (${expected.others} companies)`) &&
                 unclassifiedNote.includes(`Largest countries: Netherlands ${expected.nl}`) &&
                 tileFills.length > 0 && tileFills.every((f) => f === 'url(#research-hatch-treemap)') &&
                 caption.includes('largest companies in your basket') && firstRow[1] === 'Nvidia Corp (NVDA)' &&
                 firstRow[4] === expected.nvidia && advice.length === 0 &&
-                marketTitle === 'Largest SEC filers by Public float' && scrubberBack;
+                marketTitle === 'Largest SEC filers by Public float' && scrubberBack && viewDropped;
             if (ok) {
-                pass(`Research 6d: Market first; with SPY and QQQ the basket view shows ${expected.classified} classified by the SEC and ${expected.unclassified} not (Netherlands ${expected.nl}), Technology ${expected.technology}, Nvidia ${expected.nvidia}; hatched unclassified, neutral International Corp Fin; drills to "Other (${expected.others} companies)"; the table and Market return`);
+                pass(`Sectors 6: Market first (also with a basket unless ?view=basket); the basket view shows ${expected.classified} classified by the SEC and ${expected.unclassified} not (Netherlands ${expected.nl}), Technology ${expected.technology}, Nvidia ${expected.nvidia}; hatched unclassified, neutral International Corp Fin; drills to "Other (${expected.others} companies)"; the table and Market return`);
             } else {
-                fail(`Research 6d: fetch ${notCarried}/${fetched.length} "${asOf}", market ${marketFirst}/${basketOff}/${barShown}, basket ${basketOn} "${title}" scrubber shown ${scrubberShown}, ` +
-                    `centre "${centre}", cards ${JSON.stringify(cards)} vs ${JSON.stringify(expected)}, fills ${JSON.stringify(fills)} swatch ${hatchedSwatch}, ` +
+                fail(`Sectors 6: fetch ${notCarried}/${fetched.length} "${asOf}", market ${marketFirst}/${basketOff}/no bar ${noBar}/with basket ${marketWithBasket}, basket ${basketOn} "${title}" scrubber shown ${scrubberShown}, ` +
+                    `top "${top}", cards ${JSON.stringify(cards)} vs ${JSON.stringify(expected)}, fills ${JSON.stringify(fills)} swatch ${hatchedSwatch}, ` +
                     `crumb "${crumb}", leaves ${JSON.stringify(leaves)}, note "${unclassifiedNote}", tiles ${JSON.stringify(tileFills)}, ` +
-                    `table "${caption}" ${JSON.stringify(firstRow)}, advice ${advice}, market "${marketTitle}" ${scrubberBack}`);
+                    `table "${caption}" ${JSON.stringify(firstRow)}, advice ${advice}, market "${marketTitle}" ${scrubberBack}, view dropped ${viewDropped} (${page.url()})`);
             }
         });
 
-        // Step 6e: Lean vs the market, under the basket chart. Each office's share of the SEC-classified part of the
+        // Sectors 6a: Lean vs the market, under the basket chart. Each office's share of the SEC-classified part of the
         // basket against its share of every filer's Public float in the scrubber's year, with a signed difference in
         // points (an arrow and a colour too, never colour alone); the year follows the scrubber, rows are reachable by
         // keyboard, and a row zooms the chart into its office.
-        await step('Research 6e', fail, async () => {
-            await page.goto(`${base}/Research?tab=sectors&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await step('Sectors 6a', fail, async () => {
+            await page.goto(`${base}/Research/Sectors?view=basket&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             await page.waitForSelector('#research-lean-rows .research-lean__row', {timeout: TIMEOUT});
             const expectedFor = (index) => page.evaluate(async (periodIndex) => {
                 const data = await (await fetch(document.getElementById('research-sectors-views').dataset.industriesUrl)).json();
@@ -504,19 +507,50 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             const words = (await page.locator('#research-lean').innerText()).toLowerCase();
             const advice = ['best', 'efficient', ' buy', 'should'].filter((w) => words.includes(w));
             await page.locator('#research-sectors-year').fill(String((await periodsOf(page, 'sectors')).length - 1));
-            await page.locator('#research-basket-chips [data-ticker="QQQ"] .research-basket__remove').click();
-            await page.locator('#research-basket-chips [data-ticker="SPY"] .research-basket__remove').click();
+            await page.click('[data-sectors-view="market"]');
             const hiddenInMarket = !(await page.locator('#research-lean').isVisible());
 
             if (lastOk && followsYear && nextIsRow && crumb.startsWith('Technology') && advice.length === 0 && hiddenInMarket) {
-                pass(`Research 6e: Technology is ${last.basket} of the SEC-classified part (${last.classified}) against ${last.market} of the market in ${last.year} (${last.difference}, ${last.more ? '▲' : '▼'}); ${first.year} reads ${first.market} (${first.difference}); rows tab in order and zoom the chart; hidden in Market`);
+                pass(`Sectors 6a: Technology is ${last.basket} of the SEC-classified part (${last.classified}) against ${last.market} of the market in ${last.year} (${last.difference}, ${last.more ? '▲' : '▼'}); ${first.year} reads ${first.market} (${first.difference}); rows tab in order and zoom the chart; hidden in Market`);
             } else {
-                fail(`Research 6e: "${title}" note "${note}", Technology ${JSON.stringify(tech)} vs ${JSON.stringify(last)}, ` +
+                fail(`Sectors 6a: "${title}" note "${note}", Technology ${JSON.stringify(tech)} vs ${JSON.stringify(last)}, ` +
                     `first "${firstTitle}" ${JSON.stringify(techFirst)} vs ${JSON.stringify(first)}, tab ${nextIsRow}, crumb "${crumb}", advice ${advice}, hidden ${hiddenInMarket}`);
             }
         });
 
+        // Sectors 7: ?focus= opens the chart zoomed, matched by name whatever its case: Finance › National Commercial
+        // Banks shows the breadcrumb All sectors › Finance › National Commercial Banks. A name the data does not have
+        // (Finance/Banks) leaves the chart at the top, and a malformed focus (three parts) is dropped by the server.
+        await step('Sectors 7', fail, async () => {
+            const crumbsOf = async (focus) => {
+                await page.goto(`${base}/Research/Sectors?focus=${encodeURIComponent(focus)}`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+                await page.waitForSelector('#research-treemap svg', {timeout: TIMEOUT});
+                return (await page.locator('#research-sectors-breadcrumb .research-breadcrumb__item').allTextContents())
+                    .map((t) => t.trim().split(' · ')[0]);
+            };
+            const banks = await crumbsOf('Finance/National Commercial Banks');
+            const legendPressed = ((await page.locator('#research-sectors-legend button[aria-pressed="true"]').textContent()) || '').trim();
+            const ranked = (await page.locator('#research-sectors-ranked-title').textContent()).trim();
+            const lower = await crumbsOf('finance');
+            const unknown = await crumbsOf('Finance/Banks');
+            const malformed = await crumbsOf('Finance/National Commercial Banks/Extra');
+            const dropped = await page.locator('#research-panel-sectors[data-research-focus]').count() === 0;
+            const ok = JSON.stringify(banks) === JSON.stringify(['All sectors', 'Finance', 'National Commercial Banks']) &&
+                legendPressed === 'Finance' && ranked.startsWith('Largest parts of National Commercial Banks') &&
+                JSON.stringify(lower) === JSON.stringify(['All sectors', 'Finance']) &&
+                JSON.stringify(unknown) === JSON.stringify(['All sectors']) &&
+                JSON.stringify(malformed) === JSON.stringify(['All sectors']) && dropped;
+            if (ok) {
+                pass('Sectors 7: ?focus=Finance/National Commercial Banks opens zoomed (All sectors › Finance › National Commercial Banks); case is ignored; an unknown or malformed focus stays at the top');
+            } else {
+                fail(`Sectors 7: banks ${JSON.stringify(banks)} legend "${legendPressed}" ranked "${ranked}", lower ${JSON.stringify(lower)}, ` +
+                    `unknown ${JSON.stringify(unknown)}, malformed ${JSON.stringify(malformed)} dropped ${dropped}`);
+            }
+        });
+
+        // Step 7: Funds opens with SPY expanded; QQQ expands with Enter; the scrubber shows quarters. Back on the tabbed page.
         await step('Research 7', fail, async () => {
+            await page.goto(`${base}/Research`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             await page.click('#research-tab-funds');
             await page.waitForSelector('#research-funds-tree [role="tree"]', {timeout: TIMEOUT});
             const spy = page.locator('#research-funds-tree [role="treeitem"][aria-label^="SPY "]');
@@ -1041,9 +1075,12 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             try {
                 await reduced.emulateMedia({reducedMotion: 'reduce'});
                 await reduced.goto(`${base}/Research`, {waitUntil: 'networkidle', timeout: TIMEOUT});
-                await reduced.waitForSelector('#research-sunburst path.research-sunburst__arc', {timeout: TIMEOUT});
-                const shape = () => reduced.evaluate(() => [...document.querySelectorAll('#research-sunburst path.research-sunburst__arc')]
-                    .map((arc) => `${arc.dataset.key}=${arc.getAttribute('d')}`).join('|'));
+                await reduced.waitForSelector('#research-treemap g.research-treemap__tile', {timeout: TIMEOUT});
+                const shape = () => reduced.evaluate(() => [...document.querySelectorAll('#research-treemap g.research-treemap__tile')]
+                    .map((tile) => {
+                        const rect = tile.querySelector('rect');
+                        return `${tile.dataset.key}=${tile.getAttribute('transform')}/${rect.getAttribute('width')}x${rect.getAttribute('height')}`;
+                    }).join('|'));
                 await reduced.locator('#research-sectors-year').fill('0');
                 const atOnce = await shape();
                 await reduced.waitForTimeout(1200);
@@ -1052,7 +1089,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                 if (label === earliest && atOnce === settled) {
                     pass('Research 10: with reduced motion the slider change is drawn at once, with no transition');
                 } else {
-                    fail(`Research 10: label "${label}", arcs changed after the change: ${atOnce !== settled}`);
+                    fail(`Research 10: label "${label}", tiles changed after the change: ${atOnce !== settled}`);
                 }
             } finally {
                 await reduced.close();
@@ -1072,7 +1109,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                 const mobile = watch(await phone.newPage());
                 // With a weighted basket, so the Funds tab's check covers the Fund Basket bar's chips too.
                 await mobile.goto(`${base}/Research?basket=SPY:70,QQQ:50`, {waitUntil: 'networkidle', timeout: TIMEOUT});
-                await mobile.waitForSelector('#research-sunburst svg', {timeout: TIMEOUT});
+                await mobile.waitForSelector('#research-treemap svg', {timeout: TIMEOUT});
                 const wide = [];
                 for (const tabId of ['sectors', 'funds', 'performance', 'risk', 'world']) {
                     await mobile.tap(`#research-tab-${tabId}`);
@@ -1082,7 +1119,10 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                     }
                 }
                 await mobile.tap('#research-tab-sectors');
-                // With a basket set, Sectors opens on Your basket, which has no years: the slider is the market's.
+                // With a basket set, the tab opens on Your basket (the Sectors page only does so with ?view=basket),
+                // which has no years: the slider is the market's.
+                await mobile.waitForSelector('[data-sectors-view="basket"][aria-pressed="true"]', {timeout: TIMEOUT});
+                pass('Research 11: with a basket set, the Sectors tab opens on Your basket');
                 await mobile.tap('[data-sectors-view="market"]');
                 // The cookie banner is fixed to the bottom of the screen and, depending on how its text wraps, can
                 // cover the slider; answer it first, as someone on a phone would.

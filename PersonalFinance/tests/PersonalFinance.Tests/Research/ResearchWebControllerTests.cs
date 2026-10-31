@@ -132,14 +132,14 @@ public class ResearchWebControllerTests
     }
 
     [Fact]
-    public async Task Index_ReadsTheSectorsSnapshotOnce_AndOnlyTheCompaniesTabAndTheSectorsBasketFetchMore_SoTheSunburstNeedsNoFurtherRoundTrip()
+    public async Task Index_ReadsTheSectorsSnapshotOnce_AndOnlyTheCompaniesTabAndTheSectorsBasketFetchMore_SoTheChartNeedsNoFurtherRoundTrip()
     {
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
         proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
 
         ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
 
-        // The view embeds the whole snapshot as JSON for the sunburst, so the page makes no API call of its own.
+        // The view embeds the whole snapshot as JSON for the chart, so the page makes no API call of its own.
         Assert.Equal([nameof(IResearchApi.GetSectorsAsync), nameof(IResearchApi.GetFundsAsync), nameof(IResearchApi.GetWorldAsync),
                 nameof(IResearchApi.GetFundOverlapAsync), nameof(IResearchApi.GetFundReturnsAsync), nameof(IResearchApi.GetMacroAsync),
                 nameof(IResearchApi.GetFundFactsAsync), nameof(IResearchApi.GetFundExposureAsync)],
@@ -151,7 +151,8 @@ public class ResearchWebControllerTests
             [
                 nameof(ResearchController.Company), nameof(ResearchController.FundIndustries), nameof(ResearchController.Home),
                 nameof(ResearchController.Index),
-                nameof(ResearchController.Releases), nameof(ResearchController.SearchIndex), nameof(ResearchController.Suggest),
+                nameof(ResearchController.Releases), nameof(ResearchController.SearchIndex), nameof(ResearchController.Sectors),
+                nameof(ResearchController.Suggest),
             ],
             typeof(ResearchController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
                 .Select(m => m.Name).Order(StringComparer.Ordinal));
@@ -339,5 +340,113 @@ public class ResearchWebControllerTests
         Assert.Equal(new DateOnly(2026, 10, 30), second.Datasets[0].AsOf);
         // The failure is not kept, and the status read after it is: two reads for three views.
         Assert.Equal(2, proxy.Calls.Count);
+    }
+
+    private static ResearchSectorsPageViewModel SectorsModelOf(IActionResult result) =>
+        Assert.IsType<ResearchSectorsPageViewModel>(Assert.IsType<ViewResult>(result).Model);
+
+    private static readonly FundsSnapshotDto Funds = new()
+    {
+        AsOf = new DateOnly(2026, 6, 30),
+        Periods = ["2026 Q2"],
+        Funds = [new TrackedFundDto { Ticker = "SPY", Name = "SPDR S&P 500 ETF Trust" }],
+        Values = [new FundsPeriodDto { Period = "2026 Q2", Funds = [new FundHoldingsDto { Ticker = "SPY", HoldingCount = 504 }] }],
+    };
+
+    [Fact]
+    public async Task Sectors_ReadsSectorsAndFundsOnly()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot)
+            .Returns(nameof(IResearchApi.GetFundsAsync), Funds);
+
+        ResearchSectorsPageViewModel model = SectorsModelOf(await CreateController(api).Sectors());
+
+        Assert.Equal([nameof(IResearchApi.GetFundsAsync), nameof(IResearchApi.GetSectorsAsync)],
+            proxy.Calls.Order(StringComparer.Ordinal));
+        Assert.Same(Snapshot, model.Sectors.Snapshot);
+        Assert.Same(Funds, model.Funds.Snapshot);
+        Assert.Null(model.Focus);
+        Assert.Equal(ResearchSectorsPageViewModel.MarketView, model.View);
+    }
+
+    [Fact]
+    public async Task Sectors_WhenTheSectorsDataHasNeverLoaded_ShowsItsUnavailableState()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Throws(nameof(IResearchApi.GetSectorsAsync), await ApiFailure(HttpStatusCode.ServiceUnavailable, "{}"))
+            .Returns(nameof(IResearchApi.GetFundsAsync), Funds);
+
+        ResearchSectorsPageViewModel model = SectorsModelOf(await CreateController(api).Sectors());
+
+        Assert.True(model.Sectors.Unavailable);
+        Assert.False(model.Funds.Unavailable);
+        // Retry reloads this page, not the old tabbed one.
+        Assert.Equal(("Research", "Sectors"),
+            (model.Sectors.UnavailableState.RetryController, model.Sectors.UnavailableState.RetryAction));
+        Assert.False(string.IsNullOrWhiteSpace(model.Sectors.UnavailableState.Heading));
+    }
+
+    [Fact]
+    public async Task Sectors_WhenOnlyTheFundsDataFails_KeepsTheChart_AndOnlyTheBasketViewIsUnavailable()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot)
+            .Throws(nameof(IResearchApi.GetFundsAsync), await ApiFailure(HttpStatusCode.ServiceUnavailable, "{}"));
+
+        ResearchSectorsPageViewModel model = SectorsModelOf(await CreateController(api).Sectors(view: "basket"));
+
+        Assert.False(model.Sectors.Unavailable);
+        Assert.True(model.Funds.Unavailable);
+        Assert.Equal(ResearchSectorsPageViewModel.BasketView, model.View);
+        Assert.Equal(("Research", "Sectors"),
+            (model.Funds.UnavailableState.RetryController, model.Funds.UnavailableState.RetryAction));
+        Assert.Equal(ResearchSectorsPageViewModel.BasketView, model.Funds.UnavailableState.RetryRouteValues["view"]);
+    }
+
+    [Theory]
+    [InlineData("Technology", "Technology")]
+    [InlineData(" Finance / National Commercial Banks ", "Finance/National Commercial Banks")]
+    [InlineData("A/B/C", null)]
+    [InlineData("Finance/", null)]
+    [InlineData("/Banks", null)]
+    [InlineData("   ", null)]
+    [InlineData(null, null)]
+    public async Task Sectors_KeepsAValidFocus_AndDropsAMalformedOne(string? focus, string? expected)
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
+
+        ResearchSectorsPageViewModel model = SectorsModelOf(await CreateController(api).Sectors(focus));
+
+        Assert.Equal(expected, model.Focus);
+    }
+
+    [Fact]
+    public async Task Sectors_DropsAFocusPartLongerThan80Characters()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> _) = ApiProxy.Create<IResearchApi>();
+        string eighty = new('a', 80);
+
+        ResearchSectorsPageViewModel kept = SectorsModelOf(await CreateController(api).Sectors($"Finance/{eighty}"));
+        ResearchSectorsPageViewModel dropped = SectorsModelOf(await CreateController(api).Sectors(eighty + "a"));
+
+        Assert.Equal($"Finance/{eighty}", kept.Focus);
+        Assert.Null(dropped.Focus);
+    }
+
+    [Theory]
+    [InlineData("basket", "basket")]
+    [InlineData("BASKET", "basket")]
+    [InlineData("market", "market")]
+    [InlineData("risk", "market")]
+    [InlineData(null, "market")]
+    public async Task Sectors_OpensOnTheMarketUnlessTheBasketViewIsAskedFor(string? view, string expected)
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> _) = ApiProxy.Create<IResearchApi>();
+
+        ResearchSectorsPageViewModel model = SectorsModelOf(await CreateController(api).Sectors(view: view));
+
+        Assert.Equal(expected, model.View);
     }
 }

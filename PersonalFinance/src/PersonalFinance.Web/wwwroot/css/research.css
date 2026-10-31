@@ -503,11 +503,11 @@
 }
 
 /* --------------------------------------------------------------------------
-   Sectors sunburst. The eight SEC industry offices take the dataviz reference
+   Sectors treemap. The eight SEC industry offices take the dataviz reference
    categorical palette in SEC office-number order (validated on the white card
    with the dataviz palette validator: adjacent-pair CVD and normal-vision
    checks pass). Crypto Assets, Unassigned and any other office are neutral
-   grey. Three slots sit below 3:1 on white, so every arc keeps a 1px surface
+   grey. Three slots sit below 3:1 on white, so every tile keeps a 1px surface
    gap, the legend names each office and the tooltip carries the figures.
    The values live in site.css (--app-research-office-*), with a dark set
    lifted to 3:1 on the dark page and card (#486).
@@ -533,6 +533,17 @@
 /* The Sectors tab's "Market | Your basket" switch, and the parts that belong to one view only. */
 .research-sectors__views {
     grid-column: 1 / -1;
+}
+
+/* Under the Sectors card's subtitle: which basket funds have no holdings report. */
+.research-sectors__note {
+    margin: 0;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-sectors__note[hidden] {
+    display: none;
 }
 
 [data-sectors-view-part][hidden] {
@@ -685,54 +696,6 @@ button.research-lean__row {
     }
 }
 
-.research-sunburst {
-    width: 100%;
-    max-width: 40rem;
-    margin: 0 auto;
-}
-
-.research-sunburst svg {
-    display: block;
-    width: 100%;
-    height: auto;
-    font-family: var(--app-font-family);
-    touch-action: manipulation;
-}
-
-.research-sunburst__arc {
-    stroke: var(--app-bg);
-    stroke-width: 1px;
-}
-
-.research-sunburst__arc--zoomable,
-.research-sunburst__centre--zoomed {
-    cursor: pointer;
-}
-
-/* Keyboard focus on an arc: a ring in the page's text colour (arcs carry no
-   outline, so the stroke draws it). */
-.research-sunburst__arc:focus {
-    outline: none;
-}
-
-.research-sunburst__arc:focus-visible {
-    stroke: var(--app-text);
-    stroke-width: 3px;
-    paint-order: stroke;
-}
-
-/* A row of the ranked list under the hover or keyboard focus fades every
-   slice outside its own. */
-.research-sunburst__arc--faded {
-    opacity: 0.25;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-    .research-sunburst__arc {
-        transition: opacity 150ms ease;
-    }
-}
-
 /* The ranked list under the Sectors chart: the focus's parts, largest first.
    Groups are buttons; a bar under each row is sized against the largest. */
 
@@ -821,7 +784,8 @@ button.research-ranked__row:focus-visible {
     font-size: var(--app-font-size-small);
 }
 
-/* Above the Sectors chart: the breadcrumb, and the Sunburst | Treemap toggle. */
+/* Above the Sectors chart: the breadcrumb. The view toggle below is the Market | Your basket switch's (and other
+   tabs'). */
 
 .research-chartbar {
     display: flex;
@@ -876,8 +840,7 @@ button.research-ranked__row:focus-visible {
     width: 100%;
 }
 
-.research-treemap[hidden],
-.research-sunburst[hidden] {
+.research-treemap[hidden] {
     display: none;
 }
 
@@ -907,8 +870,16 @@ button.research-ranked__row:focus-visible {
     stroke-width: 3px;
 }
 
+/* A row of the ranked list under the hover or keyboard focus fades every
+   other tile. */
 .research-treemap__tile--faded {
     opacity: 0.25;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .research-treemap__tile {
+        transition: opacity 150ms ease;
+    }
 }
 
 .research-treemap__name,
@@ -1019,24 +990,6 @@ button.research-ranked__row:focus-visible {
     color: var(--app-text-muted);
     font-size: var(--app-font-size-small);
     overflow-wrap: anywhere;
-}
-
-.research-sunburst__label {
-    font-size: 10px;
-    pointer-events: none;
-    user-select: none;
-}
-
-.research-sunburst__centre-title {
-    fill: var(--app-text-muted);
-    font-size: 12px;
-}
-
-.research-sunburst__centre-value {
-    fill: var(--app-text);
-    font-family: var(--app-font-mono);
-    font-size: 18px;
-    font-weight: var(--app-font-weight-semibold);
 }
 
 .research-tooltip {
