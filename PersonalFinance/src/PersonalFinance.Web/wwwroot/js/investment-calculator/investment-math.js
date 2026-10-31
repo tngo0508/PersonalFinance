@@ -187,11 +187,14 @@
      *     'already' with the year when the starting amount alone gets there.
      * mode 'years': the first year the plan with its current monthly contribution reaches the target, looking up to
      *     50 years ahead (LIMITS.years.max); 'unreachable' with the shortfall at year 50 when it never does.
-     * A target the starting amount already covers is 'already' in year 0 in either mode.
+     *     When the deposits stop before they start (stopAt ≤ delay), no monthly contribution helps: 'unreachable'
+     *     with noDeposits, year (the plan's last) and the shortfall then.
+     * A target the starting amount already covers is 'already' in either mode, in the year the amount arrives
+     * (year 0, or the delay's last year).
      * @param {object} inputs - The plan, as for project().
      * @param {{target: number, mode: ('monthly'|'years'), todays?: boolean}} goal - The goal.
      * @returns {{kind: ('monthly'|'years'|'already'|'unreachable'), monthly?: number, year?: number,
-     *     shortfall?: number, progress: number, reachedYear: (number|null)}} The answer, plus progress (the plan's
+     *     shortfall?: number, noDeposits?: boolean, progress: number, reachedYear: (number|null)}} The answer, plus progress (the plan's
      *     last balance over the target, 1 for no target) and reachedYear (the first year within the plan that the
      *     current plan reaches the target, or null).
      */
@@ -211,8 +214,12 @@
         const context = { progress: target > 0 ? endOf(current) / target : 1, reachedYear: hit ? hit.year : null };
         const answer = (fields) => Object.assign(fields, context);
 
-        if (plan.initial >= target) {
+        // The starting amount arrives in year `delay` (year 0 for a plan that starts now).
+        if (target === 0) {
             return answer({ kind: 'already', year: 0 });
+        }
+        if (balances({ monthly: 0 })[plan.delay].balance >= target) {
+            return answer({ kind: 'already', year: plan.delay });
         }
 
         if (settings.mode === 'years') {
@@ -226,6 +233,10 @@
         const alone = balances({ monthly: 0 }).find(reaches);
         if (alone) {
             return answer({ kind: 'already', year: alone.year });
+        }
+        if (plan.stopAt !== null && plan.stopAt <= plan.delay) {
+            // The deposits stop before they start: no monthly contribution moves the balance.
+            return answer({ kind: 'unreachable', year: plan.years, shortfall: target - endOf(current), noDeposits: true });
         }
         // The last balance rises with the monthly contribution: widen until it reaches, then halve the gap.
         const endWith = (monthly) => endOf(balances({ monthly }));

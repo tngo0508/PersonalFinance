@@ -262,9 +262,9 @@
                 ? PFI18n.t('InvestmentCalculator.Js.Goal.AlreadyNow', { target })
                 : PFI18n.t('InvestmentCalculator.Js.Goal.AlreadyYear', { target, year: PFI18n.formatNumber(goal.year) });
         } else {
-            const horizon = InvestmentMath.LIMITS.years.max;
+            const horizon = goal.noDeposits ? goal.year : InvestmentMath.LIMITS.years.max;
             headline = PFI18n.t('InvestmentCalculator.Js.Goal.Unreachable', { years: yearsText(horizon) });
-            detail = PFI18n.t('InvestmentCalculator.Js.Goal.Shortfall', {
+            detail = PFI18n.t(goal.noDeposits ? 'InvestmentCalculator.Js.Goal.NoDeposits' : 'InvestmentCalculator.Js.Goal.Shortfall', {
                 monthly: money(plan.monthly), amount: money(goal.shortfall), year: PFI18n.formatNumber(horizon)
             });
         }
