@@ -58,9 +58,6 @@ public sealed class ResearchFundsPageViewModel
     public static readonly IReadOnlyList<string> SortKeys =
         [SortTicker, SortRole, SortReturn, SortVolatility, SortSharpe, SortFee, SortAssets];
 
-    private static readonly System.Text.RegularExpressions.Regex BasketShape =
-        new(@"^[A-Za-z0-9.:,\-]{1,200}$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
-
     /// <summary>
     /// Builds the page over the three datasets, each null when it could not be read. <paramref name="view"/>,
     /// <paramref name="window"/>, <paramref name="sort"/> and <paramref name="quarter"/> come from the address and are
@@ -92,7 +89,7 @@ public sealed class ResearchFundsPageViewModel
             ["sort"] = Sort,
         };
         string? trimmedBasket = basket?.Trim();
-        if (trimmedBasket is not null && BasketShape.IsMatch(trimmedBasket))
+        if (ResearchAddress.IsWellFormedBasket(trimmedBasket))
         {
             retryRoute["basket"] = trimmedBasket;
         }

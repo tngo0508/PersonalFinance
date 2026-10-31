@@ -231,6 +231,23 @@ public sealed partial class ResearchNewsRenderingTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task FundsPage_WithoutReturns_ShowsTheTable_AndOnlyTheRiskViewIsUnavailable()
+    {
+        // The fund returns are not registered, so reading them fails as if ApiService were unreachable.
+        _research.Returns(nameof(IResearchApi.GetFundsAsync), Funds)
+            .Returns(nameof(IResearchApi.GetFundFactsAsync), new FundFactsSnapshotDto());
+
+        string table = await GetAsync("/Research/Funds", vietnamese: false);
+        string risk = await GetAsync("/Research/Funds?view=risk", vietnamese: false);
+
+        Assert.Contains("id=\"research-compare-table\"", table, StringComparison.Ordinal);
+        Assert.Contains("research-compare-no-returns", table, StringComparison.Ordinal);
+        Assert.DoesNotContain("We couldn't load the fund returns data", table, StringComparison.Ordinal);
+        Assert.Contains("We couldn't load the fund returns data", risk, StringComparison.Ordinal);
+        Assert.DoesNotContain("id=\"research-risk-chart\"", risk, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task FundsPage_HoldingsList_LinksEachHoldingByName_AndCarriesNoIdentifier()
     {
         LoadEveryDataset();

@@ -103,8 +103,9 @@
                     </div>
                     @if (returns is null)
                     {
-                        @* The returns have never loaded: the table still lists the funds, with their fees and sizes. *@
-                        <partial name="_UnavailableState" model="Model.ReturnsUnavailableState"/>
+                        @* The returns have never loaded: the table still lists the funds, with their fees and sizes;
+                           only the views drawn from the returns show the Unavailable State. *@
+                        <p class="research-overlap__note" id="research-compare-no-returns" role="status">@L["Research.Funds.Page.Table.NoReturns"]</p>
                     }
                     <div class="research-compare__scroll">
                         <table class="table research-compare__table" id="research-compare-table">
@@ -116,7 +117,7 @@
                                     bool sorted = key == Model.Sort;
                                     string direction = ResearchFundsPageViewModel.SortsDescending(key) ? "descending" : "ascending";
                                     <th scope="col" data-sort-key="@key" aria-sort="@(sorted ? direction : null)"
-                                        class="@(key is ResearchFundsPageViewModel.SortTicker or ResearchFundsPageViewModel.SortRole ? null : "research-compare__number")">
+                                        class="@(ResearchFundsPageViewModel.SortsDescending(key) ? "research-compare__number" : null)">
                                         <a class="research-compare__sort" href="@Href(Model.View, sort: key)" data-research-link>
                                             <span>@L[labelKey]</span>
                                             @if (sorted)
