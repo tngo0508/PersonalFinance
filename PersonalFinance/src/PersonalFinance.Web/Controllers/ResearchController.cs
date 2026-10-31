@@ -100,6 +100,26 @@ public sealed class ResearchController : Controller
     }
 
     /// <summary>
+    /// The Research World page: the country map with its colour scale and country detail, and the Fund Basket's view by
+    /// issuer country. It reads the World data, the funds data and the fund exposure data through the snapshot cache;
+    /// each that cannot be read shows only its own section's Unavailable State, so the basket view still works without
+    /// the World data and the map without the other two. <paramref name="country"/> opens the map with that country
+    /// selected, and <paramref name="view"/> <c>basket</c> opens the basket view; a malformed value of either is
+    /// ignored. A well-formed <c>basket</c> is kept on the Unavailable State's Retry.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> World([FromQuery] string? country = null, [FromQuery] string? view = null,
+        [FromQuery] string? basket = null, CancellationToken cancellationToken = default)
+    {
+        Task<WorldSnapshotDto?> world = ReadAsync(_researchApi.GetWorldAsync, ResearchCacheKeys.World, "World", cancellationToken);
+        Task<FundsSnapshotDto?> funds = ReadAsync(_researchApi.GetFundsAsync, ResearchCacheKeys.Funds, "funds", cancellationToken);
+        Task<FundExposureSnapshotDto?> exposure = ReadAsync(_researchApi.GetFundExposureAsync, ResearchCacheKeys.FundExposure, "fund exposure", cancellationToken);
+        await Task.WhenAll(world, funds, exposure);
+        return View(new ResearchWorldPageViewModel(_localizer, await world, await funds, await exposure, country, view,
+            basket));
+    }
+
+    /// <summary>
     /// The fund industries snapshot, as JSON, from ApiService: the Sectors basket view fetches it the first time
     /// it is shown, so the page itself does not carry it (some 600 KB). An ApiService failure (503 when it has never
     /// loaded) keeps its status code with a safe message.

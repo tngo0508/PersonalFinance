@@ -67,6 +67,16 @@ async function periodLabel(page, tabId) {
 }
 
 /**
+ * The page's address as the page sees it. A history.replaceState change reaches page.url() only later, so the steps
+ * that check it read location.href instead.
+ * @param {import('playwright').Page} page - The page.
+ * @returns {Promise<URL>} The address.
+ */
+async function addressOf(page) {
+    return new URL(await page.evaluate(() => window.location.href));
+}
+
+/**
  * Whether the page scrolls sideways (wider than the viewport).
  * @param {import('playwright').Page} page - The page.
  * @returns {Promise<boolean>} True when there is horizontal page scroll.
@@ -940,25 +950,101 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
-        // Step 8: World, switched to % of GDP, changes its legend.
-        await step('Research 8', fail, async () => {
-            await page.click('#research-tab-world');
-            // With a basket set (from the steps before), the tab opens on the basket map: switch to the market.
-            if (await page.locator('[data-world-view="market"][aria-pressed="false"]').count()) {
-                await page.click('[data-world-view="market"]');
-            }
+        // The World steps run on the World page (/Research/World), which shares its panel and scripts with the tabbed
+        // page's World tab; steps 8b, 8c, 9 and 11 below still cover that tab.
+
+        // World 1 (was Research 8): the World page opens on the market map, the Research nav marks World as the current
+        // page, and switching to % of GDP changes the legend.
+        await step('World 1', fail, async () => {
+            await page.goto(`${base}/Research/World`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             await page.waitForSelector('#research-world-map svg', {timeout: TIMEOUT});
+            const current = ((await page.locator('.research-nav a[aria-current="page"]').textContent()) || '').trim();
+            const tabs = await page.locator('[role="tablist"]').count();
             const legend = page.locator('#research-world-legend');
             const before = await legend.getAttribute('aria-label');
             const button = page.locator('[data-research-world-metric="percentOfGdp"]');
             await button.click();
             const after = await legend.getAttribute('aria-label');
             const firstStep = await legend.locator('li').first().textContent();
-            if (before !== after && /% of GDP/.test(after) && firstStep.includes('%') &&
+            if (current === 'World' && tabs === 0 && before !== after && /% of GDP/.test(after) && firstStep.includes('%') &&
                 await button.getAttribute('aria-pressed') === 'true') {
-                pass(`Research 8: "% of GDP" changes the legend to "${after}"`);
+                pass(`World 1: the World page shows the map, World current in the nav; "% of GDP" changes the legend to "${after}"`);
             } else {
-                fail(`Research 8: legend "${before}" -> "${after}", first step "${firstStep}"`);
+                fail(`World 1: nav current "${current}", tablists ${tabs}, legend "${before}" -> "${after}", first step "${firstStep}"`);
+            }
+        });
+
+        // World 2: with a basket in the address the World page still opens on the market map; ?view=basket opens the
+        // basket map with the basket kept, and switching back to the market drops view= from the address.
+        await step('World 2', fail, async () => {
+            await page.goto(`${base}/Research/World?basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.waitForSelector('#research-world-map svg', {timeout: TIMEOUT});
+            const marketFirst = await page.locator('[data-world-view="market"]').getAttribute('aria-pressed');
+            await page.goto(`${base}/Research/World?view=basket&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.waitForSelector('#research-world-basket-map svg path', {timeout: TIMEOUT});
+            const basketOn = await page.locator('[data-world-view="basket"]').getAttribute('aria-pressed');
+            const marketHidden = !(await page.locator('#research-world-map').isVisible());
+            const callouts = await page.locator('#research-world-basket-callouts li').count();
+            await page.click('[data-world-view="market"]');
+            const address = await addressOf(page);
+            const ok = marketFirst === 'true' && basketOn === 'true' && marketHidden && callouts > 0 &&
+                !address.searchParams.has('view') && address.searchParams.get('basket') === 'SPY:60,QQQ:40';
+            if (ok) {
+                pass('World 2: the page opens on the market map, ?view=basket opens the basket map with the basket kept, and the market switch drops view= from the address');
+            } else {
+                fail(`World 2: market first ${marketFirst}, basket ${basketOn}/${marketHidden}, callouts ${callouts}, address ${address.search}`);
+            }
+        });
+
+        // World 3: the side panel's country list selects a country and puts it in the address; choosing none clears
+        // the detail and the address's country=.
+        await step('World 3', fail, async () => {
+            await page.goto(`${base}/Research/World`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.waitForSelector('#research-world-map svg', {timeout: TIMEOUT});
+            const hintBefore = await page.locator('#research-world-detail-hint').isVisible();
+            await page.selectOption('#research-world-country', 'India');
+            const name = ((await page.locator('#research-world-detail .research-world__detail-name').textContent()) || '').trim();
+            const inAddress = (await addressOf(page)).searchParams.get('country');
+            const outlined = await page.locator('#research-world-map .research-world__country--selected').count();
+            await page.selectOption('#research-world-country', '');
+            const detailHidden = !(await page.locator('#research-world-detail').isVisible());
+            const cleared = !(await addressOf(page)).searchParams.has('country');
+            if (hintBefore && name === 'India' && inAddress === 'India' && outlined === 1 && detailHidden && cleared) {
+                pass('World 3: choosing India in the list shows its detail, outlines it and puts country=India in the address; choosing none clears both');
+            } else {
+                fail(`World 3: hint ${hintBefore}, detail "${name}", address "${inAddress}", outlined ${outlined}, hidden ${detailHidden}, cleared ${cleared}`);
+            }
+        });
+
+        // World 4: ?country=Japan opens with Japan selected and its detail shown, matched whatever its case; an unknown
+        // name selects nothing and leaves the address, and a malformed one is dropped by the server, without a page error.
+        await step('World 4', fail, async () => {
+            const errorsBefore = pageErrors.length;
+            const open = async (country) => {
+                await page.goto(`${base}/Research/World?country=${encodeURIComponent(country)}`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+                await page.waitForSelector('#research-world-map svg', {timeout: TIMEOUT});
+                const detail = page.locator('#research-world-detail');
+                return {
+                    name: await detail.isVisible() ? ((await detail.locator('.research-world__detail-name').textContent()) || '').trim() : '',
+                    figures: await detail.locator('dd').count(),
+                    selected: await page.locator('#research-world-country').inputValue(),
+                    outlined: await page.locator('#research-world-map .research-world__country--selected').count()
+                };
+            };
+            const japan = await open('Japan');
+            const lower = await open('japan');
+            const unknown = await open('Atlantis');
+            unknown.inAddress = (await addressOf(page)).searchParams.has('country');
+            const malformed = await open('<script>alert(1)</script>');
+            const dropped = await page.locator('#research-panel-world[data-research-country]').count() === 0;
+            const ok = japan.name === 'Japan' && japan.figures === 2 && japan.selected === 'Japan' && japan.outlined === 1 &&
+                lower.name === 'Japan' && unknown.name === '' && unknown.selected === '' && unknown.outlined === 0 && !unknown.inAddress &&
+                malformed.name === '' && dropped && pageErrors.length === errorsBefore;
+            if (ok) {
+                pass('World 4: ?country=Japan selects Japan and shows its detail; case is ignored; an unknown or malformed country selects nothing, without errors');
+            } else {
+                fail(`World 4: japan ${JSON.stringify(japan)}, lower ${JSON.stringify(lower)}, unknown ${JSON.stringify(unknown)}, ` +
+                    `malformed ${JSON.stringify(malformed)} dropped ${dropped}, page errors ${pageErrors.slice(errorsBefore).join(' | ')}`);
             }
         });
 

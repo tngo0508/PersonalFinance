@@ -67,7 +67,8 @@
     <partial name="_FundsTab" model="Model"/>
     <partial name="_PerformanceTab" model="Model"/>
     <partial name="_RiskTab" model="Model"/>
-    <partial name="_WorldTab" model="Model"/>
+    @* The World tab is the World page's panel. *@
+    <partial name="_WorldPanel" model="@(new ResearchWorldPanelViewModel { World = Model.World, Exposure = Model.FundExposure, BasketView = showFunds && Model.FundExposure is { Funds.Count: > 0 }, InTab = true, Hidden = !Model.IsSelected(ResearchViewModel.WorldTab) })"/>
     <partial name="_CompaniesTab" model="Model"/>
 
     @* Summarises each change of period for screen readers. *@

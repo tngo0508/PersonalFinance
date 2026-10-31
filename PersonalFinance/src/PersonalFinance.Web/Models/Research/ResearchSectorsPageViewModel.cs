@@ -19,9 +19,6 @@ public sealed class ResearchSectorsPageViewModel
     /// <summary>The most characters one part of <see cref="Focus"/> may have (an SEC office or SIC industry name).</summary>
     public const int MaxFocusPartLength = 80;
 
-    private static readonly System.Text.RegularExpressions.Regex BasketShape =
-        new(@"^[A-Za-z0-9.:,\-]{1,200}$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
-
     /// <summary>
     /// Builds the page over <paramref name="sectors"/> and <paramref name="funds"/>, either null when it could not be
     /// read. <paramref name="focus"/> and <paramref name="view"/> come from the address and are checked here: a
@@ -49,7 +46,7 @@ public sealed class ResearchSectorsPageViewModel
             retryRoute["view"] = BasketView;
         }
         string? trimmedBasket = basket?.Trim();
-        if (trimmedBasket is not null && BasketShape.IsMatch(trimmedBasket))
+        if (ResearchAddress.IsWellFormedBasket(trimmedBasket))
         {
             retryRoute["basket"] = trimmedBasket;
         }

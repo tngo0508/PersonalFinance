@@ -1,0 +1,55 @@
+@model ResearchWorldPageViewModel
+
+@{
+    ViewData["Title"] = L["Research.Nav.World"].Value + " · " + L["Research.Title"].Value;
+    bool showWorld = !Model.World.Unavailable;
+    ResearchWorldPanelViewModel panel = Model.Panel;
+    bool showBasket = panel.BasketView;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/research.css" asp-append-version="true"/>
+}
+
+@* Research World: stock-market value by country on a zoomable map with its colour scale and country detail, and the
+   Fund Basket's holdings by issuer country. It reads the World, funds and fund exposure data only. ?country= opens the
+   map with that country selected (matched by name in research-world.js), ?view=basket the basket view. *@
+<div class="research research-world-page">
+    <partial name="_ResearchNav" model="@("world")"/>
+
+    <header class="research-header">
+        <div>
+            <h1 class="research-header__title">@L["Research.Nav.World"]</h1>
+            <p class="research-header__subtitle">@L["Research.World.Page.Lead"]</p>
+        </div>
+        <p class="research-header__pill">@L["Research.Header.Disclaimer"]</p>
+    </header>
+
+    <partial name="_WorldPanel" model="panel"/>
+
+    @* Summarises each change of year, metric or country for screen readers. *@
+    <p class="visually-hidden" id="research-live" aria-live="polite"></p>
+</div>
+
+@section Scripts {
+    <js-strings prefix="Research.Js." />
+    @* research-page.js first: it holds the helpers, the scrubber and the table the map registers with. *@
+    <script src="~/js/research/research-page.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-basket.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-search.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-glossary.js" asp-append-version="true"></script>
+    @if (showWorld || showBasket)
+    {
+        @* Both maps draw with D3 from the vendored world-atlas borders, so each loads them without the other. *@
+        <script src="~/lib/d3/d3.min.js"></script>
+        <script src="~/lib/topojson-client/dist/topojson-client.min.js"></script>
+    }
+    @if (showWorld)
+    {
+        <script src="~/js/research/research-world.js" asp-append-version="true"></script>
+    }
+    @if (showBasket)
+    {
+        <script src="~/js/research/research-world-basket.js" asp-append-version="true"></script>
+    }
+}
