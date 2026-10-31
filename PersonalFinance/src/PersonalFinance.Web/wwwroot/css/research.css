@@ -1150,6 +1150,59 @@ button.research-ranked__row:focus-visible {
     fill: url(#research-world-nodata);
 }
 
+/* The selected country (the country detail's), outlined over its neighbours. */
+.research-world__country--selected,
+.research-world__country--selected:hover {
+    stroke: var(--app-text);
+    stroke-width: 2px;
+}
+
+/* A click on the market map selects a country (the basket map shares the class, not the click). */
+#research-world-map .research-world__country {
+    cursor: pointer;
+}
+
+.research-world__country-select {
+    margin-bottom: var(--app-spacing-s);
+}
+
+.research-world__detail {
+    margin-bottom: var(--app-spacing-m);
+}
+
+.research-world__detail[hidden] {
+    display: none;
+}
+
+.research-world__detail-name {
+    margin: 0;
+    font-weight: 600;
+}
+
+.research-world__detail-year,
+.research-world__detail-rank,
+.research-world__detail-none {
+    margin: 0;
+    color: var(--app-text-muted);
+}
+
+.research-world__detail-figures {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0 var(--app-spacing-s);
+    margin: var(--app-spacing-xs) 0;
+}
+
+.research-world__detail-figures dt {
+    font-weight: 400;
+}
+
+.research-world__detail-figures dd {
+    margin: 0;
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+}
+
 .research-world__metrics {
     display: flex;
     flex-wrap: wrap;

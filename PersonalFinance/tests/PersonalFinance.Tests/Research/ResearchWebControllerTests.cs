@@ -152,7 +152,7 @@ public class ResearchWebControllerTests
                 nameof(ResearchController.Company), nameof(ResearchController.FundIndustries), nameof(ResearchController.Home),
                 nameof(ResearchController.Index),
                 nameof(ResearchController.Releases), nameof(ResearchController.SearchIndex), nameof(ResearchController.Sectors),
-                nameof(ResearchController.Suggest),
+                nameof(ResearchController.Suggest), nameof(ResearchController.World),
             ],
             typeof(ResearchController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
                 .Select(m => m.Name).Order(StringComparer.Ordinal));
@@ -488,5 +488,185 @@ public class ResearchWebControllerTests
         ResearchSectorsPageViewModel model = SectorsModelOf(await CreateController(api).Sectors(view: view));
 
         Assert.Equal(expected, model.View);
+    }
+
+    private static ResearchWorldPageViewModel WorldModelOf(IActionResult result) =>
+        Assert.IsType<ResearchWorldPageViewModel>(Assert.IsType<ViewResult>(result).Model);
+
+    private static readonly FundExposureSnapshotDto Exposure = new()
+    {
+        AsOf = new DateOnly(2026, 9, 30),
+        Funds =
+        [
+            new FundExposureDto
+            {
+                Ticker = "SPY",
+                ReportDate = new DateOnly(2026, 9, 30),
+                Countries = [new CountryShareDto { Code = "US", Percent = 99m }],
+            },
+        ],
+    };
+
+    /// <summary>Makes the World page's three datasets load, except <paramref name="failing"/>, which never has (503).</summary>
+    private static async Task WithWorldData(ApiProxy<IResearchApi> proxy, string? failing = null)
+    {
+        (string Method, object Result)[] datasets =
+        [
+            (nameof(IResearchApi.GetWorldAsync), World),
+            (nameof(IResearchApi.GetFundsAsync), Funds),
+            (nameof(IResearchApi.GetFundExposureAsync), Exposure),
+        ];
+        foreach ((string method, object result) in datasets)
+        {
+            if (method == failing)
+            {
+                proxy.Throws(method, await ApiFailure(HttpStatusCode.ServiceUnavailable, "{}"));
+            }
+            else
+            {
+                proxy.Returns(method, result);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task World_ReadsWorldFundsAndExposureOnly()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        await WithWorldData(proxy);
+
+        ResearchWorldPageViewModel model = WorldModelOf(await CreateController(api).World());
+
+        Assert.Equal(
+            [nameof(IResearchApi.GetFundExposureAsync), nameof(IResearchApi.GetFundsAsync), nameof(IResearchApi.GetWorldAsync)],
+            proxy.Calls.Order(StringComparer.Ordinal));
+        Assert.Same(World, model.World.Snapshot);
+        Assert.Same(Funds, model.Funds.Snapshot);
+        Assert.Same(Exposure, model.Exposure);
+        Assert.Null(model.Country);
+        Assert.Equal(ResearchWorldPageViewModel.MarketView, model.View);
+        Assert.True(model.Panel.BasketView);
+        Assert.Null(model.Panel.BasketUnavailableState);
+    }
+
+    [Fact]
+    public async Task World_WhenTheWorldDataHasNeverLoaded_StillShowsTheBasketView()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        await WithWorldData(proxy, nameof(IResearchApi.GetWorldAsync));
+
+        ResearchWorldPageViewModel model = WorldModelOf(
+            await CreateController(api).World(view: "basket", basket: "SPY:60,QQQ:40"));
+
+        Assert.True(model.World.Unavailable);
+        Assert.True(model.Panel.BasketView);
+        Assert.Null(model.Panel.BasketUnavailableState);
+        // Only the map is unavailable: its Retry reloads this page, in the basket view, with the basket kept.
+        UnavailableStateViewModelAssert(model.World.UnavailableState, "basket", "SPY:60,QQQ:40");
+    }
+
+    [Theory]
+    [InlineData(nameof(IResearchApi.GetFundExposureAsync))]
+    [InlineData(nameof(IResearchApi.GetFundsAsync))]
+    public async Task World_WhenTheBasketDataFails_KeepsTheMap_AndOnlyTheBasketViewIsUnavailable(string failing)
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        await WithWorldData(proxy, failing);
+
+        ResearchWorldPageViewModel model = WorldModelOf(
+            await CreateController(api).World(view: "basket", basket: "SPY:60,QQQ:40"));
+
+        Assert.False(model.World.Unavailable);
+        Assert.False(model.Panel.BasketView);
+        Assert.NotNull(model.Panel.BasketUnavailableState);
+        UnavailableStateViewModelAssert(model.Panel.BasketUnavailableState, "basket", "SPY:60,QQQ:40");
+    }
+
+    [Fact]
+    public async Task World_WhenTheBasketDataFails_OnTheMarketView_ShowsNoBasketUnavailableState()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        await WithWorldData(proxy, nameof(IResearchApi.GetFundExposureAsync));
+
+        ResearchWorldPageViewModel model = WorldModelOf(await CreateController(api).World());
+
+        Assert.False(model.Panel.BasketView);
+        Assert.Null(model.Panel.BasketUnavailableState);
+    }
+
+    [Theory]
+    [InlineData("SPY:60,QQQ:40", true)]
+    [InlineData("SPY:60,<script>", false)]
+    public async Task World_WhenTheWorldDataFails_KeepsAWellFormedBasketOnRetry(string basket, bool kept)
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        await WithWorldData(proxy, nameof(IResearchApi.GetWorldAsync));
+
+        ResearchWorldPageViewModel model = WorldModelOf(await CreateController(api).World(basket: basket));
+
+        Assert.Equal(kept, model.World.UnavailableState.RetryRouteValues.ContainsKey("basket"));
+    }
+
+    [Theory]
+    [InlineData("Japan", "Japan")]
+    [InlineData("  japan ", "japan")]
+    [InlineData("Korea, Rep.", "Korea, Rep.")]
+    [InlineData("Côte d'Ivoire", "Côte d'Ivoire")]
+    [InlineData("Hong Kong SAR (China)", "Hong Kong SAR (China)")]
+    [InlineData("<script>alert(1)</script>", null)]
+    [InlineData("Japan\"onload=\"x", null)]
+    [InlineData("Japan\nChina", null)]
+    [InlineData("   ", null)]
+    [InlineData(null, null)]
+    public async Task World_KeepsAWellFormedCountry_AndDropsAMalformedOne(string? country, string? expected)
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        await WithWorldData(proxy);
+
+        ResearchWorldPageViewModel model = WorldModelOf(await CreateController(api).World(country));
+
+        Assert.Equal(expected, model.Country);
+        Assert.Equal(expected, model.Panel.Country);
+    }
+
+    [Fact]
+    public async Task World_DropsACountryLongerThan80Characters_AndKeepsAWellFormedOneOnRetry()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Throws(nameof(IResearchApi.GetWorldAsync), await ApiFailure(HttpStatusCode.ServiceUnavailable, "{}"));
+        string eighty = new('a', 80);
+
+        ResearchWorldPageViewModel kept = WorldModelOf(await CreateController(api).World(eighty));
+        ResearchWorldPageViewModel dropped = WorldModelOf(await CreateController(api).World(eighty + "a"));
+
+        Assert.Equal(eighty, kept.Country);
+        Assert.Equal(eighty, kept.World.UnavailableState.RetryRouteValues["country"]);
+        Assert.Null(dropped.Country);
+        Assert.False(dropped.World.UnavailableState.RetryRouteValues.ContainsKey("country"));
+    }
+
+    [Theory]
+    [InlineData("basket", "basket")]
+    [InlineData("BASKET", "basket")]
+    [InlineData("market", "market")]
+    [InlineData("risk", "market")]
+    [InlineData(null, "market")]
+    public async Task World_OpensOnTheMarketUnlessTheBasketViewIsAskedFor(string? view, string expected)
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> _) = ApiProxy.Create<IResearchApi>();
+
+        ResearchWorldPageViewModel model = WorldModelOf(await CreateController(api).World(view: view));
+
+        Assert.Equal(expected, model.View);
+    }
+
+    /// <summary>The Unavailable State's Retry reloads the World page with <paramref name="view"/> and <paramref name="basket"/>.</summary>
+    private static void UnavailableStateViewModelAssert(PersonalFinance.Web.Infrastructure.UnavailableStateViewModel state,
+        string view, string basket)
+    {
+        Assert.Equal(("Research", "World"), (state.RetryController, state.RetryAction));
+        Assert.False(string.IsNullOrWhiteSpace(state.Heading));
+        Assert.Equal(view, state.RetryRouteValues["view"]);
+        Assert.Equal(basket, state.RetryRouteValues["basket"]);
     }
 }

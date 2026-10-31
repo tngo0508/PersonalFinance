@@ -1,12 +1,18 @@
 /* global d3, topojson, PFI18n, ChartPalette */
 /**
- * Research page, World tab: a D3 choropleth of stock-market capitalisation by country, one year at a time, in an
- * Equal Earth projection without Antarctica. Reads the World snapshot from the JSON data island rendered by
- * Views/Research/_WorldTab.cshtml and the vendored world-atlas countries-110m borders (keyed by ISO numeric code).
+ * Research World page and World tab: a D3 choropleth of stock-market capitalisation by country, one year at a time, in
+ * an Equal Earth projection without Antarctica. Reads the World snapshot from the JSON data island rendered by
+ * Views/Research/_WorldPanel.cshtml and the vendored world-atlas countries-110m borders (keyed by ISO numeric code).
  * An 8-step single-hue scale colours each country by market cap or by market cap as % of GDP (the metric switch in
  * the side panel); countries with no figure for the year are hatched grey ("No data"). Hover or tap a country for
  * its figures. The page's scrubber (js/research/research-page.js) moves it between years through update(), and its
  * table view reads table().
+ *
+ * A country is selected by clicking it on the map or choosing it in the side panel's list: it is outlined, and the
+ * country detail shows its figures for the scrubber's year and its rank by market cap. The panel's
+ * data-research-country opens the map with that country selected, matched by name whatever its case (an unknown name
+ * selects nothing); window.ResearchWorld.selectCountry(name) does the same later. On the World page (not the tab) the
+ * address's ?country= follows the selection, replacing the history entry.
  */
 (function () {
     'use strict';
@@ -23,6 +29,10 @@
     const LEGEND_ID = 'research-world-legend';
     const TOOLTIP_ID = 'research-world-tooltip';
     const SUBTITLE_ID = 'research-world-subtitle';
+    const PANEL_ID = 'research-panel-world';
+    const COUNTRY_SELECT_ID = 'research-world-country';
+    const DETAIL_ID = 'research-world-detail';
+    const DETAIL_HINT_ID = 'research-world-detail-hint';
     const LIVE_ID = 'research-live';
     const TAB_ID = 'world';
     const ANTARCTICA_ID = '010';
@@ -128,6 +138,102 @@
     }
 
     /**
+     * Find a country of the snapshot by name, whatever its case and surrounding spaces.
+     * @param {Object} data - The World snapshot.
+     * @param {string} name - The name, e.g. "japan".
+     * @returns {Object|null} The snapshot's country ({id, iso3, name}), or null when it has none of that name.
+     */
+    function findCountry (data, name) {
+        const wanted = String(name || '').trim().toLocaleLowerCase();
+        if (!wanted) {
+            return null;
+        }
+        return data.countries.find((country) => country.name.toLocaleLowerCase() === wanted) || null;
+    }
+
+    /**
+     * One country's figures for a year, with its rank by market cap among the countries that report one.
+     * @param {Object} data - The World snapshot.
+     * @param {number} periodIndex - The period index.
+     * @param {string} countryId - The country's ISO numeric id.
+     * @returns {{figures: Object|null, rank: number, count: number}} Its figures (null when it has none that year),
+     *     its rank (0 when it has no market cap) and how many countries have one.
+     */
+    function countryFigures (data, periodIndex, countryId) {
+        const period = data.values[periodIndex];
+        const ranked = period.countries
+            .filter((value) => value.marketCap !== null && value.marketCap !== undefined)
+            .sort((a, b) => b.marketCap - a.marketCap);
+        const value = period.countries.find((v) => data.countries[v.country].id === countryId);
+        const rank = value ? ranked.indexOf(value) + 1 : 0;
+        return { figures: value || null, rank, count: ranked.length };
+    }
+
+    /**
+     * Fill the country detail for the selected country, or hide it (and show the hint) when none is selected.
+     * @param {HTMLElement|null} detail - The detail element.
+     * @param {HTMLElement|null} hint - The hint shown while nothing is selected.
+     * @param {Object|null} country - The selected country, or null.
+     * @param {{figures: Object|null, rank: number, count: number}|null} figures - From countryFigures().
+     * @param {string} year - The scrubber's year.
+     * @returns {string} The detail as one sentence, for the live region; '' when nothing is selected.
+     */
+    function renderDetail (detail, hint, country, figures, year) {
+        if (hint) {
+            hint.hidden = Boolean(country);
+        }
+        if (!detail) {
+            return '';
+        }
+        detail.hidden = !country;
+        if (!country) {
+            detail.replaceChildren();
+            return '';
+        }
+        const paragraph = (className, text) => {
+            const p = document.createElement('p');
+            p.className = className;
+            p.textContent = text;
+            return p;
+        };
+        const parts = [
+            paragraph('research-world__detail-name', country.name),
+            paragraph('research-world__detail-year', PFI18n.t('Research.Js.World.DetailYear', { year }))
+        ];
+        const sentence = [];
+        if (!figures.figures) {
+            const none = PFI18n.t('Research.Js.World.NoDataFor', { year });
+            parts.push(paragraph('research-world__detail-none', none));
+            sentence.push(none);
+        } else {
+            const list = document.createElement('dl');
+            list.className = 'research-world__detail-figures';
+            const noGdp = figures.figures.percentOfGdp === null || figures.figures.percentOfGdp === undefined;
+            const rows = [
+                [PFI18n.t('Research.Js.World.MarketCap'), formatMoney(figures.figures.marketCap)],
+                [PFI18n.t('Research.Js.World.PercentOfGdp'),
+                    noGdp ? PFI18n.t('Research.Js.World.NoGdp') : formatPercent(figures.figures.percentOfGdp)]
+            ];
+            rows.forEach(([label, value]) => {
+                const term = document.createElement('dt');
+                term.textContent = label;
+                const definition = document.createElement('dd');
+                definition.textContent = value;
+                list.append(term, definition);
+                sentence.push(`${label}: ${value}`);
+            });
+            parts.push(list);
+            if (figures.rank > 0) {
+                const rank = PFI18n.t('Research.Js.World.Rank', { rank: figures.rank, count: figures.count });
+                parts.push(paragraph('research-world__detail-rank', rank));
+                sentence.push(rank);
+            }
+        }
+        detail.replaceChildren(...parts);
+        return `${year}. ${sentence.join('. ')}`;
+    }
+
+    /**
      * Create the tooltip controller for the World tooltip element.
      * @param {HTMLElement|null} tooltip - The tooltip element.
      * @returns {{show: function(PointerEvent, string, Object|null, string): void, hide: function(): void}} The
@@ -211,9 +317,14 @@
         const { years, names } = indexData(data);
         const legend = document.getElementById(LEGEND_ID);
         const subtitle = document.getElementById(SUBTITLE_ID);
+        const detail = document.getElementById(DETAIL_ID);
+        const detailHint = document.getElementById(DETAIL_HINT_ID);
+        const countrySelect = document.getElementById(COUNTRY_SELECT_ID);
         let colours = readColours(host);
         let metricKey = 'marketCap';
         let periodIndex = data.periods.length - 1;
+        // The selected country of the snapshot ({id, iso3, name}), or null.
+        let selected = null;
 
         const svg = d3.select(host).append('svg').attr('role', 'img');
         const defs = svg.append('defs');
@@ -247,7 +358,13 @@
             .on('pointerdown', (event, feature) => {
                 tooltip.show(event, nameOf(feature), figuresOf(feature) || null, data.periods[periodIndex]);
             })
-            .on('pointerleave', tooltip.hide);
+            .on('pointerleave', tooltip.hide)
+            .on('click', (event, feature) => {
+                const name = feature.id && names.get(feature.id);
+                if (name && selectCountry(name)) {
+                    announce(showDetail());
+                }
+            });
 
         /**
          * Fit the projection to the host's width and redraw the borders.
@@ -328,7 +445,66 @@
         function update (index, options) {
             periodIndex = Math.max(0, Math.min(data.periods.length - 1, index));
             paint(Boolean(options && options.animate));
+            showDetail();
             return describe();
+        }
+
+        /**
+         * Fill the country detail for the selected country and the year shown.
+         * @returns {string} The detail as a sentence for the live region, or '' when nothing is selected.
+         */
+        function showDetail () {
+            const figures = selected ? countryFigures(data, periodIndex, selected.id) : null;
+            const text = renderDetail(detail, detailHint, selected, figures, data.periods[periodIndex]);
+            return selected ? PFI18n.t('Research.Js.World.Selected', { name: selected.name, detail: text }) : '';
+        }
+
+        /**
+         * Outline the selected country on the map and keep the side panel's list in step.
+         * @returns {void}
+         */
+        function markSelected () {
+            const id = selected ? selected.id : null;
+            paths.classed('research-world__country--selected', (feature) => Boolean(id) && feature.id === id);
+            // The outline is drawn last, so its neighbours do not cover it.
+            paths.filter((feature) => Boolean(id) && feature.id === id).raise();
+            if (countrySelect) {
+                countrySelect.value = selected ? selected.name : '';
+            }
+        }
+
+        /**
+         * Select a country by name, whatever its case, and show its detail.
+         * @param {string} name - The country's name, e.g. "Japan".
+         * @returns {boolean} True when the snapshot has the country; otherwise nothing changes.
+         */
+        function selectCountry (name) {
+            const country = findCountry(data, name);
+            if (!country) {
+                return false;
+            }
+            selected = country;
+            markSelected();
+            showDetail();
+            return true;
+        }
+
+        /**
+         * Clear the selection and hide the country detail.
+         * @returns {void}
+         */
+        function clearCountry () {
+            selected = null;
+            markSelected();
+            showDetail();
+        }
+
+        /**
+         * The selected country's name, or null.
+         * @returns {string|null} The name.
+         */
+        function selectedCountry () {
+            return selected ? selected.name : null;
         }
 
         /**
@@ -395,7 +571,81 @@
         layout();
         renderLegend(legend, METRICS[metricKey], colours);
         ChartPalette.subscribe(restyle);
-        return { periods: data.periods, transitionMs: TRANSITION_MS, update, table, setMetric, resize };
+        return {
+            periods: data.periods,
+            transitionMs: TRANSITION_MS,
+            update,
+            table,
+            setMetric,
+            resize,
+            selectCountry,
+            clearCountry,
+            selectedCountry,
+            showDetail
+        };
+    }
+
+    /**
+     * Say a sentence in the page's live region.
+     * @param {string} text - The sentence; nothing is said when empty.
+     * @returns {void}
+     */
+    function announce (text) {
+        const live = document.getElementById(LIVE_ID);
+        if (live && text) {
+            live.textContent = text;
+        }
+    }
+
+    /**
+     * On the World page (not the tabbed page's World tab), keep the address's ?country= in step with the selection,
+     * replacing the current history entry, so a reload or a shared link opens the same country.
+     * @param {HTMLElement|null} panel - The World panel.
+     * @param {string|null} name - The selected country, or null for none.
+     * @returns {void}
+     */
+    function rememberCountry (panel, name) {
+        if (!panel || panel.getAttribute('role') === 'tabpanel' || !window.history ||
+            typeof window.history.replaceState !== 'function') {
+            return;
+        }
+        const url = new URL(window.location.href);
+        if (name) {
+            url.searchParams.set('country', name);
+        } else {
+            url.searchParams.delete('country');
+        }
+        window.history.replaceState(window.history.state, '', url);
+    }
+
+    /**
+     * Wire the side panel's country list, and select the country the panel asks for on load.
+     * @param {Object} chart - The chart from createMap().
+     * @returns {void}
+     */
+    function initCountry (chart) {
+        const panel = document.getElementById(PANEL_ID);
+        const select = document.getElementById(COUNTRY_SELECT_ID);
+        if (select) {
+            select.addEventListener('change', () => {
+                if (select.value) {
+                    chart.selectCountry(select.value);
+                    announce(chart.showDetail());
+                } else {
+                    chart.clearCountry();
+                }
+                rememberCountry(panel, chart.selectedCountry());
+            });
+        }
+        // A click on the map changes the selection too; the list's change covers the keyboard path.
+        const host = document.getElementById(HOST_ID);
+        if (host) {
+            host.addEventListener('click', () => rememberCountry(panel, chart.selectedCountry()));
+        }
+        const requested = panel ? panel.dataset.researchCountry : '';
+        if (requested) {
+            chart.selectCountry(requested);
+        }
     }
 
     /**
@@ -441,6 +691,8 @@
         const chart = createMap(host, data, features, tooltip);
         initMetricSwitch(chart);
         page.registerTab(TAB_ID, chart);
+        initCountry(chart);
+        window.ResearchWorld = { selectCountry: chart.selectCountry };
 
         // A tap outside the map, or a scroll, puts the tooltip away.
         document.addEventListener('pointerdown', (event) => {

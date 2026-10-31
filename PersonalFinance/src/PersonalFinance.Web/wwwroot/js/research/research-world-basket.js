@@ -13,8 +13,11 @@
  * map light their countries while pointed at or focused (choosing one keeps them lit), and currency bars list what the
  * holdings are priced in.
  *
- * The switch opens on Your basket only when a basket is set at load; the market view (research-world.js) is left
- * exactly as it was. Reads the `research-fund-exposure-data` island and the basket from `window.ResearchBasket`.
+ * On the tabbed page the switch opens on Your basket whenever a basket is set at load. On the World page the panel's
+ * data-research-world-view says which view it opens on (Your basket only when it is "basket" and a basket is set), and
+ * the address's ?view= follows the switch. The market view (research-world.js) is left exactly as it was. Reads the
+ * `research-fund-exposure-data` island and the basket from `window.ResearchBasket`. It works without the World data:
+ * the market view then shows only its Unavailable State.
  */
 (function () {
     'use strict';
@@ -176,6 +179,8 @@
             line(entry.region, 'research-tooltip__muted')
         ]);
         let mode = 'market';
+        // The view the World page asked for ('market' or 'basket'); undefined on the tabbed page.
+        const requested = panel.dataset.researchWorldView;
         let exposure = null;
         let scaleMax = 1;
         let zoom = null;
@@ -535,11 +540,30 @@
             }
         }
 
+        /**
+         * On the World page, keep the address's view in step with the switch (?view=basket, or none for the market),
+         * replacing the current history entry, so a reload or a shared link opens the same view.
+         * @returns {void}
+         */
+        function rememberView () {
+            if (requested === undefined || !window.history || typeof window.history.replaceState !== 'function') {
+                return;
+            }
+            const url = new URL(window.location.href);
+            if (mode === 'basket') {
+                url.searchParams.set('view', 'basket');
+            } else {
+                url.searchParams.delete('view');
+            }
+            window.history.replaceState(window.history.state, '', url);
+        }
+
         buttons.forEach((button) => button.addEventListener('click', () => {
             if (button.disabled) {
                 return;
             }
             setMode(button.dataset.worldView);
+            rememberView();
             if (page.announce) {
                 page.announce(PFI18n.t(mode === 'basket'
                     ? 'Research.Js.WorldBasket.ShowingBasket'
@@ -555,6 +579,7 @@
             const basket = window.ResearchBasket ? window.ResearchBasket.get() : [];
             if (basket.length === 0 && mode === 'basket') {
                 setMode('market');
+                rememberView();
             }
             drawBasket();
         });
@@ -579,7 +604,9 @@
         });
         const basket = window.ResearchBasket ? window.ResearchBasket.get() : [];
         drawBasket();
-        setMode(basket.length > 0 && exposure.count > 0 ? 'basket' : 'market');
+        // The tabbed page opens on the basket whenever one is set; the World page only when ?view=basket asks for it.
+        const wantsBasket = requested === undefined || requested === 'basket';
+        setMode(wantsBasket && basket.length > 0 && exposure.count > 0 ? 'basket' : 'market');
     }
 
     /**
