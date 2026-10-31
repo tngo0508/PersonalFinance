@@ -12,8 +12,11 @@ public sealed class TermEntryDto
     /// <summary>The Term.</summary>
     public string Term { get; set; } = string.Empty;
 
-    /// <summary>The Term's Vietnamese name, shown under it.</summary>
-    public string VietnameseName { get; set; } = string.Empty;
+    /// <summary>
+    /// The Term in English. A page in another Language shows it under the Term, tying the new word to the one on US
+    /// forms; an English page shows nothing there.
+    /// </summary>
+    public string EnglishTerm { get; set; } = string.Empty;
 
     /// <summary>Abbreviations and synonyms.</summary>
     public List<string> AlsoKnownAs { get; set; } = [];

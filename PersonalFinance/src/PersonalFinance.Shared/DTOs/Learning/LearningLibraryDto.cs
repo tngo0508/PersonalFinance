@@ -29,10 +29,13 @@ public sealed class TermSummaryDto
     /// <summary>The Term in the Language asked for.</summary>
     public string Term { get; set; } = string.Empty;
 
-    /// <summary>The Term in English, which the filter matches whatever the Language.</summary>
+    /// <summary>
+    /// The Term in English, which the filter matches whatever the Language; a shelf in another Language shows it under
+    /// the Term.
+    /// </summary>
     public string EnglishTerm { get; set; } = string.Empty;
 
-    /// <summary>The Term's Vietnamese name.</summary>
+    /// <summary>The Term's Vietnamese name, which the filter matches; never shown.</summary>
     public string VietnameseName { get; set; } = string.Empty;
 
     /// <summary>Abbreviations and synonyms ("APR").</summary>

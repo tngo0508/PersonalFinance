@@ -125,7 +125,7 @@ internal sealed class JourneyService : IJourneyService
             {
                 Slug = c.entry!.Slug,
                 Term = c.entry.Term,
-                VietnameseName = c.entry.VietnameseName,
+                EnglishTerm = _content.FindTerm(c.entry.Slug, LearningContentFiles.English)?.Term ?? c.entry.Term,
                 OneLine = c.entry.OneLine,
                 LessonSlug = c.Slug
             })

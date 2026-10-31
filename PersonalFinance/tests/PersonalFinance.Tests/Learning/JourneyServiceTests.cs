@@ -245,7 +245,7 @@ public class JourneyServiceTests
         ReviewCardDto card = review.Cards[0];
         Assert.Equal(("Emergency fund", "build-a-cushion"), (card.Term, card.LessonSlug));
         Assert.False(string.IsNullOrWhiteSpace(card.OneLine));
-        Assert.False(string.IsNullOrWhiteSpace(card.VietnameseName));
+        Assert.Equal("Emergency fund", card.EnglishTerm);
     }
 
     [Fact]

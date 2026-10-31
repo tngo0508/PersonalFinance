@@ -138,7 +138,10 @@
                                 {
                                     <span class="atelier-spine-aka">@string.Join(", ", term.AlsoKnownAs)</span>
                                 }
-                                <span class="atelier-spine-vi" lang="vi">@term.VietnameseName</span>
+                                @if (term.EnglishTerm != term.Term)
+                                {
+                                    <span class="atelier-spine-en" lang="en">@term.EnglishTerm</span>
+                                }
                             </a>
                         </li>
                     }

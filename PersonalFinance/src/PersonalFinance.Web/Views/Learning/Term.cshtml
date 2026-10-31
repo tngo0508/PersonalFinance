@@ -34,7 +34,10 @@
 
     <header class="atelier-sheet atelier-entry-header">
         <h1 class="atelier-title" data-test-id="atelier-term">@entry.Term</h1>
-        <p class="atelier-vi-name" lang="vi" data-test-id="atelier-vi-name">@entry.VietnameseName</p>
+        @if (entry.EnglishTerm != entry.Term)
+        {
+            <p class="atelier-en-name" lang="en" data-test-id="atelier-en-name">@entry.EnglishTerm</p>
+        }
         @if (entry.AlsoKnownAs.Count > 0)
         {
             <p class="atelier-aka">@L.Named("Learning.Entry.AlsoKnownAs", ("names", string.Join(", ", entry.AlsoKnownAs)))</p>

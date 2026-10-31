@@ -57,7 +57,7 @@ internal sealed class LearningLibraryService : ILearningLibraryService
         {
             Slug = entry.Slug,
             Term = entry.Term,
-            VietnameseName = entry.VietnameseName,
+            EnglishTerm = EnglishTerm(entry.Slug) ?? entry.Term,
             AlsoKnownAs = entry.AlsoKnownAs.ToList(),
             Topic = entry.Topic,
             OneLine = entry.OneLine,

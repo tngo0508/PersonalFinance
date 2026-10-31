@@ -1,7 +1,7 @@
 /**
  * Atelier smoke test (#517, #519): a guest opens /Learning, sees the Journey's outline with a Start the Journey link,
  * finds an entry with the filter by abbreviation and by Vietnamese name, reads a Term Entry with its title, meta
- * description and canonical link, gets a 404 for an unknown slug, finds the entries in /sitemap.xml and robots.txt,
+ * description and canonical link (in Vietnamese, with the English Term under the Term), gets a 404 for an unknown slug, finds the entries in /sitemap.xml and robots.txt,
  * is asked to sign in on a Lesson, and reads the entry in dark mode (key text at 4.5:1). A fresh Account then answers
  * Lesson 1's Check, sees its keepsake, and finds "Opens tomorrow" on Lesson 2. Unlock timing stays in the service
  * tests. Ask the AI (#521): a guest is asked to sign in; a fresh Account opens the AI Assistant from the entry and
@@ -25,6 +25,7 @@ const en = require(path.join(WEB, 'Resources', 'i18n', 'en.json'));
 const FIXTURE = path.join(__dirname, '..', 'PersonalFinance', 'tests', 'PersonalFinance.Tests', 'Learning', 'Fixtures',
     'Content');
 const apr = require(path.join(FIXTURE, 'terms', 'apr.json'));
+const aprVi = require(path.join(FIXTURE, 'terms', 'apr.vi.json'));
 // Written in the repo, not axe-core (MPL-2.0 is not on the license policy's list)
 const {AA_TEXT, contrastRatio, flattenBackground} = require(path.join(WEB, 'tools', 'contrast.js'));
 
@@ -34,9 +35,8 @@ const LESSON_ONE_TERMS = ['emergency-fund', 'compound-interest'];
 const REVIEW_TEXT = ['.atelier-card-term', '.atelier-card-hint', '.atelier-card-one-line',
     '.atelier-review .atelier-lede'];
 
-const DARK_TEXT = ['[data-test-id="atelier-term"]', '[data-test-id="atelier-vi-name"]',
-    '[data-test-id="atelier-one-line"]', '.atelier-reading p', '.atelier-note-heading', '.atelier-sources a',
-    '[data-test-id="atelier-reviewed"]'];
+const DARK_TEXT = ['[data-test-id="atelier-term"]', '[data-test-id="atelier-one-line"]', '.atelier-reading p',
+    '.atelier-note-heading', '.atelier-sources a', '[data-test-id="atelier-reviewed"]'];
 
 /**
  * Report a check as passed or failed.
@@ -113,8 +113,8 @@ async function checkLibrary(page, base, report) {
 async function checkEntry(page, report) {
     const term = (await page.locator('[data-test-id="atelier-term"]').textContent()).trim();
     check(term === apr.term, 'Atelier: the entry shows its Term', term, report);
-    const viName = (await page.locator('[data-test-id="atelier-vi-name"]').textContent()).trim();
-    check(viName === apr.vietnameseName, 'Atelier: the entry shows the Vietnamese name under the Term', viName, report);
+    check(!(await page.locator('[data-test-id="atelier-en-name"]').count()),
+        'Atelier: an English entry shows no second name under the Term', 'a second name is shown', report);
     check(await page.locator('[data-test-id="note-us"]').isVisible(), `Atelier: the entry shows "${en['Learning.Entry.InTheUs']}"`,
         'not visible', report);
     check(await page.locator('[data-test-id="atelier-disclaimer"]').isVisible(), 'Atelier: the entry links the Disclaimer',
@@ -411,6 +411,27 @@ async function checkAskTheAi(browser, base, report) {
 }
 
 /**
+ * A Vietnamese reader sees the entry's Term in Vietnamese with the English Term under it.
+ * @param {import('playwright').Browser} browser - The suite's browser.
+ * @param {string} base - The Web app's base URL.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+async function checkEntryInVietnamese(browser, base, report) {
+    const context = await browser.newContext({ignoreHTTPSErrors: true, locale: 'vi-VN'});
+    try {
+        const page = await context.newPage();
+        await page.goto(`${base}/Learning/Term/apr`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        const term = (await page.locator('[data-test-id="atelier-term"]').textContent()).trim();
+        check(term === aprVi.term, 'Atelier: a Vietnamese entry shows its Term in Vietnamese', term, report);
+        const englishName = page.locator('[data-test-id="atelier-en-name"]');
+        const shown = await englishName.count() ? (await englishName.textContent()).trim() : 'nothing';
+        check(shown === apr.term, 'Atelier: a Vietnamese entry shows the English Term under the Term', shown, report);
+    } finally {
+        await context.close();
+    }
+}
+
+/**
  * Runs the Atelier smoke as a guest, then as fresh Accounts.
  * @param {{browser: import('playwright').Browser, base: string, pass: Function, fail: Function}} options - The
  *     browser, the Web app's base URL and the suite's pass and fail.
@@ -428,6 +449,7 @@ async function runLearningSmoke({browser, base, pass, fail}) {
     } finally {
         await context.close();
     }
+    await checkEntryInVietnamese(browser, base, report);
     await checkDarkMode(browser, base, report);
     await checkJourney(browser, base, report);
     await checkAskTheAi(browser, base, report);
