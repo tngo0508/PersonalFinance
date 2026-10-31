@@ -331,6 +331,15 @@
     vertical-align: 0.2em;
 }
 
+/* The goal line: dash-dot in the fifth chart colour, as on the chart. */
+.ic-swatch--goal {
+    width: 1rem;
+    height: 0;
+    border-radius: 0;
+    border-top: 2px dashed var(--app-chart-5);
+    vertical-align: 0.2em;
+}
+
 .ic-chart {
     position: relative;
     width: 100%;
@@ -479,6 +488,118 @@
     margin-right: 0.35rem;
 }
 
+/* ---------- Reach a goal tile ---------- */
+
+.ic-goal {
+    display: flex;
+    flex-direction: column;
+}
+
+.ic-goal__target {
+    margin-bottom: 0.75rem;
+}
+
+.ic-goal__modes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+    margin: 0 0 0.75rem;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+
+.ic-goal__mode {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
+    font-weight: var(--app-font-weight-semibold);
+    text-align: center;
+    color: var(--app-text);
+    background: var(--app-bg);
+    border: 1px solid var(--app-border-control);
+    border-radius: var(--app-radius-m);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ic-goal__mode:hover {
+    border-color: var(--app-border-hover);
+}
+
+.btn-check:checked + .ic-goal__mode {
+    background: var(--app-brand-soft);
+    border-color: var(--app-brand);
+    color: var(--app-brand-on-soft);
+}
+
+.btn-check:focus-visible + .ic-goal__mode,
+.ic-goal__use:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+.ic-goal__answer {
+    margin: 0 0 0.75rem;
+}
+
+.ic-goal__headline {
+    display: block;
+    font-size: 1.5rem;
+    line-height: 1.2;
+    font-weight: var(--app-font-weight-bold);
+    color: var(--app-brand-text);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.ic-goal__detail {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--app-text-muted);
+}
+
+.ic-progress {
+    height: 0.6rem;
+    overflow: hidden;
+    background: var(--app-border);
+    border-radius: 999px;
+}
+
+.ic-progress__fill {
+    width: 0;
+    height: 100%;
+    background: var(--app-chart-1);
+    border-radius: inherit;
+    transition: width 0.2s ease;
+}
+
+.ic-goal__use {
+    align-self: flex-start;
+    min-height: 2.75rem;
+    margin-top: 0.75rem;
+    padding: 0.4rem 1rem;
+    font-size: 0.875rem;
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-brand-on-soft);
+    background: var(--app-brand-soft);
+    border: 1px solid var(--app-brand);
+    border-radius: var(--app-radius-m);
+    cursor: pointer;
+}
+
+.ic-goal__use:hover {
+    background: var(--app-bg);
+}
+
+.ic-goal__use[hidden],
+.ic-tile__hint[hidden] {
+    display: none;
+}
+
 /* ---------- Wide screens: rail beside the grid, bar and rail pinned ---------- */
 
 @media (min-width: 62em) {
@@ -503,6 +624,8 @@
 
 @media (prefers-reduced-motion: reduce) {
     .ic-preset,
+    .ic-goal__mode,
+    .ic-progress__fill,
     .ic-years__summary::before {
         transition: none;
     }

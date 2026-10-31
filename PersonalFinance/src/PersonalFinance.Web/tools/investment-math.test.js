@@ -171,3 +171,75 @@ test('the rate presets are the Money Priorities rates', () => {
     assert.deepStrictEqual(Array.from(math.PRESETS, (preset) => [preset.key, preset.rate]),
         [['conservative', 4], ['base', 7], ['aggressive', 10]]);
 });
+
+test('the monthly contribution needed: 120,000 in 10 years at 0% is 1,000 a month', () => {
+    const answer = math.solveGoal(plan({ initial: 0, rate: 0, years: 10 }), { target: 120000, mode: 'monthly' });
+
+    assert.strictEqual(answer.kind, 'monthly');
+    assert.strictEqual(answer.monthly, 1000);
+    assert.strictEqual(answer.year, 10);
+});
+
+test('the monthly contribution needed is rounded up to a whole amount that reaches the goal', () => {
+    // 500 a month grows 10,000 to 300,850.72 in 20 years at 7%; 499 falls 520.93 short.
+    const answer = math.solveGoal(plan(), { target: 300850, mode: 'monthly' });
+
+    assert.strictEqual(answer.monthly, 500);
+});
+
+test('when the starting amount alone reaches the goal, it is already there, with the year', () => {
+    // 10,000 at 7.2% doubles in year 10 (see the milestone test).
+    const answer = math.solveGoal(plan({ rate: 7.2, years: 30 }), { target: 20000, mode: 'monthly' });
+
+    assert.strictEqual(answer.kind, 'already');
+    assert.strictEqual(answer.year, 10);
+});
+
+test('the years needed at the current monthly contribution', () => {
+    const inputs = plan({ initial: 0, monthly: 1000, rate: 0, years: 5 });
+    const answer = math.solveGoal(inputs, { target: 120000, mode: 'years' });
+
+    assert.strictEqual(answer.kind, 'years');
+    assert.strictEqual(answer.year, 10);
+    assert.strictEqual(math.solveGoal(inputs, { target: 120001, mode: 'years' }).year, 11);
+});
+
+test('a goal not reached within 50 years is unreachable, with the shortfall', () => {
+    // 100 a month at 0% puts in 60,000 in 50 years.
+    const answer = math.solveGoal(plan({ initial: 0, monthly: 100, rate: 0 }), { target: 100000, mode: 'years' });
+
+    assert.strictEqual(answer.kind, 'unreachable');
+    assertCents(answer.shortfall, 40000);
+});
+
+test("a goal in today's money is inflated over time", () => {
+    // 120,000 of today's money in 10 years at 2.5% inflation is 120,000·1.025^10 = 153,610.14: 1,280.08 a month at 0%.
+    const inputs = plan({ initial: 0, rate: 0, years: 10, inflation: 2.5 });
+
+    assert.strictEqual(math.solveGoal(inputs, { target: 120000, mode: 'monthly', todays: true }).monthly, 1281);
+    assert.strictEqual(math.solveGoal(inputs, { target: 120000, mode: 'monthly' }).monthly, 1000);
+});
+
+test("the shortfall of a goal in today's money is in today's money", () => {
+    // 60,000 put in over 50 years is worth 60,000 / 1.025^50 = 17,456.53 today.
+    const answer = math.solveGoal(plan({ initial: 0, monthly: 100, rate: 0, inflation: 2.5 }),
+        { target: 100000, mode: 'years', todays: true });
+
+    assert.strictEqual(answer.kind, 'unreachable');
+    assert.ok(Math.abs(answer.shortfall - 82543.47) < 0.01, `${answer.shortfall}`);
+});
+
+test('progress compares the current plan with the goal, and the plan reaches it in the reached year', () => {
+    const answer = math.solveGoal(plan({ initial: 0, monthly: 1000, rate: 0, years: 20 }), { target: 120000, mode: 'monthly' });
+
+    assert.strictEqual(answer.progress, 2);
+    assert.strictEqual(answer.reachedYear, 10);
+    assert.strictEqual(math.solveGoal(plan({ years: 5 }), { target: 1e9, mode: 'monthly' }).reachedYear, null);
+});
+
+test('a goal of nothing is already reached today', () => {
+    const answer = math.solveGoal(plan(), { target: 0, mode: 'years' });
+
+    assert.strictEqual(answer.kind, 'already');
+    assert.strictEqual(answer.year, 0);
+});

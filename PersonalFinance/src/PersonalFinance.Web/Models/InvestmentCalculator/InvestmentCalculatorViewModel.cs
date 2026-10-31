@@ -29,6 +29,10 @@ public sealed class InvestmentCalculatorViewModel
 
     public decimal MonthlyMax => Scaled(InvestmentCalculatorLimits.MonthlyMax);
 
+    public decimal Goal => Scaled(InvestmentCalculatorLimits.DefaultGoal);
+
+    public decimal GoalMax => Scaled(InvestmentCalculatorLimits.GoalMax);
+
     /// <summary>The model for <paramref name="currencyCode"/>; an unsupported code reads as US dollars.</summary>
     public static InvestmentCalculatorViewModel For(string? currencyCode) =>
         new() { CurrencyCode = SupportedCurrencies.CodeOrDefault(currencyCode) };

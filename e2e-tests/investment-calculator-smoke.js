@@ -2,8 +2,9 @@
  * Investment Calculator smoke test (spec #587): a fresh Account opens the calculator; the summary bar and the D3
  * balance chart show a projection; moving the monthly contribution slider changes the headline balance; a rate preset
  * sets the assumed return; the fee tile reacts to a higher fund fee; and the Today's money switch shows the headline
- * and the year-by-year table in today's money. Run from ui-test.js as Test 9m.
- * Later slices extend it: Reach a goal, a lever previewed into Compare, a saved scenario that survives a reload.
+ * and the year-by-year table in today's money; the goal tile returns a monthly contribution that "Use this amount"
+ * puts in the rail. Run from ui-test.js as Test 9m.
+ * Later slices extend it: a lever previewed into Compare, a saved scenario that survives a reload.
  *
  * Expected texts are read from Resources/i18n/en.json, so a rewording does not break the test.
  */
@@ -108,7 +109,26 @@ async function runInvestmentCalculatorSmoke({browser, base, pass, fail}) {
         check(rowsBefore > 1 && await textOf(page, '#icYearOther') === en['InvestmentCalculator.Js.Money.Future'],
             "The year-by-year table lists every year and switches to today's money", `${rowsBefore} rows`);
 
-        // 6. The educational-estimate note links to the Disclaimer.
+        // 6. The goal tile works out the monthly contribution a goal needs, and "Use this amount" puts it in the rail.
+        const answerBefore = await textOf(page, '#icGoalAnswer');
+        await page.locator('label[for="icGoalModeMonthly"]').click();
+        await page.fill('#icGoal', '2000000');
+        const answer = await changedText(page, '#icGoalAnswer', answerBefore);
+        const perMonth = new RegExp(`^${en['InvestmentCalculator.Js.Goal.Monthly'].replace('{amount}', '\\$[\\d,]+')}$`);
+        check(perMonth.test(answer), 'The goal tile returns a monthly contribution', `"${answer}"`);
+        await page.click('#icGoalUse');
+        const used = await page.inputValue('#icMonthly');
+        check(used === String(amount(answer)), '"Use this amount" sets the monthly contribution in the rail',
+            `answer "${answer}", monthly field ${used}`);
+        await page.waitForFunction(() => document.getElementById('icGoalProgress')?.getAttribute('aria-valuenow') === '100',
+            null, {timeout: TIMEOUT}).catch(() => {});
+        const progress = await page.getAttribute('#icGoalProgress', 'aria-valuenow');
+        check(progress === '100', 'With that amount the plan reaches the goal', `aria-valuenow ${progress}`);
+        await page.locator('#icBalanceChart .ic-goal-line').first().waitFor({state: 'attached', timeout: TIMEOUT}).catch(() => {});
+        const goalLines = await page.locator('#icBalanceChart .ic-goal-line').count();
+        check(goalLines === 1, 'The balance chart draws the goal line', `${goalLines} goal lines`);
+
+        // 7. The educational-estimate note links to the Disclaimer.
         const disclaimer = await page.locator('.ic-disclaimer a').getAttribute('href').catch(() => null);
         check(disclaimer === '/disclaimer', 'The estimate note links to the Disclaimer', `${disclaimer}`);
     } catch (error) {

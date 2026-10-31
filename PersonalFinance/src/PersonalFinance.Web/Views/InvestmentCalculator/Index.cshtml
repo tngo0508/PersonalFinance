@@ -122,7 +122,7 @@
 
         <section class="ic-main" aria-labelledby="icOverviewTitle">
             <h2 class="visually-hidden" id="icOverviewTitle">@L["InvestmentCalculator.Overview.Title"]</h2>
-            @* Tiles fill an auto-fit grid; the goal tile (#590) goes before the year-by-year table. *@
+            @* Tiles fill an auto-fit grid. *@
             <div class="ic-tiles">
                 <article class="ic-tile ic-tile--wide" aria-labelledby="icBalanceTitle">
                     <header class="ic-tile__head">
@@ -131,6 +131,7 @@
                             <li><span class="ic-swatch ic-swatch--balance"></span>@L["InvestmentCalculator.Js.Series.Balance"]</li>
                             <li><span class="ic-swatch ic-swatch--contributed"></span>@L["InvestmentCalculator.Js.Series.PutIn"]</li>
                             <li><span class="ic-swatch ic-swatch--today"></span>@L["InvestmentCalculator.Js.Series.TodaysMoney"]</li>
+                            <li><span class="ic-swatch ic-swatch--goal"></span>@L["InvestmentCalculator.Js.Series.Goal"]</li>
                         </ul>
                     </header>
                     <div class="ic-chart" id="icBalanceChart"></div>
@@ -172,6 +173,42 @@
                         </ul>
                     </header>
                     <div class="ic-chart ic-chart--small" id="icBarsChart"></div>
+                </article>
+
+                @* Reach a goal (#590): the goal amount lives here, not in the rail. The script solves it with
+                   InvestmentMath.solveGoal; "Use this amount" sets the rail's monthly contribution. *@
+                <article class="ic-tile ic-goal" aria-labelledby="icGoalTitle">
+                    <header class="ic-tile__head">
+                        <h3 class="ic-tile__title" id="icGoalTitle">@L["InvestmentCalculator.Tile.Goal"]</h3>
+                    </header>
+                    <div class="ic-goal__target">
+                        <div class="ic-field__head">
+                            <label class="ic-field__label" for="icGoal">@L["InvestmentCalculator.Goal.Target"]</label>
+                            <output class="ic-field__value" id="icGoalValue" for="icGoal">@Money(Model.Goal)</output>
+                        </div>
+                        <input type="number" class="form-control form-control-sm ic-field__number" id="icGoal"
+                               inputmode="decimal" min="0" max="@Invariant(Model.GoalMax)" step="any"
+                               value="@Model.Goal.ToString(CultureInfo.InvariantCulture)"/>
+                    </div>
+                    <fieldset class="ic-goal__modes">
+                        <legend class="visually-hidden">@L["InvestmentCalculator.Goal.SolveFor"]</legend>
+                        <input type="radio" class="btn-check" name="icGoalMode" id="icGoalModeMonthly" value="monthly" checked/>
+                        <label class="ic-goal__mode" for="icGoalModeMonthly">@L["InvestmentCalculator.Goal.Mode.Monthly"]</label>
+                        <input type="radio" class="btn-check" name="icGoalMode" id="icGoalModeYears" value="years"/>
+                        <label class="ic-goal__mode" for="icGoalModeYears">@L["InvestmentCalculator.Goal.Mode.Years"]</label>
+                    </fieldset>
+                    <p class="ic-goal__answer">
+                        <strong class="ic-goal__headline" id="icGoalAnswer">&nbsp;</strong>
+                        <span class="ic-goal__detail" id="icGoalDetail"></span>
+                    </p>
+                    <div class="ic-progress" id="icGoalProgress" role="progressbar" aria-labelledby="icGoalProgressLabel"
+                         aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                        <div class="ic-progress__fill" id="icGoalProgressFill"></div>
+                    </div>
+                    <p class="ic-tile__note" id="icGoalProgressLabel"></p>
+                    <p class="ic-tile__hint" id="icGoalNote" hidden></p>
+                    <button type="button" class="ic-goal__use" id="icGoalUse" hidden></button>
+                    <p class="visually-hidden" id="icGoalStatus" role="status" aria-live="polite" aria-atomic="true"></p>
                 </article>
 
                 @* Collapsed until the script opens it on wide screens; on a phone the table is long. *@

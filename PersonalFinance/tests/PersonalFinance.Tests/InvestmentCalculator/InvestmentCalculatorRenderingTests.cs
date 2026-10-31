@@ -175,6 +175,43 @@ public sealed partial class InvestmentCalculatorRenderingTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GoalTile_SolvesForTheMonthlyAmountByDefault_BeforeTheYearByYearTable()
+    {
+        string page = Calculator(await GetPageAsync());
+
+        string monthly = Tag(page, "id=\"icGoalModeMonthly\"");
+        Assert.Contains("type=\"radio\"", monthly, StringComparison.Ordinal);
+        Assert.Contains("checked", monthly, StringComparison.Ordinal);
+        Assert.DoesNotContain("checked", Tag(page, "id=\"icGoalModeYears\""), StringComparison.Ordinal);
+        Assert.Contains("How much a month?", page, StringComparison.Ordinal);
+        Assert.Contains("How long?", page, StringComparison.Ordinal);
+
+        string progress = Tag(page, "id=\"icGoalProgress\"");
+        Assert.Contains("role=\"progressbar\"", progress, StringComparison.Ordinal);
+        Assert.Contains("aria-valuemax=\"100\"", progress, StringComparison.Ordinal);
+        Assert.Contains("hidden", Tag(page, "id=\"icGoalUse\""), StringComparison.Ordinal);
+
+        int goal = page.IndexOf("id=\"icGoal\"", StringComparison.Ordinal);
+        Assert.True(goal >= 0 && goal < page.IndexOf("id=\"icYearly\"", StringComparison.Ordinal),
+            "The goal tile is not before the year-by-year table.");
+    }
+
+    [Theory]
+    [InlineData("USD", "500000", "1000000000")]
+    [InlineData("VND", "12500000000", "25000000000000")]
+    public async Task GoalAmount_StartsAndIsBoundedOnTheMoneyScale(string currency, string value, string max)
+    {
+        _preferences.ReportingCurrencies[UserId] = currency;
+
+        string target = Tag(Calculator(await GetPageAsync()), "id=\"icGoal\"");
+
+        Assert.Contains("type=\"number\"", target, StringComparison.Ordinal);
+        Assert.Contains("min=\"0\"", target, StringComparison.Ordinal);
+        Assert.Contains($"value=\"{value}\"", target, StringComparison.Ordinal);
+        Assert.Contains($"max=\"{max}\"", target, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task EveryElementId_IsUnique()
     {
         string page = Calculator(await GetPageAsync());
