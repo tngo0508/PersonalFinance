@@ -44,6 +44,10 @@ public static class AnalysisText
     public static string MonthName(int month) =>
         month is >= 1 and <= 12 ? CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month) : string.Empty;
 
+    /// <summary>A month's short name in the request culture, e.g. "Mar"; empty for a number outside 1–12.</summary>
+    public static string ShortMonthName(int month) =>
+        month is >= 1 and <= 12 ? CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(month) : string.Empty;
+
     /// <summary>A month and year in the request culture's year-month pattern, e.g. "March 2026".</summary>
     public static string MonthYear(int year, int month) =>
         new DateTime(year, month, 1).ToString("Y", CultureInfo.CurrentCulture);

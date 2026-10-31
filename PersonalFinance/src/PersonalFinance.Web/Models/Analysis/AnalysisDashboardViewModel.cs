@@ -67,6 +67,26 @@ public class AnalysisDashboardViewModel
     public double TimeElapsedPercent { get; set; }
     public string VelocityStatus { get; set; } = string.Empty;
 
+    /// <summary>The month the velocity figures describe: the selected month, or the latest one when none is selected.</summary>
+    public int VelocityMonth { get; set; }
+
+    /// <summary>The number of days in <see cref="VelocityMonth"/>; 0 without velocity figures.</summary>
+    public int DaysInVelocityMonth { get; set; }
+
+    /// <summary>True while <see cref="VelocityMonth"/> still has days to come, so the page projects its end.</summary>
+    public bool IsVelocityMonthOpen => DaysRemaining > 0;
+
+    /// <summary>
+    ///     How the month's spending pace reads at a glance: "over" past the budget, "ahead" spending faster than time
+    ///     passes, otherwise "ok" (on track, or spending slower than time passes).
+    /// </summary>
+    public string PaceTone => VelocityStatus switch
+    {
+        "Over Budget" => "over",
+        "Ahead of Schedule" => "ahead",
+        _ => "ok"
+    };
+
     /// <summary><see cref="VelocityStatus"/> in the request's Language.</summary>
     public string VelocityStatusLabel { get; set; } = string.Empty;
 
@@ -79,14 +99,31 @@ public class AnalysisDashboardViewModel
     // Money Flow: one month of income moving into categories and savings; null when the month has no data
     public MoneyFlowViewModel? MoneyFlow { get; set; }
 
-    // Variance rankings
-    public List<VarianceRankingViewModel> VarianceRankings { get; set; } = new();
-
     // Weekly trend
     public List<WeeklySpendingViewModel> WeeklyTrend { get; set; } = new();
 
     // Category velocities
     public List<CategoryVelocityViewModel> CategoryVelocities { get; set; } = new();
+
+    /// <summary>The selected month's point in <see cref="TrendPoints"/>; null for a whole-year view.</summary>
+    public TrendPointViewModel? SelectedTrendPoint =>
+        SelectedMonth is { } month ? TrendPoints.FirstOrDefault(t => t.MonthNumber == month) : null;
+
+    /// <summary>The month before the selected one, for the summary's month-on-month change; null when there is none.</summary>
+    public TrendPointViewModel? PreviousTrendPoint =>
+        SelectedMonth is { } month ? TrendPoints.FirstOrDefault(t => t.MonthNumber == month - 1) : null;
+
+    /// <summary>
+    ///     The categories most in need of attention first: the highest share of budget used, then by name. A category with
+    ///     neither a budget nor spending says nothing about the period and is left out.
+    /// </summary>
+    public List<CategoryInsightViewModel> CategoriesByAttention =>
+        Categories.Where(c => c.BudgetedAmount != 0m || c.ActualAmount != 0m)
+            .OrderByDescending(c => c.PercentageUsed).ThenBy(c => c.CategoryName, StringComparer.CurrentCulture).ToList();
+
+    /// <summary>The largest budget or actual amount among the categories: the full width of every category bar.</summary>
+    public decimal CategoryScaleMax =>
+        Categories.Count == 0 ? 0m : Categories.Max(c => Math.Max(c.BudgetedAmount, c.ActualAmount));
 
     // Status messages
     public string? StatusMessage { get; set; }
@@ -95,6 +132,9 @@ public class AnalysisDashboardViewModel
 
 public sealed class TrendPointViewModel
 {
+    /// <summary>The month, 1–12, so the page can find the selected and previous months.</summary>
+    public int MonthNumber { get; set; }
+
     public string MonthName { get; set; } = string.Empty;
     public decimal Income { get; set; }
     public decimal Expenses { get; set; }
@@ -113,20 +153,14 @@ public sealed class CategoryInsightViewModel
 
     /// <summary><see cref="Status"/> in the request's Language.</summary>
     public string StatusLabel { get; set; } = string.Empty;
-}
 
-public sealed class VarianceRankingViewModel
-{
-    public int Rank { get; set; }
-    public string CategoryName { get; set; } = string.Empty;
-    public decimal BudgetedAmount { get; set; }
-    public decimal ActualAmount { get; set; }
-    public decimal Variance { get; set; }
-    public double VariancePercent { get; set; }
-    public string Status { get; set; } = string.Empty;
-
-    /// <summary><see cref="Status"/> in the request's Language.</summary>
-    public string StatusLabel { get; set; } = string.Empty;
+    /// <summary>How the category reads at a glance: "over" its budget, "near" its limit, otherwise "ok".</summary>
+    public string Tone => Status switch
+    {
+        "Over Budget" => "over",
+        "Near Limit" => "near",
+        _ => "ok"
+    };
 }
 
 public sealed class WeeklySpendingViewModel

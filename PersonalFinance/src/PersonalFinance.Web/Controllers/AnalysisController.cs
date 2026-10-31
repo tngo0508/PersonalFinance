@@ -258,6 +258,10 @@ public class AnalysisController : Controller
             model.TimeElapsedPercent = result.Velocity.TimeElapsedPercent;
             model.VelocityStatus = result.Velocity.Status;
             model.VelocityStatusLabel = AnalysisText.Status(localizer, result.Velocity.Status);
+            model.VelocityMonth = result.Velocity.MonthNumber;
+            model.DaysInVelocityMonth = result.Velocity is { Year: >= 1, MonthNumber: >= 1 and <= 12 }
+                ? DateTime.DaysInMonth(result.Velocity.Year, result.Velocity.MonthNumber)
+                : 0;
             model.WeeklyTrend = result.Velocity.WeeklyTrend
                 .Select(w => new WeeklySpendingViewModel
                 {
@@ -280,6 +284,7 @@ public class AnalysisController : Controller
             model.TrendPoints = result.Trends.TrendPoints
                 .Select(t => new TrendPointViewModel
                 {
+                    MonthNumber = t.MonthNumber,
                     MonthName = AnalysisText.MonthName(t.MonthNumber),
                     Income = t.Income,
                     Expenses = t.Expenses,
@@ -301,20 +306,6 @@ public class AnalysisController : Controller
                 }).ToList();
 
         model.MoneyFlow = MoneyFlowBuilder.Build(result.Categories, localizer);
-
-        if (result.Variance != null)
-            model.VarianceRankings = result.Variance.Rankings
-                .Select(v => new VarianceRankingViewModel
-                {
-                    Rank = v.Rank,
-                    CategoryName = v.CategoryName,
-                    BudgetedAmount = v.BudgetedAmount,
-                    ActualAmount = v.ActualAmount,
-                    Variance = v.Variance,
-                    VariancePercent = v.VariancePercent,
-                    Status = v.Status,
-                    StatusLabel = AnalysisText.Status(localizer, v.Status)
-                }).ToList();
 
         return model;
     }

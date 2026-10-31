@@ -15,10 +15,37 @@
     }
 
     /**
+     * Format an amount as whole currency units in the page culture, e.g. "$1,800".
+     * @param {number} amount - The amount.
+     * @returns {string} The formatted amount.
+     */
+    function money (amount) {
+        return PFI18n.formatMoney(amount, pageCurrency(), { whole: true });
+    }
+
+    /**
+     * Scroll the month strip so the selected month is in view; on a phone it would otherwise start off screen.
+     * @returns {void}
+     */
+    function revealSelectedMonth () {
+        const strip = document.querySelector('.analysis-period__months');
+        const current = strip && strip.querySelector('[aria-current="page"]');
+        if (!current || strip.scrollWidth <= strip.clientWidth) {
+            return;
+        }
+        const chip = current.getBoundingClientRect();
+        const box = strip.getBoundingClientRect();
+        if (chip.right > box.right || chip.left < box.left) {
+            strip.scrollLeft += chip.left - box.left - (box.width - chip.width) / 2;
+        }
+    }
+
+    /**
      * Initialize the analysis dashboard charts, and redraw them in the new colours when the theme changes (#489).
      * @returns {void}
      */
     function init () {
+        revealSelectedMonth();
         const data = window.__analysisData;
         if (!data) {
             return;
@@ -38,9 +65,27 @@
      */
     function renderAll (data) {
         const palette = window.ChartPalette.read();
-        renderWeeklyTrendChart(data.weeklyTrend, palette);
-        renderTrendChart(data.trendPoints, palette);
-        renderCategoryCharts(data.categories, palette);
+        const extra = window.ChartPalette.readTokens(['--app-money-flow-spending', '--app-accent-target', '--app-text']);
+        palette.expenses = extra[0];
+        palette.net = extra[1];
+        palette.text = extra[2];
+        palette.tone = { over: palette.negative, ahead: palette.warning, ok: palette.positive };
+
+        const selected = selectedIndex(data);
+        renderSparklines(data.trendPoints, selected, palette);
+        renderPaceChart(data.pace, data.weeklyTrend, palette);
+        renderTrendCharts(data.trendPoints, selected, palette);
+    }
+
+    /**
+     * The position of the selected month in the trend points, or the last point for a whole-year view.
+     * @param {Object} data - The page data island.
+     * @returns {number} The index, or -1 without trend points.
+     */
+    function selectedIndex (data) {
+        const points = data.trendPoints || [];
+        const index = points.findIndex((p) => p.monthNumber === data.selectedMonth);
+        return index >= 0 ? index : points.length - 1;
     }
 
     /**
@@ -53,20 +98,17 @@
     }
 
     /**
-     * The tooltip and legend colours every chart on the page shares.
+     * The tooltip colours every chart on the page shares.
      * @param {Object} palette - The chart palette.
-     * @returns {{tooltip: Object, legend: Object}} Chart.js plugin options, without callbacks.
+     * @returns {Object} Chart.js tooltip options, without callbacks.
      */
-    function themedPlugins (palette) {
+    function themedTooltip (palette) {
         return {
-            tooltip: {
-                backgroundColor: palette.tooltip.background,
-                titleColor: palette.tooltip.text,
-                bodyColor: palette.tooltip.text,
-                borderColor: palette.tooltip.border,
-                borderWidth: 1
-            },
-            legend: { labels: { color: palette.axis } }
+            backgroundColor: palette.tooltip.background,
+            titleColor: palette.tooltip.text,
+            bodyColor: palette.tooltip.text,
+            borderColor: palette.tooltip.border,
+            borderWidth: 1
         };
     }
 
@@ -78,299 +120,327 @@
      */
     function themedScale (palette, axis) {
         return Object.assign({}, axis, {
-            grid: { color: palette.grid },
+            grid: Object.assign({ color: palette.grid }, axis.grid),
             border: { color: palette.grid },
             ticks: Object.assign({ color: palette.axis }, axis.ticks)
         });
     }
 
     /**
-     * Render the weekly spending trend bar chart.
-     * @param {Array} weeklyTrend - Array of weekly spending data.
+     * A money axis whose labels are whole currency units.
+     * @param {Object} palette - The chart palette.
+     * @param {Object} [axis] - The axis' own options.
+     * @returns {Object} Chart.js scale options.
+     */
+    function moneyScale (palette, axis) {
+        return themedScale(palette, Object.assign({}, axis, {
+            ticks: { maxTicksLimit: 5, callback: (value) => money(value) }
+        }));
+    }
+
+    /**
+     * A small line of each summary figure across the year, with the selected month marked.
+     * @param {Array} points - The monthly trend points.
+     * @param {number} selected - The selected point's index.
      * @param {Object} palette - The chart palette.
      * @returns {void}
      */
-    function renderWeeklyTrendChart (weeklyTrend, palette) {
-        const canvas = document.getElementById('weeklyTrendChart');
-        if (!canvas || !weeklyTrend || weeklyTrend.length === 0) {
+    function renderSparklines (points, selected, palette) {
+        if (!points || points.length < 2) {
             return;
         }
 
-        const plugins = themedPlugins(palette);
-        const ctx = canvas.getContext('2d');
-        keep(new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: weeklyTrend.map((w) => {
-                    return w.weekLabel;
-                }),
-                datasets: [{
-                    label: PFI18n.t('Analysis.Js.WeeklySpending'),
-                    data: weeklyTrend.map((w) => {
-                        return w.totalSpent;
-                    }),
-                    backgroundColor: ChartPalette.withAlpha(palette.series[1], 0.7),
-                    borderColor: palette.series[1],
-                    borderWidth: 1
-                }]
+        const colours = { income: palette.positive, expenses: palette.expenses, netSavings: palette.net, savingsRate: palette.net };
+        document.querySelectorAll('canvas[data-spark]').forEach((canvas) => {
+            const series = canvas.dataset.spark;
+            const colour = colours[series] || palette.axis;
+            keep(new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: points.map((p) => p.monthName),
+                    datasets: [{
+                        data: points.map((p) => p[series]),
+                        borderColor: colour,
+                        borderWidth: 1.75,
+                        tension: 0.3,
+                        pointRadius: points.map((_p, i) => (i === selected ? 3 : 0)),
+                        pointBackgroundColor: colour,
+                        pointBorderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    events: [],
+                    layout: { padding: 4 },
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    scales: { x: { display: false }, y: { display: false } }
+                }
+            }));
+        });
+    }
+
+    /**
+     * Draws a vertical "today" line across the chart area at the x value in the plugin options.
+     * @type {Object}
+     */
+    const todayLine = {
+        id: 'analysisTodayLine',
+        afterDatasetsDraw: function (chart, _args, options) {
+            if (options.day === null || options.day === undefined) {
+                return;
+            }
+            const x = chart.scales.x.getPixelForValue(options.day);
+            const area = chart.chartArea;
+            const ctx = chart.ctx;
+            ctx.save();
+            ctx.strokeStyle = options.color;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x, area.top);
+            ctx.lineTo(x, area.bottom);
+            ctx.stroke();
+            ctx.fillStyle = options.color;
+            ctx.font = `600 11px ${Chart.defaults.font.family}`;
+            ctx.textAlign = 'right';
+            ctx.fillText(options.label, x - 6, area.bottom - 6);
+            ctx.restore();
+        }
+    };
+
+    /**
+     * Cumulative spending against an even spread of the budget, with the projection to month end while the month is
+     * open. The spending line steps through the weekly totals (days 1-7, 8-14, ...); without transactions it shows only
+     * today's total rather than inventing a path to it.
+     * @param {Object|null} pace - The velocity figures from the page model.
+     * @param {Array} weeks - The weekly spending totals, in order.
+     * @param {Object} palette - The chart palette.
+     * @returns {void}
+     */
+    function renderPaceChart (pace, weeks, palette) {
+        const canvas = document.getElementById('paceChart');
+        if (!canvas || !pace) {
+            return;
+        }
+
+        const tone = palette.tone[pace.tone] || palette.positive;
+        const elapsed = pace.daysElapsed;
+        let spent = [];
+        if (weeks && weeks.length > 0) {
+            let running = 0;
+            spent.push({ x: 0, y: 0 });
+            weeks.forEach((week, index) => {
+                const endDay = Math.min((index + 1) * 7, pace.daysInMonth, Math.ceil(elapsed));
+                if (endDay > spent[spent.length - 1].x) {
+                    running += week.totalSpent;
+                    spent.push({ x: Math.min(endDay, elapsed), y: running });
+                }
+            });
+        } else {
+            spent = [{ x: elapsed, y: pace.spentSoFar }];
+        }
+
+        const datasets = [
+            {
+                label: PFI18n.t('Analysis.Js.SpentSoFar'),
+                data: spent,
+                borderColor: tone,
+                backgroundColor: ChartPalette.withAlpha(tone, 0.12),
+                fill: spent.length > 1 ? 'origin' : false,
+                borderWidth: 2.5,
+                pointRadius: spent.map((_p, i) => (i === spent.length - 1 ? 4 : 0)),
+                pointBackgroundColor: tone,
+                tension: 0
             },
+            {
+                label: PFI18n.t('Analysis.Js.BudgetPace'),
+                data: [{ x: 0, y: 0 }, { x: pace.daysInMonth, y: pace.budget }],
+                borderColor: palette.axis,
+                borderDash: [5, 4],
+                borderWidth: 1.5,
+                pointRadius: 0
+            }
+        ];
+        if (pace.open) {
+            datasets.push({
+                label: PFI18n.t('Analysis.Js.Projection'),
+                data: [{ x: elapsed, y: pace.spentSoFar }, { x: pace.daysInMonth, y: pace.projected }],
+                borderColor: tone,
+                borderDash: [3, 4],
+                borderWidth: 2,
+                pointRadius: [0, 3],
+                pointBackgroundColor: tone
+            });
+        }
+
+        keep(new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: { datasets: datasets },
+            plugins: [todayLine],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: { mode: 'nearest', intersect: false },
                 plugins: {
-                    legend: { display: false },
-                    tooltip: Object.assign(plugins.tooltip, {
+                    legend: { position: 'bottom', labels: { color: palette.axis, boxWidth: 18, boxHeight: 2 } },
+                    tooltip: Object.assign(themedTooltip(palette), {
                         callbacks: {
-                            label: function (context) {
-                                return PFI18n.formatMoney(context.parsed.y, pageCurrency());
-                            }
+                            title: (items) => PFI18n.t('Analysis.Js.Day', { day: Math.round(items[0].parsed.x) }),
+                            label: (context) => PFI18n.t('Analysis.Js.SeriesTooltip', { series: context.dataset.label, amount: money(context.parsed.y) })
                         }
-                    })
+                    }),
+                    analysisTodayLine: { day: pace.open ? elapsed : null, color: palette.axis, label: PFI18n.t('Analysis.Js.Today') }
                 },
                 scales: {
-                    x: themedScale(palette, {}),
-                    y: themedScale(palette, {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function (value) {
-                                return PFI18n.formatMoney(value, pageCurrency(), { whole: true });
-                            }
-                        }
-                    })
+                    x: themedScale(palette, {
+                        type: 'linear',
+                        min: 0,
+                        max: pace.daysInMonth,
+                        grid: { display: false },
+                        ticks: { stepSize: 7, includeBounds: false, callback: (value) => PFI18n.t('Analysis.Js.Day', { day: value === 0 ? 1 : value }) }
+                    }),
+                    y: moneyScale(palette, { beginAtZero: true })
                 }
             }
         }));
     }
 
     /**
-     * Render the monthly trend line chart.
-     * @param {Array} trendPoints - Array of monthly trend data.
+     * Writes each bar's label above it: the savings rate on the net savings bars.
+     * @type {Object}
+     */
+    const barLabels = {
+        id: 'analysisBarLabels',
+        afterDatasetsDraw: function (chart, _args, options) {
+            const meta = chart.getDatasetMeta(0);
+            const ctx = chart.ctx;
+            ctx.save();
+            ctx.textAlign = 'center';
+            meta.data.forEach((bar, index) => {
+                const value = chart.data.datasets[0].data[index];
+                ctx.fillStyle = index === options.selected ? options.strong : options.color;
+                ctx.font = `${index === options.selected ? '600 ' : ''}11px ${Chart.defaults.font.family}`;
+                ctx.textBaseline = value < 0 ? 'top' : 'bottom';
+                ctx.fillText(options.labels[index], bar.x, value < 0 ? bar.y + 4 : bar.y - 4);
+            });
+            ctx.restore();
+        }
+    };
+
+    /**
+     * The monthly trend in two charts on one month axis: income and expenses as lines with the kept gap shaded
+     * (red where expenses passed income), then net savings as bars labelled with the savings rate. Clicking a month
+     * opens it.
+     * @param {Array} points - The monthly trend points.
+     * @param {number} selected - The selected point's index.
      * @param {Object} palette - The chart palette.
      * @returns {void}
      */
-    function renderTrendChart (trendPoints, palette) {
-        const canvas = document.getElementById('trendChart');
-        if (!canvas || !trendPoints || trendPoints.length === 0) {
+    function renderTrendCharts (points, selected, palette) {
+        const trendCanvas = document.getElementById('trendChart');
+        const netCanvas = document.getElementById('netSavingsChart');
+        if (!trendCanvas || !points || points.length < 2) {
             return;
         }
 
-        const plugins = themedPlugins(palette);
-        const ctx = canvas.getContext('2d');
-        keep(new Chart(ctx, {
+        const section = trendCanvas.closest('[data-month-url]');
+        const labels = points.map((p) => p.monthName);
+        const onClick = function (_event, elements) {
+            if (section && elements.length > 0) {
+                const point = points[elements[0].index];
+                window.location.href = `${section.dataset.monthUrl}&month=${point.monthNumber}`;
+            }
+        };
+        const onHover = function (event, elements) {
+            event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+        };
+        const radius = points.map((_p, i) => (i === selected ? 5 : 3));
+        const xAxis = themedScale(palette, {
+            grid: { display: false },
+            ticks: {
+                color: (context) => (context.index === selected ? palette.text : palette.axis),
+                font: (context) => (context.index === selected ? { weight: '600' } : {})
+            }
+        });
+        const tooltip = Object.assign(themedTooltip(palette), {
+            callbacks: {
+                label: (context) => PFI18n.t('Analysis.Js.SeriesTooltip', { series: context.dataset.label, amount: money(context.parsed.y) })
+            }
+        });
+
+        keep(new Chart(trendCanvas.getContext('2d'), {
             type: 'line',
             data: {
-                labels: trendPoints.map((t) => {
-                    return t.monthName;
-                }),
+                labels: labels,
                 datasets: [
                     {
                         label: PFI18n.t('Analysis.Js.Income'),
-                        data: trendPoints.map((t) => {
-                            return t.income;
-                        }),
+                        data: points.map((p) => p.income),
                         borderColor: palette.positive,
-                        backgroundColor: ChartPalette.withAlpha(palette.positive, 0.1),
-                        tension: 0.3,
+                        backgroundColor: palette.positive,
+                        borderWidth: 2.5,
+                        pointRadius: radius,
+                        tension: 0.25,
                         fill: false
                     },
                     {
                         label: PFI18n.t('Analysis.Js.Expenses'),
-                        data: trendPoints.map((t) => {
-                            return t.expenses;
-                        }),
-                        borderColor: palette.negative,
-                        backgroundColor: ChartPalette.withAlpha(palette.negative, 0.1),
-                        tension: 0.3,
-                        fill: false
-                    },
-                    {
-                        label: PFI18n.t('Analysis.Js.NetSavings'),
-                        data: trendPoints.map((t) => {
-                            return t.netSavings;
-                        }),
-                        borderColor: palette.series[1],
-                        backgroundColor: ChartPalette.withAlpha(palette.series[1], 0.1),
-                        tension: 0.3,
-                        fill: false,
-                        borderDash: [5, 5]
+                        data: points.map((p) => p.expenses),
+                        borderColor: palette.expenses,
+                        backgroundColor: palette.expenses,
+                        borderWidth: 2.5,
+                        pointRadius: radius,
+                        tension: 0.25,
+                        fill: { target: 0, above: ChartPalette.withAlpha(palette.negative, 0.16), below: ChartPalette.withAlpha(palette.positive, 0.14) }
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: plugins.legend,
-                    tooltip: Object.assign(plugins.tooltip, {
-                        callbacks: {
-                            label: function (context) {
-                                return PFI18n.t('Analysis.Js.SeriesTooltip', { series: context.dataset.label, amount: PFI18n.formatMoney(context.parsed.y, pageCurrency(), { whole: true }) });
-                            }
-                        }
-                    })
-                },
-                scales: {
-                    x: themedScale(palette, {}),
-                    y: themedScale(palette, {
-                        ticks: {
-                            callback: function (value) {
-                                return PFI18n.formatMoney(value, pageCurrency(), { whole: true });
-                            }
-                        }
-                    })
-                }
+                interaction: { mode: 'index', intersect: false },
+                onClick: onClick,
+                onHover: onHover,
+                plugins: { legend: { display: false }, tooltip: tooltip },
+                scales: { x: xAxis, y: moneyScale(palette, { grace: '5%' }) }
             }
         }));
-    }
 
-    /**
-     * Render the category pie and bar charts.
-     * @param {Array} categories - Array of category insight data.
-     * @param {Object} palette - The chart palette.
-     * @returns {void}
-     */
-    function renderCategoryCharts (categories, palette) {
-        if (!categories || categories.length === 0) {
+        if (!netCanvas) {
             return;
         }
-
-        renderCategoryPieChart(categories, palette);
-        renderCategoryBarChart(categories, palette);
-    }
-
-    /**
-     * A doughnut slice's colour: the categorical series in turn, then the same series lighter, so the seventh to
-     * twelfth categories never repeat an earlier slice's colour.
-     * @param {Object} palette - The chart palette.
-     * @param {number} index - The slice's position.
-     * @returns {string} The colour.
-     */
-    function sliceColour (palette, index) {
-        const count = palette.series.length;
-        const colour = palette.series[index % count];
-        return Math.floor(index / count) % 2 === 1 ? ChartPalette.withAlpha(colour, 0.55) : colour;
-    }
-
-    /**
-     * Render the category pie chart. Slices take the categorical series in turn; the legend and table name each one.
-     * @param {Array} categories - Array of category insight data.
-     * @param {Object} palette - The chart palette.
-     * @returns {void}
-     */
-    function renderCategoryPieChart (categories, palette) {
-        const canvas = document.getElementById('categoryPieChart');
-        if (!canvas) {
-            return;
-        }
-
-        const plugins = themedPlugins(palette);
-        const ctx = canvas.getContext('2d');
-        keep(new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: categories.map((c) => {
-                    return c.categoryName;
-                }),
-                datasets: [{
-                    data: categories.map((c) => {
-                        return c.actualAmount;
-                    }),
-                    backgroundColor: categories.map((_c, index) => sliceColour(palette, index)),
-                    // The gaps between slices in the card's colour
-                    borderColor: palette.page
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { boxWidth: 12, padding: 10, color: palette.axis }
-                    },
-                    tooltip: Object.assign(plugins.tooltip, {
-                        callbacks: {
-                            label: function (context) {
-                                const label = context.label || '';
-                                const value = context.parsed;
-                                const total = context.dataset.data.reduce((a, b) => {
-                                    return a + b;
-                                }, 0);
-                                const percentage = PFI18n.formatNumber(value / total * 100, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-                                return PFI18n.t('Analysis.Js.ShareTooltip', { label: label, amount: PFI18n.formatMoney(value, pageCurrency(), { whole: true }), percent: percentage });
-                            }
-                        }
-                    })
-                }
-            }
-        }));
-    }
-
-    /**
-     * Render the category bar chart (budgeted vs actual).
-     * @param {Array} categories - Array of category insight data.
-     * @param {Object} palette - The chart palette.
-     * @returns {void}
-     */
-    function renderCategoryBarChart (categories, palette) {
-        const canvas = document.getElementById('categoryBarChart');
-        if (!canvas) {
-            return;
-        }
-
-        const plugins = themedPlugins(palette);
-        const ctx = canvas.getContext('2d');
-        keep(new Chart(ctx, {
+        const nets = points.map((p) => p.netSavings);
+        keep(new Chart(netCanvas.getContext('2d'), {
             type: 'bar',
             data: {
-                labels: categories.map((c) => {
-                    return c.categoryName;
-                }),
-                datasets: [
-                    {
-                        label: PFI18n.t('Analysis.Js.Budgeted'),
-                        data: categories.map((c) => {
-                            return c.budgetedAmount;
-                        }),
-                        backgroundColor: ChartPalette.withAlpha(palette.axis, 0.5),
-                        borderColor: palette.axis,
-                        borderWidth: 1
-                    },
-                    {
-                        label: PFI18n.t('Analysis.Js.Actual'),
-                        data: categories.map((c) => {
-                            return c.actualAmount;
-                        }),
-                        backgroundColor: ChartPalette.withAlpha(palette.series[1], 0.7),
-                        borderColor: palette.series[1],
-                        borderWidth: 1
-                    }
-                ]
+                labels: labels,
+                datasets: [{
+                    label: PFI18n.t('Analysis.Js.NetSavings'),
+                    data: nets,
+                    backgroundColor: nets.map((v, i) => ChartPalette.withAlpha(v < 0 ? palette.negative : palette.net, i === selected ? 1 : 0.55)),
+                    borderRadius: 3,
+                    maxBarThickness: 40
+                }]
             },
+            plugins: [barLabels],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                indexAxis: 'y',
+                layout: { padding: { top: 18, bottom: 4 } },
+                onClick: onClick,
+                onHover: onHover,
                 plugins: {
-                    legend: plugins.legend,
-                    tooltip: Object.assign(plugins.tooltip, {
-                        callbacks: {
-                            label: function (context) {
-                                return PFI18n.t('Analysis.Js.SeriesTooltip', { series: context.dataset.label, amount: PFI18n.formatMoney(context.parsed.x, pageCurrency(), { whole: true }) });
-                            }
-                        }
-                    })
+                    legend: { display: false },
+                    tooltip: tooltip,
+                    analysisBarLabels: {
+                        selected: selected,
+                        color: palette.axis,
+                        strong: palette.text,
+                        labels: points.map((p) => PFI18n.t('Analysis.Js.Percent', { value: PFI18n.formatNumber(p.savingsRate, { maximumFractionDigits: 0 }) }))
+                    }
                 },
-                scales: {
-                    x: themedScale(palette, {
-                        ticks: {
-                            callback: function (value) {
-                                return PFI18n.formatMoney(value, pageCurrency(), { whole: true });
-                            }
-                        }
-                    }),
-                    y: themedScale(palette, {})
-                }
+                scales: { x: xAxis, y: moneyScale(palette, { beginAtZero: true, grace: '10%' }) }
             }
         }));
     }

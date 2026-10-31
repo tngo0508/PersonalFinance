@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.17.0] - 2026-10-30
+
+### Changed
+
+- **Analysis page redesign**: the Analysis page now reads top to bottom as four questions (am I on pace, where the money went, which categories need attention, how the year is going), opened by a one-sentence summary of the month.
+  - A period strip under the app header picks a month in one click; it replaces the month dropdown.
+  - The summary figures show their change from the month before and a small line of the year, with the selected month marked.
+  - Spending Velocity becomes one chart of spending so far against an even spread of the budget, with the projection to month end; it replaces the progress bar and the weekly bars. A month spending slower than time passes now reads as on track rather than as a warning.
+  - Money Flow keeps its Sankey and adds a Step down view of the same month, from income down to what was saved; its table sits behind "Show as a table".
+  - Each category is one bar of what was spent against a tick at its budget, most used first, replacing the doughnut, the budget-vs-actual bars and the two category tables (one merged table stays behind "Show as a table"). Categories with neither a budget nor spending are left out.
+  - The monthly trend shows income against expenses with the kept gap shaded, and net savings bars labelled with the savings rate; clicking a month opens it.
+
 ## [16.16.2] - 2026-10-30
 
 ### Security
