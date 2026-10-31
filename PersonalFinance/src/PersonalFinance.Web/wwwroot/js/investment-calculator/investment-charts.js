@@ -8,6 +8,7 @@
  * window.InvestmentCharts.line(host, options): a multi-series line chart over years, with optional area fills, dashed
  *     series, vertical markers and a readout that follows the pointer or the arrow keys.
  * window.InvestmentCharts.donut(host, options): a two-or-more-part donut with a centre label.
+ * window.InvestmentCharts.bars(host, options): stacked bars per year (what was put in and what grew).
  */
 (function () {
     'use strict';
@@ -241,5 +242,78 @@
             .text(options.centre);
     }
 
-    window.InvestmentCharts = Object.freeze({ line, donut });
+    /**
+     * Draw stacked bars, one per year. Negative parts (a fee above the return) draw as nothing.
+     * @param {HTMLElement} host - The container; its width sets the chart's.
+     * @param {object} options - The chart.
+     * @param {Array<{x: number, parts: Array<{value: number, color: string}>, title: string}>} options.bars - The
+     *     bars in year order, parts stacked bottom first; title is the bar's hover text.
+     * @param {string} options.label - The chart's accessible description.
+     * @param {object} options.palette - ChartPalette.read() colours (grid, axis).
+     * @param {Function} options.formatY - Formats an amount for the axis (compact).
+     * @param {Function} options.formatX - Formats a year for the axis.
+     * @param {number} [options.heightEm] - The height in rem (default 11).
+     */
+    function bars (host, options) {
+        if (!host || typeof d3 === 'undefined') {
+            return;
+        }
+        const width = host.clientWidth;
+        if (!width) {
+            return;
+        }
+        const r = rem();
+        const height = Math.round((options.heightEm || 11) * r);
+        const m = { top: r * 0.6, right: r * 0.5, bottom: r * 1.8, left: r * 3.6 };
+        const palette = options.palette;
+        const data = options.bars.map((bar) => {
+            let base = 0;
+            const parts = bar.parts.map((part) => {
+                const value = Math.max(0, part.value);
+                const piece = { y0: base, y1: base + value, color: part.color };
+                base += value;
+                return piece;
+            });
+            return { x: bar.x, title: bar.title, total: base, parts };
+        });
+        const x = d3.scaleBand().domain(data.map((d) => d.x)).range([m.left, width - m.right]).padding(0.18);
+        const y = d3.scaleLinear().domain([0, d3.max(data, (d) => d.total) || 1]).nice().range([height - m.bottom, m.top]);
+
+        d3.select(host).select('svg').remove();
+        const svg = d3.select(host).insert('svg', ':first-child')
+            .attr('class', 'ic-svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', width)
+            .attr('height', height)
+            .attr('role', 'img')
+            .attr('aria-label', options.label);
+
+        // Label as many years as fit, at a round step.
+        const fit = Math.max(1, Math.floor((width - m.left - m.right) / (r * 3.5)));
+        const every = Math.max(1, Math.ceil(data.length / fit));
+        svg.append('g')
+            .attr('transform', `translate(0,${height - m.bottom})`)
+            .call(d3.axisBottom(x).tickValues(x.domain().filter((v) => v % every === 0 || data.length === 1))
+                .tickFormat(options.formatX))
+            .call((g) => g.selectAll('text').attr('fill', palette.axis))
+            .call((g) => g.selectAll('line,path').attr('stroke', palette.grid));
+        svg.append('g')
+            .attr('transform', `translate(${m.left},0)`)
+            .call(d3.axisLeft(y).ticks(Math.max(3, Math.floor(height / (r * 3.5)))).tickSize(-(width - m.left - m.right))
+                .tickFormat(options.formatY))
+            .call((g) => g.select('.domain').remove())
+            .call((g) => g.selectAll('text').attr('fill', palette.axis))
+            .call((g) => g.selectAll('line').attr('stroke', palette.grid).attr('stroke-dasharray', '3 3'));
+
+        const groups = svg.append('g').selectAll('g').data(data).join('g').attr('class', 'ic-bar-year');
+        groups.append('title').text((d) => d.title);
+        groups.selectAll('rect').data((d) => d.parts.map((part) => Object.assign({ x: d.x }, part))).join('rect')
+            .attr('x', (d) => x(d.x))
+            .attr('width', x.bandwidth())
+            .attr('y', (d) => y(d.y1))
+            .attr('height', (d) => Math.max(0, y(d.y0) - y(d.y1)))
+            .attr('fill', (d) => d.color);
+    }
+
+    window.InvestmentCharts = Object.freeze({ line, donut, bars });
 })();

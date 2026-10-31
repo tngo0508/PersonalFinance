@@ -71,6 +71,43 @@
     color: var(--app-positive-text);
 }
 
+/* The other money (today's or future) reads as a secondary figure. */
+.ic-num--other dd {
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text-muted);
+}
+
+.ic-bar__tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+}
+
+.ic-switch {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    margin: 0;
+    padding-left: 0;
+    white-space: nowrap;
+}
+
+.ic-switch .form-check-input {
+    float: none;
+    margin: 0;
+    width: 2.5em;
+    height: 1.35em;
+    cursor: pointer;
+}
+
+.ic-switch .form-check-label {
+    font-size: 0.875rem;
+    font-weight: var(--app-font-weight-semibold);
+    cursor: pointer;
+}
+
 /* ---------- Layout ---------- */
 
 .ic-layout {
@@ -178,6 +215,8 @@
 
 .ic-preset:focus-visible,
 .ic-more__summary:focus-visible,
+.ic-years__summary:focus-visible,
+.ic-table-wrap:focus-visible,
 .ic-svg:focus-visible {
     outline: 2px solid var(--app-brand);
     outline-offset: 2px;
@@ -283,6 +322,15 @@
 .ic-swatch--growth,
 .ic-swatch--nofee { background: var(--app-chart-3); }
 
+/* Today's money is the balance colour, dashed, as on the chart. */
+.ic-swatch--today {
+    width: 1rem;
+    height: 0;
+    border-radius: 0;
+    border-top: 2px dashed var(--app-chart-1);
+    vertical-align: 0.2em;
+}
+
 .ic-chart {
     position: relative;
     width: 100%;
@@ -317,6 +365,85 @@
 
 .ic-split strong {
     font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Year by year ---------- */
+
+.ic-years__summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    cursor: pointer;
+    list-style: none;
+    border-radius: var(--app-radius-s);
+}
+
+.ic-years__summary::-webkit-details-marker {
+    display: none;
+}
+
+.ic-years__summary::before {
+    content: "";
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease;
+}
+
+.ic-years[open] .ic-years__summary::before {
+    transform: rotate(45deg);
+}
+
+.ic-table-wrap {
+    max-height: 24rem;
+    overflow: auto;
+    margin-top: 0.5rem;
+    border: 1px solid var(--app-border-subtle);
+    border-radius: var(--app-radius-m);
+}
+
+.ic-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.ic-table th,
+.ic-table td {
+    padding: 0.4rem 0.75rem;
+    text-align: right;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.ic-table th:first-child {
+    text-align: left;
+}
+
+.ic-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    font-size: 0.75rem;
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text-muted);
+    background: var(--app-surface);
+}
+
+.ic-table tbody th {
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.ic-table__balance {
+    font-weight: var(--app-font-weight-bold);
+}
+
+.ic-table tbody tr:last-child > * {
+    border-bottom: 0;
 }
 
 .ic-readout {
@@ -375,7 +502,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .ic-preset {
+    .ic-preset,
+    .ic-years__summary::before {
         transition: none;
     }
 }

@@ -14,6 +14,7 @@
     const int years = 20;
     const decimal increase = 0m;
     const decimal fee = 0.1m;
+    const decimal inflation = 2.5m;
     (string Key, decimal Rate)[] presets = [("Conservative", 4m), ("Base", 7m), ("Aggressive", 10m)];
 }
 
@@ -62,7 +63,20 @@
                 <dt>@L["InvestmentCalculator.Bar.Growth"]</dt>
                 <dd id="icGrowth" class="ic-num__growth">&nbsp;</dd>
             </div>
+            <div class="ic-num ic-num--other">
+                <dt id="icOtherLabel">@L["InvestmentCalculator.Js.Money.Today"]</dt>
+                <dd id="icOther">&nbsp;</dd>
+            </div>
         </dl>
+        @* The bar's tools: later slices add the view switch and Saved / Save here. *@
+        <div class="ic-bar__tools">
+            <div class="form-check form-switch ic-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="icTodaysMoney"
+                       aria-describedby="icTodaysMoneyHint"/>
+                <label class="form-check-label" for="icTodaysMoney">@L["InvestmentCalculator.Bar.TodaysMoney"]</label>
+                <span class="visually-hidden" id="icTodaysMoneyHint">@L["InvestmentCalculator.Bar.TodaysMoneyHint"]</span>
+            </div>
+        </div>
         <p class="visually-hidden" id="icStatus" role="status" aria-live="polite" aria-atomic="true"></p>
     </section>
 
@@ -96,6 +110,8 @@
                        Percent(increase), L["InvestmentCalculator.Field.IncreaseHint"]); }
                 @{ Field("Fee", L["InvestmentCalculator.Field.Fee"], fee, 0m, 3m, 3m, 0.05m, Percent(fee),
                        L["InvestmentCalculator.Field.FeeHint"]); }
+                @{ Field("Inflation", L["InvestmentCalculator.Field.Inflation"], inflation, 0m, 10m, 10m, 0.1m,
+                       Percent(inflation), L["InvestmentCalculator.Field.InflationHint"]); }
             </details>
 
             <p class="ic-disclaimer">
@@ -106,7 +122,7 @@
 
         <section class="ic-main" aria-labelledby="icOverviewTitle">
             <h2 class="visually-hidden" id="icOverviewTitle">@L["InvestmentCalculator.Overview.Title"]</h2>
-            @* Tiles fill an auto-fit grid; later slices add the year-by-year bars, the goal and the table. *@
+            @* Tiles fill an auto-fit grid; the goal tile (#590) goes before the year-by-year table. *@
             <div class="ic-tiles">
                 <article class="ic-tile ic-tile--wide" aria-labelledby="icBalanceTitle">
                     <header class="ic-tile__head">
@@ -114,6 +130,7 @@
                         <ul class="ic-legend" aria-hidden="true">
                             <li><span class="ic-swatch ic-swatch--balance"></span>@L["InvestmentCalculator.Js.Series.Balance"]</li>
                             <li><span class="ic-swatch ic-swatch--contributed"></span>@L["InvestmentCalculator.Js.Series.PutIn"]</li>
+                            <li><span class="ic-swatch ic-swatch--today"></span>@L["InvestmentCalculator.Js.Series.TodaysMoney"]</li>
                         </ul>
                     </header>
                     <div class="ic-chart" id="icBalanceChart"></div>
@@ -145,6 +162,39 @@
                     <div class="ic-chart ic-chart--small" id="icFeeChart"></div>
                     <p class="ic-tile__note" id="icFeeNote"></p>
                 </article>
+
+                <article class="ic-tile" aria-labelledby="icBarsTitle">
+                    <header class="ic-tile__head">
+                        <h3 class="ic-tile__title" id="icBarsTitle">@L["InvestmentCalculator.Tile.Bars"]</h3>
+                        <ul class="ic-legend" aria-hidden="true">
+                            <li><span class="ic-swatch ic-swatch--contributed"></span>@L["InvestmentCalculator.Js.Series.PutIn"]</li>
+                            <li><span class="ic-swatch ic-swatch--growth"></span>@L["InvestmentCalculator.Js.Series.Growth"]</li>
+                        </ul>
+                    </header>
+                    <div class="ic-chart ic-chart--small" id="icBarsChart"></div>
+                </article>
+
+                @* Collapsed until the script opens it on wide screens; on a phone the table is long. *@
+                <details class="ic-tile ic-tile--wide ic-years" id="icYearly">
+                    <summary class="ic-years__summary">
+                        <h3 class="ic-tile__title" id="icYearsTitle">@L["InvestmentCalculator.Tile.Years"]</h3>
+                    </summary>
+                    <div class="ic-table-wrap" role="region" aria-labelledby="icYearsTitle" tabindex="0">
+                        <table class="ic-table" id="icYearTable">
+                            <caption class="visually-hidden" id="icYearCaption">@L["InvestmentCalculator.Js.Table.Caption"]</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">@L["InvestmentCalculator.Table.Year"]</th>
+                                    <th scope="col">@L["InvestmentCalculator.Table.PutIn"]</th>
+                                    <th scope="col">@L["InvestmentCalculator.Table.Growth"]</th>
+                                    <th scope="col">@L["InvestmentCalculator.Table.Balance"]</th>
+                                    <th scope="col" id="icYearOther">@L["InvestmentCalculator.Js.Money.Today"]</th>
+                                </tr>
+                            </thead>
+                            <tbody id="icYearRows"></tbody>
+                        </table>
+                    </div>
+                </details>
             </div>
         </section>
     </div>
