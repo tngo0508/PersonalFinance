@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [16.16.2] - 2026-10-30
+
+### Security
+
+- **Agent owner guard**: the scheduled ticket agent works only on `ready-for-agent` issues assigned to the owner and no one else, so an outsider's issue never reaches it until the owner assigns it.
+  - Agent Auto-Merge merges only a PR from a branch of this repository, opened by the claude app, whose issue is assigned to the owner alone; before, a fork PR named `agent/issue-*` could merge itself once green.
+  - The rebase picker skips fork PRs, and an `@claude` mention runs Claude only when the owner writes it.
+  - `/to-tickets`, `/to-spec` and `/triage` assign the issue to you whenever they apply `ready-for-agent`, so the agent picks up new tickets with no manual step.
+
 ## [16.16.1] - 2026-10-30
 
 ### Changed

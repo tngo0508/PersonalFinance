@@ -5,6 +5,8 @@ name: Agent Auto-Merge
 # The i18n Translate check must have passed too: it pushes the Vietnamese as a new commit, so the checks of the
 # commit before it never merge (the head-SHA guard below), and the translated commit's own checks decide.
 # A PR that touches the Atelier content folder is never merged here: it gets one comment and waits for the owner.
+# Only the agent's own PRs merge: a branch of this repository, opened by the claude app, for an issue assigned to the
+# owner and no one else. A fork PR can name its branch agent/issue-* too, and must never merge itself.
 #
 # Needs the AGENT_GH_TOKEN secret (fine-grained PAT: contents, pull requests, issues read/write). A merge made with
 # GITHUB_TOKEN does not trigger workflows, so the push to main would never deploy or publish its Release.
@@ -44,6 +46,8 @@ jobs:
           BRANCH: ${{ github.event.workflow_run.head_branch }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           CONTENT_DIR: PersonalFinance/src/PersonalFinance.ApiService/Features/Learning/Content
+          OWNER: ${{ github.repository_owner }}
+          AGENT_LOGIN: app/claude
         run: |
           set -euo pipefail
           if [ -z "$GH_TOKEN" ]; then
@@ -51,12 +55,29 @@ jobs:
             exit 1
           fi
 
-          pr_json=$(gh pr list --state open --head "$BRANCH" --json number,isDraft,headRefOid --jq '.[0] // empty')
+          pr_json=$(gh pr list --state open --head "$BRANCH" --json number,isDraft,headRefOid,isCrossRepository,author \
+            --jq '[.[] | select(.isCrossRepository | not)] | .[0] // empty')
           if [ -z "$pr_json" ]; then
             echo "::notice::No open PR for $BRANCH."
             exit 0
           fi
           pr=$(jq -r '.number' <<< "$pr_json")
+
+          author=$(jq -r '.author.login' <<< "$pr_json")
+          if [ "$author" != "$AGENT_LOGIN" ]; then
+            echo "::notice::PR #$pr was opened by $author, not the ticket agent: it waits for a human."
+            exit 0
+          fi
+          issue="${BRANCH#agent/issue-}"
+          if ! [[ "$issue" =~ ^[0-9]+$ ]]; then
+            echo "::notice::$BRANCH does not name an issue: PR #$pr waits for a human."
+            exit 0
+          fi
+          if ! gh api "repos/$GH_REPO/issues/$issue" \
+              | jq -e --arg owner "$OWNER" '[.assignees[].login] == [$owner]' > /dev/null; then
+            echo "::notice::Issue #$issue is not assigned to $OWNER alone: PR #$pr waits for a human."
+            exit 0
+          fi
 
           if [ "$(jq -r '.isDraft' <<< "$pr_json")" = "true" ]; then
             echo "::notice::PR #$pr is a draft: it waits for a human."
