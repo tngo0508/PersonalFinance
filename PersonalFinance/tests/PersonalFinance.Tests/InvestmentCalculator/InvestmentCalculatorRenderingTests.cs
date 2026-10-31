@@ -15,6 +15,7 @@ using PersonalFinance.Data;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Feedback;
+using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Shared.Enums;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
@@ -34,6 +35,7 @@ public sealed partial class InvestmentCalculatorRenderingTests : IAsyncLifetime
     private const string UserId = "calculator-user";
 
     private readonly InMemoryUserPreferenceService _preferences = new();
+    private readonly GoalsApi _goals = new();
     private WebApplication _app = null!;
     private HttpClient _client = null!;
 
@@ -46,7 +48,8 @@ public sealed partial class InvestmentCalculatorRenderingTests : IAsyncLifetime
         });
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
-        builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddSingleton<TimeProvider>(new FixedTimeProvider(new DateTimeOffset(2026, 10, 30, 12, 0, 0, TimeSpan.Zero)));
+        builder.Services.AddSingleton<ISavingsGoalsApi>(_goals);
         builder.Services.AddSingleton<IUserPreferenceService>(_preferences);
         builder.Services.AddSingleton<IFeedbackApi, NoFeedbackApi>();
         builder.Services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
@@ -212,6 +215,89 @@ public sealed partial class InvestmentCalculatorRenderingTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SavingsGoalPicker_ListsActiveGoals_WithTheirTargetAndYearsToTheTargetDate()
+    {
+        _goals.Goals.AddRange(
+        [
+            Goal(1, "Emergency fund", 25_000m, new DateTime(2029, 6, 1)),
+            Goal(2, "New car", 18_000m, targetDate: null),
+            Goal(3, "Paid off", 5_000m, new DateTime(2027, 1, 1), completed: true),
+            Goal(4, "Retirement", 900_000m, new DateTime(2100, 1, 1)),
+            Goal(5, "Overdue trip", 3_000m, new DateTime(2025, 1, 1))
+        ]);
+
+        string page = Calculator(await GetPageAsync());
+
+        Assert.Contains("<label class=\"ic-field__label\" for=\"icGoalFrom\">Start from one of my Savings Goals</label>",
+            page, StringComparison.Ordinal);
+        string fund = Tag(page, "data-goal-id=\"1\"");
+        Assert.Contains("data-target=\"25000\"", fund, StringComparison.Ordinal);
+        Assert.Contains("data-years=\"3\"", fund, StringComparison.Ordinal); // 2.6 years, rounded up
+        Assert.Contains("Emergency fund: $25,000", page, StringComparison.Ordinal);
+        string car = Tag(page, "data-goal-id=\"2\"");
+        Assert.Contains("data-target=\"18000\"", car, StringComparison.Ordinal);
+        Assert.Contains("data-years=\"\"", car, StringComparison.Ordinal); // no target date: years stay as they are
+        Assert.Contains("data-years=\"50\"", Tag(page, "data-goal-id=\"4\""), StringComparison.Ordinal);
+        Assert.Contains("data-years=\"1\"", Tag(page, "data-goal-id=\"5\""), StringComparison.Ordinal);
+        Assert.DoesNotContain("data-goal-id=\"3\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("id=\"icGoalFromUnavailable\"", page, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SavingsGoalPicker_ConvertsAGoalInAnotherCurrency_AndLeavesOutOneWithNoRate()
+    {
+        SavingsGoalDto house = Goal(6, "House deposit", 270_000_000m, targetDate: null);
+        house.CurrencyCode = "VND";
+        house.ReportingTargetAmount = 10_850.40m;
+        SavingsGoalDto trip = Goal(7, "Hanoi trip", 30_000_000m, targetDate: null);
+        trip.CurrencyCode = "VND";
+        trip.ReportingTargetAmount = null;
+        _goals.Goals.AddRange([house, trip]);
+
+        string page = Calculator(await GetPageAsync());
+
+        Assert.Contains("data-target=\"10851\"", Tag(page, "data-goal-id=\"6\""), StringComparison.Ordinal);
+        Assert.Contains("House deposit: about $10,851, converted from VND", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-goal-id=\"7\"", page, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SavingsGoalPicker_IsLeftOut_WhenTheAccountHasNoActiveGoals()
+    {
+        _goals.Goals.Add(Goal(3, "Paid off", 5_000m, targetDate: null, completed: true));
+
+        string page = Calculator(await GetPageAsync());
+
+        Assert.DoesNotContain("id=\"icGoalFrom\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("id=\"icGoalFromUnavailable\"", page, StringComparison.Ordinal);
+        Assert.Contains("id=\"icGoal\"", page, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SavingsGoalPicker_WhenTheApiIsUnavailable_SaysSoAndTheCalculatorStillRenders()
+    {
+        _goals.Unavailable = true;
+
+        string page = Calculator(await GetPageAsync());
+
+        Assert.DoesNotContain("id=\"icGoalFrom\"", page, StringComparison.Ordinal);
+        Assert.Contains("id=\"icGoalFromUnavailable\"", page, StringComparison.Ordinal);
+        Assert.Contains("Your Savings Goals could not be loaded", page, StringComparison.Ordinal);
+        Assert.Contains("id=\"icGoal\"", page, StringComparison.Ordinal);
+        Assert.Contains("id=\"icMonthlyRange\"", page, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SavingsGoalPicker_OnlyReadsTheGoals()
+    {
+        _goals.Goals.Add(Goal(1, "Emergency fund", 25_000m, targetDate: null));
+
+        await GetPageAsync();
+
+        Assert.Equal(["GetSavingsGoalsAsync"], _goals.Calls);
+    }
+
+    [Fact]
     public async Task EveryElementId_IsUnique()
     {
         string page = Calculator(await GetPageAsync());
@@ -267,6 +353,68 @@ public sealed partial class InvestmentCalculatorRenderingTests : IAsyncLifetime
             ], IdentityConstants.ApplicationScheme);
             return Task.FromResult(AuthenticateResult.Success(
                 new AuthenticationTicket(new ClaimsPrincipal(identity), IdentityConstants.ApplicationScheme)));
+        }
+    }
+
+    private static SavingsGoalDto Goal(int id, string name, decimal target, DateTime? targetDate, bool completed = false) =>
+        new()
+        {
+            Id = id,
+            Name = name,
+            CurrencyCode = "USD",
+            ReportingCurrency = "USD",
+            TargetAmount = target,
+            ReportingTargetAmount = target,
+            TargetDate = targetDate,
+            IsCompleted = completed
+        };
+
+    /// <summary>The Savings Goals API: records every call, and every write fails the test.</summary>
+    private sealed class GoalsApi : ISavingsGoalsApi
+    {
+        public List<SavingsGoalDto> Goals { get; } = [];
+
+        public List<string> Calls { get; } = [];
+
+        public bool Unavailable { get; set; }
+
+        public Task<List<SavingsGoalDto>> GetSavingsGoalsAsync(CancellationToken cancellationToken = default)
+        {
+            Calls.Add(nameof(GetSavingsGoalsAsync));
+            return Unavailable
+                ? throw new HttpRequestException("The ApiService is down.")
+                : Task.FromResult(Goals);
+        }
+
+        public Task<CreateSavingsGoalResponseDto> CreateSavingsGoalAsync(CreateSavingsGoalRequestDto request,
+            CancellationToken cancellationToken = default) => Write<CreateSavingsGoalResponseDto>();
+
+        public Task<UpdateSavingsGoalResponseDto> UpdateSavingsGoalAsync(int id, UpdateSavingsGoalRequestDto request,
+            CancellationToken cancellationToken = default) => Write<UpdateSavingsGoalResponseDto>();
+
+        public Task<DeleteSavingsGoalResponseDto> DeleteSavingsGoalAsync(int id,
+            CancellationToken cancellationToken = default) => Write<DeleteSavingsGoalResponseDto>();
+
+        public Task<List<ContributionDto>> GetContributionsAsync(int goalId,
+            CancellationToken cancellationToken = default) => Write<List<ContributionDto>>();
+
+        public Task<SaveContributionResponseDto> AddContributionAsync(int goalId, SaveContributionRequestDto request,
+            CancellationToken cancellationToken = default) => Write<SaveContributionResponseDto>();
+
+        public Task<SaveContributionResponseDto> UpdateContributionAsync(int goalId, int contributionId,
+            SaveContributionRequestDto request, CancellationToken cancellationToken = default) =>
+            Write<SaveContributionResponseDto>();
+
+        public Task<DeleteContributionResponseDto> DeleteContributionAsync(int goalId, int contributionId,
+            CancellationToken cancellationToken = default) => Write<DeleteContributionResponseDto>();
+
+        public Task<SaveContributionResponseDto> CorrectBalanceAsync(int goalId, CorrectBalanceRequestDto request,
+            CancellationToken cancellationToken = default) => Write<SaveContributionResponseDto>();
+
+        private Task<T> Write<T>([System.Runtime.CompilerServices.CallerMemberName] string caller = "")
+        {
+            Calls.Add(caller);
+            throw new NotSupportedException($"The calculator called {caller}.");
         }
     }
 

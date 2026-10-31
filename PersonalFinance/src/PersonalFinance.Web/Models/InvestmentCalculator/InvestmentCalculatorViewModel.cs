@@ -33,6 +33,15 @@ public sealed class InvestmentCalculatorViewModel
 
     public decimal GoalMax => Scaled(InvestmentCalculatorLimits.GoalMax);
 
+    /// <summary>The active Savings Goals the goal tile can start from (#593); empty hides the picker.</summary>
+    public IReadOnlyList<SavingsGoalOption> SavingsGoals { get; init; } = [];
+
+    /// <summary>
+    /// True when the Savings Goals could not be loaded: the tile says so in place of the picker, and the calculator
+    /// keeps working.
+    /// </summary>
+    public bool SavingsGoalsUnavailable { get; init; }
+
     /// <summary>The model for <paramref name="currencyCode"/>; an unsupported code reads as US dollars.</summary>
     public static InvestmentCalculatorViewModel For(string? currencyCode) =>
         new() { CurrencyCode = SupportedCurrencies.CodeOrDefault(currencyCode) };

@@ -181,6 +181,33 @@
                     <header class="ic-tile__head">
                         <h3 class="ic-tile__title" id="icGoalTitle">@L["InvestmentCalculator.Tile.Goal"]</h3>
                     </header>
+                    @* Start from a Savings Goal (#593): read once by the controller, never written. Choosing one sets the
+                       goal amount and, for a dated goal, the rail's years. *@
+                    @if (Model.SavingsGoals.Count > 0)
+                    {
+                        <div class="ic-goal__from">
+                            <label class="ic-field__label" for="icGoalFrom">@L["InvestmentCalculator.Goal.From"]</label>
+                            <select class="form-select form-select-sm ic-goal__select" id="icGoalFrom"
+                                    aria-describedby="icGoalFromHint">
+                                <option value="" selected>@L["InvestmentCalculator.Goal.From.None"]</option>
+                                @foreach (SavingsGoalOption option in Model.SavingsGoals)
+                                {
+                                    string target = Money(option.Target);
+                                    string text = option.ConvertedFrom is null
+                                        ? L["InvestmentCalculator.Goal.From.Option", option.Name, target]
+                                        : L["InvestmentCalculator.Goal.From.OptionConverted", option.Name, target, option.ConvertedFrom];
+                                    @* An undated goal's data-years is empty: the script then leaves the years alone. *@
+                                    <option value="@option.Id" data-goal-id="@option.Id" data-name="@option.Name"
+                                            data-target="@Invariant(option.Target)" data-years="@option.Years">@text</option>
+                                }
+                            </select>
+                            <p class="ic-tile__hint" id="icGoalFromHint">@L["InvestmentCalculator.Goal.From.Hint"]</p>
+                        </div>
+                    }
+                    else if (Model.SavingsGoalsUnavailable)
+                    {
+                        <p class="ic-tile__hint" id="icGoalFromUnavailable">@L["InvestmentCalculator.Goal.From.Unavailable"]</p>
+                    }
                     <div class="ic-goal__target">
                         <div class="ic-field__head">
                             <label class="ic-field__label" for="icGoal">@L["InvestmentCalculator.Goal.Target"]</label>
