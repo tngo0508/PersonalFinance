@@ -151,6 +151,26 @@ public class ResearchController : ControllerBase
     public async Task<IActionResult> GetWorld(CancellationToken cancellationToken = default) =>
         SnapshotOrUnavailable(await _researchService.GetWorldAsync(cancellationToken), WorldNeverLoaded);
 
+    /// <summary>
+    /// Gets the search index of the Research page's search box: the Tracked Funds, industry offices, industries and
+    /// countries. Always answers 200: a part whose dataset has never loaded is empty.
+    /// </summary>
+    [HttpGet("search-index")]
+    [ProducesResponseType(typeof(ResearchSearchIndexDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetSearchIndex(CancellationToken cancellationToken = default) =>
+        Ok(await _researchService.GetSearchIndexAsync(cancellationToken));
+
+    /// <summary>
+    /// Gets each stored dataset's SourceAsOf and BuiltAt, without the datasets themselves. Always answers 200: the
+    /// list is empty when nothing has loaded.
+    /// </summary>
+    [HttpGet("status")]
+    [ProducesResponseType(typeof(ResearchStatusDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetStatus(CancellationToken cancellationToken = default) =>
+        Ok(await _researchService.GetStatusAsync(cancellationToken));
+
     /// <summary>200 with the snapshot, or 503 with <paramref name="reason"/> when the dataset has never loaded.</summary>
     private IActionResult SnapshotOrUnavailable<TSnapshot>(ResearchSnapshotResult<TSnapshot> result, string reason)
         where TSnapshot : class =>

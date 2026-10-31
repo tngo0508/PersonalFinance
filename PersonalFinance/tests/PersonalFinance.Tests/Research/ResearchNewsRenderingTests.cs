@@ -163,6 +163,7 @@ public sealed partial class ResearchNewsRenderingTests : IAsyncLifetime
         builder.Logging.ClearProviders();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton(researchApi);
+        builder.Services.AddSingleton(TestResearchCache.Create());
         builder.Services.AddSingleton(newsApi);
         builder.Services.AddSingleton<IUserPreferenceService, InMemoryUserPreferenceService>();
         builder.Services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(Guid.NewGuid().ToString()));

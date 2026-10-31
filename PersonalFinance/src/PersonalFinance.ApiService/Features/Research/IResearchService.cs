@@ -60,6 +60,17 @@ public interface IResearchService
     Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the search index of the Research page's search box (Tracked Funds, industry offices, industries and
+    /// countries), built from the funds, Sectors and World snapshots; a part whose dataset has never loaded is empty.
+    /// </summary>
+    Task<ResearchSearchIndexDto> GetSearchIndexAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets each stored dataset's SourceAsOf and BuiltAt without reading its payload; empty when nothing has loaded.
+    /// </summary>
+    Task<ResearchStatusDto> GetStatusAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Rebuilds every dataset built from one of <paramref name="sources"/>, each on its own; the others are skipped.
     /// A dataset's snapshot is replaced only when its build succeeds; a failed build is logged and leaves the previous
     /// snapshot in place.

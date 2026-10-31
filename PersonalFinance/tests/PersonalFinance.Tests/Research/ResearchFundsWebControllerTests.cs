@@ -40,7 +40,7 @@ public class ResearchFundsWebControllerTests
     };
 
     private static ResearchController CreateController(IResearchApi api) =>
-        new(api, NullLogger<ResearchController>.Instance, TestLocalization.Localizer)
+        new(api, TestResearchCache.Create(), NullLogger<ResearchController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -199,5 +199,64 @@ public class ResearchFundsWebControllerTests
         IActionResult result = await CreateController(api).FundIndustries();
 
         Assert.Same(industries, Assert.IsType<JsonResult>(result).Value);
+    }
+
+    private static ResearchSearchIndexDto CompleteIndex() => new()
+    {
+        Funds = [new TrackedFundDto { Ticker = "SPY", Name = "SPDR S&P 500 ETF Trust" }],
+        Offices = ["Technology"],
+        Industries = [new ResearchSearchIndustryDto { Name = "Semiconductors", Office = "Technology" }],
+        Countries = ["Brazil"],
+    };
+
+    [Fact]
+    public async Task SearchIndex_ReturnsTheIndexAsJson_ReadingApiServiceOnceThroughTheCache()
+    {
+        ResearchSearchIndexDto index = CompleteIndex();
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSearchIndexAsync), index);
+        ResearchController controller = CreateController(api);
+
+        IActionResult first = await controller.SearchIndex();
+        IActionResult second = await controller.SearchIndex();
+
+        Assert.Same(index, Assert.IsType<JsonResult>(first).Value);
+        Assert.Same(index, Assert.IsType<JsonResult>(second).Value);
+        Assert.Equal([nameof(IResearchApi.GetSearchIndexAsync)], proxy.Calls);
+    }
+
+    [Fact]
+    public async Task SearchIndex_WhenAPartIsEmpty_ReadsApiServiceAgainOnTheNextRequest()
+    {
+        ResearchSearchIndexDto complete = CompleteIndex();
+        ResearchSearchIndexDto partial = new() { Countries = ["Brazil"] };
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSearchIndexAsync), partial);
+        ResearchController controller = CreateController(api);
+
+        IActionResult first = await controller.SearchIndex();
+        proxy.Returns(nameof(IResearchApi.GetSearchIndexAsync), complete);
+        IActionResult second = await controller.SearchIndex();
+        IActionResult third = await controller.SearchIndex();
+
+        Assert.Same(partial, Assert.IsType<JsonResult>(first).Value);
+        Assert.Same(complete, Assert.IsType<JsonResult>(second).Value);
+        Assert.Same(complete, Assert.IsType<JsonResult>(third).Value);
+        Assert.Equal(2, proxy.Calls.Count);
+    }
+
+    [Fact]
+    public async Task SearchIndex_WhenApiServiceFails_KeepsTheStatusWithASafeMessage()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Throws(nameof(IResearchApi.GetSearchIndexAsync), await NeverLoaded("secret internal reason"));
+        ResearchController controller = CreateController(api);
+
+        IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.SearchIndex());
+
+        ObjectResult error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, error.StatusCode);
+        Assert.DoesNotContain("secret internal reason", JsonSerializer.Serialize(error.Value));
+        Assert.False(string.IsNullOrWhiteSpace(JsonSerializer.Serialize(error.Value)));
     }
 }

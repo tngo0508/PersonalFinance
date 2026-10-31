@@ -7,6 +7,7 @@ using PersonalFinance.Shared.DTOs.Research;
 using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models.Research;
+using PersonalFinance.Web.Services;
 using ApiException = Refit.ApiException;
 
 namespace PersonalFinance.Web.Controllers;
@@ -20,6 +21,7 @@ namespace PersonalFinance.Web.Controllers;
 public sealed class ResearchController : Controller
 {
     private readonly IResearchApi _researchApi;
+    private readonly IResearchSnapshotCache _snapshotCache;
     private readonly ILogger<ResearchController> _logger;
     private readonly IStringLocalizer _localizer;
 
@@ -27,11 +29,14 @@ public sealed class ResearchController : Controller
     /// Initializes a new instance of the <see cref="ResearchController"/> class.
     /// </summary>
     /// <param name="researchApi">ApiService client for the Research datasets.</param>
+    /// <param name="snapshotCache">Keeps the datasets read from ApiService, so the page does not fetch them each view.</param>
     /// <param name="logger">Logger for this controller.</param>
     /// <param name="localizer">The page's text, in the request's Language.</param>
-    public ResearchController(IResearchApi researchApi, ILogger<ResearchController> logger, IStringLocalizer localizer)
+    public ResearchController(IResearchApi researchApi, IResearchSnapshotCache snapshotCache,
+        ILogger<ResearchController> logger, IStringLocalizer localizer)
     {
         _researchApi = researchApi;
+        _snapshotCache = snapshotCache;
         _logger = logger;
         _localizer = localizer;
     }
@@ -50,14 +55,14 @@ public sealed class ResearchController : Controller
         CancellationToken cancellationToken = default)
     {
         // The datasets are read side by side, so the page waits for the slowest one rather than for all in turn.
-        Task<SectorsSnapshotDto?> sectors = ReadAsync(_researchApi.GetSectorsAsync, "Sectors", cancellationToken);
-        Task<FundsSnapshotDto?> funds = ReadAsync(_researchApi.GetFundsAsync, "funds", cancellationToken);
-        Task<WorldSnapshotDto?> world = ReadAsync(_researchApi.GetWorldAsync, "World", cancellationToken);
-        Task<FundOverlapSnapshotDto?> overlap = ReadAsync(_researchApi.GetFundOverlapAsync, "fund overlap", cancellationToken);
-        Task<FundReturnsSnapshotDto?> returns = ReadAsync(_researchApi.GetFundReturnsAsync, "fund returns", cancellationToken);
-        Task<MacroSnapshotDto?> macro = ReadAsync(_researchApi.GetMacroAsync, "macro", cancellationToken);
-        Task<FundFactsSnapshotDto?> facts = ReadAsync(_researchApi.GetFundFactsAsync, "fund facts", cancellationToken);
-        Task<FundExposureSnapshotDto?> exposure = ReadAsync(_researchApi.GetFundExposureAsync, "fund exposure", cancellationToken);
+        Task<SectorsSnapshotDto?> sectors = ReadAsync(_researchApi.GetSectorsAsync, ResearchCacheKeys.Sectors, "Sectors", cancellationToken);
+        Task<FundsSnapshotDto?> funds = ReadAsync(_researchApi.GetFundsAsync, ResearchCacheKeys.Funds, "funds", cancellationToken);
+        Task<WorldSnapshotDto?> world = ReadAsync(_researchApi.GetWorldAsync, ResearchCacheKeys.World, "World", cancellationToken);
+        Task<FundOverlapSnapshotDto?> overlap = ReadAsync(_researchApi.GetFundOverlapAsync, ResearchCacheKeys.FundOverlap, "fund overlap", cancellationToken);
+        Task<FundReturnsSnapshotDto?> returns = ReadAsync(_researchApi.GetFundReturnsAsync, ResearchCacheKeys.FundReturns, "fund returns", cancellationToken);
+        Task<MacroSnapshotDto?> macro = ReadAsync(_researchApi.GetMacroAsync, ResearchCacheKeys.Macro, "macro", cancellationToken);
+        Task<FundFactsSnapshotDto?> facts = ReadAsync(_researchApi.GetFundFactsAsync, ResearchCacheKeys.FundFacts, "fund facts", cancellationToken);
+        Task<FundExposureSnapshotDto?> exposure = ReadAsync(_researchApi.GetFundExposureAsync, ResearchCacheKeys.FundExposure, "fund exposure", cancellationToken);
         await Task.WhenAll(sectors, funds, world, overlap, returns, macro, facts, exposure);
         return View(new ResearchViewModel(_localizer, await sectors, await funds, await world, tab, ticker, await overlap,
             await returns, await macro, await facts, await exposure));
@@ -72,6 +77,25 @@ public sealed class ResearchController : Controller
     [JsonApiErrors]
     public async Task<IActionResult> FundIndustries(CancellationToken cancellationToken = default) =>
         Json(await _researchApi.GetFundIndustriesAsync(cancellationToken));
+
+    /// <summary>
+    /// The search index of the page's search box, as JSON, from ApiService: it loads once, so the page does not carry
+    /// the lists. Read through the snapshot cache; an ApiService failure keeps its status code with a safe message and
+    /// is never cached.
+    /// An index with an empty part (a dataset not loaded yet) is served but not kept either.
+    /// </summary>
+    [HttpGet]
+    [JsonApiErrors]
+    public async Task<IActionResult> SearchIndex(CancellationToken cancellationToken = default) =>
+        Json(await _snapshotCache.GetOrReadAsync(ResearchCacheKeys.SearchIndex, _researchApi.GetSearchIndexAsync,
+            cancellationToken, keep: IsComplete));
+
+    /// <summary>
+    /// Whether every part of <paramref name="index"/> has entries. ApiService answers 200 with an empty part for a
+    /// dataset that has never loaded, so an index with one is not kept: the next request reads it again.
+    /// </summary>
+    private static bool IsComplete(ResearchSearchIndexDto index) =>
+        index.Funds.Count > 0 && index.Offices.Count > 0 && index.Industries.Count > 0 && index.Countries.Count > 0;
 
     /// <summary>
     /// Suggestions for the Companies tab's search box, as JSON, from ApiService. A rejected query is 400; an ApiService
@@ -110,14 +134,15 @@ public sealed class ResearchController : Controller
 
     /// <summary>
     /// Reads one dataset; null when it has never loaded (503) or ApiService cannot be reached, so only that tab shows
-    /// the Unavailable State.
+    /// the Unavailable State. <paramref name="cacheKey"/> keys the snapshot cache; <paramref name="dataset"/> is only the
+    /// label in the log.
     /// </summary>
-    private async Task<TSnapshot?> ReadAsync<TSnapshot>(Func<CancellationToken, Task<TSnapshot>> read, string dataset,
-        CancellationToken cancellationToken) where TSnapshot : class
+    private async Task<TSnapshot?> ReadAsync<TSnapshot>(Func<CancellationToken, Task<TSnapshot>> read, string cacheKey,
+        string dataset, CancellationToken cancellationToken) where TSnapshot : class
     {
         try
         {
-            return await read(cancellationToken);
+            return await _snapshotCache.GetOrReadAsync(cacheKey, read, cancellationToken);
         }
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.ServiceUnavailable)
         {

@@ -217,7 +217,7 @@ JavaScript paths are under `Web/wwwroot/js/`.
 | Learning | `LearningController` (`api/learning`, `[AllowAnonymous]`), `JourneyController` (`api/learning/journey`) | `ILearningContent`, `ILearningLibraryService`, `IJourneyService` | `LessonCompletion`, `ReviewCardState` (writes `UserPreference.ShowJourneyOnDashboard`; reads its JSON content folder, `Features/Learning/Content/`, at startup) | `ILearningApi` | `Learning` (public; also serves `/sitemap.xml` and `/robots.txt`) | `learning/` | Content is code (ADR 0019): Term Entries and Lessons are files loaded into memory, Vietnamese falling back to English per field; xUnit content checks (`tests/.../Learning/`) guard the files. The owner drafts new content with the `/atelier-draft` skill, whose gate `Web/tools/atelier-excerpts.js` passes it only allowlisted draft + cite excerpts. Anonymous reads; the nav's "Learning" entry asks `ILearningLibraryStatus` (cached) and stays hidden while the Library is empty. The Journey's open Lesson is computed on read from the finishes and their time zones (`Domain/JourneyClock`, on Infrastructure's `BrowserTimeZone`), never stored; the Lesson page opens with today's Review from Day 2 on (Web `MarkCard` posts each card's mark); in Development, `E2E_SEED_LEARNING` seeds a learner past Lesson 1 for the E2E smoke. The Dashboard reads the Journey for its quiet card, and Web `ShowOnDashboard` (the card's Hide, the Atelier page's switch) writes the preference |
 | NetWorth | `NetWorthController` (`api/NetWorth`) | `INetWorthParametersService` | `NetWorthParameters` | `INetWorthApi` | `Networth` | `networth/` | `calculate` is pure: a static Validator and the static `NetWorthProjectionService`, no Service, no database |
 | InvestmentScenarios | `InvestmentScenariosController` (`api/InvestmentScenarios`) | `IInvestmentScenarioService` | `InvestmentScenario` | `IInvestmentScenariosApi` | `InvestmentScenarios` (JSON only); `InvestmentCalculator` lists them | `investment-calculator/investment-scenarios.js` | Saved Investment Scenarios (inputs plus the what-if timing, DelayYears and StopAfterYear): list, save, update, rename, duplicate, soft delete; at most 20 per user (409 past that); the projection stays client-side |
-| Research | `ResearchController` (`api/Research`), `CompaniesController` (`api/Research/companies`) | `IResearchService`, `ICompanyProfileService`, ten `IResearchDatasetRefresher` (one fills the exchange rates), `ResearchSnapshotStore` | `ResearchSnapshot`, `ExchangeRate` (not user-owned) | `IResearchApi` | `Research` | `research/` (12 files) | The largest Feature: five external adapters, `Domain/` with 56 pure types, a refresh job; see [10](#10-research-pipeline) |
+| Research | `ResearchController` (`api/Research`, including `status` and `search-index`), `CompaniesController` (`api/Research/companies`) | `IResearchService`, `ICompanyProfileService`, ten `IResearchDatasetRefresher` (one fills the exchange rates), `ResearchSnapshotStore` | `ResearchSnapshot`, `ExchangeRate` (not user-owned) | `IResearchApi` | `Research` | `research/` (12 files) | The largest Feature: five external adapters, `Domain/` with 56 pure types, a refresh job; see [10](#10-research-pipeline) |
 | SavingsGoals | `SavingsGoalsController` (`api/SavingsGoals`, Contributions under `{goalId}/contributions`) | `ISavingsGoalService` | `SavingsGoal`, `Contribution` | `ISavingsGoalsApi` | `SavingsGoals` | `savingsgoals/` | Validators for a new goal, a Contribution and a balance correction; the saved amount is the Contribution total, cached on the goal in the same save; each goal's Pace is worked out on read (`SavingsGoalPace`); raises each milestone Notification once |
 | Search | `SearchController` (`api/Search`) | `ISearchService` | none (reads `BudgetTransaction`, `BudgetCategory`, `SpreadsheetTransactionRecord`, `SavingsGoal`) | `ISearchApi` | `Search` (JSON only) | `core/search.js` | Read-only; picks the source through `IBudgetDataSourceService`; a Learning group of Term Entries comes last, read through Learning's `ILearningLibraryService` (#522) |
 | Watchlist | `WatchlistController` (`api/Watchlist`), `NewsController` (`api/News`) | `IWatchlistService`, `INewsService`, `INewsFeedClient` (internal) | `SavedArticle` | `IWatchlistApi`, `INewsApi` | `Watchlist` (JSON only), `News` | `news/` | RSS adapter with `IMemoryCache` (5 minutes); `NewsService` has no database |
@@ -1012,13 +1012,16 @@ flowchart LR
 ```
 
 The read path. Each tab fails on its own, and `IResearchApi` is the one Refit client registered without retries on 503,
-because a 503 here means "never loaded", not "try again".
+because a 503 here means "never loaded", not "try again". Web reads each dataset through `IResearchSnapshotCache`
+(`ResearchSnapshotCache` over `IMemoryCache`, 10 minutes): a hit is served from memory, a miss goes to ApiService. A
+failed read is never kept, and neither is a search index with an empty part (a dataset not loaded yet).
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant B as Browser
     participant WC as ResearchController (Web)
+    participant SC as IResearchSnapshotCache (10 min)
     participant RA as IResearchApi (no retry on 503)
     participant AC as ResearchController (ApiService)
     participant RS as IResearchService
@@ -1027,21 +1030,34 @@ sequenceDiagram
 
     B->>WC: GET /Research?tab=
     par eight datasets in parallel, Task.WhenAll
-        WC->>RA: GetSectorsAsync ... GetFundExposureAsync
-        RA->>AC: GET api/Research/sectors, funds, funds/overlap, ...
-        AC->>RS: GetSectorsAsync() etc.
-        RS->>ST: ReadAsync(dataset)
-        ST->>DB: one row by Dataset, deserialise Payload
-        alt snapshot exists
-            AC-->>RA: 200 snapshot DTO
-        else never loaded
-            AC-->>RA: 503 ResearchUnavailableDto(Reason)
+        WC->>SC: GetOrReadAsync(key, read)
+        alt cached
+            SC-->>WC: snapshot served from memory
+        else miss
+            SC->>RA: GetSectorsAsync ... GetFundExposureAsync
+            RA->>AC: GET api/Research/sectors, funds, funds/overlap, ...
+            AC->>RS: GetSectorsAsync() etc.
+            RS->>ST: ReadAsync(dataset)
+            ST->>DB: one row by Dataset, deserialise Payload
+            alt snapshot exists
+                AC-->>RA: 200 snapshot DTO
+                RA-->>SC: snapshot, kept for 10 minutes
+                SC-->>WC: snapshot
+            else never loaded
+                AC-->>RA: 503 ResearchUnavailableDto(Reason)
+                RA-->>WC: ApiException, not kept
+            end
         end
     end
     WC-->>B: ResearchViewModel, a failed dataset shows _UnavailableState in its tab only
-    B->>WC: later, on demand: FundIndustries (~600 KB), Suggest, Company, Releases
+    B->>WC: later, on demand: SearchIndex, FundIndustries (~600 KB), Suggest, Company, Releases
+    WC->>SC: SearchIndex: GetOrReadAsync("search-index"), kept only when no part is empty
+    SC->>RA: on a miss: GET api/Research/search-index (200, a never-loaded dataset leaves its part empty)
     WC->>RA: CompaniesController: live SEC lookups, 30 per minute per Account, cached 24 h
 ```
+
+The ApiService `ResearchController` also serves `GET api/Research/status` (which datasets have loaded and when) and
+`GET api/Research/search-index` (the funds, SEC industry offices, SIC industries and countries the search box looks up).
 
 Drawn from `ApiService/Features/Research/ResearchFeature.cs`, `ResearchService.cs`, `ResearchSnapshotStore.cs`,
 `ResearchRefreshJob.cs`, `Adapters/`, `Web/Controllers/ResearchController.cs` and

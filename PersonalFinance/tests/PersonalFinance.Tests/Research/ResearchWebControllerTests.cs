@@ -46,7 +46,7 @@ public class ResearchWebControllerTests
     };
 
     private static ResearchController CreateController(IResearchApi api) =>
-        new(api, NullLogger<ResearchController>.Instance, TestLocalization.Localizer)
+        new(api, TestResearchCache.Create(), NullLogger<ResearchController>.Instance, TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -73,7 +73,7 @@ public class ResearchWebControllerTests
             """{"reason":"The fund overlap data has not loaded yet."}"""));
         proxy.Throws(nameof(IResearchApi.GetWorldAsync), await ApiFailure(HttpStatusCode.InternalServerError, "{}"));
         var logger = new RecordingLogger<ResearchController>();
-        var controller = new ResearchController(api, logger, TestLocalization.Localizer)
+        var controller = new ResearchController(api, TestResearchCache.Create(), logger, TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -94,6 +94,27 @@ public class ResearchWebControllerTests
     public void Controller_RequiresSignIn()
     {
         Assert.NotNull(typeof(ResearchController).GetCustomAttribute<AuthorizeAttribute>());
+    }
+
+    [Fact]
+    public async Task Index_ReadsEachDatasetOncePerLifetime_AcrossTwoRequests()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot)
+            .Returns(nameof(IResearchApi.GetFundsAsync), new FundsSnapshotDto())
+            .Returns(nameof(IResearchApi.GetWorldAsync), new WorldSnapshotDto())
+            .Returns(nameof(IResearchApi.GetFundOverlapAsync), new FundOverlapSnapshotDto())
+            .Returns(nameof(IResearchApi.GetFundReturnsAsync), new FundReturnsSnapshotDto())
+            .Returns(nameof(IResearchApi.GetMacroAsync), new MacroSnapshotDto())
+            .Returns(nameof(IResearchApi.GetFundFactsAsync), new FundFactsSnapshotDto())
+            .Returns(nameof(IResearchApi.GetFundExposureAsync), new FundExposureSnapshotDto());
+        ResearchController controller = CreateController(api);
+
+        await controller.Index();
+        await controller.Index();
+
+        Assert.Equal(8, proxy.Calls.Count);
+        Assert.Equal(8, proxy.Calls.Distinct().Count());
     }
 
     [Fact]
@@ -129,7 +150,7 @@ public class ResearchWebControllerTests
         Assert.Equal(
             [
                 nameof(ResearchController.Company), nameof(ResearchController.FundIndustries), nameof(ResearchController.Index),
-                nameof(ResearchController.Releases), nameof(ResearchController.Suggest),
+                nameof(ResearchController.Releases), nameof(ResearchController.SearchIndex), nameof(ResearchController.Suggest),
             ],
             typeof(ResearchController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
                 .Select(m => m.Name).Order(StringComparer.Ordinal));

@@ -48,6 +48,12 @@ public class ResearchRefreshJobTests
         public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<WorldSnapshotDto>(null));
 
+        public Task<ResearchSearchIndexDto> GetSearchIndexAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ResearchSearchIndexDto());
+
+        public Task<ResearchStatusDto> GetStatusAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ResearchStatusDto());
+
         public Task<ResearchRefreshSummary> RefreshAsync(ResearchSources sources = ResearchSources.All,
             CancellationToken cancellationToken = default)
         {

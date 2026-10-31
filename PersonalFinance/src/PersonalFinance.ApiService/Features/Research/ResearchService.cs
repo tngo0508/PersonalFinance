@@ -87,6 +87,20 @@ internal sealed class ResearchService : IResearchService
         GetAsync<WorldSnapshotDto>(ResearchDatasets.World, cancellationToken);
 
     /// <inheritdoc />
+    public async Task<ResearchSearchIndexDto> GetSearchIndexAsync(CancellationToken cancellationToken = default)
+    {
+        // One after the other: the store shares this request's DbContext, which allows one query at a time.
+        FundsSnapshotDto? funds = (await GetFundsAsync(cancellationToken)).Snapshot;
+        SectorsSnapshotDto? sectors = (await GetSectorsAsync(cancellationToken)).Snapshot;
+        WorldSnapshotDto? world = (await GetWorldAsync(cancellationToken)).Snapshot;
+        return ResearchSearchIndexBuilder.Build(funds, sectors, world);
+    }
+
+    /// <inheritdoc />
+    public async Task<ResearchStatusDto> GetStatusAsync(CancellationToken cancellationToken = default) =>
+        new() { Datasets = await _store.ReadStatusAsync(cancellationToken) };
+
+    /// <inheritdoc />
     public async Task<ResearchRefreshSummary> RefreshAsync(ResearchSources sources = ResearchSources.All,
         CancellationToken cancellationToken = default)
     {

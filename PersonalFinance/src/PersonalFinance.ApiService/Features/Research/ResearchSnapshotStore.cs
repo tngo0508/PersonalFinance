@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
+using PersonalFinance.Shared.DTOs.Research;
 
 namespace PersonalFinance.ApiService.Features.Research;
 
@@ -26,6 +27,10 @@ internal sealed class ResearchSnapshotStore
         string? payload = await PayloadQuery(_db, dataset).FirstOrDefaultAsync(cancellationToken);
         return payload is null ? null : JsonSerializer.Deserialize<T>(payload, JsonSerializerOptions.Web);
     }
+
+    /// <summary>Every stored dataset's SourceAsOf and BuiltAt, ordered by name; the payloads are not read.</summary>
+    public Task<List<ResearchDatasetStatusDto>> ReadStatusAsync(CancellationToken cancellationToken) =>
+        ResearchStatusQuery.Build(_db).ToListAsync(cancellationToken);
 
     /// <summary>
     /// Replaces the dataset's row with the new payload, or adds it on the first store. A save that fails leaves
