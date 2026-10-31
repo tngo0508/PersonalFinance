@@ -134,8 +134,18 @@
     }
 
     /**
+     * Put the app's base path in front of a root-relative address, without doubling the slash.
+     * @param {string|undefined} base - The base path, e.g. `/` or `/app/`.
+     * @param {string} href - The root-relative address, e.g. `/Research/Fund/VTI`.
+     * @returns {string} The address under the base path.
+     */
+    function withBase (base, href) {
+        return `${(base || '').replace(/\/+$/, '')}${href}`;
+    }
+
+    /**
      * Go to a Research page, carrying the Fund Basket.
-     * @param {string} href - The page.
+     * @param {string} href - The page, under the base path.
      * @returns {void}
      */
     function go (href) {
@@ -305,7 +315,7 @@
                     option.dataset.index = String(position);
                     // Keep focus in the box: a mouse press must not blur the input before the click.
                     option.addEventListener('mousedown', (event) => event.preventDefault());
-                    option.addEventListener('click', () => go(result.href));
+                    option.addEventListener('click', () => go(withBase(box.dataset.base, result.href)));
                     return option;
                 }));
                 return block;
@@ -399,7 +409,7 @@
             if (!target) {
                 return false;
             }
-            go(target.href);
+            go(withBase(box.dataset.base, target.href));
             return true;
         }
 
@@ -465,7 +475,7 @@
         });
     }
 
-    window.ResearchSearch = { match, latestOnly, searchIndex };
+    window.ResearchSearch = { match, latestOnly, searchIndex, withBase };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

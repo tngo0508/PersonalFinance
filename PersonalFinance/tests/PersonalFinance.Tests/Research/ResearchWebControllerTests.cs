@@ -387,6 +387,46 @@ public class ResearchWebControllerTests
         Assert.False(string.IsNullOrWhiteSpace(model.Sectors.UnavailableState.Heading));
     }
 
+    [Theory]
+    [InlineData("SPY:60,QQQ:40", true)]
+    [InlineData("SPY,QQQ", true)]
+    [InlineData("SPY:60,<script>", false)]
+    [InlineData("SPY 60", false)]
+    public async Task Sectors_WhenTheSectorsDataFails_KeepsAWellFormedBasketOnRetry(string basket, bool kept)
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Throws(nameof(IResearchApi.GetSectorsAsync), await ApiFailure(HttpStatusCode.ServiceUnavailable, "{}"))
+            .Returns(nameof(IResearchApi.GetFundsAsync), Funds);
+
+        ResearchSectorsPageViewModel model = SectorsModelOf(
+            await CreateController(api).Sectors(view: "basket", basket: basket));
+
+        Assert.Equal(kept, model.Sectors.UnavailableState.RetryRouteValues.ContainsKey("basket"));
+        if (kept)
+        {
+            Assert.Equal(basket, model.Sectors.UnavailableState.RetryRouteValues["basket"]);
+        }
+    }
+
+    [Theory]
+    [InlineData("SPY:60,QQQ:40", true)]
+    [InlineData("SPY:60;DROP", false)]
+    public async Task Sectors_WhenTheFundsDataFails_KeepsAWellFormedBasketOnRetry(string basket, bool kept)
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot)
+            .Throws(nameof(IResearchApi.GetFundsAsync), await ApiFailure(HttpStatusCode.ServiceUnavailable, "{}"));
+
+        ResearchSectorsPageViewModel model = SectorsModelOf(
+            await CreateController(api).Sectors(view: "basket", basket: basket));
+
+        Assert.Equal(kept, model.Funds.UnavailableState.RetryRouteValues.ContainsKey("basket"));
+        if (kept)
+        {
+            Assert.Equal(basket, model.Funds.UnavailableState.RetryRouteValues["basket"]);
+        }
+    }
+
     [Fact]
     public async Task Sectors_WhenOnlyTheFundsDataFails_KeepsTheChart_AndOnlyTheBasketViewIsUnavailable()
     {

@@ -423,12 +423,12 @@
     }
 
     /**
-     * The chart's label, the card's subtitle and the live summary for the basket.
+     * The card's subtitle and the live summary for the basket.
      * @param {Object} data - The fund industries snapshot.
      * @param {Object} root - The d3 hierarchy root of the basket.
      * @param {Object} focus - The focused d3 hierarchy node.
      * @param {string} trail - Where the chart is, e.g. "Your basket › Technology".
-     * @returns {{aria: string, subtitle: string, summary: string}} The wording.
+     * @returns {{subtitle: string, summary: string}} The wording.
      */
     function describe (data, root, focus, trail) {
         const offices = (root.children || []).filter((d) => d.data.kind === 'office');
@@ -446,7 +446,6 @@
         }
         const summary = sentences.join(' ');
         return {
-            aria: PFI18n.t('Research.Js.SectorsBasket.ChartLabel', { summary }),
             subtitle: PFI18n.t('Research.Js.SectorsBasket.Subtitle', { date: page.formatDay(data.asOf) }),
             summary
         };

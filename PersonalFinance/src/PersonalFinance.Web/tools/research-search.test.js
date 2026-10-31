@@ -152,3 +152,10 @@ test('latestOnly: a single call resolves to its value and passes its arguments',
 
     assert.strictEqual(await wrapped('msft'), 'for msft');
 });
+
+test('withBase: puts the base path in front of a root-relative address without doubling the slash', () => {
+    assert.strictEqual(search.withBase('/', '/Research/Fund/VTI'), '/Research/Fund/VTI');
+    assert.strictEqual(search.withBase('/app/', '/Research/Fund/VTI'), '/app/Research/Fund/VTI');
+    assert.strictEqual(search.withBase('/app', '/Research/World?country=Japan'), '/app/Research/World?country=Japan');
+    assert.strictEqual(search.withBase(undefined, '/Research/Fund/VTI'), '/Research/Fund/VTI');
+});

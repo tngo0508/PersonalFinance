@@ -9,7 +9,7 @@
     string boxClass = $"research-search {(Model.Large ? "research-search--large" : "research-search--compact")} {Model.CssClass}".TrimEnd();
 }
 <div class="@boxClass" data-research-search
-     data-index-url="@Url.Action("SearchIndex", "Research")" data-suggest-url="@Url.Action("Suggest", "Research")">
+     data-base="@Url.Content("~/")" data-index-url="@Url.Action("SearchIndex", "Research")" data-suggest-url="@Url.Action("Suggest", "Research")">
     <svg class="research-search__icon" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16">
         <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/>
         <path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>

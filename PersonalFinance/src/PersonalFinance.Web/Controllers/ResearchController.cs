@@ -87,15 +87,16 @@ public sealed class ResearchController : Controller
     /// that cannot be read shows only its own section's Unavailable State. <paramref name="focus"/>
     /// (<c>Office</c> or <c>Office/Industry</c>) opens the chart zoomed into that group, and <paramref name="view"/>
     /// <c>basket</c> opens the basket view; a malformed value of either is ignored.
+    /// A well-formed <c>basket</c> is kept on the Unavailable State's Retry.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Sectors([FromQuery] string? focus = null, [FromQuery] string? view = null,
-        CancellationToken cancellationToken = default)
+        [FromQuery] string? basket = null, CancellationToken cancellationToken = default)
     {
         Task<SectorsSnapshotDto?> sectors = ReadAsync(_researchApi.GetSectorsAsync, ResearchCacheKeys.Sectors, "Sectors", cancellationToken);
         Task<FundsSnapshotDto?> funds = ReadAsync(_researchApi.GetFundsAsync, ResearchCacheKeys.Funds, "funds", cancellationToken);
         await Task.WhenAll(sectors, funds);
-        return View(new ResearchSectorsPageViewModel(_localizer, await sectors, await funds, focus, view));
+        return View(new ResearchSectorsPageViewModel(_localizer, await sectors, await funds, focus, view, basket));
     }
 
     /// <summary>

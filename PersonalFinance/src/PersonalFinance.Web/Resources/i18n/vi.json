@@ -2618,7 +2618,6 @@
   "Research.Js.SectorsBasket.Summary": "Giỏ quỹ của bạn: {value} trong {offices}.",
   "Research.Js.SectorsBasket.SummaryWithRest": "Giỏ quỹ của bạn: {value} trong {offices}; {rest} không được SEC phân loại.",
   "Research.Js.SectorsBasket.SummaryWhere": "Đang hiển thị {trail}: {value} giỏ quỹ của bạn.",
-  "Research.Js.SectorsBasket.ChartLabel": "Biểu đồ sunburst của giỏ quỹ theo văn phòng ngành của SEC và ngành SIC. {summary}",
   "Research.Js.SectorsBasket.Subtitle": "Giỏ quỹ của bạn theo văn phòng ngành của SEC, ngành SIC và công ty, từ khoản nắm giữ của mỗi quỹ tính đến {date} hoặc sớm hơn. Mọi tỷ lệ phần trăm đều tính trên giỏ quỹ của bạn. Các công ty không có ngành SEC được nhóm theo quốc gia.",
   "Research.Js.SectorsBasket.Points": "{value} điểm",
   "Research.Js.SectorsBasket.LeanTitle": "Mức nghiêng so với thị trường, {year}",

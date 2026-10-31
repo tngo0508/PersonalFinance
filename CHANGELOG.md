@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Research groundwork**: the pages of the Research redesign start to arrive, not linked from anywhere yet; the Research page you open from the sidebar is unchanged apart from the change below.
+- **Research groundwork**: the pages of the Research redesign start to arrive, not linked from anywhere yet; the Research page you open from the sidebar is unchanged apart from the changes below.
   - A Research navigation bar with one search box for funds, companies, SEC offices, industries and countries (press `/` to focus it), glossary terms explained on click, and links that keep your Fund Basket.
   - A Research Home page with starting points, your basket and when each dataset is from.
   - A Sectors page: the treemap of the largest SEC filers with its year scrubber, ranked list, table, Technology lens and basket view; `?focus=Office/Industry` opens it zoomed into a group and `?view=basket` on the basket view.

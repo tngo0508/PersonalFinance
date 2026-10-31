@@ -19,6 +19,9 @@ public sealed class ResearchSectorsPageViewModel
     /// <summary>The most characters one part of <see cref="Focus"/> may have (an SEC office or SIC industry name).</summary>
     public const int MaxFocusPartLength = 80;
 
+    private static readonly System.Text.RegularExpressions.Regex BasketShape =
+        new(@"^[A-Za-z0-9.:,\-]{1,200}$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
     /// <summary>
     /// Builds the page over <paramref name="sectors"/> and <paramref name="funds"/>, either null when it could not be
     /// read. <paramref name="focus"/> and <paramref name="view"/> come from the address and are checked here: a
@@ -29,8 +32,9 @@ public sealed class ResearchSectorsPageViewModel
     /// <param name="funds">The funds snapshot, or null.</param>
     /// <param name="focus">The address's <c>focus</c>, e.g. <c>Finance/National Commercial Banks</c>.</param>
     /// <param name="view">The address's <c>view</c>: <c>market</c> or <c>basket</c>.</param>
+    /// <param name="basket">The address's <c>basket</c> (e.g. <c>SPY:60,QQQ:40</c>), kept on Retry when well-formed.</param>
     public ResearchSectorsPageViewModel(IStringLocalizer localizer, SectorsSnapshotDto? sectors, FundsSnapshotDto? funds,
-        string? focus, string? view)
+        string? focus, string? view, string? basket = null)
     {
         Focus = NormalizeFocus(focus);
         View = string.Equals(view?.Trim(), BasketView, StringComparison.OrdinalIgnoreCase) ? BasketView : MarketView;
@@ -43,6 +47,11 @@ public sealed class ResearchSectorsPageViewModel
         if (View == BasketView)
         {
             retryRoute["view"] = BasketView;
+        }
+        string? trimmedBasket = basket?.Trim();
+        if (trimmedBasket is not null && BasketShape.IsMatch(trimmedBasket))
+        {
+            retryRoute["basket"] = trimmedBasket;
         }
         Sectors = new(sectors, pageTitle, localizer["Research.Unavailable.Sectors"], "Sectors", retryRoute);
         Funds = new(funds, pageTitle, localizer["Research.Unavailable.Funds"], "Sectors",
