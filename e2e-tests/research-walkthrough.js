@@ -67,6 +67,16 @@ async function periodLabel(page, tabId) {
 }
 
 /**
+ * The page's address as the page sees it. A history.replaceState change reaches page.url() only later, so the steps
+ * that check it read location.href instead.
+ * @param {import('playwright').Page} page - The page.
+ * @returns {Promise<URL>} The address.
+ */
+async function addressOf(page) {
+    return new URL(await page.evaluate(() => window.location.href));
+}
+
+/**
  * Whether the page scrolls sideways (wider than the viewport).
  * @param {import('playwright').Page} page - The page.
  * @returns {Promise<boolean>} True when there is horizontal page scroll.
@@ -976,7 +986,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             const marketHidden = !(await page.locator('#research-world-map').isVisible());
             const callouts = await page.locator('#research-world-basket-callouts li').count();
             await page.click('[data-world-view="market"]');
-            const address = new URL(page.url());
+            const address = await addressOf(page);
             const ok = marketFirst === 'true' && basketOn === 'true' && marketHidden && callouts > 0 &&
                 !address.searchParams.has('view') && address.searchParams.get('basket') === 'SPY:60,QQQ:40';
             if (ok) {
@@ -994,11 +1004,11 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             const hintBefore = await page.locator('#research-world-detail-hint').isVisible();
             await page.selectOption('#research-world-country', 'India');
             const name = ((await page.locator('#research-world-detail .research-world__detail-name').textContent()) || '').trim();
-            const inAddress = new URL(page.url()).searchParams.get('country');
+            const inAddress = (await addressOf(page)).searchParams.get('country');
             const outlined = await page.locator('#research-world-map .research-world__country--selected').count();
             await page.selectOption('#research-world-country', '');
             const detailHidden = !(await page.locator('#research-world-detail').isVisible());
-            const cleared = !new URL(page.url()).searchParams.has('country');
+            const cleared = !(await addressOf(page)).searchParams.has('country');
             if (hintBefore && name === 'India' && inAddress === 'India' && outlined === 1 && detailHidden && cleared) {
                 pass('World 3: choosing India in the list shows its detail, outlines it and puts country=India in the address; choosing none clears both');
             } else {
@@ -1007,7 +1017,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
         });
 
         // World 4: ?country=Japan opens with Japan selected and its detail shown, matched whatever its case; an unknown
-        // name selects nothing, and a malformed one is dropped by the server, without a page error.
+        // name selects nothing and leaves the address, and a malformed one is dropped by the server, without a page error.
         await step('World 4', fail, async () => {
             const errorsBefore = pageErrors.length;
             const open = async (country) => {
@@ -1024,10 +1034,11 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             const japan = await open('Japan');
             const lower = await open('japan');
             const unknown = await open('Atlantis');
+            unknown.inAddress = (await addressOf(page)).searchParams.has('country');
             const malformed = await open('<script>alert(1)</script>');
             const dropped = await page.locator('#research-panel-world[data-research-country]').count() === 0;
             const ok = japan.name === 'Japan' && japan.figures === 2 && japan.selected === 'Japan' && japan.outlined === 1 &&
-                lower.name === 'Japan' && unknown.name === '' && unknown.selected === '' && unknown.outlined === 0 &&
+                lower.name === 'Japan' && unknown.name === '' && unknown.selected === '' && unknown.outlined === 0 && !unknown.inAddress &&
                 malformed.name === '' && dropped && pageErrors.length === errorsBefore;
             if (ok) {
                 pass('World 4: ?country=Japan selects Japan and shows its detail; case is ignored; an unknown or malformed country selects nothing, without errors');

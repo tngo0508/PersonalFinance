@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.3.0] - 2026-10-31
+
+### Added
+
+- **Research World page**: the Research redesign gains a World page at `/Research/World`, not linked from anywhere yet.
+  - It shows the stock-market value map with its year scrubber, colour scale and table, and your basket's view by issuer country; `?view=basket` opens the basket view and keeps the basket from the address.
+  - A country detail shows the chosen country's market cap, its % of GDP and its rank for the year. Choose the country in the side panel's list or click it on the map; `?country=Japan` opens with Japan chosen, and an unknown name is ignored.
+  - When the World data has not loaded, the basket view still works and only the map says so; when the funds or fund exposure data has not loaded, the map still works and only the basket view says so. Retry keeps your basket.
+
+### Changed
+
+- **World tab**: the Research page's World tab now shows the same country detail, and draws from the same panel as the World page.
+
 ## [17.2.0] - 2026-10-31
 
 ### Added

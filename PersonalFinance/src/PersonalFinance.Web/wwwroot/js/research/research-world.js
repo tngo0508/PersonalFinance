@@ -310,10 +310,13 @@
      * @param {Object} data - The World snapshot.
      * @param {Object[]} features - The world-atlas country features, without Antarctica.
      * @param {Object} tooltip - The tooltip controller.
+     * @param {function(string): void} onPick - Called with the country's name when the user selects one on the map.
      * @returns {{periods: string[], transitionMs: number, update: function(number, Object): string,
-     *     table: function(number): Object, setMetric: function(string): string, resize: function(): void}} The chart.
+     *     table: function(number): Object, setMetric: function(string): string, resize: function(): void,
+     *     selectCountry: function(string): boolean, clearCountry: function(): void,
+     *     selectionText: function(): string}} The chart.
      */
-    function createMap (host, data, features, tooltip) {
+    function createMap (host, data, features, tooltip, onPick) {
         const { years, names } = indexData(data);
         const legend = document.getElementById(LEGEND_ID);
         const subtitle = document.getElementById(SUBTITLE_ID);
@@ -323,8 +326,9 @@
         let colours = readColours(host);
         let metricKey = 'marketCap';
         let periodIndex = data.periods.length - 1;
-        // The selected country of the snapshot ({id, iso3, name}), or null.
+        // The selected country of the snapshot ({id, iso3, name}), or null, and its detail as a sentence.
         let selected = null;
+        let selectedText = '';
 
         const svg = d3.select(host).append('svg').attr('role', 'img');
         const defs = svg.append('defs');
@@ -362,7 +366,7 @@
             .on('click', (event, feature) => {
                 const name = feature.id && names.get(feature.id);
                 if (name && selectCountry(name)) {
-                    announce(showDetail());
+                    onPick(name);
                 }
             });
 
@@ -451,12 +455,12 @@
 
         /**
          * Fill the country detail for the selected country and the year shown.
-         * @returns {string} The detail as a sentence for the live region, or '' when nothing is selected.
+         * @returns {void}
          */
         function showDetail () {
             const figures = selected ? countryFigures(data, periodIndex, selected.id) : null;
             const text = renderDetail(detail, detailHint, selected, figures, data.periods[periodIndex]);
-            return selected ? PFI18n.t('Research.Js.World.Selected', { name: selected.name, detail: text }) : '';
+            selectedText = selected ? PFI18n.t('Research.Js.World.Selected', { name: selected.name, detail: text }) : '';
         }
 
         /**
@@ -500,11 +504,11 @@
         }
 
         /**
-         * The selected country's name, or null.
-         * @returns {string|null} The name.
+         * The selected country and its detail as one sentence, for the live region.
+         * @returns {string} The sentence, or '' when nothing is selected.
          */
-        function selectedCountry () {
-            return selected ? selected.name : null;
+        function selectionText () {
+            return selectedText;
         }
 
         /**
@@ -580,8 +584,7 @@
             resize,
             selectCountry,
             clearCountry,
-            selectedCountry,
-            showDetail
+            selectionText
         };
     }
 
@@ -619,32 +622,28 @@
     }
 
     /**
-     * Wire the side panel's country list, and select the country the panel asks for on load.
+     * Wire the side panel's country list (the keyboard path; a click on the map is the other), and select the country
+     * the panel asks for on load. A name the data does not have selects nothing and is taken out of the address.
      * @param {Object} chart - The chart from createMap().
+     * @param {HTMLElement|null} panel - The World panel.
+     * @param {function(string): void} onPick - Says the selection and puts it in the address.
      * @returns {void}
      */
-    function initCountry (chart) {
-        const panel = document.getElementById(PANEL_ID);
+    function initCountry (chart, panel, onPick) {
         const select = document.getElementById(COUNTRY_SELECT_ID);
         if (select) {
             select.addEventListener('change', () => {
-                if (select.value) {
-                    chart.selectCountry(select.value);
-                    announce(chart.showDetail());
+                if (select.value && chart.selectCountry(select.value)) {
+                    onPick(select.value);
                 } else {
                     chart.clearCountry();
+                    rememberCountry(panel, null);
                 }
-                rememberCountry(panel, chart.selectedCountry());
             });
         }
-        // A click on the map changes the selection too; the list's change covers the keyboard path.
-        const host = document.getElementById(HOST_ID);
-        if (host) {
-            host.addEventListener('click', () => rememberCountry(panel, chart.selectedCountry()));
-        }
         const requested = panel ? panel.dataset.researchCountry : '';
-        if (requested) {
-            chart.selectCountry(requested);
+        if (requested && !chart.selectCountry(requested)) {
+            rememberCountry(panel, null);
         }
     }
 
@@ -688,10 +687,20 @@
             return;
         }
         const tooltip = createTooltip(document.getElementById(TOOLTIP_ID));
-        const chart = createMap(host, data, features, tooltip);
+        const panel = document.getElementById(PANEL_ID);
+        const chart = createMap(host, data, features, tooltip, onPick);
+        /**
+         * Say the user's selection and put it in the address.
+         * @param {string} name - The selected country's name.
+         * @returns {void}
+         */
+        function onPick (name) {
+            announce(chart.selectionText());
+            rememberCountry(panel, name);
+        }
         initMetricSwitch(chart);
         page.registerTab(TAB_ID, chart);
-        initCountry(chart);
+        initCountry(chart, panel, onPick);
         window.ResearchWorld = { selectCountry: chart.selectCountry };
 
         // A tap outside the map, or a scroll, puts the tooltip away.
