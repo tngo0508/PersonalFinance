@@ -144,6 +144,29 @@ public class CommunityChallengeTests
     }
 
     [Fact]
+    public async Task CheckedInCount_CountsEachMemberForItsOwnLocalDay_AcrossTheUtcDayBoundary()
+    {
+        await using AppDbContext db = CreateContext();
+        CommunityService service = CreateService(db);
+        CommunityChallengeAdminItemDto created = await service.CreateChallengeAsync(Challenge(Day(10, 1), Day(10, 31)));
+        await service.JoinChallengeAsync(Other, created.Id, null);
+        await service.CheckInAsync(Other, created.Id, null);
+
+        // 06:46 UTC on 30 October: still 29 October, 23:46, in Los Angeles; already 30 October in UTC and Saigon.
+        _clock.Now = new DateTimeOffset(2026, 10, 30, 6, 46, 0, TimeSpan.Zero);
+        await service.JoinChallengeAsync(Member, created.Id, "America/Los_Angeles");
+        await service.CheckInAsync(Member, created.Id, "America/Los_Angeles");
+        await service.JoinChallengeAsync(Reader, created.Id, Saigon);
+        CommunityChallengeDto saigon = await service.CheckInAsync(Reader, created.Id, Saigon);
+
+        // Other kept 29 October in UTC, which is yesterday for it now, so only the two members still on their day count.
+        CommunityChallengeDto seen = Assert.Single((await service.GetCommunityAsync("challenge-viewer")).Challenges);
+        Assert.False(seen.IsMember);
+        Assert.Equal(2, seen.CheckedInCount);
+        Assert.Equal(2, saigon.CheckedInCount);
+    }
+
+    [Fact]
     public async Task Streak_GrowsDayByDay_AndRestartsAfterAMissedDay()
     {
         await using AppDbContext db = CreateContext();
