@@ -31,6 +31,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - New assumptions: a yearly contribution increase, a yearly fund fee and assumed-return presets matching Money Priorities.
   - The charts can be read by hovering or with the keyboard, and the estimate links to the disclaimer.
 
+## [16.17.1] - 2026-10-30
+
+### Fixed
+
+- **Challenge count across midnight**: a Challenge's "kept it today" count now counts each member for the day or week that is current in that member's own time zone, so it no longer drops to 0 for a viewer whose date differs from the member's.
+  - Before, the count used the viewer's date (UTC for an Account that has not joined), so in the evening in the Americas it showed only the Check-ins for the next UTC day.
+  - The Challenge E2E smoke now checks in from a browser zone whose date is not the UTC date, so it covers this at any time of day.
+
 ## [16.17.0] - 2026-10-30
 
 ### Changed
