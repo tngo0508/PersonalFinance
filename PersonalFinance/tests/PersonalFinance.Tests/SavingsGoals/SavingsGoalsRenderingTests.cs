@@ -180,6 +180,50 @@ public sealed partial class SavingsGoalsRenderingTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Ring_DrawsNoArc_WhileItsLabelRoundsToZero()
+    {
+        _api.Goals.Add(new SavingsGoalDto { Id = 4, Name = "House", TargetAmount = 100_000m, CurrentAmount = 300m });
+
+        (_, string html) = await GetPageAsync();
+
+        string ring = Ring().Match(html).Value;
+        Assert.Contains(">0%</text>", ring, StringComparison.Ordinal);
+        Assert.DoesNotContain("savings-goal-ring__arc", ring, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Chart_PutsTodaysMarker_OnAContributionDatedAheadOfThePagesUtcDay()
+    {
+        // The ApiService dates Contributions in the user's time zone, a day ahead of the page's UTC 2026-10-25.
+        SavingsGoalDto goal = PacedGoal(new SavingsGoalPaceDto { Status = PaceStatus.NoTargetDate, Start = new DateOnly(2026, 10, 16) });
+        goal.History =
+        [
+            new SavingsGoalHistoryPointDto { Date = new DateOnly(2026, 10, 16), Saved = 0m },
+            new SavingsGoalHistoryPointDto { Date = new DateOnly(2026, 10, 26), Saved = 650m }
+        ];
+        _api.Goals.Add(goal);
+
+        (_, string html) = await GetPageAsync();
+
+        string chart = Chart().Match(html).Value;
+        Assert.Contains("points=\"4,68 276,68 276,48.19 276,48.19\"", chart, StringComparison.Ordinal);
+        Assert.Contains("class=\"savings-goal-chart__today\" cx=\"276\" cy=\"48.19\"", chart, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Chart_LeavesOutTheIdealLine_WhenTheDateIsBeforeTheChartsFirstPoint()
+    {
+        SavingsGoalDto goal = PacedGoal(new SavingsGoalPaceDto { Status = PaceStatus.PastDue, Start = new DateOnly(2022, 1, 1) });
+        goal.TargetDate = new DateTime(2024, 1, 1);
+        goal.History = [new SavingsGoalHistoryPointDto { Date = new DateOnly(2024, 10, 25), Saved = 650m }];
+        _api.Goals.Add(goal);
+
+        (_, string html) = await GetPageAsync();
+
+        Assert.DoesNotContain("savings-goal-chart__ideal", Chart().Match(html).Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Chart_IsLeftOut_WithoutAHistory()
     {
         _api.Goals.Add(EmptyGoal());
@@ -346,7 +390,8 @@ public sealed partial class SavingsGoalsRenderingTests : IAsyncLifetime
         (_, string html) = await GetPageAsync();
 
         string pace = PaceBlock().Match(html).Value;
-        Assert.Contains("$112.50 a month would reach the target by October 2027.", pace, StringComparison.Ordinal);
+        Assert.Contains("$112.50 a month would reach the target by October 2027.", Footer().Match(html).Value,
+            StringComparison.Ordinal);
         Assert.Contains("At your recent pace you&#x27;d reach this in March 2028.", pace, StringComparison.Ordinal);
         Assert.Contains("Saved this month: $40.00", pace, StringComparison.Ordinal);
     }
@@ -487,6 +532,9 @@ public sealed partial class SavingsGoalsRenderingTests : IAsyncLifetime
 
     [GeneratedRegex("""<svg class="savings-goal-chart"[\s\S]*?</svg>""")]
     private static partial Regex Chart();
+
+    [GeneratedRegex("""<div class="savings-goal-footer-info">[\s\S]*?</div>""")]
+    private static partial Regex Footer();
 
     [GeneratedRegex("""<form [^>]*action="/SavingsGoals/AddContribution"[\s\S]*?</form>""")]
     private static partial Regex AddContributionForm();

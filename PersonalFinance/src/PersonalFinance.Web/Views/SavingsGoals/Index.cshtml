@@ -136,7 +136,8 @@
                             <div class="savings-goal-header__info">
                                 <svg class="savings-goal-ring" width="84" height="84" viewBox="0 0 84 84" role="img" aria-label="@L.Named("SavingsGoals.Card.PercentComplete", ("percent", percent))">
                                     <circle class="savings-goal-ring__track" cx="42" cy="42" r="@ringRadius"/>
-                                    @if (progress > 0)
+                                    @* No arc unless the label shows more than 0%. *@
+                                    @if (percent > 0)
                                     {
                                         <circle class="savings-goal-ring__arc" cx="42" cy="42" r="@ringRadius" transform="rotate(-90 42 42)"
                                                 stroke-dasharray="@Dash(circumference * (double)progress / 100) @Dash(circumference)"/>
@@ -199,7 +200,7 @@
                         @if (chart is not null)
                         {
                             <svg class="savings-goal-chart" viewBox="0 0 @SavingsGoalChartViewModel.Width @SavingsGoalChartViewModel.Height"
-                                 preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                                 aria-hidden="true" focusable="false">
                                 <line class="savings-goal-chart__target" x1="4" x2="@(SavingsGoalChartViewModel.Width - 4)" y1="@chart.TargetY" y2="@chart.TargetY"/>
                                 @if (chart.Ideal is { } ideal)
                                 {
@@ -210,37 +211,6 @@
                                 <circle class="savings-goal-chart__today" cx="@chart.TodayX" cy="@chart.TodayY" r="4"/>
                             </svg>
                         }
-
-                        <!-- Remaining + Metadata -->
-                        <div class="savings-goal-footer-info">
-                            @if (isComplete)
-                            {
-                                <span class="savings-goal-remaining savings-goal-remaining--complete">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                         stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                                    @L["SavingsGoals.Card.GoalReached"]
-                                </span>
-                            }
-                            else
-                            {
-                                <span class="savings-goal-remaining">
-                                    @L.Named("SavingsGoals.Card.Remaining", ("amount", MoneyFormatter.FormatWhole(remaining, Currency(goal))))
-                                </span>
-                            }
-                            @if (goal.TargetDate.HasValue)
-                            {
-                                <span class="savings-goal-target-date">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                         stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"
-                                                                       ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line
-                                                x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10"
-                                                                                   y2="10"/></svg>
-                                    @Month(DateOnly.FromDateTime(goal.TargetDate.Value))
-                                </span>
-                            }
-                        </div>
 
                         <!-- Pace: descriptive, never advice; status as text, not colour alone -->
                         @if (goal.Pace is { } pace)
@@ -257,10 +227,6 @@
                                     @L[$"SavingsGoals.Pace.Sentence.{pace.Status}"]
                                 }
                             </p>
-                            @if (pace.NeededPerMonth is { } needed && goal.TargetDate is { } dueDate)
-                            {
-                                <p class="savings-goal-pace__needed">@L.Named("SavingsGoals.Pace.NeededPerMonth", ("amount", MoneyFormatter.Format(needed, Currency(goal))), ("month", Month(DateOnly.FromDateTime(dueDate))))</p>
-                            }
                             @if (pace.Status != PaceStatus.Reached)
                             {
                                 <p class="savings-goal-pace__projection">
@@ -281,6 +247,41 @@
                             <p class="savings-goal-pace__month">@L.Named("SavingsGoals.Card.SavedThisMonth", ("amount", MoneyFormatter.Format(goal.SavedThisMonth, Currency(goal))))</p>
                         </div>
                         }
+
+                        <!-- Footer: what is left, what a month would take, and the target month -->
+                        <div class="savings-goal-footer-info">
+                            @if (isComplete)
+                            {
+                                <span class="savings-goal-remaining savings-goal-remaining--complete">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                         stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                    @L["SavingsGoals.Card.GoalReached"]
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="savings-goal-remaining">
+                                    @L.Named("SavingsGoals.Card.Remaining", ("amount", MoneyFormatter.FormatWhole(remaining, Currency(goal))))
+                                </span>
+                            }
+                            @if (goal.Pace?.NeededPerMonth is { } needed && goal.TargetDate is { } dueDate)
+                            {
+                                <span class="savings-goal-pace__needed">@L.Named("SavingsGoals.Pace.NeededPerMonth", ("amount", MoneyFormatter.Format(needed, Currency(goal))), ("month", Month(DateOnly.FromDateTime(dueDate))))</span>
+                            }
+                            @if (goal.TargetDate.HasValue)
+                            {
+                                <span class="savings-goal-target-date">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                         stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"
+                                                                       ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line
+                                                x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10"
+                                                                                   y2="10"/></svg>
+                                    @Month(DateOnly.FromDateTime(goal.TargetDate.Value))
+                                </span>
+                            }
+                        </div>
 
                         @if (goal.Contributions.Count == 0 && goal.CurrentAmount == 0)
                         {

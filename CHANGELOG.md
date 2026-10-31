@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Savings Goal cards show a ring and a saved-vs-ideal chart**: each card has a progress ring with its percentage, a status pill, and a small chart of the saved amount over time against the line to its target date (slice 3 of spec #395).
   - The ring replaces the progress bar and draws no arc at 0%. The pill says the Pace status in words (Ahead, On track, Behind, Past due, Reached, No target date, Just started), and the ring, pill and saved line are coloured by it.
   - The chart steps the saved amount from the goal's start to today, with a dashed ideal line from the opening amount to the target on the target date (dated goals only), a thin target line and a marker at today. It is hidden from screen readers; the pace sentence and the amounts say the same in words.
-  - The card's target date now shows as its month, in the page language.
+  - The card's footer, now under the pace sentence, shows what is left, what a month would take to reach the target in time, and the target month in the page language (it showed the full date in English before).
 - **Goal history in the API**: each goal in `GET api/SavingsGoals` carries `History`, the saved amount after each Contribution date from the goal's start, at most the last 24 months (an earlier total is carried into the first point), and its Pace carries `Start` and `StartingAmount`.
 
 ## [17.0.0] - 2026-10-30

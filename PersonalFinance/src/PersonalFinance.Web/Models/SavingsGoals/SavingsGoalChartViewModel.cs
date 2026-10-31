@@ -33,6 +33,9 @@ public sealed class SavingsGoalChartViewModel
 
         List<SavingsGoalHistoryPointDto> history = goal.History.OrderBy(p => p.Date).ToList();
         DateOnly from = history[0].Date;
+        // The ApiService dates Contributions in the user's time zone, which can be a day ahead of this page's UTC
+        // today; the marker then sits on the latest point rather than before it.
+        if (history[^1].Date > today) today = history[^1].Date;
         DateOnly? due = goal.TargetDate is { } date ? DateOnly.FromDateTime(date) : null;
         DateOnly to = due is { } dueDate && dueDate > today ? dueDate : today;
         int span = Math.Max(1, to.DayNumber - from.DayNumber);
@@ -74,7 +77,8 @@ public sealed class SavingsGoalChartViewModel
     private static (string, string, string, string)? IdealLine(SavingsGoalDto goal, DateOnly from, DateOnly? due,
         Func<DateOnly, double> x, Func<decimal, double> y)
     {
-        if (goal.Pace is not { } pace || due is not { } dueDate || dueDate <= pace.Start) return null;
+        // A date before the chart's left edge (the history was cut to 24 months) leaves no line to draw.
+        if (goal.Pace is not { } pace || due is not { } dueDate || dueDate <= pace.Start || dueDate <= from) return null;
 
         DateOnly left = pace.Start < from ? from : pace.Start;
         decimal share = (decimal)(left.DayNumber - pace.Start.DayNumber) / (dueDate.DayNumber - pace.Start.DayNumber);
