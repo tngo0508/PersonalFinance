@@ -85,9 +85,11 @@ restarts it, but GitHub delays or drops many ticks, so do not rely on cron alone
 late run's timeout is cut so that it ends by 19:00. Trigger it by hand at any time with
 `gh workflow run claude-ticket-agent.yml` (it then chains), or `-f issue=<n>` for one issue only (no chain).
 
-- **Picks** the oldest open `ready-for-agent` issue with no assignee, no `agent:in-progress`, `wayfinder:map` or
+- **Picks** the oldest open `ready-for-agent` issue assigned to the owner and no one else, with no `agent:in-progress`, `wayfinder:map` or
   `atelier:content` label, no sub-issues, no open blockers and no open PR that closes it. It pauses while 5 PRs from `agent/issue-*` branches
-  are open (drafts included).
+  are open (drafts included). Anyone can open an issue on this public repository, so the assignment is the owner's
+  go-ahead: assign a ticket to yourself to hand it to the agent. A local session that takes a `ready-for-agent` ticket
+  itself removes that label, or the agent may pick the same ticket.
 - **Claims** it with `agent:in-progress`, then runs `/implement` (tdd, code-review), `dotnet test`, `npm run lint` and,
   when the change touches `e2e-tests/` or the Web project, the E2E suites through `.github/scripts/e2e-inmemory.sh`
   (both apps on the InMemory provider, as CI's E2E job runs them, so the runner needs no database; #545 showed what an
@@ -97,7 +99,8 @@ late run's timeout is cut so that it ends by 19:00. Trigger it by hand at any ti
   `.github/scripts/agent-version-check.sh`. It applies the release check's rules: AppVersion is above `main` and every
   other open agent PR, and CHANGELOG.md's top section is that version and not empty. After the run, the workflow repeats
   the check on the pushed PR. A PR that would fail it becomes a draft with a comment listing the problems.
-- **Auto-merges**: `.github/workflows/agent-auto-merge.yml` merges an `agent/issue-*` PR that is not a draft as soon
+- **Auto-merges**: `.github/workflows/agent-auto-merge.yml` merges an `agent/issue-*` PR that is not a draft, comes
+  from a branch of this repository, was opened by the claude app and closes an issue assigned to the owner alone, as soon
   as every check on its head commit has finished, none failed, and the release check and `claude-review` both passed.
   It also waits until every PR workflow run on that commit has finished and passed, because a run whose jobs have not
   started yet shows no checks (#535, #537 and #539 merged red that way). A failing check or a draft waits for a human. The merge deploys like any other. This needs the `AGENT_GH_TOKEN`
@@ -115,6 +118,8 @@ late run's timeout is cut so that it ends by 19:00. Trigger it by hand at any ti
   variable `AZURE_TRANSLATOR_REGION`): the key goes to that one deterministic step, in no Claude step, so a malicious
   issue cannot leak it. A fork PR gets no secrets and is skipped with a passing check. A placeholder mismatch fails
   the check and waits for a hand correction to `vi.json`.
+- **Ignores outsiders**: a fork PR can name its branch `agent/issue-*` too, so the rebase picker and Agent Auto-Merge
+  skip cross-repository PRs, and `.github/workflows/claude.yml` answers an `@claude` mention only from the owner.
 - **Rebases first**: before picking a ticket, a run looks for an open, non-draft `agent/issue-*` PR that now
   conflicts with `main`. That usually happens because a sibling merged and both PRs touched `AppVersion` and
   `CHANGELOG.md`. Rebasing it is the whole run, even when the open-PR cap is full. The agent re-bumps to the next

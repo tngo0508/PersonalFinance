@@ -59,6 +59,8 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           EVENT: ${{ github.event_name }}
           CHAINED: ${{ inputs.chained }}
+          # The agent works only on tickets the owner assigned to themself, so nobody else can hand it work.
+          OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
 
@@ -80,8 +82,10 @@ jobs:
           # A stale agent PR comes first, cap or not: once a sibling merges, the others conflict on AppVersion and
           # CHANGELOG.md and can never merge. One rebase is the whole run. A PR whose rebase failed waits for a human.
           if [ -z "$REQUESTED" ]; then
-            stale=$(gh pr list --state open --limit 100 --json number,headRefName,isDraft,mergeable,labels --jq "
+            # A fork PR can name its branch agent/issue-* too: only branches of this repository count.
+            stale=$(gh pr list --state open --limit 100 --json number,headRefName,isDraft,mergeable,labels,isCrossRepository --jq "
               [.[] | select((.headRefName | startswith(\"$BRANCH_PREFIX\")) and (.isDraft | not)
+                and (.isCrossRepository | not)
                 and .mergeable == \"CONFLICTING\"
                 and ([.labels[].name] | index(\"agent:rebase-failed\") | not))]
               | sort_by(.number) | .[0] // empty | \"\(.number) \(.headRefName)\"")
@@ -117,7 +121,9 @@ jobs:
             [ "$(jq -r '.state' <<< "$info")" = "open" ] || return 1
             jq -e '[.labels[].name] | index("ready-for-agent")' <<< "$info" > /dev/null || return 1
             jq -e '[.labels[].name] | (index("agent:in-progress") or index("wayfinder:map") or index("atelier:content")) | not' <<< "$info" > /dev/null || return 1
-            [ "$(jq '.assignees | length' <<< "$info")" = "0" ] || return 1
+            # Assigned to the owner and no one else: anyone can open an issue, so a ticket is the agent's only once
+            # the owner has read it and assigned it to themself.
+            jq -e --arg owner "$OWNER" '[.assignees[].login] == [$owner]' <<< "$info" > /dev/null || return 1
             [ "$(jq '.sub_issues_summary.total // 0' <<< "$info")" = "0" ] || return 1
             [ "$(jq '.issue_dependencies_summary.blocked_by // 0' <<< "$info")" = "0" ] || return 1
             case " $taken " in *" $n "*) return 1 ;; esac
@@ -133,7 +139,7 @@ jobs:
             if eligible "$REQUESTED"; then
               issue="$REQUESTED"
             else
-              echo "::error::Issue #$REQUESTED is not eligible (needs ready-for-agent, open, unassigned, no sub-issues, no open blockers, no open PR)."
+              echo "::error::Issue #$REQUESTED is not eligible (needs ready-for-agent, open, assigned to $OWNER only, no sub-issues, no open blockers, no open PR)."
               exit 1
             fi
           else
