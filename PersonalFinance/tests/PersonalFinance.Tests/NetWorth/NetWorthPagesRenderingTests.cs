@@ -18,6 +18,7 @@ using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.DTOs.NetWorth;
+using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Shared.Enums;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
@@ -75,6 +76,9 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
         builder.Logging.ClearProviders();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton(netWorthApi);
+        (ISavingsGoalsApi savingsGoalsApi, ApiProxy<ISavingsGoalsApi> goalsProxy) = ApiProxy.Create<ISavingsGoalsApi>();
+        goalsProxy.Returns(nameof(ISavingsGoalsApi.GetSavingsGoalsAsync), new List<SavingsGoalDto>());
+        builder.Services.AddSingleton(savingsGoalsApi);
         builder.Services.AddSingleton<IUserPreferenceService, InMemoryUserPreferenceService>();
         builder.Services.AddSingleton<IFeedbackApi, NoFeedbackApi>();
         builder.Services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
