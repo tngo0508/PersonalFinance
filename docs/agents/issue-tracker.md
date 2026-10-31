@@ -88,7 +88,8 @@ late run's timeout is cut so that it ends by 19:00. Trigger it by hand at any ti
 - **Picks** the oldest open `ready-for-agent` issue assigned to the owner and no one else, with no `agent:in-progress`, `wayfinder:map` or
   `atelier:content` label, no sub-issues, no open blockers and no open PR that closes it. It pauses while 5 PRs from `agent/issue-*` branches
   are open (drafts included). Anyone can open an issue on this public repository, so the assignment is the owner's
-  go-ahead: assign a ticket to yourself to hand it to the agent. A local session that takes a `ready-for-agent` ticket
+  go-ahead: assign a ticket to yourself to hand it to the agent. `/to-tickets` and `/triage` do this for you when they
+  apply `ready-for-agent` (see `triage-labels.md`). A local session that takes a `ready-for-agent` ticket
   itself removes that label, or the agent may pick the same ticket.
 - **Claims** it with `agent:in-progress`, then runs `/implement` (tdd, code-review), `dotnet test`, `npm run lint` and,
   when the change touches `e2e-tests/` or the Web project, the E2E suites through `.github/scripts/e2e-inmemory.sh`

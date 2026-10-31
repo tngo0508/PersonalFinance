@@ -81,7 +81,8 @@ same either way, only the shape of the blocking edges changes:
   each ticket's blocking edges can reference real identifiers. Use the platform's native blocking relationship where it
   has one; otherwise set each ticket's "Blocked by" to the blocking issues. If the source was an existing issue, make
   each ticket its sub-issue (tracker doc's operation). Apply the `ready-for-agent` triage label unless instructed
-  otherwise; the tickets are agent-grabbable by construction.
+  otherwise; the tickets are agent-grabbable by construction. Applying it also assigns the ticket to the user, in the
+  same call (`--assignee @me`): see the triage label doc for why.
 
 Work the **frontier**: any ticket whose blockers are all done. For a purely linear chain that means top to bottom.
 
