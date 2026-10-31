@@ -7,6 +7,7 @@ using PersonalFinance.Shared.DTOs.Research;
 using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Infrastructure;
 using PersonalFinance.Web.Models.Research;
+using PersonalFinance.Web.Services;
 using ApiException = Refit.ApiException;
 
 namespace PersonalFinance.Web.Controllers;
@@ -20,6 +21,7 @@ namespace PersonalFinance.Web.Controllers;
 public sealed class ResearchController : Controller
 {
     private readonly IResearchApi _researchApi;
+    private readonly IResearchSnapshotCache _snapshotCache;
     private readonly ILogger<ResearchController> _logger;
     private readonly IStringLocalizer _localizer;
 
@@ -27,11 +29,14 @@ public sealed class ResearchController : Controller
     /// Initializes a new instance of the <see cref="ResearchController"/> class.
     /// </summary>
     /// <param name="researchApi">ApiService client for the Research datasets.</param>
+    /// <param name="snapshotCache">Keeps the datasets read from ApiService, so the page does not fetch them each view.</param>
     /// <param name="logger">Logger for this controller.</param>
     /// <param name="localizer">The page's text, in the request's Language.</param>
-    public ResearchController(IResearchApi researchApi, ILogger<ResearchController> logger, IStringLocalizer localizer)
+    public ResearchController(IResearchApi researchApi, IResearchSnapshotCache snapshotCache,
+        ILogger<ResearchController> logger, IStringLocalizer localizer)
     {
         _researchApi = researchApi;
+        _snapshotCache = snapshotCache;
         _logger = logger;
         _localizer = localizer;
     }
@@ -117,7 +122,7 @@ public sealed class ResearchController : Controller
     {
         try
         {
-            return await read(cancellationToken);
+            return await _snapshotCache.GetOrReadAsync(dataset, read, cancellationToken);
         }
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.ServiceUnavailable)
         {

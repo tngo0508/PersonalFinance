@@ -46,7 +46,7 @@ public class ResearchControllerLocalizationTests
     private static ResearchController CreateController()
     {
         (IResearchApi api, ApiProxy<IResearchApi> _) = ApiProxy.Create<IResearchApi>();
-        return new ResearchController(api, NullLogger<ResearchController>.Instance,
+        return new ResearchController(api, TestResearchCache.Create(), NullLogger<ResearchController>.Instance,
             LocalizationTestCatalog.Localizer(English, Vietnamese))
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }

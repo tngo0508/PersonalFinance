@@ -112,6 +112,8 @@ try
     // Whether the Library has Published Term Entries, which shows the "Learning" nav entry (cached: every page asks).
     builder.Services.AddMemoryCache();
     builder.Services.AddScoped<ILearningLibraryStatus, LearningLibraryStatus>();
+    // The Research snapshots read from ApiService, kept for 10 minutes so a page view does not refetch them.
+    builder.Services.AddSingleton<IResearchSnapshotCache, ResearchSnapshotCache>();
     builder.Services.AddScoped<IEmailSender<IdentityUser>, IdentityEmailSender>();
 
     // The clock, injected so tests can fix the time (CODING_STANDARDS "Async and time").
