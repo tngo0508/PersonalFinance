@@ -10,6 +10,9 @@
  * Today's money: every amount of year y is divided by (1 + inflation)^y, the prices of that year. A year's growth in
  * today's money is the change in the deflated balance less that year's deflated deposits, so it includes what
  * inflation took and the deflated rows still add up to the deflated totals.
+ *
+ * Goals: solveGoal() answers how much a month reaches a target in the plan's years, or how many years the current
+ * monthly contribution takes (up to 50), by projecting the plan.
  */
 (function (root) {
     'use strict';
@@ -155,5 +158,76 @@
         };
     }
 
-    root.InvestmentMath = Object.freeze({ LIMITS, DEFAULTS, PRESETS, normalize, project });
+    /**
+     * Solve a savings goal (#590) against a plan. The target is compared with each year's balance, in today's money
+     * when goal.todays is set (the same as inflating the target by (1 + inflation)^y).
+     *
+     * mode 'monthly': the whole monthly contribution (rounded up) that reaches the target by the plan's last year;
+     *     'already' with the year when the starting amount alone gets there.
+     * mode 'years': the first year the plan with its current monthly contribution reaches the target, looking up to
+     *     50 years ahead (LIMITS.years.max); 'unreachable' with the shortfall at year 50 when it never does.
+     * A target the starting amount already covers is 'already' in year 0 in either mode.
+     * @param {object} inputs - The plan, as for project().
+     * @param {{target: number, mode: ('monthly'|'years'), todays?: boolean}} goal - The goal.
+     * @returns {{kind: ('monthly'|'years'|'already'|'unreachable'), monthly?: number, year?: number,
+     *     shortfall?: number, progress: number, reachedYear: (number|null)}} The answer, plus progress (the plan's
+     *     last balance over the target, 1 for no target) and reachedYear (the first year within the plan that the
+     *     current plan reaches the target, or null).
+     */
+    function solveGoal (inputs, goal) {
+        const plan = normalize(inputs);
+        const settings = goal || {};
+        const target = Math.max(0, Number(settings.target) || 0);
+        const balances = (changes) => {
+            const result = project(Object.assign({}, plan, changes));
+            return (settings.todays ? result.real : result).rows;
+        };
+        const reaches = (row) => row.balance >= target;
+        const endOf = (rows) => rows[rows.length - 1].balance;
+
+        const current = balances({});
+        const hit = current.find(reaches);
+        const context = { progress: target > 0 ? endOf(current) / target : 1, reachedYear: hit ? hit.year : null };
+        const answer = (fields) => Object.assign(fields, context);
+
+        if (plan.initial >= target) {
+            return answer({ kind: 'already', year: 0 });
+        }
+
+        if (settings.mode === 'years') {
+            const long = balances({ years: LIMITS.years.max });
+            const year = long.find(reaches);
+            return year
+                ? answer({ kind: 'years', year: year.year })
+                : answer({ kind: 'unreachable', shortfall: target - endOf(long) });
+        }
+
+        const alone = balances({ monthly: 0 }).find(reaches);
+        if (alone) {
+            return answer({ kind: 'already', year: alone.year });
+        }
+        // The last balance rises with the monthly contribution: widen until it reaches, then halve the gap.
+        const endWith = (monthly) => endOf(balances({ monthly }));
+        let low = 0;
+        let high = Math.max(1, target / (12 * plan.years));
+        while (endWith(high) < target && high < Number.MAX_SAFE_INTEGER) {
+            low = high;
+            high *= 2;
+        }
+        for (let i = 0; i < 60 && high - low > 0.001; i++) {
+            const middle = (low + high) / 2;
+            if (endWith(middle) >= target) {
+                high = middle;
+            } else {
+                low = middle;
+            }
+        }
+        let monthly = Math.floor(high);
+        if (endWith(monthly) < target) {
+            monthly += 1;
+        }
+        return answer({ kind: 'monthly', monthly, year: plan.years });
+    }
+
+    root.InvestmentMath = Object.freeze({ LIMITS, DEFAULTS, PRESETS, normalize, project, solveGoal });
 })(typeof window !== 'undefined' ? window : globalThis);

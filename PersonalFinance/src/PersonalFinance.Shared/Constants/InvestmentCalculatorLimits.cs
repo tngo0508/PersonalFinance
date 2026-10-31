@@ -31,4 +31,10 @@ public static class InvestmentCalculatorLimits
 
     /// <summary>The largest monthly contribution the field takes, in US dollars.</summary>
     public const long MonthlyMax = 1_000_000;
+
+    /// <summary>The goal amount the Reach a goal tile opens with, in US dollars.</summary>
+    public const long DefaultGoal = 500_000;
+
+    /// <summary>The largest goal amount the field takes, in US dollars.</summary>
+    public const long GoalMax = 1_000_000_000;
 }

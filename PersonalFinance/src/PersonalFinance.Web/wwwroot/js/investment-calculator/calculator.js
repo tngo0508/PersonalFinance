@@ -6,6 +6,9 @@
  *
  * The Today's money switch shows the bar's numbers, the tiles' text, the donut and the year-by-year table in today's
  * money (the projection's real half); the line and bar charts stay in future money, with today's money dashed.
+ *
+ * The Reach a goal tile (#590) holds its own goal amount and solves it with InvestmentMath.solveGoal, in today's money
+ * when the switch is on; the balance chart draws the goal as a horizontal line with a marker at the year it is reached.
  */
 (function () {
     'use strict';
@@ -21,6 +24,11 @@
     let frame = null;
     let statusTimer = null;
     let todays = false;
+    /** The goal tile's last answer (InvestmentMath.solveGoal) and target, for the balance chart. */
+    let goal = null;
+    let goalTarget = 0;
+    /** Set by the goal tile's own controls, so only they announce its answer. */
+    let announceGoal = false;
 
     /**
      * The element with this id, or null.
@@ -141,7 +149,9 @@
      */
     function colours () {
         const palette = ChartPalette.read();
-        return Object.assign(palette, { balance: palette.series[0], contributed: palette.series[1], growth: palette.series[2] });
+        return Object.assign(palette, {
+            balance: palette.series[0], contributed: palette.series[1], growth: palette.series[2], goal: palette.series[4]
+        });
     }
 
     /**
@@ -166,6 +176,121 @@
      */
     function shown (p) {
         return todays ? p.real : p;
+    }
+
+    /**
+     * The goal amount as its field holds it: at least 0 and at most the field's max.
+     * @returns {number} The target.
+     */
+    function readTarget () {
+        const field = byId('icGoal');
+        const value = field ? parseFloat(field.value) : NaN;
+        const max = field ? parseFloat(field.max) : NaN;
+        const target = Number.isFinite(value) ? Math.max(0, value) : 0;
+        return Number.isFinite(max) ? Math.min(target, max) : target;
+    }
+
+    /**
+     * The goal tile's chosen question: 'monthly' (How much a month?) or 'years' (How long?).
+     * @returns {string} The mode.
+     */
+    function goalMode () {
+        const years = byId('icGoalModeYears');
+        return years && years.checked ? 'years' : 'monthly';
+    }
+
+    /**
+     * The sentence the balance chart's description adds about the goal.
+     * @returns {string} The sentence, or empty without a goal.
+     */
+    function goalSentence () {
+        if (!goal || goalTarget <= 0) {
+            return '';
+        }
+        return goal.reachedYear === null
+            ? PFI18n.t('InvestmentCalculator.Js.Chart.GoalNotReached', { target: money(goalTarget) })
+            : PFI18n.t('InvestmentCalculator.Js.Chart.GoalReached', {
+                target: money(goalTarget), year: PFI18n.formatNumber(goal.reachedYear)
+            });
+    }
+
+    /**
+     * Solve the goal for the plan and fill the goal tile: the answer, the progress bar, the today's-money note and
+     * the "Use this amount" button.
+     * @param {object} plan - The normalized inputs.
+     * @returns {string} The answer as one sentence pair, for the goal's live region.
+     */
+    function updateGoal (plan) {
+        goalTarget = readTarget();
+        goal = InvestmentMath.solveGoal(plan, { target: goalTarget, mode: goalMode(), todays });
+        const target = money(goalTarget);
+        const yearsText = (count) => PFI18n.plural('InvestmentCalculator.Js.Years', count);
+        setText('icGoalValue', target);
+
+        const monthlyField = byId('icMonthly');
+        const monthlyMax = monthlyField ? parseFloat(monthlyField.max) : NaN;
+        const tooHigh = goal.kind === 'monthly' && Number.isFinite(monthlyMax) && goal.monthly > monthlyMax;
+        let headline = '';
+        let detail = '';
+        if (goal.kind === 'monthly') {
+            headline = PFI18n.t('InvestmentCalculator.Js.Goal.Monthly', { amount: money(goal.monthly) });
+            detail = PFI18n.t('InvestmentCalculator.Js.Goal.MonthlyDetail', { target, years: yearsText(goal.year) });
+            if (tooHigh) {
+                detail = `${detail} ${PFI18n.t('InvestmentCalculator.Js.Goal.TooHigh', { max: money(monthlyMax) })}`;
+            }
+        } else if (goal.kind === 'years') {
+            headline = yearsText(goal.year);
+            detail = PFI18n.t('InvestmentCalculator.Js.Goal.YearsDetail', { target, monthly: money(plan.monthly) });
+        } else if (goal.kind === 'already') {
+            headline = PFI18n.t('InvestmentCalculator.Js.Goal.Already');
+            detail = goal.year === 0
+                ? PFI18n.t('InvestmentCalculator.Js.Goal.AlreadyNow', { target })
+                : PFI18n.t('InvestmentCalculator.Js.Goal.AlreadyYear', { target, year: PFI18n.formatNumber(goal.year) });
+        } else {
+            const horizon = InvestmentMath.LIMITS.years.max;
+            headline = PFI18n.t('InvestmentCalculator.Js.Goal.Unreachable', { years: yearsText(horizon) });
+            detail = PFI18n.t('InvestmentCalculator.Js.Goal.Shortfall', {
+                monthly: money(plan.monthly), amount: money(goal.shortfall), year: PFI18n.formatNumber(horizon)
+            });
+        }
+        setText('icGoalAnswer', headline);
+        setText('icGoalDetail', detail);
+
+        const filled = Math.max(0, Math.min(1, goal.progress));
+        const asPercent = (value) => PFI18n.formatNumber(value, { style: 'percent', maximumFractionDigits: 0 });
+        const bar = byId('icGoalProgress');
+        if (bar) {
+            bar.setAttribute('aria-valuenow', String(Math.round(filled * 100)));
+            bar.setAttribute('aria-valuetext', PFI18n.t('InvestmentCalculator.Js.Goal.ProgressText', { percent: asPercent(goal.progress) }));
+        }
+        const fill = byId('icGoalProgressFill');
+        if (fill) {
+            fill.style.width = `${filled * 100}%`;
+        }
+        setText('icGoalProgressLabel', goal.reachedYear === null
+            ? PFI18n.t('InvestmentCalculator.Js.Goal.Progress', { percent: asPercent(goal.progress), years: yearsText(plan.years) })
+            : PFI18n.t(goal.reachedYear === 0 ? 'InvestmentCalculator.Js.Goal.ProgressNow' : 'InvestmentCalculator.Js.Goal.ProgressReached',
+                { year: PFI18n.formatNumber(goal.reachedYear) }));
+
+        const note = byId('icGoalNote');
+        if (note) {
+            const year = goal.kind === 'years' ? goal.year : plan.years;
+            note.hidden = !todays || goalTarget <= 0;
+            note.textContent = note.hidden
+                ? ''
+                : PFI18n.t('InvestmentCalculator.Js.Goal.Today', {
+                    amount: money(goalTarget * Math.pow(1 + plan.inflation / 100, year)), year: PFI18n.formatNumber(year)
+                });
+        }
+
+        const use = byId('icGoalUse');
+        if (use) {
+            use.hidden = goal.kind !== 'monthly' || tooHigh || goal.monthly === plan.monthly;
+            use.textContent = goal.kind === 'monthly'
+                ? PFI18n.t('InvestmentCalculator.Js.Goal.Use', { amount: money(goal.monthly) })
+                : '';
+        }
+        return `${headline}. ${detail}`;
     }
 
     /**
@@ -214,18 +339,28 @@
         const name = (key) => PFI18n.t(`InvestmentCalculator.Js.Series.${key}`);
 
         InvestmentCharts.line(byId('icBalanceChart'), Object.assign({}, common, {
-            label: PFI18n.t('InvestmentCalculator.Js.Chart.BalanceToday', {
-                start: money(p.rows[0].balance), final: money(p.final), years: PFI18n.formatNumber(years),
-                real: money(p.real.final), contributed: money(p.contributed)
-            }),
+            label: [
+                PFI18n.t('InvestmentCalculator.Js.Chart.BalanceToday', {
+                    start: money(p.rows[0].balance), final: money(p.final), years: PFI18n.formatNumber(years),
+                    real: money(p.real.final), contributed: money(p.contributed)
+                }),
+                goalSentence()
+            ].join(' ').trim(),
             series: [
                 { name: name('Balance'), color: c.balance, area: true, width: 3, values: p.rows.map((r) => ({ x: r.year, y: r.balance })) },
                 { name: name('PutIn'), color: c.contributed, values: p.rows.map((r) => ({ x: r.year, y: r.contributed })) },
                 { name: name('TodaysMoney'), color: c.balance, dash: '6 4', width: 2, values: p.real.rows.map((r) => ({ x: r.year, y: r.balance })) }
             ],
-            markers: p.milestoneYear === null
-                ? []
-                : [{ x: p.milestoneYear, color: c.growth, label: PFI18n.t('InvestmentCalculator.Js.Milestone.Marker') }]
+            // With Today's money on, the goal is today's money: its line reads against the dashed line.
+            goal: goalTarget > 0 ? { y: goalTarget, color: c.goal, label: name('Goal') } : null,
+            markers: [
+                p.milestoneYear === null
+                    ? null
+                    : { x: p.milestoneYear, color: c.growth, label: PFI18n.t('InvestmentCalculator.Js.Milestone.Marker') },
+                !goal || goal.reachedYear === null || goalTarget <= 0
+                    ? null
+                    : { x: goal.reachedYear, color: c.goal, label: PFI18n.t('InvestmentCalculator.Js.Goal.Marker') }
+            ].filter(Boolean)
         }));
 
         InvestmentCharts.line(byId('icFeeChart'), Object.assign({}, common, {
@@ -316,8 +451,17 @@
             ? PFI18n.t('InvestmentCalculator.Js.Fee.Note', { fee: percent(plan.fee), amount: money(p.noFee) })
             : PFI18n.t('InvestmentCalculator.Js.Fee.None'));
 
+        const goalText = updateGoal(plan);
+
+        // The goal tile's own controls announce its answer; everything else announces the plan.
+        const goalOnly = announceGoal;
+        announceGoal = false;
         clearTimeout(statusTimer);
         statusTimer = setTimeout(() => {
+            if (goalOnly) {
+                setText('icGoalStatus', goalText);
+                return;
+            }
             setText('icStatus', PFI18n.t('InvestmentCalculator.Js.Status', {
                 label, final: money(p.final), contributed: money(p.contributed), growth: money(p.growth)
             }));
@@ -395,6 +539,58 @@
     }
 
     /**
+     * Wire the goal tile: its amount and question re-solve the goal; "Use this amount" puts the answer in the rail's
+     * monthly contribution.
+     */
+    function bindGoal () {
+        const field = byId('icGoal');
+        if (field) {
+            field.addEventListener('input', () => {
+                announceGoal = true;
+                update();
+            });
+            // On leaving the field, show the amount the goal used (e.g. 0 for a negative entry).
+            field.addEventListener('change', () => {
+                field.value = String(readTarget());
+                announceGoal = true;
+                update();
+            });
+        }
+        root.querySelectorAll('input[name="icGoalMode"]').forEach((radio) => {
+            radio.addEventListener('change', () => {
+                announceGoal = true;
+                update();
+            });
+        });
+        const use = byId('icGoalUse');
+        if (use) {
+            use.addEventListener('click', () => {
+                if (!goal || goal.kind !== 'monthly') {
+                    return;
+                }
+                const amount = String(goal.monthly);
+                const monthly = byId('icMonthly');
+                const range = byId('icMonthlyRange');
+                if (monthly) {
+                    monthly.value = amount;
+                }
+                if (range) {
+                    range.value = amount;
+                }
+                const used = PFI18n.t('InvestmentCalculator.Js.Goal.Used', { amount: money(goal.monthly) });
+                update();
+                // The button hides once the plan uses the amount; keep focus in the tile on the chosen question.
+                const checked = root.querySelector('input[name="icGoalMode"]:checked');
+                if (checked) {
+                    checked.focus();
+                }
+                clearTimeout(statusTimer);
+                setText('icGoalStatus', used);
+            });
+        }
+    }
+
+    /**
      * Start the page.
      */
     function init () {
@@ -406,6 +602,7 @@
         KEYS.forEach(bindField);
         bindPresets();
         bindTodaysMoney();
+        bindGoal();
         update();
 
         const tiles = root.querySelector('.ic-tiles');

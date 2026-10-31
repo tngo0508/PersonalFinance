@@ -6,12 +6,15 @@
  * size, so the charts scale with the text.
  *
  * window.InvestmentCharts.line(host, options): a multi-series line chart over years, with optional area fills, dashed
- *     series, vertical markers and a readout that follows the pointer or the arrow keys.
+ *     series, vertical markers, a horizontal goal line and a readout that follows the pointer or the arrow keys.
  * window.InvestmentCharts.donut(host, options): a two-or-more-part donut with a centre label.
  * window.InvestmentCharts.bars(host, options): stacked bars per year (what was put in and what grew).
  */
 (function () {
     'use strict';
+
+    /** How far above the line chart's highest point a goal line may sit before it is left out. */
+    const GOAL_HEADROOM = 2;
 
     /**
      * The root font size in pixels.
@@ -45,6 +48,8 @@
      * @param {Array<{name: string, color: string, values: Array<{x: number, y: number}>, area?: boolean,
      *     dash?: string, width?: number}>} options.series - The lines, drawn in order; values share the same x.
      * @param {Array<{x: number, label: string, color: string}>} [options.markers] - Vertical markers at a year.
+     * @param {{y: number, label: string, color: string}} [options.goal] - A horizontal goal line at an amount; left
+     *     out when it is more than GOAL_HEADROOM times the highest point of the series.
      * @param {string} options.label - The chart's accessible description.
      * @param {object} options.palette - ChartPalette.read() colours (grid, axis, tooltip).
      * @param {Function} options.formatY - Formats an amount for the axis (compact).
@@ -69,7 +74,10 @@
         const palette = options.palette;
         const xs = options.series[0].values.map((v) => v.x);
         const maxX = d3.max(xs) || 1;
-        const maxY = d3.max(options.series, (s) => d3.max(s.values, (v) => v.y)) || 1;
+        const seriesMax = d3.max(options.series, (s) => d3.max(s.values, (v) => v.y)) || 1;
+        // A goal far above the lines would flatten them; past twice the highest point the line is left out.
+        const goal = options.goal && options.goal.y > 0 && options.goal.y <= seriesMax * GOAL_HEADROOM ? options.goal : null;
+        const maxY = goal ? Math.max(seriesMax, goal.y) : seriesMax;
         const x = d3.scaleLinear().domain([0, maxX]).range([m.left, width - m.right]);
         const y = d3.scaleLinear().domain([0, maxY]).nice().range([height - m.bottom, m.top]);
 
@@ -113,15 +121,35 @@
                 .attr('d', d3.line().x((d) => x(d.x)).y((d) => y(d.y)).curve(d3.curveMonotoneX));
         });
 
-        (options.markers || []).forEach((marker) => {
+        if (goal) {
+            const py = y(goal.y);
+            const g = svg.append('g').attr('class', 'ic-goal-line');
+            g.append('line')
+                .attr('x1', m.left).attr('x2', width - m.right).attr('y1', py).attr('y2', py)
+                .attr('stroke', goal.color).attr('stroke-width', 1.5).attr('stroke-dasharray', '8 3 2 3');
+            g.append('text')
+                .attr('x', width - m.right - r * 0.3).attr('y', py - r * 0.35)
+                .attr('text-anchor', 'end')
+                .attr('fill', palette.axis).attr('font-size', r * 0.75).attr('font-weight', 600)
+                .text(goal.label);
+        }
+
+        // Markers whose labels would collide drop their label one row, into the plot.
+        let lastLabelEnd = -Infinity;
+        let row = 0;
+        (options.markers || []).slice().sort((a, b) => a.x - b.x).forEach((marker) => {
             const px = x(marker.x);
             const flip = px > width * 0.7;
+            const labelWidth = marker.label.length * r * 0.45;
+            const start = flip ? px - labelWidth : px;
+            row = start < lastLabelEnd ? row + 1 : 0;
+            lastLabelEnd = start + labelWidth + r;
             const g = svg.append('g').attr('class', 'ic-marker');
             g.append('line')
                 .attr('x1', px).attr('x2', px).attr('y1', m.top).attr('y2', height - m.bottom)
                 .attr('stroke', marker.color).attr('stroke-width', 1.5).attr('stroke-dasharray', '4 4');
             g.append('text')
-                .attr('x', px + (flip ? -r * 0.3 : r * 0.3)).attr('y', m.top - r * 0.5)
+                .attr('x', px + (flip ? -r * 0.3 : r * 0.3)).attr('y', m.top - r * 0.5 + row * r)
                 .attr('text-anchor', flip ? 'end' : 'start')
                 .attr('fill', palette.axis).attr('font-size', r * 0.75).attr('font-weight', 600)
                 .text(marker.label);
