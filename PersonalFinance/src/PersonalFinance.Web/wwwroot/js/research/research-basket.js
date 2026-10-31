@@ -113,7 +113,8 @@
         const kept = [];
         let placed = false;
         pairs.forEach((pair) => {
-            if (pair.split('=')[0] !== PARAM) {
+            // ASP.NET binds query names whatever their case, so `Basket=` is the same value and is replaced too.
+            if (pair.split('=')[0].toLowerCase() !== PARAM) {
                 kept.push(pair);
             } else if (own && !placed) {
                 kept.push(own);

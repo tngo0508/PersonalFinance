@@ -59,6 +59,12 @@ test('an empty basket removes the parameter and keeps the rest', () => {
     assert.strictEqual(basket.withBasket('/Research/Basket?basket=VTI%3A100', []), '/Research/Basket');
 });
 
+test('a basket parameter in another case is replaced or removed, never doubled', () => {
+    assert.strictEqual(basket.withBasket('/Research/Funds?Basket=VOO&view=risk', MIX),
+        '/Research/Funds?basket=VTI%3A60%2CBND%3A40&view=risk');
+    assert.strictEqual(basket.withBasket('/Research/Funds?view=risk&BASKET=VOO', []), '/Research/Funds?view=risk');
+});
+
 test('a link already right is left as it is', () => {
     assert.strictEqual(basket.withBasket('/Research', []), '/Research');
 });

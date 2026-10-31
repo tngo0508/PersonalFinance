@@ -2451,7 +2451,7 @@
   "Research.Js.Basket.NoticeInvalid": "Some funds in this link aren't tracked and were left out.",
   "Research.Js.Basket.NoticeTooMany": "A Fund Basket holds up to five funds, so only the first five were kept.",
   "Research.Js.Basket.Full": "Your basket holds up to five funds",
-  "Research.Glossary.Basket": "Your basket is a mix of up to five funds with weights. It only drives this page: nothing is saved or bought, and it lives in the page address so you can bookmark or share it.",
+  "Research.Glossary.Basket": "Your basket is a mix of up to five funds with weights. It only shapes what Research shows you: nothing is saved or bought, and it lives in the page address so you can bookmark or share it.",
   "Research.Glossary.Overlap": "Overlap: the share of money in two funds that sits in the same companies. Near 100% means they hold almost the same thing.",
   "Research.Glossary.Correlation": "Correlation: how closely two funds' monthly returns moved together, from −1 (opposite) to +1 (in step). It describes the past only.",
   "Research.Glossary.Volatility": "Volatility: how much monthly returns swung, shown as a yearly figure. Bigger means a bumpier ride.",

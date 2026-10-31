@@ -1,4 +1,5 @@
 using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Text.Unicode;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 using PersonalFinance.Tests.TestSupport;
@@ -57,6 +58,20 @@ public class ResearchTermTagHelperTests
         string html = await RenderAsync(key, "Leverage");
 
         Assert.Equal("Leverage", html);
+    }
+
+    [Fact]
+    public void EveryGlossaryTerm_HasItsExplanationInEnglish()
+    {
+        string path = Path.Combine(RepositoryRoot.SourceProject("PersonalFinance.Web"), "Resources", "i18n", "en.json");
+        using JsonDocument english = JsonDocument.Parse(File.ReadAllText(path));
+
+        Assert.Equal(14, ResearchTermTagHelper.ResourceKeys.Count);
+        Assert.All(ResearchTermTagHelper.ResourceKeys, key =>
+        {
+            Assert.StartsWith("Research.Glossary.", key);
+            Assert.True(english.RootElement.TryGetProperty(key, out _), $"en.json has no {key}.");
+        });
     }
 
     private static async Task<string> RenderAsync(string key, string text)

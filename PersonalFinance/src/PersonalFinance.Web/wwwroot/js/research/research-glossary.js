@@ -2,18 +2,41 @@
  * Research glossary: a click on a term (`button.research-term`, rendered by `<research-term key="...">` with its
  * explanation in `data-term-text`) opens a small popover under it with that text. The popover is a `role="tooltip"`
  * the term points at through `aria-describedby` while it is open. A second click on the term, Escape or a click
- * anywhere else closes it. Exposed as `window.ResearchGlossary = { open, close }`.
+ * anywhere else closes it. Because `aria-describedby` is set on a button that already has focus, a screen reader may
+ * not read it, so the text is also said through a polite live region: the Research page's `#research-live` when the
+ * page has one, else a region of this module's own. Exposed as `window.ResearchGlossary = { open, close }`.
  */
 (function () {
     'use strict';
 
     const POPOVER_ID = 'research-glossary-popover';
+    const PAGE_LIVE_ID = 'research-live';
     const TERM_SELECTOR = '.research-term';
     const GAP_PX = 8;
     const EDGE_PX = 8;
 
     let popover = null;
     let openTerm = null;
+    let live = null;
+
+    /**
+     * The live region the term text is said through: the page's, or one of the module's own made at start, so it is
+     * on the page before its first change.
+     * @returns {HTMLElement} The live region.
+     */
+    function ensureLive () {
+        if (!live) {
+            live = document.getElementById(PAGE_LIVE_ID);
+        }
+        if (!live) {
+            live = document.createElement('div');
+            live.className = 'visually-hidden';
+            live.setAttribute('role', 'status');
+            live.setAttribute('aria-live', 'polite');
+            document.body.append(live);
+        }
+        return live;
+    }
 
     /**
      * The popover, created on first use.
@@ -67,6 +90,7 @@
         pop.style.top = `${rect.bottom + GAP_PX}px`;
         term.setAttribute('aria-describedby', POPOVER_ID);
         openTerm = term;
+        ensureLive().textContent = text;
     }
 
     /**
@@ -74,6 +98,7 @@
      * @returns {void}
      */
     function init () {
+        ensureLive();
         document.addEventListener('click', (event) => {
             const target = event.target instanceof Element ? event.target : null;
             const term = target ? target.closest(TERM_SELECTOR) : null;

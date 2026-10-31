@@ -1334,7 +1334,7 @@ button.research-ranked__row:focus-visible {
     pointer-events: none;
 }
 
-.research-search__results {
+.research-search__popup {
     position: absolute;
     z-index: 20;
     top: calc(100% + 4px);
@@ -1349,7 +1349,8 @@ button.research-ranked__row:focus-visible {
     box-shadow: var(--app-shadow-popover);
 }
 
-.research-search__results[hidden] {
+.research-search__popup[hidden],
+.research-search__message[hidden] {
     display: none;
 }
 
@@ -1371,7 +1372,7 @@ button.research-ranked__row:focus-visible {
     background: var(--app-brand-soft);
 }
 
-.research-search__empty {
+.research-search__message {
     padding: var(--app-spacing-s) var(--app-spacing-m);
     color: var(--app-text-muted);
     font-size: var(--app-font-size-small);

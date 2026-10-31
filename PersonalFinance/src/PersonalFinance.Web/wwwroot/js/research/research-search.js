@@ -7,7 +7,8 @@
  * any box, and is matched as the user types. Companies come from the company suggestions (`data-suggest-url`), asked
  * 200 ms after typing stops for two characters or more; only the latest answer is shown, so a slow one cannot replace
  * the results for newer text. Results are grouped Funds, Companies, Sectors, Industries, Countries. Arrow keys move
- * through them, Enter opens one (or the Fund page of a typed Tracked Fund ticker), Escape closes the list, and `/`
+ * through them (the listbox holds only options; a loading, failed or no-match message sits beside it and is said
+ * through a polite live region), Enter opens one (or the Fund page of a typed Tracked Fund ticker), Escape closes the list, and `/`
  * focuses the first box unless the user is typing in a field. Every navigation carries the Fund Basket.
  *
  * `match` and `latestOnly` need no page, so they are exposed on `window.ResearchSearch` for the tests.
@@ -54,7 +55,8 @@
             ...(index.industries || []).filter((i) => has(i.name)).map((i) => ({
                 kind: 'industry',
                 label: i.name,
-                href: `/Research/Sectors?focus=${encodeURIComponent(`${i.office}/${i.name}`)}`
+                // An industry without its office (never expected) still opens the Sectors page by its own name.
+                href: `/Research/Sectors?focus=${encodeURIComponent(i.office ? `${i.office}/${i.name}` : i.name)}`
             })),
             ...(index.countries || []).filter(has).map((country) => ({
                 kind: 'country', label: country, href: `/Research/World?country=${encodeURIComponent(country)}`
@@ -159,12 +161,28 @@
         if (!input || !listbox) {
             return;
         }
+        // The listbox holds only options: the popup around it also carries the loading, failed and no-match message,
+        // which a polite live region (always on the page, so it is read when it changes) says aloud.
+        const popup = element('div', 'research-search__popup');
+        popup.hidden = true;
+        listbox.before(popup);
+        listbox.hidden = false;
+        const message = element('div', 'research-search__message');
+        message.hidden = true;
+        message.setAttribute('aria-hidden', 'true');
+        popup.append(listbox, message);
+        const status = element('div', 'visually-hidden');
+        status.setAttribute('role', 'status');
+        status.setAttribute('aria-live', 'polite');
+        box.append(status);
+        // A press on the popup's padding or scrollbar must not blur the input and close it.
+        popup.addEventListener('mousedown', (event) => event.preventDefault());
         const indexUrl = box.dataset.indexUrl || '/Research/SearchIndex';
         const suggestUrl = box.dataset.suggestUrl || '/Research/Suggest';
         let index = null;
         let indexState = 'idle';
         let indexLoad = null;
-        let companies = { query: '', items: [] };
+        let companies = [];
         let results = [];
         let activeIndex = -1;
         let suggestTimer = null;
@@ -206,22 +224,23 @@
             if (!loaded) {
                 indexLoad = null;
             }
-            if (!listbox.hidden) {
+            if (!popup.hidden) {
                 draw();
             }
         }
 
         /**
-         * The company suggestions for the current text, without the Tracked Funds the index already lists.
+         * The latest company suggestions, without the Tracked Funds the index already lists. They stay while a newer
+         * answer is on its way, so the group does not flicker as the user types; text too short to ask clears them.
          * @param {string} query - The trimmed text.
          * @returns {{kind: string, label: string, href: string}[]} The company results.
          */
         function companyResults (query) {
-            if (companies.query !== query) {
+            if (query.length < SUGGEST_MIN_LENGTH) {
                 return [];
             }
             const tracked = new Set(((index && index.funds) || []).map((f) => f.ticker.toUpperCase()));
-            return companies.items
+            return companies
                 .filter((item) => item && item.ticker && !tracked.has(item.ticker.toUpperCase()))
                 .map((item) => ({
                     kind: 'company',
@@ -231,7 +250,20 @@
         }
 
         /**
-         * Draw the results for the box's text, grouped by kind, or the loading, failed or no-match line.
+         * Show a message under the results, and say it through the box's live region.
+         * @param {string} text - The message, or empty for none.
+         * @returns {void}
+         */
+        function showMessage (text) {
+            message.textContent = text;
+            message.hidden = !text;
+            if (status.textContent !== text) {
+                status.textContent = text;
+            }
+        }
+
+        /**
+         * Draw the results for the box's text, grouped by kind, or the loading, failed or no-match message.
          * @returns {void}
          */
         function draw () {
@@ -265,16 +297,17 @@
                 }));
                 return block;
             }));
+            const lines = [];
             if (results.length === 0) {
-                const text = indexState === 'loading' || indexState === 'idle'
+                lines.push(indexState === 'loading' || indexState === 'idle'
                     ? PFI18n.t('Research.Js.Search.Loading')
-                    : PFI18n.t('Research.Js.Search.NoMatch', { query });
-                listbox.append(element('div', 'research-search__empty', text));
+                    : PFI18n.t('Research.Js.Search.NoMatch', { query }));
             }
             if (indexState === 'failed') {
-                listbox.append(element('div', 'research-search__empty', PFI18n.t('Research.Js.Search.Failed')));
+                lines.push(PFI18n.t('Research.Js.Search.Failed'));
             }
-            listbox.hidden = false;
+            showMessage(lines.join(' '));
+            popup.hidden = false;
             input.setAttribute('aria-expanded', 'true');
             markActive();
         }
@@ -284,8 +317,9 @@
          * @returns {void}
          */
         function close () {
-            listbox.hidden = true;
+            popup.hidden = true;
             listbox.replaceChildren();
+            showMessage('');
             input.setAttribute('aria-expanded', 'false');
             input.removeAttribute('aria-activedescendant');
             results = [];
@@ -318,6 +352,7 @@
             window.clearTimeout(suggestTimer);
             const query = input.value.trim();
             if (query.length < SUGGEST_MIN_LENGTH) {
+                companies = [];
                 return;
             }
             suggestTimer = window.setTimeout(async () => {
@@ -328,10 +363,10 @@
                     // Company search being down leaves the funds, sectors and countries.
                     items = [];
                 }
-                if (items === null) {
+                if (items === null || input.value.trim().length < SUGGEST_MIN_LENGTH) {
                     return;
                 }
-                companies = { query, items };
+                companies = items;
                 if (input.value.trim() === query && document.activeElement === input) {
                     draw();
                 }
@@ -370,7 +405,7 @@
         input.addEventListener('keydown', (event) => {
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
                 event.preventDefault();
-                if (listbox.hidden) {
+                if (popup.hidden) {
                     draw();
                     return;
                 }
@@ -383,7 +418,7 @@
                 if (submit()) {
                     event.preventDefault();
                 }
-            } else if (event.key === 'Escape' && !listbox.hidden) {
+            } else if (event.key === 'Escape' && !popup.hidden) {
                 event.preventDefault();
                 close();
             }

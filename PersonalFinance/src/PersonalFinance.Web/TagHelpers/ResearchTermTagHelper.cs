@@ -21,6 +21,9 @@ public sealed class ResearchTermTagHelper : TagHelper
         "Office", "NetAssets", "Fee", "Issuer", "PricedIn"
     }.ToDictionary(term => term, term => KeyPrefix + term, StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>The resource key of every glossary entry, e.g. <c>Research.Glossary.Volatility</c>.</summary>
+    internal static IReadOnlyCollection<string> ResourceKeys => Terms.Values;
+
     private readonly IStringLocalizer _localizer;
 
     public ResearchTermTagHelper(IStringLocalizer localizer)

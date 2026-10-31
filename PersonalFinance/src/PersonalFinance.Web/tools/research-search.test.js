@@ -108,6 +108,14 @@ test('never more than eight results', () => {
     assert.strictEqual(search.match(many, 'fund').length, 8);
 });
 
+test('an industry without an office links to the Sectors page by its own name', () => {
+    const results = search.match({ industries: [{ name: 'Banks', office: '' }, { name: 'Bank holding', office: null }] }, 'bank');
+
+    assert.deepStrictEqual(Array.from(results, (r) => r.href),
+        ['/Research/Sectors?focus=Banks', '/Research/Sectors?focus=Bank%20holding']);
+    assert.ok(results.every((r) => !r.href.includes('undefined') && !r.href.includes('null')));
+});
+
 test('a missing part of the index is skipped', () => {
     const results = search.match({ funds: INDEX.funds }, 'japan');
 
