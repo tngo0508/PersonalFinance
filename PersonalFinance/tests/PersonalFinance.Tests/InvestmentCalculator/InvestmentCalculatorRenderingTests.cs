@@ -215,6 +215,52 @@ public sealed partial class InvestmentCalculatorRenderingTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ViewSwitch_IsTabsInTheSummaryBar_WithOverviewSelectedByDefault()
+    {
+        string page = Calculator(await GetPageAsync());
+
+        int bar = page.IndexOf("class=\"ic-bar\"", StringComparison.Ordinal);
+        int list = page.IndexOf("role=\"tablist\"", StringComparison.Ordinal);
+        Assert.True(bar >= 0 && list > bar && list < page.IndexOf("class=\"ic-layout\"", StringComparison.Ordinal),
+            "The view switch is not in the summary bar.");
+        string overview = Tag(page, "id=\"icViewOverviewTab\"");
+        Assert.Contains("role=\"tab\"", overview, StringComparison.Ordinal);
+        Assert.Contains("aria-selected=\"true\"", overview, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"icOverview\"", overview, StringComparison.Ordinal);
+        string compare = Tag(page, "id=\"icViewCompareTab\"");
+        Assert.Contains("aria-selected=\"false\"", compare, StringComparison.Ordinal);
+        Assert.Contains("tabindex=\"-1\"", compare, StringComparison.Ordinal);
+        Assert.Contains("Compare what-ifs", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("hidden", Tag(page, "id=\"icOverview\""), StringComparison.Ordinal);
+        string panel = Tag(page, "id=\"icCompare\"");
+        Assert.Contains("role=\"tabpanel\"", panel, StringComparison.Ordinal);
+        Assert.Contains("hidden", panel, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ViewCompare_InTheQueryString_OpensTheCompareView()
+    {
+        string page = Calculator(await GetPageAsync("?view=compare"));
+
+        Assert.Contains("aria-selected=\"true\"", Tag(page, "id=\"icViewCompareTab\""), StringComparison.Ordinal);
+        Assert.Contains("aria-selected=\"false\"", Tag(page, "id=\"icViewOverviewTab\""), StringComparison.Ordinal);
+        Assert.Contains("hidden", Tag(page, "id=\"icOverview\""), StringComparison.Ordinal);
+        Assert.DoesNotContain("hidden", Tag(page, "id=\"icCompare\""), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("USD", "100")]
+    [InlineData("VND", "2500000")]
+    public async Task MoreAMonthLever_AddsAHundredDollarsOnTheMoneyScale(string currency, string step)
+    {
+        _preferences.ReportingCurrencies[UserId] = currency;
+
+        string levers = Tag(Calculator(await GetPageAsync()), "id=\"icLevers\"");
+
+        Assert.Contains($"data-monthly-step=\"{step}\"", levers, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task SavingsGoalPicker_ListsActiveGoals_WithTheirTargetAndYearsToTheTargetDate()
     {
         _goals.Goals.AddRange(
@@ -326,9 +372,9 @@ public sealed partial class InvestmentCalculatorRenderingTests : IAsyncLifetime
         return end > start ? html[start..end] : html[start..];
     }
 
-    private async Task<string> GetPageAsync()
+    private async Task<string> GetPageAsync(string query = "")
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/InvestmentCalculator");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/InvestmentCalculator{query}");
         request.Headers.Add("Accept-Language", "en-US");
         HttpResponseMessage response = await _client.SendAsync(request);
         string html = await response.Content.ReadAsStringAsync();

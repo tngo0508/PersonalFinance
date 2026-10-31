@@ -16,6 +16,11 @@
     const decimal fee = 0.1m;
     const decimal inflation = 2.5m;
     (string Key, decimal Rate)[] presets = [("Conservative", 4m), ("Base", 7m), ("Aggressive", 10m)];
+
+    // Overview or Compare what-ifs (#591): ?view=compare opens Compare; the script keeps the query string in step.
+    bool compareView = string.Equals(Context.Request.Query["view"], "compare", StringComparison.OrdinalIgnoreCase);
+    // The what-if levers, in InvestmentMath.LEVERS order; the script writes each one's label and difference.
+    string[] levers = ["monthly", "rate", "delay", "stop", "fee"];
 }
 
 @section Styles {
@@ -49,7 +54,17 @@
 
 <div class="ic-page" data-investment-calculator data-currency="@currency">
     <section class="ic-bar" aria-labelledby="icTitle">
-        <h1 class="ic-bar__title" id="icTitle">@L["InvestmentCalculator.Title"]</h1>
+        <div class="ic-bar__head">
+            <h1 class="ic-bar__title" id="icTitle">@L["InvestmentCalculator.Title"]</h1>
+            <div class="ic-views" role="tablist" aria-label="@L["InvestmentCalculator.View.Aria"]">
+                <button type="button" class="ic-view" role="tab" id="icViewOverviewTab" data-ic-view="overview"
+                        aria-controls="icOverview" aria-selected="@(compareView ? "false" : "true")"
+                        tabindex="@(compareView ? "-1" : "0")">@L["InvestmentCalculator.View.Overview"]</button>
+                <button type="button" class="ic-view" role="tab" id="icViewCompareTab" data-ic-view="compare"
+                        aria-controls="icCompare" aria-selected="@(compareView ? "true" : "false")"
+                        tabindex="@(compareView ? "0" : "-1")">@L["InvestmentCalculator.View.Compare"]</button>
+            </div>
+        </div>
         <dl class="ic-bar__nums">
             <div class="ic-num ic-num--hero">
                 <dt id="icFinalLabel">@L.Plural("InvestmentCalculator.Js.Bar.InYears", years)</dt>
@@ -68,7 +83,7 @@
                 <dd id="icOther">&nbsp;</dd>
             </div>
         </dl>
-        @* The bar's tools: later slices add the view switch and Saved / Save here. *@
+        @* The bar's tools: a later slice adds Saved / Save here. *@
         <div class="ic-bar__tools">
             <div class="form-check form-switch ic-switch">
                 <input class="form-check-input" type="checkbox" role="switch" id="icTodaysMoney"
@@ -104,6 +119,12 @@
             @{ Field("Years", L["InvestmentCalculator.Field.Years"], years, 1m, 50m, 50m, 1m,
                    L.Plural("InvestmentCalculator.Js.Years", years)); }
 
+            @* A plan that starts later or stops adding (an applied what-if) says so here; the rail has no field for it. *@
+            <div class="ic-timing" id="icTiming" hidden>
+                <p class="ic-timing__text" id="icTimingText"></p>
+                <button type="button" class="ic-timing__reset" id="icTimingReset">@L["InvestmentCalculator.Timing.Reset"]</button>
+            </div>
+
             <details class="ic-more">
                 <summary class="ic-more__summary">@L["InvestmentCalculator.More.Title"]</summary>
                 @{ Field("Increase", L["InvestmentCalculator.Field.Increase"], increase, 0m, 10m, 10m, 0.5m,
@@ -120,7 +141,7 @@
             </p>
         </aside>
 
-        <section class="ic-main" aria-labelledby="icOverviewTitle">
+        <section class="ic-main" id="icOverview" role="tabpanel" aria-labelledby="icViewOverviewTab" hidden="@compareView">
             <h2 class="visually-hidden" id="icOverviewTitle">@L["InvestmentCalculator.Overview.Title"]</h2>
             @* Tiles fill an auto-fit grid. *@
             <div class="ic-tiles">
@@ -261,6 +282,48 @@
                 </details>
             </div>
         </section>
+
+        @* Compare what-ifs (#591): the levers preview a one-change variant of the plan as a dashed line; the comparison
+           holds the plan and up to two variants. investment-compare.js fills it. *@
+        <section class="ic-main ic-compare" id="icCompare" role="tabpanel" aria-labelledby="icViewCompareTab" hidden="@(!compareView)">
+            <h2 class="visually-hidden" id="icCompareTitle">@L["InvestmentCalculator.View.Compare"]</h2>
+            <div class="ic-tiles">
+                <article class="ic-tile ic-tile--wide ic-whatif" aria-labelledby="icWhatIfTitle">
+                    <header class="ic-tile__head">
+                        <h3 class="ic-tile__title" id="icWhatIfTitle">@L["InvestmentCalculator.WhatIf.Title"]</h3>
+                    </header>
+                    <p class="ic-tile__hint ic-whatif__hint" id="icWhatIfHint">@L["InvestmentCalculator.WhatIf.Hint"]</p>
+                    <div class="ic-levers" id="icLevers" role="group" aria-labelledby="icWhatIfTitle"
+                         aria-describedby="icWhatIfHint" data-monthly-step="@Invariant(Model.LeverMonthly)">
+                        @foreach (string lever in levers)
+                        {
+                            <button type="button" class="ic-lever" data-lever="@lever" aria-pressed="false">
+                                <span class="ic-lever__label">&nbsp;</span>
+                                <strong class="ic-lever__diff">&nbsp;</strong>
+                            </button>
+                        }
+                    </div>
+                    <div class="ic-preview" id="icPreview" hidden>
+                        <p class="ic-preview__text" id="icPreviewText"></p>
+                        <div class="ic-preview__actions">
+                            <button type="button" class="ic-action ic-action--primary" id="icPreviewApply">@L["InvestmentCalculator.WhatIf.Apply"]</button>
+                            <button type="button" class="ic-action" id="icPreviewAdd">@L["InvestmentCalculator.WhatIf.Add"]</button>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="ic-tile ic-tile--wide ic-comparison" aria-labelledby="icComparisonTitle">
+                    <header class="ic-tile__head">
+                        <h3 class="ic-tile__title" id="icComparisonTitle">@L["InvestmentCalculator.Comparison.Title"]</h3>
+                    </header>
+                    <ul class="ic-cmp" id="icCmpList" aria-labelledby="icComparisonTitle"></ul>
+                    <p class="ic-tile__hint" id="icCmpRoom"></p>
+                    <div class="ic-chart" id="icCompareChart"></div>
+                    <p class="ic-tile__hint">@L["InvestmentCalculator.Tile.ChartHint"]</p>
+                </article>
+            </div>
+            <p class="visually-hidden" id="icCompareStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+        </section>
     </div>
 </div>
 
@@ -270,5 +333,6 @@
     <script src="~/lib/d3/d3.min.js"></script>
     <script src="~/js/investment-calculator/investment-math.js" asp-append-version="true"></script>
     <script src="~/js/investment-calculator/investment-charts.js" asp-append-version="true"></script>
+    <script src="~/js/investment-calculator/investment-compare.js" asp-append-version="true"></script>
     <script src="~/js/investment-calculator/calculator.js" asp-append-version="true"></script>
 }

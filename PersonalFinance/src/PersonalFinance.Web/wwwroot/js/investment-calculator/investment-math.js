@@ -13,6 +13,10 @@
  *
  * Goals: solveGoal() answers how much a month reaches a target in the plan's years, or how many years the current
  * monthly contribution takes (up to 50), by projecting the plan.
+ *
+ * What-ifs (#591): a plan may start later (delay: years with nothing in them, the starting amount arriving in the
+ * last of them and the yearly increase counting from the first year of deposits) or stop its deposits after a year
+ * (stopAt). lever() turns the plan into a variant with one change.
  */
 (function (root) {
     'use strict';
@@ -53,20 +57,26 @@
 
     /**
      * The inputs made safe to project: amounts at least 0, years a whole number of 1-50, rates within their bounds.
-     * @param {object} inputs - initial, monthly, rate, years, increase, fee, inflation (rates in percent).
+     * @param {object} inputs - initial, monthly, rate, years, increase, fee, inflation (rates in percent), and the
+     *     optional delay (whole years before the plan starts, at most years − 1) and stopAt (the last year of
+     *     deposits, 0 to years; null or missing for none).
      * @returns {{initial: number, monthly: number, rate: number, years: number, increase: number, fee: number,
-     *     inflation: number}} The normalized inputs.
+     *     inflation: number, delay: number, stopAt: (number|null)}} The normalized inputs.
      */
     function normalize (inputs) {
         const source = inputs || {};
+        const years = Math.round(clamp(source.years, LIMITS.years.min, LIMITS.years.max));
+        const noStop = source.stopAt === null || source.stopAt === undefined || source.stopAt === '';
         return {
             initial: clamp(source.initial, 0, Number.MAX_SAFE_INTEGER),
             monthly: clamp(source.monthly, 0, Number.MAX_SAFE_INTEGER),
             rate: clamp(source.rate, LIMITS.rate.min, LIMITS.rate.max),
-            years: Math.round(clamp(source.years, LIMITS.years.min, LIMITS.years.max)),
+            years,
             increase: clamp(source.increase, LIMITS.increase.min, LIMITS.increase.max),
             fee: clamp(source.fee, LIMITS.fee.min, LIMITS.fee.max),
-            inflation: clamp(source.inflation, LIMITS.inflation.min, LIMITS.inflation.max)
+            inflation: clamp(source.inflation, LIMITS.inflation.min, LIMITS.inflation.max),
+            delay: Math.round(clamp(source.delay, 0, years - 1)),
+            stopAt: noStop ? null : Math.round(clamp(source.stopAt, 0, years))
         };
     }
 
@@ -118,20 +128,31 @@
         const plan = normalize(inputs);
         const netMonthly = (plan.rate - plan.fee) / 100 / 12;
         const grossMonthly = plan.rate / 100 / 12;
-        let balance = plan.initial;
-        let noFee = plan.initial;
-        let contributed = plan.initial;
+        // A plan that starts later (delay) holds nothing until then; the starting amount arrives in its first year.
+        const opening = plan.delay === 0 ? plan.initial : 0;
+        let balance = opening;
+        let noFee = opening;
+        let contributed = opening;
         let milestoneYear = null;
-        const rows = [{ year: 0, contributedYear: plan.initial, growthYear: 0, contributed, balance, noFee }];
+        const rows = [{ year: 0, contributedYear: opening, growthYear: 0, contributed, balance, noFee }];
 
         for (let year = 1; year <= plan.years; year++) {
-            const deposit = plan.monthly * Math.pow(1 + plan.increase / 100, year - 1);
             const startBalance = balance;
-            for (let month = 0; month < 12; month++) {
-                balance = balance * (1 + netMonthly) + deposit;
-                noFee = noFee * (1 + grossMonthly) + deposit;
+            let contributedYear = 0;
+            if (year === plan.delay) {
+                // The year before the plan's first year of deposits: it opens with the starting amount.
+                balance = plan.initial;
+                noFee = plan.initial;
+                contributedYear = plan.initial;
+            } else if (year > plan.delay) {
+                const contributing = plan.stopAt === null || year <= plan.stopAt;
+                const deposit = contributing ? plan.monthly * Math.pow(1 + plan.increase / 100, year - 1 - plan.delay) : 0;
+                for (let month = 0; month < 12; month++) {
+                    balance = balance * (1 + netMonthly) + deposit;
+                    noFee = noFee * (1 + grossMonthly) + deposit;
+                }
+                contributedYear = deposit * 12;
             }
-            const contributedYear = deposit * 12;
             contributed += contributedYear;
             rows.push({
                 year,
@@ -229,5 +250,49 @@
         return answer({ kind: 'monthly', monthly, year: plan.years });
     }
 
-    root.InvestmentMath = Object.freeze({ LIMITS, DEFAULTS, PRESETS, normalize, project, solveGoal });
+    /**
+     * The what-if levers (#591), in the order the Compare view lists them. Each changes one input of the plan (field):
+     * monthly adds options.monthlyStep (100 by default; the page passes 100 US dollars in the Reporting Currency),
+     * rate adds 1 point, delay starts 5 years later, stop stops the deposits at options.stopAt (by default half way
+     * through the plan), fee adds half a point.
+     */
+    const LEVERS = Object.freeze([
+        Object.freeze({ key: 'monthly', field: 'monthly' }),
+        Object.freeze({ key: 'rate', field: 'rate' }),
+        Object.freeze({ key: 'delay', field: 'delay' }),
+        Object.freeze({ key: 'stop', field: 'stopAt' }),
+        Object.freeze({ key: 'fee', field: 'fee' })
+    ]);
+
+    /** How far the rate, delay and fee levers move their input. */
+    const LEVER_STEPS = Object.freeze({ monthly: 100, rate: 1, delay: 5, fee: 0.5 });
+
+    /**
+     * A lever applied to a plan: the plan's inputs with that lever's one change, within the bounds (normalize).
+     * @param {object} inputs - The plan, as for project().
+     * @param {string} key - A LEVERS key.
+     * @param {{monthlyStep?: number, stopAt?: number}} [options] - The monthly lever's amount, the stop lever's year.
+     * @returns {{key: string, field: string, inputs: object}|null} The variant, or null for an unknown key.
+     */
+    function lever (inputs, key, options) {
+        const found = LEVERS.find((candidate) => candidate.key === key);
+        if (!found) {
+            return null;
+        }
+        const settings = options || {};
+        const plan = normalize(inputs);
+        const values = {
+            monthly: () => plan.monthly + (Number(settings.monthlyStep) || LEVER_STEPS.monthly),
+            rate: () => plan.rate + LEVER_STEPS.rate,
+            delay: () => plan.delay + LEVER_STEPS.delay,
+            stop: () => (Number.isFinite(Number(settings.stopAt)) && settings.stopAt !== null
+                ? Number(settings.stopAt)
+                : Math.max(1, Math.round(plan.years / 2))),
+            fee: () => plan.fee + LEVER_STEPS.fee
+        };
+        const changed = Object.assign({}, plan, { [found.field]: values[key]() });
+        return { key, field: found.field, inputs: normalize(changed) };
+    }
+
+    root.InvestmentMath = Object.freeze({ LIMITS, DEFAULTS, PRESETS, LEVERS, LEVER_STEPS, normalize, project, solveGoal, lever });
 })(typeof window !== 'undefined' ? window : globalThis);

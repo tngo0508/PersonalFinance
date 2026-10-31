@@ -162,7 +162,7 @@ test('out-of-range and missing inputs are clamped before projecting', () => {
     const inputs = math.normalize({ initial: -5, monthly: 'abc', rate: 40, years: 80.4, increase: -1, fee: 9, inflation: 12 });
 
     assert.deepStrictEqual(Object.assign({}, inputs),
-        { initial: 0, monthly: 0, rate: 15, years: 50, increase: 0, fee: 3, inflation: 10 });
+        { initial: 0, monthly: 0, rate: 15, years: 50, increase: 0, fee: 3, inflation: 10, delay: 0, stopAt: null });
     assert.strictEqual(math.normalize({ inflation: -1 }).inflation, 0);
     assert.strictEqual(math.normalize({ years: 0 }).years, 1);
 });
@@ -242,4 +242,86 @@ test('a goal of nothing is already reached today', () => {
 
     assert.strictEqual(answer.kind, 'already');
     assert.strictEqual(answer.year, 0);
+});
+
+test('starting 5 years later leaves the first 5 years empty, then grows like a 15-year plan', () => {
+    const later = math.project(plan({ delay: 5 }));
+
+    assert.deepStrictEqual(Array.from(later.rows.slice(0, 5), (row) => row.balance), [0, 0, 0, 0, 0]);
+    assert.strictEqual(later.rows[5].balance, 10000);
+    assert.strictEqual(later.rows[5].contributedYear, 10000);
+    // 10000·(1+0.07/12)^180 + 500·((1+0.07/12)^180 − 1)/(0.07/12).
+    assertCents(later.final, 186970.62);
+    assert.strictEqual(later.contributed, 100000);
+});
+
+test('the yearly increase counts from the year the plan starts', () => {
+    const later = math.project(plan({ rate: 0, years: 4, increase: 10, delay: 2 }));
+
+    assert.deepStrictEqual(Array.from(later.rows, (row) => Math.round(row.contributedYear)), [0, 0, 10000, 6000, 6600]);
+});
+
+test('stopping contributions at year 10 keeps the balance on what was put in', () => {
+    const stopped = math.project(plan({ rate: 0, stopAt: 10 }));
+
+    assert.strictEqual(stopped.contributed, 70000);
+    assert.strictEqual(stopped.final, 70000);
+    assert.strictEqual(stopped.rows[11].contributedYear, 0);
+});
+
+test('a delay or a stop year outside the plan is clamped to it', () => {
+    assert.strictEqual(math.normalize({ years: 10, delay: 30 }).delay, 9);
+    assert.strictEqual(math.normalize({ years: 10, stopAt: 30 }).stopAt, 10);
+    assert.strictEqual(math.normalize({ years: 10, stopAt: -2 }).stopAt, 0);
+    assert.strictEqual(math.normalize({ years: 10 }).stopAt, null);
+    assert.strictEqual(math.normalize({ years: 10, stopAt: '' }).stopAt, null);
+});
+
+test('the levers are, in order: more a month, a higher return, start later, stop adding, a higher fee', () => {
+    assert.deepStrictEqual(Array.from(math.LEVERS, (lever) => [lever.key, lever.field]),
+        [['monthly', 'monthly'], ['rate', 'rate'], ['delay', 'delay'], ['stop', 'stopAt'], ['fee', 'fee']]);
+});
+
+test('each lever is the plan with one change', () => {
+    const base = plan({ fee: 0.1 });
+    const changed = (key, options) => {
+        const variant = math.lever(base, key, options);
+        const inputs = Object.assign({}, variant.inputs);
+        const moved = Object.keys(inputs).filter((field) => inputs[field] !== math.normalize(base)[field]);
+        return { field: variant.field, moved, value: inputs[variant.field] };
+    };
+
+    assert.deepStrictEqual(changed('monthly'), { field: 'monthly', moved: ['monthly'], value: 600 });
+    assert.deepStrictEqual(changed('monthly', { monthlyStep: 2500000 }), { field: 'monthly', moved: ['monthly'], value: 2500500 });
+    assert.deepStrictEqual(changed('rate'), { field: 'rate', moved: ['rate'], value: 8 });
+    assert.deepStrictEqual(changed('delay'), { field: 'delay', moved: ['delay'], value: 5 });
+    assert.deepStrictEqual(changed('stop'), { field: 'stopAt', moved: ['stopAt'], value: 10 });
+    assert.deepStrictEqual(changed('stop', { stopAt: 4 }), { field: 'stopAt', moved: ['stopAt'], value: 4 });
+    assert.deepStrictEqual(changed('fee'), { field: 'fee', moved: ['fee'], value: 0.6 });
+});
+
+test('a lever leaves the plan it was given untouched', () => {
+    const base = plan();
+    math.lever(base, 'monthly');
+
+    assert.strictEqual(base.monthly, 500);
+});
+
+test('the levers move the final balance the way they say', () => {
+    const final = math.project(plan()).final;
+    const of = (key) => math.project(math.lever(plan(), key).inputs).final;
+
+    assert.ok(of('monthly') > final, 'more a month ends higher');
+    assert.ok(of('rate') > final, 'a higher return ends higher');
+    assert.ok(of('delay') < final, 'starting later ends lower');
+    assert.ok(of('stop') < final, 'stopping early ends lower');
+    assert.ok(of('fee') < final, 'a higher fee ends lower');
+    // Adding 100 a month at 7% for 20 years adds 100·((1+0.07/12)^240 − 1)/(0.07/12).
+    assertCents(of('monthly') - final, 52092.67);
+});
+
+test('a lever stays within the bounds: a 15% return cannot go higher', () => {
+    assert.strictEqual(math.lever(plan({ rate: 15 }), 'rate').inputs.rate, 15);
+    assert.strictEqual(math.lever(plan({ years: 3 }), 'delay').inputs.delay, 2);
+    assert.strictEqual(math.lever(plan(), 'nope'), null);
 });
