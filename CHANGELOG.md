@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.1.0] - 2026-10-31
+
+### Changed
+
+- **Faster Research**: the Research page reads its datasets from a short-lived cache and gains two small endpoints for the redesign that follows.
+  - The Web app keeps each Research snapshot it has read for 10 minutes, so reopening the page no longer fetches every dataset again; a failed read is never kept.
+  - A dataset status endpoint reports when each dataset's source data is from and when it was last built, without sending the datasets themselves.
+  - A search index endpoint lists the Tracked Funds, industry offices, industries and countries in one small response for the page's search box; a dataset that has never loaded leaves only its own part empty.
+
 ## [17.0.0] - 2026-10-30
 
 ### Added
