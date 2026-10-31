@@ -50,39 +50,54 @@ public class InvestmentCalculatorController : Controller
             ? SupportedCurrencies.DefaultCode
             : await _preferences.GetReportingCurrencyAsync(userId, cancellationToken));
 
-        IReadOnlyList<SavingsGoalOption> goals = [];
-        bool unavailable = false;
-        try
-        {
-            List<SavingsGoalDto> saved = await _savingsGoalsApi.GetSavingsGoalsAsync(cancellationToken);
-            var today = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
-            goals = SavingsGoalOption.From(saved, currency, today);
-        }
-        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogWarning(ex, "Failed to load savings goals for the Investment Calculator; hiding the goal picker.");
-            unavailable = true;
-        }
-
-        IReadOnlyList<InvestmentScenarioDto> scenarios = [];
-        bool scenariosUnavailable = false;
-        try
-        {
-            scenarios = await _scenariosApi.GetScenariosAsync(cancellationToken);
-        }
-        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
-        {
-            _logger.LogWarning(ex, "Failed to load Investment Scenarios; the Saved panel shows the unavailable notice.");
-            scenariosUnavailable = true;
-        }
+        // The two reads are independent: run them together, each failing on its own.
+        Task<GoalsLoad> goalsTask = LoadSavingsGoalsAsync(currency, cancellationToken);
+        Task<ScenariosLoad> scenariosTask = LoadScenariosAsync(cancellationToken);
+        await Task.WhenAll(goalsTask, scenariosTask);
+        GoalsLoad goals = await goalsTask;
+        ScenariosLoad scenarios = await scenariosTask;
 
         return View(new InvestmentCalculatorViewModel
         {
             CurrencyCode = currency,
-            SavingsGoals = goals,
-            SavingsGoalsUnavailable = unavailable,
-            Scenarios = scenarios,
-            ScenariosUnavailable = scenariosUnavailable
+            SavingsGoals = goals.Options,
+            SavingsGoalsUnavailable = goals.Unavailable,
+            SavingsGoalsWithoutRate = goals.WithoutRate,
+            Scenarios = scenarios.Scenarios,
+            ScenariosUnavailable = scenarios.Unavailable
         });
     }
+
+    private async Task<GoalsLoad> LoadSavingsGoalsAsync(string currency, CancellationToken cancellationToken)
+    {
+        try
+        {
+            List<SavingsGoalDto> saved = await _savingsGoalsApi.GetSavingsGoalsAsync(cancellationToken);
+            var today = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
+            return new GoalsLoad(SavingsGoalOption.From(saved, currency, today), false,
+                SavingsGoalOption.CountWithoutRate(saved, currency));
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to load savings goals for the Investment Calculator; hiding the goal picker.");
+            return new GoalsLoad([], true, 0);
+        }
+    }
+
+    private async Task<ScenariosLoad> LoadScenariosAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return new ScenariosLoad(await _scenariosApi.GetScenariosAsync(cancellationToken), false);
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Failed to load Investment Scenarios; the Saved panel shows the unavailable notice.");
+            return new ScenariosLoad([], true);
+        }
+    }
+
+    private sealed record GoalsLoad(IReadOnlyList<SavingsGoalOption> Options, bool Unavailable, int WithoutRate);
+
+    private sealed record ScenariosLoad(IReadOnlyList<InvestmentScenarioDto> Scenarios, bool Unavailable);
 }

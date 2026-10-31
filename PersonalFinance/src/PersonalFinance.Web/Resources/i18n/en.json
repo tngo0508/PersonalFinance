@@ -1654,6 +1654,7 @@
   "InvestmentCalculator.Goal.From.Option": "{0}: {1}",
   "InvestmentCalculator.Goal.From.OptionConverted": "{0}: about {1}, converted from {2}",
   "InvestmentCalculator.Goal.From.Hint": "Fills in its target, and its target date as the years. Your Savings Goals don't change.",
+  "InvestmentCalculator.Goal.From.NoRate": "Some Savings Goals in another currency are not listed: there is no exchange rate to your Reporting Currency for them yet.",
   "InvestmentCalculator.Goal.From.Unavailable": "Your Savings Goals could not be loaded, so you can't start from one right now. The calculator still works.",
   "InvestmentCalculator.Saved.Open": "Saved",
   "InvestmentCalculator.Saved.Save": "Save",

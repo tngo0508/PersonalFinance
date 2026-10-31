@@ -251,6 +251,10 @@
                     {
                         <p class="ic-tile__hint" id="icGoalFromUnavailable">@L["InvestmentCalculator.Goal.From.Unavailable"]</p>
                     }
+                    @if (Model.SavingsGoalsWithoutRate > 0)
+                    {
+                        <p class="ic-tile__hint" id="icGoalFromNoRate">@L["InvestmentCalculator.Goal.From.NoRate"]</p>
+                    }
                     <div class="ic-goal__target">
                         <div class="ic-field__head">
                             <label class="ic-field__label" for="icGoal">@L["InvestmentCalculator.Goal.Target"]</label>
