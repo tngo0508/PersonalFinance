@@ -50,8 +50,13 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
         "Three Scenarios", "Reading the chart", "Got it", ">Close<", "aria-label=\"Close\""
     ];
 
-    // The calculator's text whose Vietnamese is already drafted; the redesign's newer keys wait for the i18n workflow.
-    private static readonly string[] CalculatorEnglish = ["Investment Calculator"];
+    private static readonly string[] CalculatorEnglish =
+    [
+        "Investment Calculator", "Your plan", "Starting amount", "Monthly contribution", "Assumed yearly return",
+        "More assumptions", "Balance over time", "Where your balance comes from", "Fees cost you", "Reach a goal",
+        "Goal amount", "Compare what-ifs", "Year by year", "Read the disclaimer",
+        "Educational estimate using a fixed assumed return"
+    ];
 
     private static readonly string[] PresetKeys = ["fire", "coast", "traditional", "ultra", "conservative"];
 

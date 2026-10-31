@@ -251,6 +251,10 @@
                     {
                         <p class="ic-tile__hint" id="icGoalFromUnavailable">@L["InvestmentCalculator.Goal.From.Unavailable"]</p>
                     }
+                    @if (Model.SavingsGoalsWithoutRate > 0)
+                    {
+                        <p class="ic-tile__hint" id="icGoalFromNoRate">@L["InvestmentCalculator.Goal.From.NoRate"]</p>
+                    }
                     <div class="ic-goal__target">
                         <div class="ic-field__head">
                             <label class="ic-field__label" for="icGoal">@L["InvestmentCalculator.Goal.Target"]</label>
@@ -329,8 +333,10 @@
                         <p class="ic-preview__text" id="icPreviewText"></p>
                         <div class="ic-preview__actions">
                             <button type="button" class="ic-action ic-action--primary" id="icPreviewApply">@L["InvestmentCalculator.WhatIf.Apply"]</button>
-                            <button type="button" class="ic-action" id="icPreviewAdd">@L["InvestmentCalculator.WhatIf.Add"]</button>
+                            <button type="button" class="ic-action" id="icPreviewAdd"
+                                    aria-describedby="icPreviewFull">@L["InvestmentCalculator.WhatIf.Add"]</button>
                         </div>
+                        <p class="ic-tile__hint ic-preview__full" id="icPreviewFull" hidden>@L["InvestmentCalculator.WhatIf.Full"]</p>
                     </div>
                 </article>
 

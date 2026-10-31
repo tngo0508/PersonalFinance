@@ -8,7 +8,7 @@ namespace PersonalFinance.Shared.DTOs.InvestmentScenarios;
 /// amount is in <see cref="CurrencyCode"/>, the currency it was saved in (ADR 0016); the page works the projection out
 /// from the inputs each time.
 /// </summary>
-public class InvestmentScenarioDto
+public class InvestmentScenarioDto : IInvestmentScenarioInputs
 {
     public int Id { get; set; }
 
@@ -65,7 +65,7 @@ public class InvestmentScenarioDto
 /// inputs back with the new name). The currency, when given, must be supported; when missing, a new scenario is in
 /// US dollars and an existing one keeps its currency.
 /// </summary>
-public class SaveInvestmentScenarioRequestDto
+public class SaveInvestmentScenarioRequestDto : IInvestmentScenarioInputs
 {
     public string Name { get; set; } = string.Empty;
 

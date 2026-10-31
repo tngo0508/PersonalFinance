@@ -290,10 +290,11 @@ public sealed partial class InvestmentCalculatorRenderingTests : IAsyncLifetime
         Assert.Contains("data-years=\"1\"", Tag(page, "data-goal-id=\"5\""), StringComparison.Ordinal);
         Assert.DoesNotContain("data-goal-id=\"3\"", page, StringComparison.Ordinal);
         Assert.DoesNotContain("id=\"icGoalFromUnavailable\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("id=\"icGoalFromNoRate\"", page, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task SavingsGoalPicker_ConvertsAGoalInAnotherCurrency_AndLeavesOutOneWithNoRate()
+    public async Task SavingsGoalPicker_ConvertsAGoalInAnotherCurrency_AndLeavesOutOneWithNoRate_SayingSo()
     {
         SavingsGoalDto house = Goal(6, "House deposit", 270_000_000m, targetDate: null);
         house.CurrencyCode = "VND";
@@ -308,6 +309,8 @@ public sealed partial class InvestmentCalculatorRenderingTests : IAsyncLifetime
         Assert.Contains("data-target=\"10851\"", Tag(page, "data-goal-id=\"6\""), StringComparison.Ordinal);
         Assert.Contains("House deposit: about $10,851, converted from VND", page, StringComparison.Ordinal);
         Assert.DoesNotContain("data-goal-id=\"7\"", page, StringComparison.Ordinal);
+        Assert.Contains("id=\"icGoalFromNoRate\">Some Savings Goals in another currency are not listed", page,
+            StringComparison.Ordinal);
     }
 
     [Fact]

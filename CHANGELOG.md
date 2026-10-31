@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.0.0] - 2026-10-30
+
+### Added
+
+- **Saved Investment Scenarios**: you can save an Investment Calculator plan under a name, with an optional note, and load, compare, rename, duplicate or delete it later from a Saved panel, on any device.
+  - A scenario keeps the inputs only (with the what-if timing and, for a goal, its target and question); the projection is worked out again each time it loads.
+  - You keep up to 20; a scenario saved in another currency is listed but can't be loaded until you switch to that Reporting Currency.
+  - When the scenarios can't be loaded, the Saved panel says so, Save is disabled and the calculator keeps working.
+  - Schema change: a new `InvestmentScenarios` table (migration `20261031055450_AddInvestmentScenarios`), included in the data export and the account purge.
+- **Reach a goal**: a goal tile works out how much a month reaches a goal amount in your plan's years, or how many years your current contribution takes, with a progress bar and the goal drawn on the balance chart.
+  - "Use this amount" puts the monthly answer into your plan; a goal in today's money grows with inflation.
+  - A delayed start and stopped contributions are taken into account, and a goal no monthly amount can reach says so.
+- **Start from a Savings Goal**: the goal tile can fill in the target and years of one of your active Savings Goals, converting a goal in another currency at the latest rate; your Savings Goals never change.
+  - Goals with no exchange rate yet are left out, with a note saying some are missing.
+- **Compare what-ifs**: a Compare view previews one change at a time (more a month, a higher return, starting later, stopping contributions, a higher fee) as a dashed line, and applies it to your plan or adds it to a comparison of up to three lines.
+  - Each compared what-if follows your plan and its one change can be edited in place; a full comparison draws no extra preview line and says why it can't take another.
+- **Inflation and year by year**: a Today's money switch shows every amount at today's prices, and the page adds a yearly inflation assumption, bars of what each year adds and a year-by-year table.
+
+### Changed
+
+- **Investment Calculator redesign**: the calculator becomes a summary bar, a slider rail for your plan and a grid of interactive charts (balance over time, where the balance comes from, what fees cost) in your Reporting Currency.
+  - New assumptions: a yearly contribution increase, a yearly fund fee and assumed-return presets matching Money Priorities.
+  - The charts can be read by hovering or with the keyboard, and the estimate links to the disclaimer.
+
 ## [16.17.0] - 2026-10-30
 
 ### Changed

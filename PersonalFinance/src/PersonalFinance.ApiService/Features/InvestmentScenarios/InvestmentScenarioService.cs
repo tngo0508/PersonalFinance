@@ -64,8 +64,7 @@ internal sealed class InvestmentScenarioService : IInvestmentScenarioService
 
     /// <inheritdoc />
     public Task<InvestmentScenarioDto?> GetAsync(string userId, int id, CancellationToken cancellationToken = default) =>
-        _db.InvestmentScenarios.AsNoTracking()
-            .Where(s => s.UserId == userId && s.Id == id)
+        Owned(userId, id).AsNoTracking()
             .Select(ToDto)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -110,8 +109,7 @@ internal sealed class InvestmentScenarioService : IInvestmentScenarioService
     public async Task<InvestmentScenarioDto?> DuplicateAsync(string userId, int id, string name,
         CancellationToken cancellationToken = default)
     {
-        InvestmentScenario? source = await _db.InvestmentScenarios.AsNoTracking()
-            .FirstOrDefaultAsync(s => s.UserId == userId && s.Id == id, cancellationToken);
+        InvestmentScenario? source = await Owned(userId, id).AsNoTracking().FirstOrDefaultAsync(cancellationToken);
         if (source is null)
         {
             return null;
@@ -124,20 +122,9 @@ internal sealed class InvestmentScenarioService : IInvestmentScenarioService
             CreatedAt = Now(),
             Name = name.Trim(),
             Note = source.Note,
-            Mode = source.Mode,
-            CurrencyCode = source.CurrencyCode,
-            InitialAmount = source.InitialAmount,
-            MonthlyContribution = source.MonthlyContribution,
-            AssumedReturn = source.AssumedReturn,
-            Years = source.Years,
-            ContributionIncrease = source.ContributionIncrease,
-            Inflation = source.Inflation,
-            Fee = source.Fee,
-            DelayYears = source.DelayYears,
-            StopAfterYear = source.StopAfterYear,
-            GoalTarget = source.GoalTarget,
-            GoalSolveFor = source.GoalSolveFor
+            CurrencyCode = source.CurrencyCode
         };
+        CopyInputs(source, copy);
         _db.InvestmentScenarios.Add(copy);
         await _db.SaveChangesAsync(cancellationToken);
         return ToDtoCompiled(copy);
@@ -159,7 +146,11 @@ internal sealed class InvestmentScenarioService : IInvestmentScenarioService
     }
 
     private Task<InvestmentScenario?> FindAsync(string userId, int id, CancellationToken cancellationToken) =>
-        _db.InvestmentScenarios.FirstOrDefaultAsync(s => s.UserId == userId && s.Id == id, cancellationToken);
+        Owned(userId, id).FirstOrDefaultAsync(cancellationToken);
+
+    /// <summary>The Account's scenario with this id (none for another Account's, or a deleted one).</summary>
+    private IQueryable<InvestmentScenario> Owned(string userId, int id) =>
+        _db.InvestmentScenarios.Where(s => s.UserId == userId && s.Id == id);
 
     private async Task EnsureRoomAsync(string userId, CancellationToken cancellationToken)
     {
@@ -176,21 +167,27 @@ internal sealed class InvestmentScenarioService : IInvestmentScenarioService
     /// <summary>Writes the request's name, note and inputs; a Grow scenario keeps no goal.</summary>
     private static void Apply(InvestmentScenario scenario, SaveInvestmentScenarioRequestDto request)
     {
-        bool goal = request.Mode == InvestmentScenarioMode.Goal;
         scenario.Name = request.Name.Trim();
         scenario.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
-        scenario.Mode = request.Mode;
-        scenario.InitialAmount = request.InitialAmount;
-        scenario.MonthlyContribution = request.MonthlyContribution;
-        scenario.AssumedReturn = request.AssumedReturn;
-        scenario.Years = request.Years;
-        scenario.ContributionIncrease = request.ContributionIncrease;
-        scenario.Inflation = request.Inflation;
-        scenario.Fee = request.Fee;
-        scenario.DelayYears = request.DelayYears;
-        scenario.StopAfterYear = request.StopAfterYear;
-        scenario.GoalTarget = goal ? request.GoalTarget : null;
-        scenario.GoalSolveFor = goal ? request.GoalSolveFor : null;
+        CopyInputs(request, scenario);
+    }
+
+    /// <summary>Copies the twelve calculator inputs; a Grow scenario keeps no goal.</summary>
+    private static void CopyInputs(IInvestmentScenarioInputs source, InvestmentScenario target)
+    {
+        bool goal = source.Mode == InvestmentScenarioMode.Goal;
+        target.Mode = source.Mode;
+        target.InitialAmount = source.InitialAmount;
+        target.MonthlyContribution = source.MonthlyContribution;
+        target.AssumedReturn = source.AssumedReturn;
+        target.Years = source.Years;
+        target.ContributionIncrease = source.ContributionIncrease;
+        target.Inflation = source.Inflation;
+        target.Fee = source.Fee;
+        target.DelayYears = source.DelayYears;
+        target.StopAfterYear = source.StopAfterYear;
+        target.GoalTarget = goal ? source.GoalTarget : null;
+        target.GoalSolveFor = goal ? source.GoalSolveFor : null;
     }
 
     private DateTime Now() => _timeProvider.GetUtcNow().UtcDateTime;

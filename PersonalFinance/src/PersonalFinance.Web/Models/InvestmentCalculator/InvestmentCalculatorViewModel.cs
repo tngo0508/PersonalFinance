@@ -46,6 +46,12 @@ public sealed class InvestmentCalculatorViewModel
     /// </summary>
     public bool SavingsGoalsUnavailable { get; init; }
 
+    /// <summary>
+    /// How many active Savings Goals the picker leaves out because there is no exchange rate to show their target in
+    /// the Reporting Currency yet; above zero, the tile says so.
+    /// </summary>
+    public int SavingsGoalsWithoutRate { get; init; }
+
     /// <summary>The Account's saved Investment Scenarios, last edited first (#592); the page script lists them.</summary>
     public IReadOnlyList<InvestmentScenarioDto> Scenarios { get; init; } = [];
 

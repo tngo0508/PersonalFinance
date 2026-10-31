@@ -325,3 +325,29 @@ test('a lever stays within the bounds: a 15% return cannot go higher', () => {
     assert.strictEqual(math.lever(plan({ years: 3 }), 'delay').inputs.delay, 2);
     assert.strictEqual(math.lever(plan(), 'nope'), null);
 });
+
+test('a starting amount that covers the goal only arrives when a delayed plan starts', () => {
+    const inputs = plan({ initial: 50000, delay: 5 });
+
+    for (const mode of ['monthly', 'years']) {
+        const answer = math.solveGoal(inputs, { target: 20000, mode });
+        assert.strictEqual(answer.kind, 'already', mode);
+        assert.strictEqual(answer.year, 5, mode);
+    }
+});
+
+test('the stop lever stops after a delayed start, never before it', () => {
+    assert.strictEqual(math.lever(plan({ delay: 15 }), 'stop').inputs.stopAt, 16);
+    assert.strictEqual(math.lever(plan({ delay: 3 }), 'stop').inputs.stopAt, 10);
+});
+
+test('a goal is unreachable when the deposits stop before they start, with the shortfall at the end of the plan', () => {
+    // 1,000 at 0% for 10 years never moves: no monthly contribution changes that.
+    const stopped = plan({ initial: 1000, monthly: 500, rate: 0, years: 10, stopAt: 0 });
+    const answer = math.solveGoal(stopped, { target: 5000, mode: 'monthly' });
+
+    assert.strictEqual(answer.kind, 'unreachable');
+    assert.strictEqual(answer.year, 10);
+    assertCents(answer.shortfall, 4000);
+    assert.strictEqual(math.solveGoal(plan({ delay: 5, stopAt: 5 }), { target: 1e7, mode: 'monthly' }).kind, 'unreachable');
+});

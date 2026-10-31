@@ -20,6 +20,25 @@
     const NAME_MAX = 100;
 
     /**
+     * The scenario enums as the server spells them (InvestmentScenarioMode, InvestmentGoalSolveFor), with the goal
+     * tile's question ('monthly' or 'years', InvestmentMath.solveGoal's mode) mapped to its solve-for value.
+     */
+    const MODES = Object.freeze({
+        grow: 'Grow',
+        goal: 'Goal',
+        solveFor: Object.freeze({ monthly: 'Monthly', years: 'Years' })
+    });
+
+    /**
+     * The goal tile's question for a scenario's solve-for value.
+     * @param {string|null} solveFor - 'Monthly', 'Years' or null.
+     * @returns {string} 'years' or 'monthly'.
+     */
+    function goalModeOf (solveFor) {
+        return solveFor === MODES.solveFor.years ? 'years' : 'monthly';
+    }
+
+    /**
      * Round to cents, as the server stores amounts and rates.
      * @param {number} value - The value.
      * @returns {number} The value with at most two decimals.
@@ -53,7 +72,7 @@
      * @returns {string} The key.
      */
     function inputsKey (s) {
-        const goal = s.mode === 'Goal';
+        const goal = s.mode === MODES.goal;
         return JSON.stringify([
             s.mode, cents(s.initialAmount), cents(s.monthlyContribution), cents(s.assumedReturn), Number(s.years),
             cents(s.contributionIncrease), cents(s.inflation), cents(s.fee), Number(s.delayYears) || 0,
@@ -156,7 +175,7 @@
             return {
                 name,
                 note: note || null,
-                mode: hasGoal ? 'Goal' : 'Grow',
+                mode: hasGoal ? MODES.goal : MODES.grow,
                 currencyCode: deps.currency,
                 initialAmount: cents(plan.initial),
                 monthlyContribution: cents(plan.monthly),
@@ -168,7 +187,7 @@
                 delayYears: plan.delay || 0,
                 stopAfterYear: plan.stopAt === null || plan.stopAt === undefined ? null : plan.stopAt,
                 goalTarget: hasGoal ? cents(goal.target) : null,
-                goalSolveFor: hasGoal ? (goal.mode === 'years' ? 'Years' : 'Monthly') : null
+                goalSolveFor: hasGoal ? (MODES.solveFor[goal.mode] || MODES.solveFor.monthly) : null
             };
         }
 
@@ -289,7 +308,7 @@
             const parts = [t('Edited', {
                 date: PFI18n.formatDate(new Date(s.lastEditedAtUtc), { year: 'numeric', month: 'short', day: 'numeric' })
             })];
-            if (s.mode === 'Goal') {
+            if (s.mode === MODES.goal) {
                 parts.push(t('Goal', { amount: deps.money(Number(s.goalTarget), s.currencyCode) }));
             }
             meta.textContent = parts.join(' · ');
@@ -787,5 +806,5 @@
         };
     }
 
-    window.InvestmentScenarios = { create };
+    window.InvestmentScenarios = Object.freeze({ create, MODES, goalModeOf });
 })();

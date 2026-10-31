@@ -1,4 +1,5 @@
 using PersonalFinance.Shared.Constants;
+using PersonalFinance.Shared.DTOs.InvestmentScenarios;
 using PersonalFinance.Shared.Enums;
 
 namespace PersonalFinance.Data.Entities;
@@ -7,7 +8,7 @@ namespace PersonalFinance.Data.Entities;
 /// An Investment Scenario (GLOSSARY.md): a saved, named set of Investment Calculator inputs, never results (#592).
 /// The page works the projection out from these inputs each time, so the server never computes one.
 /// </summary>
-public class InvestmentScenario : AuditableEntity
+public class InvestmentScenario : AuditableEntity, IInvestmentScenarioInputs
 {
     /// <summary>The scenario's name (at most 100 characters).</summary>
     public string Name { get; set; } = string.Empty;

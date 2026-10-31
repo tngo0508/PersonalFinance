@@ -1,3 +1,4 @@
+using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
 
 namespace PersonalFinance.Web.Models.InvestmentCalculator;
@@ -16,12 +17,6 @@ namespace PersonalFinance.Web.Models.InvestmentCalculator;
 /// the goal is in the Reporting Currency.</param>
 public sealed record SavingsGoalOption(int Id, string Name, decimal Target, int? Years, string? ConvertedFrom)
 {
-    /// <summary>The calculator's shortest plan, in years (investment-math.js LIMITS.years).</summary>
-    public const int MinYears = 1;
-
-    /// <summary>The calculator's longest plan, in years.</summary>
-    public const int MaxYears = 50;
-
     private const double DaysPerYear = 365.25;
 
     /// <summary>
@@ -47,6 +42,13 @@ public sealed record SavingsGoalOption(int Id, string Name, decimal Target, int?
         return options;
     }
 
+    /// <summary>
+    /// How many goals not yet reached <see cref="From"/> leaves out because their target cannot be shown in
+    /// <paramref name="currency"/> (no exchange rate yet), so the picker can say some are missing.
+    /// </summary>
+    public static int CountWithoutRate(IEnumerable<SavingsGoalDto> goals, string currency) =>
+        goals.Count(goal => !goal.IsCompleted && TargetIn(goal, currency) is null);
+
     private static decimal? TargetIn(SavingsGoalDto goal, string currency)
     {
         if (string.Equals(goal.CurrencyCode, currency, StringComparison.OrdinalIgnoreCase))
@@ -68,6 +70,6 @@ public sealed record SavingsGoalOption(int Id, string Name, decimal Target, int?
 
         int days = DateOnly.FromDateTime(date).DayNumber - today.DayNumber;
         int years = (int)Math.Ceiling(Math.Max(0, days) / DaysPerYear);
-        return Math.Clamp(years, MinYears, MaxYears);
+        return Math.Clamp(years, InvestmentCalculatorLimits.YearsMin, InvestmentCalculatorLimits.YearsMax);
     }
 }

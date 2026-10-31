@@ -17,13 +17,53 @@
     /** At most this many variants beside the plan: three lines on the chart. */
     const MAX_VARIANTS = 2;
     const STATUS_DELAY_MS = 600;
-    /** The editor of each lever's input on the comparison: the label key and the field's bounds. */
-    const EDITORS = {
-        monthly: { label: 'Monthly', step: 'any', min: () => 0, max: (deps) => deps.monthlyMax() },
-        rate: { label: 'Rate', step: '0.5', min: () => InvestmentMath.LIMITS.rate.min, max: () => InvestmentMath.LIMITS.rate.max },
-        delay: { label: 'Delay', step: '1', min: () => 0, max: (deps, inputs) => inputs.years - 1 },
-        stopAt: { label: 'Stop', step: '1', min: () => 0, max: (deps, inputs) => inputs.years },
-        fee: { label: 'Fee', step: '0.05', min: () => InvestmentMath.LIMITS.fee.min, max: () => InvestmentMath.LIMITS.fee.max }
+    /**
+     * Every lever, by the plan input it changes (InvestmentMath.LEVERS gives each lever key's field): the suffix of its
+     * Js.Lever / Js.Variant / Js.Edit keys, the arguments of its button label (from the step and the variant) and of
+     * its variant name (from the variant's inputs), and its editor's step and bounds on the comparison.
+     */
+    const LEVERS = {
+        monthly: {
+            name: 'Monthly',
+            lever: (ctx) => ({ amount: ctx.deps.money(ctx.monthlyStep) }),
+            variant: (deps, inputs) => ({ amount: deps.money(inputs.monthly) }),
+            step: 'any',
+            min: () => 0,
+            max: (deps) => deps.monthlyMax()
+        },
+        rate: {
+            name: 'Rate',
+            lever: (ctx) => ({ points: ctx.deps.percent(InvestmentMath.LEVER_STEPS.rate) }),
+            variant: (deps, inputs) => ({ rate: deps.percent(inputs.rate) }),
+            step: '0.5',
+            min: () => InvestmentMath.LIMITS.rate.min,
+            max: () => InvestmentMath.LIMITS.rate.max
+        },
+        delay: {
+            name: 'Delay',
+            lever: () => ({ years: PFI18n.plural('InvestmentCalculator.Js.Years', InvestmentMath.LEVER_STEPS.delay) }),
+            variant: (deps, inputs) => ({ year: PFI18n.formatNumber(inputs.delay) }),
+            step: '1',
+            min: () => 0,
+            max: (deps, inputs) => inputs.years - 1
+        },
+        stopAt: {
+            name: 'Stop',
+            lever: (ctx) => ({ year: PFI18n.formatNumber(ctx.variant.inputs.stopAt) }),
+            variant: (deps, inputs) => ({ year: PFI18n.formatNumber(inputs.stopAt) }),
+            step: '1',
+            // Stopping in or before the delay's last year would mean no deposits at all.
+            min: (deps, inputs) => Math.min(inputs.delay + 1, inputs.years),
+            max: (deps, inputs) => inputs.years
+        },
+        fee: {
+            name: 'Fee',
+            lever: (ctx) => ({ points: ctx.deps.percent(InvestmentMath.LEVER_STEPS.fee) }),
+            variant: (deps, inputs) => ({ fee: deps.percent(inputs.fee) }),
+            step: '0.05',
+            min: () => InvestmentMath.LIMITS.fee.min,
+            max: () => InvestmentMath.LIMITS.fee.max
+        }
     };
 
     /**
@@ -88,15 +128,13 @@
          * @returns {string} E.g. +$100 a month.
          */
         function leverLabel (key) {
-            const steps = InvestmentMath.LEVER_STEPS;
-            const t = (name, args) => PFI18n.t(`InvestmentCalculator.Js.Lever.${name}`, args);
-            switch (key) {
-            case 'monthly': return t('Monthly', { amount: deps.money(Number.isFinite(monthlyStep) ? monthlyStep : steps.monthly) });
-            case 'rate': return t('Rate', { points: deps.percent(steps.rate) });
-            case 'delay': return t('Delay', { years: PFI18n.plural('InvestmentCalculator.Js.Years', steps.delay) });
-            case 'stop': return t('Stop', { year: PFI18n.formatNumber(variantOf('stop').inputs.stopAt) });
-            default: return t('Fee', { points: deps.percent(steps.fee) });
+            const variant = variantOf(key);
+            const lever = variant ? LEVERS[variant.field] : null;
+            if (!lever) {
+                return '';
             }
+            const step = Number.isFinite(monthlyStep) ? monthlyStep : InvestmentMath.LEVER_STEPS.monthly;
+            return PFI18n.t(`InvestmentCalculator.Js.Lever.${lever.name}`, lever.lever({ deps, monthlyStep: step, variant }));
         }
 
         /**
@@ -106,15 +144,8 @@
          * @returns {string} The name.
          */
         function variantName (field, inputs) {
-            const t = (name, args) => PFI18n.t(`InvestmentCalculator.Js.Variant.${name}`, args);
-            switch (field) {
-            case 'monthly': return t('Monthly', { amount: deps.money(inputs.monthly) });
-            case 'rate': return t('Rate', { rate: deps.percent(inputs.rate) });
-            case 'delay': return t('Delay', { year: PFI18n.formatNumber(inputs.delay) });
-            case 'stopAt': return t('Stop', { year: PFI18n.formatNumber(inputs.stopAt) });
-            case 'fee': return t('Fee', { fee: deps.percent(inputs.fee) });
-            default: return '';
-            }
+            const lever = field ? LEVERS[field] : null;
+            return lever ? PFI18n.t(`InvestmentCalculator.Js.Variant.${lever.name}`, lever.variant(deps, inputs)) : '';
         }
 
         /**
@@ -189,9 +220,15 @@
                     difference: differenceText(result.final - base.final)
                 });
             }
+            // A full comparison already shows three lines: the preview is not drawn and cannot be added.
+            const full = entries.length >= MAX_VARIANTS;
             const add = byId('icPreviewAdd');
             if (add) {
-                add.disabled = entries.length >= MAX_VARIANTS;
+                add.disabled = full;
+            }
+            const fullNote = byId('icPreviewFull');
+            if (fullNote) {
+                fullNote.hidden = !full;
             }
         }
 
@@ -252,14 +289,14 @@
             diff.className = 'ic-cmp__diff';
             body.appendChild(diff);
 
-            const editor = entry.field ? EDITORS[entry.field] : null;
+            const editor = entry.field ? LEVERS[entry.field] : null;
             if (editor) {
                 const id = `icCmpEdit${entry.id}`;
                 const wrap = document.createElement('div');
                 wrap.className = 'ic-cmp__edit';
                 const label = document.createElement('label');
                 label.htmlFor = id;
-                label.textContent = PFI18n.t(`InvestmentCalculator.Js.Edit.${editor.label}`);
+                label.textContent = PFI18n.t(`InvestmentCalculator.Js.Edit.${editor.name}`);
                 const input = document.createElement('input');
                 input.type = 'number';
                 input.id = id;
@@ -271,8 +308,7 @@
                     if (!Number.isFinite(value)) {
                         return;
                     }
-                    const limit = editor.max(deps, plan);
-                    entry.value = Number.isFinite(limit) ? Math.min(value, limit) : value;
+                    entry.value = withinEditor(entry.field, value);
                     refresh();
                     announce(`${entryName(entry)}: ${final.textContent}, ${diff.textContent}`, true);
                 });
@@ -339,7 +375,7 @@
                 }
                 const input = row.querySelector('.ic-cmp__input');
                 if (input) {
-                    const editor = EDITORS[entry.field];
+                    const editor = LEVERS[entry.field];
                     input.min = String(editor.min(deps, plan));
                     const max = editor.max(deps, plan);
                     input.max = Number.isFinite(max) ? String(max) : '';
@@ -372,8 +408,21 @@
          */
         function inputsOf (entry) {
             return entry.field
-                ? InvestmentMath.normalize(Object.assign({}, plan, { [entry.field]: entry.value }))
+                ? InvestmentMath.normalize(Object.assign({}, plan, { [entry.field]: withinEditor(entry.field, entry.value) }))
                 : entry.inputs;
+        }
+
+        /**
+         * A lever input's value within its editor's bounds for the current plan (e.g. a stop year after the delay).
+         * @param {string} field - The changed input.
+         * @param {number} value - The value.
+         * @returns {number} The bounded value.
+         */
+        function withinEditor (field, value) {
+            const lever = LEVERS[field];
+            const min = lever.min(deps, plan);
+            const max = lever.max(deps, plan);
+            return Math.max(min, Number.isFinite(max) ? Math.min(value, max) : value);
         }
 
         /**
@@ -399,7 +448,7 @@
          * @returns {object|null} The added entry, or null when the comparison is full or the entry is neither.
          */
         function add (entry) {
-            const change = entry && entry.field && EDITORS[entry.field] && Number.isFinite(Number(entry.value));
+            const change = entry && entry.field && LEVERS[entry.field] && Number.isFinite(Number(entry.value));
             if (entries.length >= MAX_VARIANTS || !entry || (!change && !entry.inputs)) {
                 return null;
             }
@@ -450,12 +499,13 @@
             const lines = [{ name: PFI18n.t('InvestmentCalculator.Js.Compare.Plan'), result: shownOf(plan) }]
                 .concat(entries.map((entry) => ({ name: entryName(entry), result: shownOf(inputsOf(entry)) })));
             const series = lines.map((line, i) => ({ name: line.name, color: colours[i], width: i === 0 ? 3 : 2.5, values: values(line.result) }));
-            const variant = previewKey ? variantOf(previewKey) : null;
+            // At most three lines: a full comparison draws no preview (the preview panel says so).
+            const variant = previewKey && entries.length < MAX_VARIANTS ? variantOf(previewKey) : null;
             if (variant) {
                 series.push({
                     name: PFI18n.t('InvestmentCalculator.Js.Preview.Series', { name: variantName(variant.field, variant.inputs) }),
-                    // The colour it would take in the comparison; the plan's when the comparison is full.
-                    color: entries.length < MAX_VARIANTS ? colours[entries.length + 1] : colours[0],
+                    // The colour it would take in the comparison.
+                    color: colours[entries.length + 1],
                     dash: '6 4',
                     width: 2.5,
                     values: values(shownOf(variant.inputs))
