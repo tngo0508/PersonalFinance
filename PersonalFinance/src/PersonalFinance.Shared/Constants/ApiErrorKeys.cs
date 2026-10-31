@@ -535,4 +535,68 @@ public static class ApiErrorKeys
         /// <summary>A finish was posted for a Lesson that is not open yet.</summary>
         public const string LessonLocked = "Learning.Error.LessonLocked";
     }
+
+    /// <summary>The keys of the Investment Scenarios Feature's rejections (#592).</summary>
+    public static class InvestmentScenarios
+    {
+        /// <summary>A scenario's name was empty.</summary>
+        public const string NameRequired = "InvestmentScenarios.Validation.NameRequired";
+
+        /// <summary>A scenario's name was longer than the <c>max</c> argument.</summary>
+        public const string NameTooLong = "InvestmentScenarios.Validation.NameTooLong";
+
+        /// <summary>A scenario's note was longer than the <c>max</c> argument.</summary>
+        public const string NoteTooLong = "InvestmentScenarios.Validation.NoteTooLong";
+
+        /// <summary>A scenario's mode was neither Grow nor Goal.</summary>
+        public const string ModeInvalid = "InvestmentScenarios.Validation.ModeInvalid";
+
+        /// <summary>A scenario named a currency that is not supported.</summary>
+        public const string CurrencyUnsupported = "InvestmentScenarios.Validation.CurrencyUnsupported";
+
+        /// <summary>The starting amount was outside the <c>min</c> and <c>max</c> amount arguments.</summary>
+        public const string InitialAmountRange = "InvestmentScenarios.Validation.InitialAmountRange";
+
+        /// <summary>The monthly contribution was outside the <c>min</c> and <c>max</c> amount arguments.</summary>
+        public const string MonthlyContributionRange = "InvestmentScenarios.Validation.MonthlyContributionRange";
+
+        /// <summary>The goal amount was outside the <c>min</c> and <c>max</c> amount arguments.</summary>
+        public const string GoalTargetRange = "InvestmentScenarios.Validation.GoalTargetRange";
+
+        /// <summary>A Goal scenario had no goal amount.</summary>
+        public const string GoalTargetRequired = "InvestmentScenarios.Validation.GoalTargetRequired";
+
+        /// <summary>A Goal scenario did not say what to solve for, or named an unknown question.</summary>
+        public const string GoalSolveForRequired = "InvestmentScenarios.Validation.GoalSolveForRequired";
+
+        /// <summary>An amount had more than two decimal places.</summary>
+        public const string WholeCents = "InvestmentScenarios.Validation.WholeCents";
+
+        /// <summary>The assumed return was outside the <c>min</c> and <c>max</c> number arguments (percent).</summary>
+        public const string AssumedReturnRange = "InvestmentScenarios.Validation.AssumedReturnRange";
+
+        /// <summary>The years were outside the <c>min</c> and <c>max</c> number arguments.</summary>
+        public const string YearsRange = "InvestmentScenarios.Validation.YearsRange";
+
+        /// <summary>The yearly raise was outside the <c>min</c> and <c>max</c> number arguments (percent).</summary>
+        public const string ContributionIncreaseRange = "InvestmentScenarios.Validation.ContributionIncreaseRange";
+
+        /// <summary>The inflation was outside the <c>min</c> and <c>max</c> number arguments (percent).</summary>
+        public const string InflationRange = "InvestmentScenarios.Validation.InflationRange";
+
+        /// <summary>The fee was outside the <c>min</c> and <c>max</c> number arguments (percent).</summary>
+        public const string FeeRange = "InvestmentScenarios.Validation.FeeRange";
+
+        /// <summary>A rate had more than two decimal places.</summary>
+        public const string RateDecimals = "InvestmentScenarios.Validation.RateDecimals";
+
+        /// <summary>The start delay was negative or not shorter than the plan.</summary>
+        public const string DelayRange = "InvestmentScenarios.Validation.DelayRange";
+
+        /// <summary>The year deposits stop was negative or after the plan ends.</summary>
+        public const string StopAfterYearRange = "InvestmentScenarios.Validation.StopAfterYearRange";
+
+        /// <summary>The Account already keeps the most scenarios allowed (the <c>max</c> argument).</summary>
+        public const string LimitReached = "InvestmentScenarios.Error.LimitReached";
+    }
 }

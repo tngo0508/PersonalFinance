@@ -12,6 +12,7 @@ using PersonalFinance.ApiService.Features.CurrencyConverter;
 using PersonalFinance.ApiService.Features.Dashboard;
 using PersonalFinance.ApiService.Features.Feedback;
 using PersonalFinance.ApiService.Features.GoogleDrive;
+using PersonalFinance.ApiService.Features.InvestmentScenarios;
 using PersonalFinance.ApiService.Features.Learning;
 using PersonalFinance.ApiService.Features.MoneyPriorities;
 using PersonalFinance.ApiService.Features.NetWorth;
@@ -72,6 +73,7 @@ try
         .AddDashboardFeature()
         .AddSearchFeature()
         .AddSavingsGoalsFeature()
+        .AddInvestmentScenariosFeature()
         .AddCommunityFeature()
         .AddWatchlistFeature()
         .AddResearchFeature(builder.Configuration, builder.Environment)

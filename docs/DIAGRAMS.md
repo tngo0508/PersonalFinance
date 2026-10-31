@@ -216,14 +216,16 @@ JavaScript paths are under `Web/wwwroot/js/`.
 | GoogleDrive | `GoogleDriveController` (`api/GoogleDrive`) | `IDriveConnectionService`, `ISpreadsheetReader`, `IGoogleDriveFileSource` (internal) | `GoogleDriveConnection`, `GoogleDriveCachedFile` | `IGoogleDriveApi` | `GoogleDrive` | `google-drive/` | Typed `HttpClient`s to Google Drive; a 1,450-line static parser; see [13](#13-google-drive-and-spreadsheet-analysis) |
 | Learning | `LearningController` (`api/learning`, `[AllowAnonymous]`), `JourneyController` (`api/learning/journey`) | `ILearningContent`, `ILearningLibraryService`, `IJourneyService` | `LessonCompletion`, `ReviewCardState` (writes `UserPreference.ShowJourneyOnDashboard`; reads its JSON content folder, `Features/Learning/Content/`, at startup) | `ILearningApi` | `Learning` (public; also serves `/sitemap.xml` and `/robots.txt`) | `learning/` | Content is code (ADR 0019): Term Entries and Lessons are files loaded into memory, Vietnamese falling back to English per field; xUnit content checks (`tests/.../Learning/`) guard the files. The owner drafts new content with the `/atelier-draft` skill, whose gate `Web/tools/atelier-excerpts.js` passes it only allowlisted draft + cite excerpts. Anonymous reads; the nav's "Learning" entry asks `ILearningLibraryStatus` (cached) and stays hidden while the Library is empty. The Journey's open Lesson is computed on read from the finishes and their time zones (`Domain/JourneyClock`, on Infrastructure's `BrowserTimeZone`), never stored; the Lesson page opens with today's Review from Day 2 on (Web `MarkCard` posts each card's mark); in Development, `E2E_SEED_LEARNING` seeds a learner past Lesson 1 for the E2E smoke. The Dashboard reads the Journey for its quiet card, and Web `ShowOnDashboard` (the card's Hide, the Atelier page's switch) writes the preference |
 | NetWorth | `NetWorthController` (`api/NetWorth`) | `INetWorthParametersService` | `NetWorthParameters` | `INetWorthApi` | `Networth` | `networth/` | `calculate` is pure: a static Validator and the static `NetWorthProjectionService`, no Service, no database |
+| InvestmentScenarios | `InvestmentScenariosController` (`api/InvestmentScenarios`) | `IInvestmentScenarioService` | `InvestmentScenario` | `IInvestmentScenariosApi` | `InvestmentScenarios` (JSON only); `InvestmentCalculator` lists them | `investment-calculator/investment-scenarios.js` | Saved Investment Scenarios: list, save, update, rename, duplicate, soft delete; at most 20 per user (409 past that); the projection stays client-side |
 | Research | `ResearchController` (`api/Research`), `CompaniesController` (`api/Research/companies`) | `IResearchService`, `ICompanyProfileService`, ten `IResearchDatasetRefresher` (one fills the exchange rates), `ResearchSnapshotStore` | `ResearchSnapshot`, `ExchangeRate` (not user-owned) | `IResearchApi` | `Research` | `research/` (12 files) | The largest Feature: five external adapters, `Domain/` with 56 pure types, a refresh job; see [10](#10-research-pipeline) |
 | SavingsGoals | `SavingsGoalsController` (`api/SavingsGoals`, Contributions under `{goalId}/contributions`) | `ISavingsGoalService` | `SavingsGoal`, `Contribution` | `ISavingsGoalsApi` | `SavingsGoals` | `savingsgoals/` | Validators for a new goal, a Contribution and a balance correction; the saved amount is the Contribution total, cached on the goal in the same save; each goal's Pace is worked out on read (`SavingsGoalPace`); raises each milestone Notification once |
 | Search | `SearchController` (`api/Search`) | `ISearchService` | none (reads `BudgetTransaction`, `BudgetCategory`, `SpreadsheetTransactionRecord`, `SavingsGoal`) | `ISearchApi` | `Search` (JSON only) | `core/search.js` | Read-only; picks the source through `IBudgetDataSourceService`; a Learning group of Term Entries comes last, read through Learning's `ILearningLibraryService` (#522) |
 | Watchlist | `WatchlistController` (`api/Watchlist`), `NewsController` (`api/News`) | `IWatchlistService`, `INewsService`, `INewsFeedClient` (internal) | `SavedArticle` | `IWatchlistApi`, `INewsApi` | `Watchlist` (JSON only), `News` | `news/` | RSS adapter with `IMemoryCache` (5 minutes); `NewsService` has no database |
 | Notifications (Infrastructure) | `NotificationController` (`api/Notification`) | `INotificationService` | `Notification` | `INotificationApi` | `Notification` (JSON only) | `core/notifications.js` | Shared by three Features; see [9](#9-notifications) |
 
-Web controllers with no ApiService Feature: `Home` (landing page, `landing/skyline.js`), `InvestmentCalculator`
-(client-side only, `investment-calculator/`) and `Legal`. Every Feature registers itself in
+Web controllers with no ApiService Feature: `Home` (landing page, `landing/skyline.js`) and `Legal`. `InvestmentCalculator`
+works out its projection client-side (`investment-calculator/`) and reads only the InvestmentScenarios and SavingsGoals
+Features. Every Feature registers itself in
 `ApiService/Features/<Feature>/<Feature>Feature.cs`, called in order from `ApiService/Program.cs`; every Refit Contract
 is registered in `Web/Infrastructure/InternalApiClientExtensions.cs`.
 
@@ -318,6 +320,19 @@ erDiagram
         string Note "nullable, max 200"
         int Kind "ContributionKind: Regular=0, Opening=1, Adjustment=2"
     }
+    InvestmentScenario {
+        int Id PK
+        string UserId "indexed"
+        string CurrencyCode "char(3), ISO 4217, default USD"
+        string Name "max 100"
+        string Note "nullable, max 500"
+        int Mode "InvestmentScenarioMode: Grow=1, Goal=2"
+        decimal InitialAmount "18,2, plus MonthlyContribution"
+        decimal AssumedReturn "5,2, plus ContributionIncrease, Inflation, Fee"
+        int Years "1 to 50, plus DelayYears and nullable StopAfterYear"
+        decimal GoalTarget "18,2, nullable, Goal mode only"
+        int GoalSolveFor "nullable: Monthly=1, Years=2"
+    }
     NetWorthParameters {
         int Id PK
         string UserId UK
@@ -338,7 +353,7 @@ erDiagram
     SavingsGoal ||--o{ Contribution : "SavingsGoalId, Restrict"
 ```
 
-`UserBudgetAllocation` and `NetWorthParameters` have no relationships; they are drawn here, with `SavingsGoal`, because
+`UserBudgetAllocation`, `NetWorthParameters` and `InvestmentScenario` have no relationships; the first two are drawn here, with `SavingsGoal`, because
 the Dashboard and the AI Assistant read them together with the budget data. Deleting a goal soft-deletes its
 Contributions with it.
 
@@ -1059,7 +1074,8 @@ flowchart TB
 
 Drawn from `Web/Infrastructure/UnavailableStateExtensions.cs`, `JsonApiErrorsAttribute.cs`, `ApiErrorMessages.cs`,
 `ApiServiceWarmer.cs`, `ApiServiceStartupWarmer.cs` and `infra/modules/api-service.bicep`. Controllers that use the
-pattern: Budget, Community, Networth, SavingsGoals, Admin (Feedback inbox, Strategy review), Dashboard (its own `Unavailable` view) and Research.
+pattern: Budget, Community, Networth, SavingsGoals, Admin (Feedback inbox, Strategy review), Dashboard (its own `Unavailable` view), Research and
+InvestmentCalculator (the Saved panel only: the calculator itself still works).
 
 ## 12. AI Assistant
 

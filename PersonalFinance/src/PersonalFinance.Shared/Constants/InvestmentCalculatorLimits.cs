@@ -3,8 +3,9 @@ namespace PersonalFinance.Shared.Constants;
 /// <summary>
 /// The Investment Calculator's money inputs (#587): the starting plan, the sliders' ranges and steps, and the largest
 /// amount a field takes. Written in whole US dollars; <see cref="Helpers.MoneyBounds"/> scales each to the Reporting
-/// Currency, so the sliders cover sensible amounts in dong too. Every amount is also at least 0. The rates and years
-/// keep their own ranges in the page's math module (investment-math.js).
+/// Currency, so the sliders cover sensible amounts in dong too. Every amount is also at least 0. The rate and year
+/// bounds below are the same as the page's math module's (investment-math.js); the Investment Scenario validators
+/// (#592) check a saved plan against all of them.
 /// </summary>
 public static class InvestmentCalculatorLimits
 {
@@ -40,4 +41,31 @@ public static class InvestmentCalculatorLimits
 
     /// <summary>The largest goal amount the field takes, in US dollars.</summary>
     public const long GoalMax = 1_000_000_000;
+
+    /// <summary>The highest assumed yearly return, in percent.</summary>
+    public const decimal AssumedReturnMax = 15m;
+
+    /// <summary>The fewest years a plan runs.</summary>
+    public const int YearsMin = 1;
+
+    /// <summary>The most years a plan runs.</summary>
+    public const int YearsMax = 50;
+
+    /// <summary>The highest yearly raise of the monthly contribution, in percent.</summary>
+    public const decimal ContributionIncreaseMax = 10m;
+
+    /// <summary>The highest yearly inflation, in percent.</summary>
+    public const decimal InflationMax = 10m;
+
+    /// <summary>The highest yearly fund fee, in percent.</summary>
+    public const decimal FeeMax = 3m;
+
+    /// <summary>The longest name of an Investment Scenario.</summary>
+    public const int ScenarioNameMaxLength = 100;
+
+    /// <summary>The longest note of an Investment Scenario.</summary>
+    public const int ScenarioNoteMaxLength = 500;
+
+    /// <summary>The most Investment Scenarios an Account keeps (deleted ones do not count).</summary>
+    public const int MaxScenariosPerUser = 20;
 }

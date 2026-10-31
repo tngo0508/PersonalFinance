@@ -164,6 +164,7 @@ A Web controller is named after its route, so its name can differ from its Featu
 | Feedback | `Feedback` |
 | GoogleDrive | `GoogleDrive` |
 | InvestmentCalculator | `InvestmentCalculator` |
+| InvestmentScenarios | `InvestmentScenarios` (JSON only) |
 | CurrencyConverter | `CurrencyConverter` |
 | LandingPage | `Home` |
 | Legal | `Legal` |

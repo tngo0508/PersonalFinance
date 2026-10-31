@@ -43,6 +43,8 @@ public static class UserDataSeed
         db.SavedArticles.Add(new SavedArticle { UserId = userId, Title = $"{marker} article", Url = "https://example.com" });
         db.PriorityWalks.Add(new PriorityWalk
         { UserId = userId, MonthlyAmount = 500m, Purpose = $"{marker} purpose", TreeVersion = 1, Path = "S,Q1,L1", LeafId = "L1" });
+        db.InvestmentScenarios.Add(new InvestmentScenario
+        { UserId = userId, Name = $"{marker} scenario", InitialAmount = 10_000m, MonthlyContribution = 500m, AssumedReturn = 7m, Years = 20 });
 
         db.CommunityPseudonyms.Add(new CommunityPseudonym { UserId = userId, Name = $"{marker} name" });
         var strategy = new CommunityStrategy

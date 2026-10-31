@@ -3,8 +3,8 @@
  * balance chart show a projection; moving the monthly contribution slider changes the headline balance; a rate preset
  * sets the assumed return; the fee tile reacts to a higher fund fee; and the Today's money switch shows the headline
  * and the year-by-year table in today's money; the goal tile returns a monthly contribution that "Use this amount"
- * puts in the rail; on Compare what-ifs a lever previews a dashed line and joins the comparison. Run from ui-test.js as
- * Test 9m. A later slice extends it: a saved scenario that survives a reload.
+ * puts in the rail; on Compare what-ifs a lever previews a dashed line and joins the comparison; and a saved Investment
+ * Scenario survives a reload and loads back into the rail. Run from ui-test.js as Test 9m.
  *
  * Expected texts are read from Resources/i18n/en.json, so a rewording does not break the test.
  */
@@ -153,7 +153,36 @@ async function runInvestmentCalculatorSmoke({browser, base, pass, fail}) {
             'The variant shows its difference from the plan', `"${await textOf(page, '#icCmpList .ic-cmp__item--1 .ic-cmp__diff')}"`);
         await page.click('#icViewOverviewTab');
 
-        // 8. The educational-estimate note links to the Disclaimer.
+        // 8. A saved Investment Scenario survives a reload and loads back into the rail.
+        const savedMonthly = await page.inputValue('#icMonthly');
+        const savedFinal = await textOf(page, '#icFinal');
+        const scenarioName = `E2E plan ${Date.now()}`;
+        await page.click('#icSave');
+        await page.fill('#icSaveName', scenarioName);
+        await page.click('#icSaveNew');
+        await page.waitForFunction(() => document.getElementById('icSavedCount')?.textContent.trim() === '1',
+            null, {timeout: TIMEOUT}).catch(() => {});
+        check(await textOf(page, '#icSavedCount') === '1', 'Save stores the plan as a scenario',
+            `count "${await textOf(page, '#icSavedCount')}", error "${await textOf(page, '#icSaveError')}"`);
+        check((await textOf(page, '#icSavedCurrent')).includes(scenarioName), 'The bar names the scenario the plan is now',
+            `"${await textOf(page, '#icSavedCurrent')}"`);
+
+        await page.reload({waitUntil: 'networkidle', timeout: TIMEOUT});
+        await page.locator('#icBalanceChart svg path.ic-series').first().waitFor({state: 'attached', timeout: TIMEOUT});
+        check(await page.inputValue('#icMonthly') !== savedMonthly, 'A reload opens the default plan', `monthly ${savedMonthly}`);
+        await page.click('#icSavedOpen');
+        const row = page.locator('#icSavedList .ic-saved__item', {hasText: scenarioName});
+        await row.waitFor({state: 'visible', timeout: TIMEOUT}).catch(() => {});
+        check(await row.count() === 1, 'The saved scenario is listed after a reload', `${await row.count()} rows`);
+        await row.locator('[data-act="load"]').click();
+        await page.waitForFunction((m) => document.getElementById('icMonthly')?.value === m, savedMonthly,
+            {timeout: TIMEOUT}).catch(() => {});
+        check(await page.inputValue('#icMonthly') === savedMonthly, 'Loading the scenario puts its inputs back in the rail',
+            `monthly ${await page.inputValue('#icMonthly')}, expected ${savedMonthly}`);
+        check(await textOf(page, '#icFinal') === savedFinal, 'The loaded scenario projects the same balance',
+            `"${await textOf(page, '#icFinal')}", expected "${savedFinal}"`);
+
+        // 9. The educational-estimate note links to the Disclaimer.
         const disclaimer = await page.locator('.ic-disclaimer a').getAttribute('href').catch(() => null);
         check(disclaimer === '/disclaimer', 'The estimate note links to the Disclaimer', `${disclaimer}`);
     } catch (error) {

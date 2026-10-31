@@ -85,6 +85,8 @@ public class AccountPurgeServiceTests
             Assert.Empty(await RowsAsync(check, type, UserId));
         }
 
+        Assert.False(await check.InvestmentScenarios.IgnoreQueryFilters().AnyAsync(s => s.UserId == UserId));
+        Assert.True(await check.InvestmentScenarios.AnyAsync(s => s.UserId == OtherUserId));
         Assert.False(await check.Users.AnyAsync(u => u.Id == UserId));
         Assert.False(await check.UserRoles.AnyAsync(r => r.UserId == UserId));
         Assert.False(await check.UserClaims.AnyAsync(c => c.UserId == UserId));
@@ -294,6 +296,7 @@ public class AccountPurgeServiceTests
             .OrderBy(t => t.Name, StringComparer.Ordinal);
         Assert.Equal(expected, deleted);
         Assert.Contains(typeof(AiUsageRecord), deleted);
+        Assert.Contains(typeof(InvestmentScenario), deleted);
     }
 
     [Fact]
