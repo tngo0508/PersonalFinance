@@ -14,6 +14,13 @@
  * through `window.ResearchBasket.get()` and hear changes on the `research:basketchange` document event; the link
  * parser and formatter are exposed as `parse` and `format`. Each Tracked Fund has a fixed colour slot (1 to 8, by its
  * place in the list), `slotOf(ticker)`, so a fund keeps its colour in every view; the ticker always goes with it.
+ *
+ * A page without the bar (the redesigned Research pages) still has the basket: it is read from the address as it is,
+ * and edited only by the "Add to basket" buttons. On every page the basket follows the user between Research pages:
+ * `withBasket(href, funds)` puts it on a link, `linkify(root)` rewrites each `a[data-research-link]` on load and on
+ * every change, a `[data-research-basket-toggle="TICKER"]` button adds or removes its fund (pressed while in the
+ * basket, disabled while the basket is full), and `[data-research-basket-count]` shows how many funds it holds. On a
+ * page without the bar, `ResearchBasket.remove(ticker)` and `ResearchBasket.set(value)` also edit it.
  */
 (function () {
     'use strict';
@@ -31,7 +38,11 @@
     const PARAM = 'basket';
     const MAX_FUNDS = 5;
     const SLOT_COUNT = 8;
+    const TOGGLE_ATTRIBUTE = 'data-research-basket-toggle';
+    const LINK_SELECTOR = 'a[data-research-link]';
+    const COUNT_SELECTOR = '[data-research-basket-count]';
     let trackedTickers = [];
+    let store = null;
     const ENTRY = /^([A-Za-z0-9.-]{1,10})(?::(\d{1,3}))?$/;
 
     /**
@@ -39,18 +50,20 @@
      * weight from 1 to 100. An untracked ticker, a repeat or a bad weight is left out; past five funds the rest is left
      * out. Weights count only when every kept fund has one; otherwise the funds share equally.
      * @param {string|null} value - The `basket` parameter, or null.
-     * @param {string[]} trackedTickers - The Tracked Funds' tickers.
+     * @param {string[]|null} trackedTickers - The Tracked Funds' tickers, or null to keep any well-formed ticker (in
+     *     upper case) on a page that does not carry the Tracked Funds.
      * @returns {{funds: {ticker: string, weight: number|null}[], invalid: boolean, tooMany: boolean}} The basket and
      *     what was left out.
      */
     function parse (value, trackedTickers) {
-        const tracked = new Map(trackedTickers.map((t) => [t.toUpperCase(), t]));
+        const tracked = trackedTickers ? new Map(trackedTickers.map((t) => [t.toUpperCase(), t])) : null;
         const funds = [];
         let invalid = false;
         let tooMany = false;
         (value || '').split(',').map((part) => part.trim()).filter(Boolean).forEach((part) => {
             const match = ENTRY.exec(part);
-            const ticker = match ? tracked.get(match[1].toUpperCase()) : undefined;
+            const symbol = match ? match[1].toUpperCase() : undefined;
+            const ticker = symbol && tracked ? tracked.get(symbol) : symbol;
             const weight = match && match[2] !== undefined ? Number(match[2]) : null;
             if (!ticker || funds.some((f) => f.ticker === ticker) || (weight !== null && (weight < 1 || weight > 100))) {
                 invalid = true;
@@ -80,6 +93,95 @@
         }
         const weighted = funds.every((f) => f.weight !== null);
         return funds.map((f) => (weighted ? `${f.ticker}:${f.weight}` : f.ticker)).join(',');
+    }
+
+    /**
+     * Put the basket on a Research link: set or replace its `basket` value, keeping the link's other query values (in
+     * their order) and its hash; an empty basket removes the value. Works on the link's text, so it needs no page.
+     * @param {string} href - The link, e.g. `/Research/Funds?view=risk#growth`.
+     * @param {{ticker: string, weight: number|null}[]} funds - The basket.
+     * @returns {string} The link with the basket.
+     */
+    function withBasket (href, funds) {
+        const hashAt = href.indexOf('#');
+        const hash = hashAt < 0 ? '' : href.slice(hashAt);
+        const beforeHash = hashAt < 0 ? href : href.slice(0, hashAt);
+        const queryAt = beforeHash.indexOf('?');
+        const path = queryAt < 0 ? beforeHash : beforeHash.slice(0, queryAt);
+        const pairs = queryAt < 0 ? [] : beforeHash.slice(queryAt + 1).split('&').filter(Boolean);
+        const value = format(funds || []);
+        const own = value ? `${PARAM}=${encodeURIComponent(value)}` : null;
+        const kept = [];
+        let placed = false;
+        pairs.forEach((pair) => {
+            // ASP.NET binds query names whatever their case, so `Basket=` is the same value and is replaced too.
+            if (pair.split('=')[0].toLowerCase() !== PARAM) {
+                kept.push(pair);
+            } else if (own && !placed) {
+                kept.push(own);
+                placed = true;
+            }
+        });
+        if (own && !placed) {
+            kept.push(own);
+        }
+        return `${path}${kept.length > 0 ? `?${kept.join('&')}` : ''}${hash}`;
+    }
+
+    /**
+     * The basket with one more fund: at an equal share, or at the average weight when weights are set.
+     * @param {{ticker: string, weight: number|null}[]} funds - The basket.
+     * @param {string} ticker - The fund to add.
+     * @returns {{ticker: string, weight: number|null}[]} A new basket.
+     */
+    function withFund (funds, ticker) {
+        const weighted = funds.length > 0 && funds.every((f) => f.weight !== null);
+        const weight = weighted ? Math.max(1, Math.round(100 / (funds.length + 1))) : null;
+        return funds.concat([{ ticker, weight }]);
+    }
+
+    /**
+     * Keep the basket in the address (replacing the history entry) and tell the page.
+     * @param {{ticker: string, weight: number|null}[]} funds - The basket.
+     * @param {Object[]} details - The basket as `get()` returns it, for the event.
+     * @returns {void}
+     */
+    function publishBasket (funds, details) {
+        if (window.history && typeof window.history.replaceState === 'function') {
+            const url = new URL(window.location.href);
+            const value = format(funds);
+            if (value) {
+                url.searchParams.set(PARAM, value);
+            } else {
+                url.searchParams.delete(PARAM);
+            }
+            window.history.replaceState(window.history.state, '', url);
+        }
+        document.dispatchEvent(new CustomEvent('research:basketchange', { detail: { funds: details } }));
+    }
+
+    /**
+     * Say a fund was added, through the page's live region.
+     * @param {string} ticker - The fund's ticker.
+     * @param {number} count - The funds now in the basket.
+     * @returns {void}
+     */
+    function announceAdded (ticker, count) {
+        if (page) {
+            page.announce(PFI18n.t('Research.Js.Basket.Added',
+                { ticker, count: PFI18n.formatNumber(count), max: PFI18n.formatNumber(MAX_FUNDS) }));
+        }
+    }
+
+    /**
+     * Say a fund was removed, through the page's live region.
+     * @param {string} ticker - The fund's ticker.
+     * @returns {void}
+     */
+    function announceRemoved (ticker) {
+        if (page) {
+            page.announce(PFI18n.t('Research.Js.Basket.Removed', { ticker }));
+        }
     }
 
     /**
@@ -142,7 +244,9 @@
      * Wire the Fund Basket bar over the Tracked Funds.
      * @param {HTMLElement} bar - The bar element.
      * @param {{ticker: string, name: string, role: (string|null)}[]} tracked - The Tracked Funds, in list order.
-     * @returns {{get: function(): Object[]}} The basket reader.
+     * @returns {{get: function(): Object[], add: function(string): void, remove: function(string): void,
+     *     set: function(string): void}} The basket's reader and editors; `set` replaces the whole basket with an
+     *     address value such as `VTI:60,BND:40` (a starting mix).
      */
     function createBasket (bar, tracked) {
         const chips = document.getElementById(CHIPS_ID);
@@ -173,17 +277,7 @@
          * @returns {void}
          */
         function publish () {
-            if (window.history && typeof window.history.replaceState === 'function') {
-                const url = new URL(window.location.href);
-                const value = format(funds);
-                if (value) {
-                    url.searchParams.set(PARAM, value);
-                } else {
-                    url.searchParams.delete(PARAM);
-                }
-                window.history.replaceState(window.history.state, '', url);
-            }
-            document.dispatchEvent(new CustomEvent('research:basketchange', { detail: { funds: get() } }));
+            publishBasket(funds, get());
         }
 
         /**
@@ -257,16 +351,11 @@
             if (funds.length >= MAX_FUNDS || funds.some((f) => f.ticker === ticker) || !byTicker.has(ticker)) {
                 return;
             }
-            const weighted = funds.length > 0 && funds.every((f) => f.weight !== null);
-            const weight = weighted ? Math.max(1, Math.round(100 / (funds.length + 1))) : null;
-            funds.push({ ticker, weight });
+            funds = withFund(funds, ticker);
             showNotice('');
             render();
             publish();
-            if (page) {
-                page.announce(PFI18n.t('Research.Js.Basket.Added',
-                    { ticker, count: PFI18n.formatNumber(funds.length), max: PFI18n.formatNumber(MAX_FUNDS) }));
-            }
+            announceAdded(ticker, funds.length);
         }
 
         /**
@@ -279,9 +368,7 @@
             funds = funds.filter((f) => f.ticker !== ticker);
             render();
             publish();
-            if (page) {
-                page.announce(PFI18n.t('Research.Js.Basket.Removed', { ticker }));
-            }
+            announceRemoved(ticker);
             if (refocus) {
                 search.focus();
             }
@@ -460,7 +547,114 @@
         if (fromLink.invalid || fromLink.tooMany) {
             publish();
         }
-        return { get };
+        return { get, add: addFund, remove: (ticker) => removeFund(ticker, false) };
+    }
+
+    /**
+     * The basket of a page without the bar: read from the address as it is (any well-formed ticker, since the page
+     * does not carry the Tracked Funds) and edited by the "Add to basket" buttons.
+     * @returns {{get: function(): Object[], add: function(string): void, remove: function(string): void,
+     *     set: function(string): void}} The basket's reader and editors; `set` replaces the whole basket with an
+     *     address value such as `VTI:60,BND:40` (a starting mix).
+     */
+    function createAddressBasket () {
+        let funds = parse(new URL(window.location.href).searchParams.get(PARAM), null).funds;
+
+        /**
+         * The basket with each fund's share, for other scripts.
+         * @returns {{ticker: string, weight: (number|null), share: number, slot: number}[]} The funds, in basket order.
+         */
+        function get () {
+            const shares = sharesOf(funds);
+            return funds.map((f, i) => ({ ticker: f.ticker, weight: f.weight, share: shares[i], slot: slotOf(f.ticker) }));
+        }
+
+        return {
+            get,
+            add (ticker) {
+                if (funds.length >= MAX_FUNDS || funds.some((f) => f.ticker === ticker)) {
+                    return;
+                }
+                funds = withFund(funds, ticker);
+                publishBasket(funds, get());
+                announceAdded(ticker, funds.length);
+            },
+            remove (ticker) {
+                funds = funds.filter((f) => f.ticker !== ticker);
+                publishBasket(funds, get());
+                announceRemoved(ticker);
+            },
+            set (value) {
+                funds = parse(value, null).funds;
+                publishBasket(funds, get());
+            }
+        };
+    }
+
+    /**
+     * Put the current basket on every Research link under a root.
+     * @param {ParentNode} root - Where to look, e.g. the document or a part just drawn.
+     * @returns {void}
+     */
+    function linkify (root) {
+        if (!root || typeof root.querySelectorAll !== 'function') {
+            return;
+        }
+        const funds = store ? store.get() : [];
+        root.querySelectorAll(LINK_SELECTOR).forEach((link) => {
+            const href = link.getAttribute('href');
+            if (href) {
+                link.setAttribute('href', withBasket(href, funds));
+            }
+        });
+    }
+
+    /**
+     * Bring the basket's links, its "Add to basket" buttons and the navigation's count up to date.
+     * @returns {void}
+     */
+    function sync () {
+        const funds = store.get();
+        const tickers = funds.map((f) => f.ticker.toUpperCase());
+        const fullText = PFI18n.t('Research.Js.Basket.Full');
+        linkify(document);
+        document.querySelectorAll(`[${TOGGLE_ATTRIBUTE}]`).forEach((button) => {
+            const inBasket = tickers.includes(button.getAttribute(TOGGLE_ATTRIBUTE).toUpperCase());
+            const full = !inBasket && funds.length >= MAX_FUNDS;
+            button.setAttribute('aria-pressed', String(inBasket));
+            button.disabled = full;
+            if (full) {
+                button.title = fullText;
+            } else if (button.title === fullText) {
+                button.removeAttribute('title');
+            }
+        });
+        document.querySelectorAll(COUNT_SELECTOR).forEach((count) => {
+            count.textContent = PFI18n.formatNumber(funds.length);
+        });
+    }
+
+    /**
+     * Wire the "Add to basket" buttons and keep links, buttons and the count following the basket.
+     * @returns {void}
+     */
+    function wireShell () {
+        document.addEventListener('click', (event) => {
+            const button = event.target instanceof Element ? event.target.closest(`[${TOGGLE_ATTRIBUTE}]`) : null;
+            if (!button || button.disabled) {
+                return;
+            }
+            const wanted = button.getAttribute(TOGGLE_ATTRIBUTE).toUpperCase();
+            const inBasket = store.get().find((f) => f.ticker.toUpperCase() === wanted);
+            if (inBasket) {
+                store.remove(inBasket.ticker);
+            } else {
+                const tracked = trackedTickers.find((t) => t.toUpperCase() === wanted);
+                store.add(tracked || wanted);
+            }
+        });
+        document.addEventListener('research:basketchange', sync);
+        sync();
     }
 
     /**
@@ -475,26 +669,37 @@
     }
 
     /**
-     * Wire the bar when it and the Tracked Funds are on the page.
+     * Wire the bar when it and the Tracked Funds are on the page, or the address basket on a page without the bar;
+     * then the links, buttons and count that follow it.
      * @returns {void}
      */
     function init () {
         const bar = document.getElementById(BAR_ID);
-        const data = page ? page.readData(DATA_ELEMENT_ID, 'Research funds data') : null;
-        if (!bar || !data || !Array.isArray(data.funds) || data.funds.length === 0) {
+        const data = bar && page ? page.readData(DATA_ELEMENT_ID, 'Research funds data') : null;
+        if (bar && data && Array.isArray(data.funds) && data.funds.length > 0) {
+            const tracked = data.funds.map((f) => ({ ticker: f.ticker, name: f.name, role: f.role || null }));
+            trackedTickers = tracked.map((f) => f.ticker);
+            store = createBasket(bar, tracked);
+            const selected = document.querySelector('.research [role="tab"][aria-selected="true"]');
+            showFor(bar, selected ? selected.dataset.researchTab : null);
+            document.addEventListener('research:tabchange', (event) => showFor(bar, event.detail.tabId));
+        } else if (bar) {
+            // The old Research page without its Tracked Funds: the bar's tabs show their own Unavailable State.
             return;
+        } else {
+            store = createAddressBasket();
         }
-        const tracked = data.funds.map((f) => ({ ticker: f.ticker, name: f.name, role: f.role || null }));
-        trackedTickers = tracked.map((f) => f.ticker);
-        const basket = createBasket(bar, tracked);
-        window.ResearchBasket.get = basket.get;
-        const selected = document.querySelector('.research [role="tab"][aria-selected="true"]');
-        showFor(bar, selected ? selected.dataset.researchTab : null);
-        document.addEventListener('research:tabchange', (event) => showFor(bar, event.detail.tabId));
+        window.ResearchBasket.get = store.get;
+        if (store.set) {
+            // Only a page without the bar edits the basket from outside it: Home's chips and starting mixes.
+            window.ResearchBasket.remove = store.remove;
+            window.ResearchBasket.set = store.set;
+        }
+        wireShell();
     }
 
-    // The parser and formatter are available at once, and get() once the bar is wired.
-    window.ResearchBasket = { parse, format, sharesOf, slotOf, get: () => [] };
+    // The pure helpers are available at once, and get() once the basket is wired.
+    window.ResearchBasket = { parse, format, sharesOf, slotOf, withBasket, linkify, get: () => [] };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

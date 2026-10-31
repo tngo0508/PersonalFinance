@@ -503,11 +503,11 @@
 }
 
 /* --------------------------------------------------------------------------
-   Sectors sunburst. The eight SEC industry offices take the dataviz reference
+   Sectors treemap. The eight SEC industry offices take the dataviz reference
    categorical palette in SEC office-number order (validated on the white card
    with the dataviz palette validator: adjacent-pair CVD and normal-vision
    checks pass). Crypto Assets, Unassigned and any other office are neutral
-   grey. Three slots sit below 3:1 on white, so every arc keeps a 1px surface
+   grey. Three slots sit below 3:1 on white, so every tile keeps a 1px surface
    gap, the legend names each office and the tooltip carries the figures.
    The values live in site.css (--app-research-office-*), with a dark set
    lifted to 3:1 on the dark page and card (#486).
@@ -533,6 +533,17 @@
 /* The Sectors tab's "Market | Your basket" switch, and the parts that belong to one view only. */
 .research-sectors__views {
     grid-column: 1 / -1;
+}
+
+/* Under the Sectors card's subtitle: which basket funds have no holdings report. */
+.research-sectors__note {
+    margin: 0;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-sectors__note[hidden] {
+    display: none;
 }
 
 [data-sectors-view-part][hidden] {
@@ -685,54 +696,6 @@ button.research-lean__row {
     }
 }
 
-.research-sunburst {
-    width: 100%;
-    max-width: 40rem;
-    margin: 0 auto;
-}
-
-.research-sunburst svg {
-    display: block;
-    width: 100%;
-    height: auto;
-    font-family: var(--app-font-family);
-    touch-action: manipulation;
-}
-
-.research-sunburst__arc {
-    stroke: var(--app-bg);
-    stroke-width: 1px;
-}
-
-.research-sunburst__arc--zoomable,
-.research-sunburst__centre--zoomed {
-    cursor: pointer;
-}
-
-/* Keyboard focus on an arc: a ring in the page's text colour (arcs carry no
-   outline, so the stroke draws it). */
-.research-sunburst__arc:focus {
-    outline: none;
-}
-
-.research-sunburst__arc:focus-visible {
-    stroke: var(--app-text);
-    stroke-width: 3px;
-    paint-order: stroke;
-}
-
-/* A row of the ranked list under the hover or keyboard focus fades every
-   slice outside its own. */
-.research-sunburst__arc--faded {
-    opacity: 0.25;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-    .research-sunburst__arc {
-        transition: opacity 150ms ease;
-    }
-}
-
 /* The ranked list under the Sectors chart: the focus's parts, largest first.
    Groups are buttons; a bar under each row is sized against the largest. */
 
@@ -821,7 +784,8 @@ button.research-ranked__row:focus-visible {
     font-size: var(--app-font-size-small);
 }
 
-/* Above the Sectors chart: the breadcrumb, and the Sunburst | Treemap toggle. */
+/* Above the Sectors chart: the breadcrumb. The view toggle below is the Market | Your basket switch's (and other
+   tabs'). */
 
 .research-chartbar {
     display: flex;
@@ -876,8 +840,7 @@ button.research-ranked__row:focus-visible {
     width: 100%;
 }
 
-.research-treemap[hidden],
-.research-sunburst[hidden] {
+.research-treemap[hidden] {
     display: none;
 }
 
@@ -907,8 +870,16 @@ button.research-ranked__row:focus-visible {
     stroke-width: 3px;
 }
 
+/* A row of the ranked list under the hover or keyboard focus fades every
+   other tile. */
 .research-treemap__tile--faded {
     opacity: 0.25;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .research-treemap__tile {
+        transition: opacity 150ms ease;
+    }
 }
 
 .research-treemap__name,
@@ -1019,24 +990,6 @@ button.research-ranked__row:focus-visible {
     color: var(--app-text-muted);
     font-size: var(--app-font-size-small);
     overflow-wrap: anywhere;
-}
-
-.research-sunburst__label {
-    font-size: 10px;
-    pointer-events: none;
-    user-select: none;
-}
-
-.research-sunburst__centre-title {
-    fill: var(--app-text-muted);
-    font-size: 12px;
-}
-
-.research-sunburst__centre-value {
-    fill: var(--app-text);
-    font-family: var(--app-font-mono);
-    font-size: 18px;
-    font-weight: var(--app-font-weight-semibold);
 }
 
 .research-tooltip {
@@ -1215,4 +1168,494 @@ button.research-ranked__row:focus-visible {
 
 .research-tooltip__line {
     display: block;
+}
+
+/* ==========================================================================
+   Research shell: sub-navigation, search box, glossary terms
+   (_ResearchNav, research-search.js, research-glossary.js)
+   ========================================================================== */
+
+.research-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-s) var(--app-spacing-m);
+    border-bottom: 1px solid var(--app-border);
+}
+
+.research-nav__links {
+    display: flex;
+    gap: var(--app-spacing-xs);
+    margin: 0;
+    padding: 0;
+    overflow-x: auto;
+    list-style: none;
+}
+
+.research-nav__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--app-spacing-xs);
+    padding: var(--app-spacing-m) var(--app-spacing-s);
+    border-bottom: 3px solid transparent;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.research-nav__link:hover {
+    color: var(--app-text);
+}
+
+.research-nav__link[aria-current="page"] {
+    border-bottom-color: var(--app-brand);
+    color: var(--app-text);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-nav__link:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: -2px;
+}
+
+.research-nav__count {
+    min-width: 1.25rem;
+    padding: 0 var(--app-spacing-xs);
+    border-radius: 999px;
+    background: var(--app-brand-soft);
+    color: var(--app-brand-on-soft);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+    text-align: center;
+}
+
+.research-nav__search {
+    flex: 0 1 21rem;
+    margin-left: auto;
+}
+
+@media (max-width: 47.5rem) {
+    .research-nav__search {
+        flex-basis: 100%;
+        margin: 0 0 var(--app-spacing-s);
+    }
+}
+
+.research-search {
+    position: relative;
+}
+
+.research-search__icon {
+    position: absolute;
+    top: 50%;
+    left: var(--app-spacing-m);
+    color: var(--app-text-muted);
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.research-search__input {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0 2.5rem;
+    border: 1px solid var(--app-border-hover);
+    border-radius: 999px;
+    background: var(--app-bg);
+    color: var(--app-text);
+    font: inherit;
+    font-size: var(--app-font-size-small);
+}
+
+.research-search__input:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+.research-search__kbd {
+    position: absolute;
+    top: 50%;
+    right: var(--app-spacing-m);
+    padding: 0 var(--app-spacing-xs);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-s);
+    background: transparent;
+    color: var(--app-text-muted);
+    font-family: var(--app-font-mono);
+    font-size: var(--app-font-size-small);
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.research-search__popup {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 24rem;
+    overflow-y: auto;
+    padding: var(--app-spacing-xs) 0;
+    border: 1px solid var(--app-border);
+    border-radius: 10px;
+    background: var(--app-bg);
+    box-shadow: var(--app-shadow-popover);
+}
+
+.research-search__popup[hidden],
+.research-search__message[hidden] {
+    display: none;
+}
+
+.research-search__group-label {
+    padding: var(--app-spacing-xs) var(--app-spacing-m);
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-search__option {
+    padding: var(--app-spacing-s) var(--app-spacing-m);
+    font-size: var(--app-font-size-small);
+    cursor: pointer;
+}
+
+.research-search__option[aria-selected="true"],
+.research-search__option:hover {
+    background: var(--app-brand-soft);
+}
+
+.research-search__message {
+    padding: var(--app-spacing-s) var(--app-spacing-m);
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-term {
+    padding: 0;
+    border: 0;
+    border-bottom: 1px dashed var(--app-text-muted);
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: help;
+}
+
+.research-term:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+.research-glossary-popover {
+    position: fixed;
+    z-index: 1080;
+    max-width: 19rem;
+    padding: var(--app-spacing-s) var(--app-spacing-m);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+    background: var(--app-bg);
+    box-shadow: var(--app-shadow-16);
+    color: var(--app-text);
+    font-size: var(--app-font-size-small);
+}
+
+.research-glossary-popover[hidden] {
+    display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .research-nav__link {
+        transition: color 0.15s ease, border-color 0.15s ease;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Research Home (Home.cshtml, research-home.js): the large search box with
+   starting points, the first-visit strip, the basket card beside the explore
+   links, and the freshness list. Stacks to one column at narrow widths.
+   -------------------------------------------------------------------------- */
+
+.research-search--large .research-search__input {
+    min-height: 3.25rem;
+    padding: 0 var(--app-spacing-l) 0 2.75rem;
+    border-width: 2px;
+    font-size: var(--app-font-size-medium);
+}
+
+.research-search--large .research-search__icon {
+    left: var(--app-spacing-m);
+}
+
+.research-home__hero {
+    padding: var(--app-spacing-l) 0 var(--app-spacing-s);
+    text-align: center;
+}
+
+.research-home__title {
+    margin: 0;
+    font-size: var(--app-font-size-xxl);
+    font-weight: var(--app-font-weight-bold);
+}
+
+.research-home__lead {
+    margin: var(--app-spacing-xs) 0 0;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-medium);
+}
+
+.research-home__search {
+    max-width: 40rem;
+    margin: var(--app-spacing-m) auto 0;
+    text-align: left;
+}
+
+.research-home__starters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--app-spacing-s);
+    margin-top: var(--app-spacing-m);
+}
+
+.research-home__starters-label {
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-home__starter-list,
+.research-home__mix-list,
+.research-home__chips,
+.research-home__explore-list,
+.research-home__fresh-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.research-home__starter-list,
+.research-home__mix-list,
+.research-home__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--app-spacing-s);
+}
+
+.research-home__starter {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0 var(--app-spacing-m);
+    border: 1px solid var(--app-border-hover);
+    border-radius: 999px;
+    background: var(--app-bg);
+    color: var(--app-text);
+    font-size: var(--app-font-size-small);
+    text-decoration: none;
+}
+
+.research-home__starter:hover {
+    border-color: var(--app-brand);
+    text-decoration: none;
+    color: var(--app-brand-text);
+}
+
+.research-home__steps {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-s) var(--app-spacing-l);
+    padding: var(--app-spacing-m) var(--app-spacing-l);
+    border-radius: var(--app-radius-l);
+    background: var(--app-brand-soft);
+}
+
+.research-home__steps[hidden] {
+    display: none;
+}
+
+.research-home__steps-title {
+    margin: 0;
+    font-size: var(--app-font-size-base);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-home__steps-list {
+    display: flex;
+    flex: 1 1 30rem;
+    flex-wrap: wrap;
+    gap: var(--app-spacing-xs) var(--app-spacing-l);
+    margin: 0;
+    padding-left: var(--app-spacing-m);
+    font-size: var(--app-font-size-small);
+}
+
+.research-home__steps-close {
+    margin-left: auto;
+}
+
+.research-home__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: var(--app-spacing-m);
+    align-items: start;
+}
+
+@media (max-width: 56rem) {
+    .research-home__grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.research-home__basket-empty {
+    margin: 0 0 var(--app-spacing-m);
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-home__basket-empty[hidden],
+.research-home__basket-filled[hidden],
+.research-home__mixes[hidden],
+.research-home__mix-list > li[hidden] {
+    display: none;
+}
+
+.research-home__chips {
+    margin-bottom: var(--app-spacing-m);
+}
+
+.research-home__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    padding: var(--app-spacing-xs) var(--app-spacing-xs) var(--app-spacing-xs) var(--app-spacing-m);
+    border: 1px solid var(--app-border-hover);
+    border-radius: 999px;
+    font-size: var(--app-font-size-small);
+}
+
+.research-home__chip-link {
+    color: var(--app-text);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-home__chip-share {
+    color: var(--app-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.research-home__chip-remove {
+    position: relative;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: var(--app-surface-secondary);
+    color: var(--app-text);
+    line-height: 1;
+}
+
+/* The visible circle is 32px; the hit area reaches 44px around it. */
+.research-home__chip-remove::before {
+    position: absolute;
+    inset: -6px;
+    content: "";
+}
+
+.research-home__chip-remove:hover {
+    background: var(--app-border);
+}
+
+.research-home__mixes {
+    margin-top: var(--app-spacing-l);
+}
+
+.research-home__mixes-label {
+    margin: 0 0 var(--app-spacing-s);
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-home__explore-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: var(--app-spacing-m);
+}
+
+.research-home__explore-link {
+    display: grid;
+    gap: var(--app-spacing-xs);
+    height: 100%;
+    padding: var(--app-spacing-m) var(--app-spacing-l);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-l);
+    background: var(--app-bg);
+    color: var(--app-text);
+    text-decoration: none;
+}
+
+.research-home__explore-link:hover {
+    border-color: var(--app-brand);
+    text-decoration: none;
+}
+
+.research-home__explore-title {
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-home__explore-text {
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-home__fresh-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 0 var(--app-spacing-l);
+    font-size: var(--app-font-size-small);
+}
+
+.research-home__fresh-item {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--app-spacing-s);
+    padding: var(--app-spacing-xs) 0;
+    border-bottom: 1px dashed var(--app-border);
+}
+
+.research-home__fresh-date {
+    color: var(--app-text-muted);
+    white-space: nowrap;
+}
+
+.research-home__fresh-missing {
+    padding: 0 var(--app-spacing-s);
+    border-radius: 999px;
+    background: var(--app-warning-bg);
+    color: var(--app-warning-text);
+    white-space: nowrap;
+}
+
+.research-home__advice {
+    margin: var(--app-spacing-m) 0 0;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-home__starter:focus-visible,
+.research-home__chip-link:focus-visible,
+.research-home__chip-remove:focus-visible,
+.research-home__explore-link:focus-visible,
+.research-home__open:focus-visible,
+.research-home h2[tabindex="-1"]:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .research-home__starter,
+    .research-home__explore-link {
+        transition: border-color 0.15s ease, color 0.15s ease;
+    }
 }

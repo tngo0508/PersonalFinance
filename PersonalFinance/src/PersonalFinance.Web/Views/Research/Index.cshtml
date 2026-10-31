@@ -4,13 +4,11 @@
 
 @{
     ViewData["Title"] = L["Research.Title"].Value;
-    SectorsPeriodDto? latest = Model.Sectors.LatestPeriod;
-    bool showSectors = !Model.Sectors.Unavailable && latest is not null;
+    bool showSectors = !Model.Sectors.Unavailable && Model.Sectors.LatestPeriod is not null;
     bool showFunds = !Model.Funds.Unavailable;
     bool showWorld = !Model.World.Unavailable;
     bool showReturns = showFunds && Model.FundReturns is not null;
-    // The Sectors basket view needs the market chart (it draws in it) and the funds data (for the basket); its own data
-    // is fetched from the FundIndustries action when the view is first shown, so the page does not carry it.
+    // The Sectors basket view needs the market chart (it draws in it) and the funds data (for the basket).
     bool showSectorsBasket = showSectors && showFunds;
 }
 
@@ -63,136 +61,8 @@
     </section>
 
     @* Each tab panel holds its own scrubber, so each tab keeps its own position. js/research/research-page.js wires
-       the tabs, the scrubber, the live region and the table view. *@
-    <section class="research-deck" id="research-panel-sectors" role="tabpanel" aria-labelledby="research-tab-sectors"
-             data-research-basket="@(showSectorsBasket ? string.Empty : null)"
-             hidden="@(!Model.IsSelected(ResearchViewModel.SectorsTab))">
-        @if (showSectorsBasket)
-        {
-            @* Market (the largest filers by Public float) or Your basket (its funds' holdings by SEC industry, weighted).
-               It opens on Your basket only when a Fund Basket is set; js/research/research-sectors-basket.js wires it. *@
-            <div class="research-sectors__views" id="research-sectors-views"
-                 data-industries-url="@Url.Action("FundIndustries", "Research")">
-                <div class="research-view-toggle" role="group" aria-label="@L["Research.Sectors.ViewLabel"]">
-                    <button type="button" class="research-view-toggle__button" data-sectors-view="market" aria-pressed="true">@L["Research.Common.Market"]</button>
-                    <button type="button" class="research-view-toggle__button" data-sectors-view="basket" aria-pressed="false">@L["Research.Js.Common.YourBasket"]</button>
-                </div>
-            </div>
-        }
-        @if (showSectors)
-        {
-            @* Both views keep the scrubber: the market chart follows the year, and so does the basket's lean section. *@
-            <div class="research-scrubber" data-research-scrubber>
-                <button type="button" class="research-scrubber__play" data-research-play data-state="paused"
-                        aria-label="@L["Research.Js.Page.PlayYears"]">
-                    <svg class="research-scrubber__icon research-scrubber__icon--play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 4v16l13-8z"/></svg>
-                    <svg class="research-scrubber__icon research-scrubber__icon--pause" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
-                </button>
-                <div class="research-scrubber__track">
-                    <label class="visually-hidden" for="research-sectors-year">@L["Research.Common.Year"]</label>
-                    <input type="range" class="research-scrubber__range" id="research-sectors-year" data-research-range
-                           min="0" max="@(Model.Sectors.Snapshot!.Periods.Count - 1)" step="1" value="@(Model.Sectors.Snapshot.Periods.Count - 1)"
-                           aria-valuetext="@latest!.Period"/>
-                    <div class="research-scrubber__ends" aria-hidden="true">
-                        <span>@Model.Sectors.Snapshot.Periods[0]</span>
-                        <span>@Model.Sectors.Snapshot.Periods[^1]</span>
-                    </div>
-                </div>
-                <p class="research-scrubber__period" data-research-period aria-hidden="true">@latest.Period</p>
-            </div>
-        }
-        <div class="research-card">
-            <h2 class="research-card__title" id="research-sectors-title">@L["Research.Js.Sectors.Title"]</h2>
-            @if (!showSectors)
-            {
-                <partial name="_UnavailableState" model="Model.Sectors.UnavailableState"/>
-            }
-            else
-            {
-                <p class="research-card__subtitle" id="research-sectors-subtitle">
-                    @L.Named("Research.Js.Sectors.Subtitle", ("count", latest!.Ranked.Count.ToString("N0", CultureInfo.CurrentCulture)),
-                        ("total", (latest.Ranked.Count + latest.RestCount).ToString("N0", CultureInfo.CurrentCulture)), ("period", latest.Period))
-                </p>
-                @if (showSectorsBasket)
-                {
-                    <p class="research-overlap__note" id="research-sectors-basket-note" role="status" hidden></p>
-                }
-                <div class="research-chartbar">
-                    @* Where the chart is zoomed: each group above the focus is a button back to it. Drawn by research-sunburst.js. *@
-                    <nav class="research-breadcrumb" id="research-sectors-breadcrumb" aria-label="@L["Research.Sectors.Breadcrumb"]"></nav>
-                    <div class="research-view-toggle" role="group" aria-label="@L["Research.Sectors.ChartType"]">
-                        <button type="button" class="research-view-toggle__button" data-research-view="sunburst" aria-pressed="true">@L["Research.Sectors.Sunburst"]</button>
-                        <button type="button" class="research-view-toggle__button" data-research-view="treemap" aria-pressed="false">@L["Research.Sectors.Treemap"]</button>
-                    </div>
-                </div>
-                @* Drawn by js/research/research-sunburst.js from the data island below; no further request is made.
-                   The treemap draws the same focus as the sunburst; one of the two shows at a time. *@
-                <div class="research-sunburst" id="research-sunburst"></div>
-                <div class="research-treemap" id="research-treemap" hidden></div>
-                <div class="research-tooltip" id="research-tooltip" aria-hidden="true" hidden></div>
-                @* The focused group's parts, largest first: the second keyboard path through the chart. Groups are
-                   buttons that zoom in; hovering or focusing a row lights its slice. Drawn by research-sunburst.js. *@
-                <h3 class="research-ranked__title" id="research-sectors-ranked-title" tabindex="-1"></h3>
-                <ol class="research-ranked" id="research-sectors-ranked" aria-labelledby="research-sectors-ranked-title"></ol>
-                <div class="research-card__actions">
-                    <button type="button" class="research-chip" data-research-table-toggle aria-pressed="false"
-                            aria-controls="research-sectors-table">@L["Research.Js.Common.ShowTable"]</button>
-                </div>
-                <div class="research-table-host" id="research-sectors-table" data-research-table hidden></div>
-                @if (showSectorsBasket)
-                {
-                    @* Lean vs the market: each SEC office's share of the SEC-classified part of the basket against its
-                       share of every filer's Public float in the scrubber's year. Drawn by research-sectors-basket.js. *@
-                    <section class="research-lean" id="research-lean" data-sectors-view-part="basket"
-                             aria-labelledby="research-lean-title" hidden>
-                        <h3 class="research-lean__title" id="research-lean-title">@L["Research.Sectors.Lean.Title"]</h3>
-                        <p class="research-lean__note" id="research-lean-note"></p>
-                        <div class="research-lean__head" aria-hidden="true">
-                            <span>@L["Research.Js.Sectors.Office"]</span><span>@L["Research.Js.Common.YourBasket"]</span><span>@L["Research.Common.Market"]</span><span>@L["Research.Sectors.Lean.Difference"]</span>
-                        </div>
-                        <ol class="research-lean__rows" id="research-lean-rows" aria-labelledby="research-lean-title"></ol>
-                    </section>
-                }
-            }
-            <p class="research-card__source">@L["Research.Source.Edgar"]</p>
-        </div>
-
-        <aside class="research-panel" aria-label="@L["Research.Sectors.PanelLabel"]">
-            @if (showSectors)
-            {
-                <h2 class="research-panel__title" id="research-sectors-takeaways-title">@L["Research.Sectors.Takeaways"]</h2>
-                <ul class="research-takeaways" id="research-sectors-takeaways" aria-labelledby="research-sectors-takeaways-title"></ul>
-                <h2 class="research-panel__title">@L["Research.Sectors.ViewOptions"]</h2>
-                <button type="button" class="research-chip" id="research-tech-toggle" aria-pressed="false"
-                        aria-describedby="research-tech-note">
-                    @L["Research.Js.Sectors.Technology"]
-                </button>
-                <p class="research-panel__note" id="research-tech-note">@L["Research.Sectors.TechNote"]</p>
-                <p class="research-panel__tech-share" id="research-tech-share" hidden></p>
-                <h2 class="research-panel__title">@L["Research.Sectors.Offices"]</h2>
-                <p class="research-panel__note">@L["Research.Sectors.OfficesHint"]</p>
-                <ul class="research-legend" id="research-sectors-legend"></ul>
-            }
-            <h2 class="research-panel__title">@L["Research.Common.AboutThisData"]</h2>
-            @if (showSectorsBasket)
-            {
-                <div data-sectors-view-part="basket" hidden>
-                    <p>@L["Research.Sectors.BasketAbout1"]</p>
-                    <p>@L["Research.Sectors.BasketAbout2"]</p>
-                </div>
-            }
-            <p data-sectors-view-part="@(showSectorsBasket ? "market" : null)">@L["Research.Sectors.MarketAbout1"]</p>
-            <p data-sectors-view-part="@(showSectorsBasket ? "market" : null)">@L["Research.Sectors.MarketAbout2"]</p>
-            <h2 class="research-panel__title">@L["Research.Common.DataAsOf"]</h2>
-            <p class="research-panel__as-of" data-sectors-view-part="@(showSectorsBasket ? "market" : null)">
-                @(Model.Sectors.AsOf is { } asOf ? asOf.ToString(ResearchViewModel.LongDate, CultureInfo.CurrentCulture) : L["Research.Common.NotLoadedYet"].Value)
-            </p>
-            @if (showSectorsBasket)
-            {
-                <p class="research-panel__as-of" id="research-sectors-holdings-as-of" data-sectors-view-part="basket" hidden></p>
-            }
-        </aside>
-    </section>
+       the tabs, the scrubber, the live region and the table view. The Sectors tab is the Sectors page's panel. *@
+    <partial name="_SectorsPanel" model="@(new ResearchSectorsPanelViewModel { Sectors = Model.Sectors, BasketView = showFunds, InTab = true, Hidden = !Model.IsSelected(ResearchViewModel.SectorsTab) })"/>
 
     <partial name="_FundsTab" model="Model"/>
     <partial name="_PerformanceTab" model="Model"/>
@@ -203,13 +73,6 @@
     @* Summarises each change of period for screen readers. *@
     <p class="visually-hidden" id="research-live" aria-live="polite"></p>
 </div>
-
-@if (showSectors)
-{
-    @* The Sectors snapshot as a JSON data island (camelCase, HTML-safe encoding), read by research-sunburst.js. *@
-    <script type="application/json" id="research-sectors-data">@Json.Serialize(Model.Sectors.Snapshot)</script>
-}
-
 
 @if (showReturns)
 {
@@ -228,7 +91,7 @@
     <script src="~/js/research/research-companies.js" asp-append-version="true"></script>
     @if (showSectors)
     {
-        <script src="~/js/research/research-sunburst.js" asp-append-version="true"></script>
+        <script src="~/js/research/research-sectors.js" asp-append-version="true"></script>
     }
     @if (showSectorsBasket)
     {

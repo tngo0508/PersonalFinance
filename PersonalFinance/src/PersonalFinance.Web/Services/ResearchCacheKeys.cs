@@ -32,4 +32,7 @@ public static class ResearchCacheKeys
 
     /// <summary>The search index of the page's search box.</summary>
     public const string SearchIndex = "search-index";
+
+    /// <summary>Each dataset's source date and build time, without the datasets (the Home page's freshness list).</summary>
+    public const string Status = "status";
 }

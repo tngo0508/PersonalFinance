@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.2.0] - 2026-10-31
+
+### Added
+
+- **Research groundwork**: the pages of the Research redesign start to arrive, not linked from anywhere yet; the Research page you open from the sidebar is unchanged apart from the changes below.
+  - A Research navigation bar with one search box for funds, companies, SEC offices, industries and countries (press `/` to focus it), glossary terms explained on click, and links that keep your Fund Basket.
+  - A Research Home page with starting points, your basket and when each dataset is from.
+  - A Sectors page: the treemap of the largest SEC filers with its year scrubber, ranked list, table, Technology lens and basket view; `?focus=Office/Industry` opens it zoomed into a group and `?view=basket` on the basket view.
+
+### Changed
+
+- **Sectors chart**: the Research page's Sectors tab now draws the treemap only, with the same zoom, breadcrumb, ranked list, keyboard paths and basket view.
+  - The top of the chart is now called "All sectors".
+
+### Removed
+
+- **Sunburst**: the Sectors sunburst and its Sunburst / Treemap toggle are gone; the treemap shows the same groups and figures.
+
 ## [17.1.0] - 2026-10-31
 
 ### Changed

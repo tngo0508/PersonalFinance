@@ -69,7 +69,38 @@ public sealed class ResearchController : Controller
     }
 
     /// <summary>
-    /// The fund industries snapshot, as JSON, from ApiService: the Sectors tab's basket view fetches it the first time
+    /// The Research Home page: the search box, starting points, the Fund Basket and when each dataset is as of. It reads
+    /// only the datasets' status, through the snapshot cache, never a dataset itself; when the status cannot be read the
+    /// page still renders, with every dataset not loaded.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Home(CancellationToken cancellationToken = default)
+    {
+        ResearchStatusDto? status = await ReadAsync(_researchApi.GetStatusAsync, ResearchCacheKeys.Status, "status",
+            cancellationToken);
+        return View(new ResearchHomeViewModel(status));
+    }
+
+    /// <summary>
+    /// The Research Sectors page: the treemap of the largest SEC filers by Public float, and the Fund Basket's view of
+    /// it. It reads the Sectors data and the funds data (which the basket view needs) through the snapshot cache; each
+    /// that cannot be read shows only its own section's Unavailable State. <paramref name="focus"/>
+    /// (<c>Office</c> or <c>Office/Industry</c>) opens the chart zoomed into that group, and <paramref name="view"/>
+    /// <c>basket</c> opens the basket view; a malformed value of either is ignored.
+    /// A well-formed <c>basket</c> is kept on the Unavailable State's Retry.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Sectors([FromQuery] string? focus = null, [FromQuery] string? view = null,
+        [FromQuery] string? basket = null, CancellationToken cancellationToken = default)
+    {
+        Task<SectorsSnapshotDto?> sectors = ReadAsync(_researchApi.GetSectorsAsync, ResearchCacheKeys.Sectors, "Sectors", cancellationToken);
+        Task<FundsSnapshotDto?> funds = ReadAsync(_researchApi.GetFundsAsync, ResearchCacheKeys.Funds, "funds", cancellationToken);
+        await Task.WhenAll(sectors, funds);
+        return View(new ResearchSectorsPageViewModel(_localizer, await sectors, await funds, focus, view, basket));
+    }
+
+    /// <summary>
+    /// The fund industries snapshot, as JSON, from ApiService: the Sectors basket view fetches it the first time
     /// it is shown, so the page itself does not carry it (some 600 KB). An ApiService failure (503 when it has never
     /// loaded) keeps its status code with a safe message.
     /// </summary>

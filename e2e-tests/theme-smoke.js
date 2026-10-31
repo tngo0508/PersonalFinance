@@ -7,7 +7,7 @@
  * sample-data notice and its Budget report and Transactions modals (slice #484), Budget, Budget Tracker and Savings
  * Goals (slice #487), the Dashboard and Money Priorities (slice #489), Community, News and the AI chat widget
  * (slice #488), and Research's Sectors and World tabs (slice #486), and that the Investment Calculator's, the Google
- * Drive Transactions timeline's, the Budget planner's Month Strip, the Net Worth runway, the Research sunburst and the
+ * Drive Transactions timeline's, the Budget planner's Month Strip, the Net Worth runway, the Research Sectors treemap and the
  * World map restyle on a theme switch without a reload (slices #483, #484, #487, #485 and #486).
  * Run from ui-test.js as Test 9j.
  *
@@ -59,7 +59,7 @@ const CONTRAST_PAGES = {
         '.finance-hub-tab-btn:not(.active)', '.finance-hub-search-btn'],
     chatWidget: ['.ai-chat-header h2', '.ai-chat-header p', '.ai-chat-eyebrow', '.ai-chat-welcome-text', '.ai-chat-chip',
         '.ai-chat-disclaimer'],
-    // Research (#486): the Sectors sunburst (a chart view) and the World map (a map view), on the seeded snapshots
+    // Research (#486): the Sectors treemap (a chart view) and the World map (a map view), on the seeded snapshots
     researchSectors: ['.research-header__title', '.research-tabs__tab[aria-selected="true"]',
         '.research-tabs__tab[aria-selected="false"]', '#research-sectors-title', '.research-panel__title',
         '#research-sectors-legend .research-legend__button', '.research-view-toggle__button[aria-pressed="true"]'],
@@ -481,7 +481,7 @@ async function checkRunwayRestyles(page, report) {
  * The fills a Research chart or map paints, next to the theme's tokens for them: every distinct fill of the marks
  * (a hatch pattern's url() aside), and the token colours, both as the browser computes them.
  * @param {import('playwright').Page} page - The Research page on the chart's tab.
- * @param {string} marks - The marks' selector, e.g. the sunburst's arcs.
+ * @param {string} marks - The marks' selector, e.g. the Sectors treemap's tiles.
  * @param {string[]} tokens - The custom properties the fills come from.
  * @returns {Promise<{theme: string, marker: boolean, fills: string[], tokens: string[]}>} marker: the page has not
  *     reloaded since the check set it. Colours are rgb(r, g, b) strings.
@@ -725,13 +725,13 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         await page.goto(`${base}/MoneyPriorities`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Money Priorities', CONTRAST_PAGES.moneyPriorities, report);
 
-        // Research (#486): dark contrast, and the Sectors sunburst and the World map repaint on a switch.
+        // Research (#486): dark contrast, and the Sectors treemap and the World map repaint on a switch.
         const offices = Array.from({length: 8}, (_, i) => `--app-research-office-${i + 1}`).concat('--app-text-faint');
         const worldSteps = Array.from({length: 8}, (_, i) => `--app-research-world-step-${i + 1}`)
             .concat('--app-research-world-nodata');
         await page.goto(`${base}/Research?tab=sectors`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Research Sectors', CONTRAST_PAGES.researchSectors, report);
-        await checkResearchRestyles(page, 'Research sunburst', '#research-sunburst path.research-sunburst__arc', offices, report);
+        await checkResearchRestyles(page, 'Research Sectors treemap', '#research-treemap .research-treemap__rect', offices, report);
         await page.goto(`${base}/Research?tab=world`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Research World', CONTRAST_PAGES.researchWorld, report);
         await checkResearchRestyles(page, 'Research World map', '#research-world-map path.research-world__country', worldSteps,

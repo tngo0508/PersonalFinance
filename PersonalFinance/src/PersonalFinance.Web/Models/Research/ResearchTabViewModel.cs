@@ -17,7 +17,10 @@ public sealed class ResearchTabViewModel<TSnapshot, TPeriod>
     /// <param name="snapshot">The dataset, or null.</param>
     /// <param name="pageTitle">The Unavailable State's page title, the page's title in the request's Language.</param>
     /// <param name="unavailableHeading">The Unavailable State's heading, e.g. "We couldn't load the World data".</param>
-    public ResearchTabViewModel(TSnapshot? snapshot, string pageTitle, string unavailableHeading)
+    /// <param name="retryAction">The Research action the Unavailable State's Retry link reloads; Index by default.</param>
+    /// <param name="retryRouteValues">The route values the Retry link keeps, or none.</param>
+    public ResearchTabViewModel(TSnapshot? snapshot, string pageTitle, string unavailableHeading,
+        string retryAction = "Index", IDictionary<string, string>? retryRouteValues = null)
     {
         Snapshot = snapshot;
         UnavailableState = new UnavailableStateViewModel
@@ -25,6 +28,8 @@ public sealed class ResearchTabViewModel<TSnapshot, TPeriod>
             PageTitle = pageTitle,
             Heading = unavailableHeading,
             RetryController = "Research",
+            RetryAction = retryAction,
+            RetryRouteValues = retryRouteValues ?? new Dictionary<string, string>(),
         };
     }
 

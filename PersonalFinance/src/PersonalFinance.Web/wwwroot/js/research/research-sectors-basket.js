@@ -1,9 +1,10 @@
 /* global PFI18n */
 /**
- * Research page, Sectors tab: the "Market | Your basket" switch and the basket view's data.
+ * Research Sectors (the Sectors page, and the tabbed Research page's Sectors tab): the "Market | Your basket" switch
+ * and the basket view's data.
  *
- * The basket view draws the Fund Basket in the Sectors sunburst and treemap (js/research/research-sunburst.js), with
- * the same breadcrumb, keyboard paths and cards. Each fund's shares (from the fund industries snapshot, every holding
+ * The basket view draws the Fund Basket in the Sectors treemap (js/research/research-sectors.js), with the same
+ * breadcrumb, keyboard paths and cards. Each fund's shares (from the fund industries snapshot, every holding
  * of its latest Form N-PORT report) are weighted by the fund's share of the basket. The hierarchy is SEC industry
  * office, SIC industry, then the ten largest companies of each industry and "Other"; then "Not classified by the SEC"
  * (companies with no SEC industry, mostly foreign ones that file no reports with the SEC, hatched grey), issuer country
@@ -16,7 +17,10 @@
  * "−" where it leans less. It describes the basket; it is not a target. A row whose office the basket holds zooms the
  * chart into it.
  *
- * The switch opens on Your basket only when a basket is set at load, and the market view is left as it was. Reads the
+ * On the Sectors page the panel's data-research-sectors-view says which view it opens on: Your basket only when it is
+ * "basket" (the address's ?view=basket) and a basket is set; a press on the switch keeps the address's view in step.
+ * On the tabbed page, which has no such attribute, the switch opens on Your basket whenever a basket is set at load.
+ * The market view is left as it was. Reads the
  * `research-sectors-data` island, the basket from `window.ResearchBasket`, and fetches the fund industries snapshot from
  * the URL on the switch (`data-industries-url`) the first time the basket view is needed.
  */
@@ -209,7 +213,7 @@
     }
 
     /**
-     * The basket's tree for the sunburst: offices in SEC office order, then the unclassified stocks, bonds and cash.
+     * The basket's tree for the treemap: offices in SEC office order, then the unclassified stocks, bonds and cash.
      * Keys never collide with the market's, so switching views starts from the top.
      * @param {Object} data - The fund industries snapshot.
      * @param {Object} totals - The basket's totals.
@@ -419,12 +423,12 @@
     }
 
     /**
-     * The chart's label, the card's subtitle and the live summary for the basket.
+     * The card's subtitle and the live summary for the basket.
      * @param {Object} data - The fund industries snapshot.
      * @param {Object} root - The d3 hierarchy root of the basket.
      * @param {Object} focus - The focused d3 hierarchy node.
      * @param {string} trail - Where the chart is, e.g. "Your basket › Technology".
-     * @returns {{aria: string, subtitle: string, summary: string}} The wording.
+     * @returns {{subtitle: string, summary: string}} The wording.
      */
     function describe (data, root, focus, trail) {
         const offices = (root.children || []).filter((d) => d.data.kind === 'office');
@@ -442,7 +446,6 @@
         }
         const summary = sentences.join(' ');
         return {
-            aria: PFI18n.t('Research.Js.SectorsBasket.ChartLabel', { summary }),
             subtitle: PFI18n.t('Research.Js.SectorsBasket.Subtitle', { date: page.formatDay(data.asOf) }),
             summary
         };
@@ -600,12 +603,12 @@
     }
 
     /**
-     * Wire the switch and the basket view to the drawn sunburst. The fund industries snapshot is not in the page: it is
+     * Wire the switch and the basket view to the drawn treemap. The fund industries snapshot is not in the page: it is
      * fetched the first time the basket view is needed (a basket set at load, or the "Your basket" button), so a visit
      * that never opens it never downloads it.
      * @param {string} url - Where to fetch the fund industries snapshot (the Web app's JSON action).
      * @param {Object} sectors - The Sectors snapshot, for the market's shares in the lean section.
-     * @param {Object} chart - The sunburst (window.ResearchSunburst).
+     * @param {Object} chart - The treemap (window.ResearchSectors).
      * @returns {void}
      */
     function createView (url, sectors, chart) {
@@ -622,6 +625,8 @@
         const buttons = Array.from(views.querySelectorAll('[data-sectors-view]'));
         const basketButton = buttons.find((b) => b.dataset.sectorsView === 'basket');
         let mode = 'market';
+        // The view the Sectors page asked for ('market' or 'basket'); undefined on the tabbed page.
+        const requested = panel.dataset.researchSectorsView;
         // The snapshot once fetched, and the fetch while it runs (so it is made once).
         let data = null;
         let loading = null;
@@ -753,15 +758,35 @@
             }
         }
 
-        buttons.forEach((button) => button.addEventListener('click', () => {
+        /**
+         * On the Sectors page, keep the address's view in step with the switch (?view=basket, or none for the
+         * market), replacing the current history entry, so a reload or a shared link opens the same view.
+         * @returns {void}
+         */
+        function rememberView () {
+            if (requested === undefined || !window.history || typeof window.history.replaceState !== 'function') {
+                return;
+            }
+            const url = new URL(window.location.href);
+            if (mode === 'basket') {
+                url.searchParams.set('view', 'basket');
+            } else {
+                url.searchParams.delete('view');
+            }
+            window.history.replaceState(window.history.state, '', url);
+        }
+
+        buttons.forEach((button) => button.addEventListener('click', async () => {
             if (button.disabled || button.dataset.sectorsView === mode) {
                 return;
             }
             if (button.dataset.sectorsView === 'basket') {
-                openBasket(true);
+                await openBasket(true);
+                rememberView();
                 return;
             }
             setMode('market');
+            rememberView();
             if (page.announce) {
                 page.announce(PFI18n.t('Research.Js.SectorsBasket.ShowingMarket'));
             }
@@ -779,7 +804,7 @@
         });
 
         readBasket();
-        if (currentBasket().length > 0) {
+        if (currentBasket().length > 0 && (requested === undefined || requested === 'basket')) {
             openBasket(false);
         }
     }
@@ -798,11 +823,11 @@
     }
 
     /**
-     * Wire the view when the switch, the sunburst, the Sectors data and the page helpers are present.
+     * Wire the view when the switch, the treemap, the Sectors data and the page helpers are present.
      * @returns {void}
      */
     function init () {
-        const chart = window.ResearchSunburst;
+        const chart = window.ResearchSectors;
         const views = document.getElementById(VIEWS_ID);
         if (!page || !chart || !views || !views.dataset.industriesUrl || typeof window.d3 === 'undefined') {
             return;
