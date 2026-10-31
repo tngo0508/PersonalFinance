@@ -178,6 +178,29 @@ public class AnalysisLocalizationTests
             model.TrendPoints.Single().MonthName);
     }
 
+    [Fact]
+    public async Task Index_CarriesTheMonthNumbersThePaceAndTrendChartsNeed()
+    {
+        var api = new SyncingAnalysisApi
+        {
+            Dashboard = new AnalysisDashboardDto
+            {
+                Year = 2028,
+                Velocity = new SpendingVelocityDto { Year = 2028, MonthNumber = 2, DailyBurnRate = 10m },
+                Trends = new TrendDataDto { TrendPoints = [new MonthlyTrendPointDto { MonthNumber = 2 }] }
+            }
+        };
+        AnalysisController controller = CreateController(api, new FakeBudgetTrackerApi());
+
+        IActionResult result = await controller.Index(2028, null);
+
+        AnalysisDashboardViewModel model =
+            Assert.IsType<AnalysisDashboardViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal(2, model.VelocityMonth);
+        Assert.Equal(29, model.DaysInVelocityMonth);
+        Assert.Equal(2, model.TrendPoints.Single().MonthNumber);
+    }
+
     private static CategoryInsightsDto Month(decimal income, decimal expenses,
         params (string Name, decimal Actual)[] categories) => new()
     {

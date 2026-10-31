@@ -81,7 +81,7 @@
             return null;
         }
 
-        // On narrow charts the amounts don't fit beside the bands; the table above them carries the figures.
+        // On narrow charts the amounts don't fit beside the bands; the table below them carries the figures.
         const compact = canvas.parentElement.clientWidth < 576;
         const colors = readColors(canvas.closest('.money-flow') || canvas);
         const nodesByKey = {};
@@ -131,7 +131,8 @@
                     // Node labels: the plugin's default black is unreadable on the dark card
                     color: colors.label,
                     size: 'max',
-                    nodePadding: 14
+                    nodePadding: 16,
+                    font: { size: 12.5 }
                 }]
             },
             options: {
@@ -162,25 +163,165 @@
     }
 
     /**
-     * Initialize the Money Flow chart once the page data is available.
+     * Render Money Flow step by step: income at the top, each category taking its share down to what was saved. In a
+     * Shortfall month the steps start from total spending, with the Shortfall stacked on top of income.
+     * @param {Object} flow - The Money Flow model (income, expenses, shortfall, saved, tableRows).
+     * @returns {Chart|null} The chart, or null when there is nothing to draw.
+     */
+    function renderSteps (flow) {
+        const canvas = document.getElementById('moneyFlowStepsChart');
+        if (!canvas || !flow || !flow.tableRows || typeof Chart === 'undefined') {
+            return null;
+        }
+
+        const colors = readColors(canvas.closest('.money-flow') || canvas);
+        const palette = window.ChartPalette.read();
+        const base = flow.shareBase > 0 ? flow.shareBase : flow.income;
+        const rows = [{ label: PFI18n.t('Analysis.Js.Income'), range: [0, flow.income], color: colors.kinds.income }];
+        if (flow.shortfall > 0) {
+            rows.push({ label: PFI18n.t('Analysis.Js.Shortfall'), range: [flow.income, flow.expenses], color: colors.kinds.shortfall });
+        }
+        let top = Math.max(flow.income, flow.expenses);
+        flow.tableRows.filter((row) => row.kind !== 'saved').forEach((row) => {
+            let color = colors.kinds[row.kind] || colors.fallback;
+            if (row.inOther) {
+                color = colors.kinds.other;
+            } else if (row.colorSlot !== null && row.colorSlot !== undefined) {
+                color = colors.slots[row.colorSlot] || colors.fallback;
+            }
+            rows.push({ label: row.name, range: [top - row.amount, top], color: color, share: row.sharePercent });
+            top -= row.amount;
+        });
+        if (flow.saved > 0) {
+            rows.push({ label: PFI18n.t('Analysis.Js.Saved'), range: [0, flow.saved], color: colors.kinds.saved, share: flow.saved / base * 100 });
+        }
+
+        return new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: rows.map((row) => row.label),
+                datasets: [{
+                    data: rows.map((row) => row.range),
+                    backgroundColor: rows.map((row) => row.color),
+                    borderRadius: 3,
+                    borderSkipped: false,
+                    barPercentage: 0.8,
+                    categoryPercentage: 0.9
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: palette.tooltip.background,
+                        titleColor: palette.tooltip.text,
+                        bodyColor: palette.tooltip.text,
+                        callbacks: {
+                            label: function (context) {
+                                const row = rows[context.dataIndex];
+                                const amount = formatAmount(row.range[1] - row.range[0]);
+                                if (row.share === undefined || row.share === null) {
+                                    return amount;
+                                }
+                                return PFI18n.t('Analysis.Js.ShareTooltip', {
+                                    label: row.label,
+                                    amount: amount,
+                                    percent: PFI18n.formatNumber(row.share, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+                                });
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: { color: palette.grid },
+                        border: { color: palette.grid },
+                        ticks: { color: palette.axis, maxTicksLimit: 6, callback: (value) => formatAmount(value) }
+                    },
+                    y: {
+                        grid: { display: false },
+                        border: { color: palette.grid },
+                        ticks: { color: palette.axis, autoSkip: false }
+                    }
+                }
+            }
+        });
+    }
+
+    /** The viewer's last choice between the flow and the step-down view, kept in this browser only. */
+    const VIEW_KEY = 'analysis.moneyFlowView';
+
+    /**
+     * Read the remembered Money Flow view.
+     * @returns {string} 'flow' or 'steps'.
+     */
+    function rememberedView () {
+        try {
+            return window.localStorage.getItem(VIEW_KEY) === 'steps' ? 'steps' : 'flow';
+        } catch (e) {
+            return 'flow';
+        }
+    }
+
+    /**
+     * Show one Money Flow view and hide the other; the switch's buttons say which is pressed.
+     * @param {Element} section - The Money Flow section.
+     * @param {string} view - 'flow' or 'steps'.
+     * @returns {void}
+     */
+    function showView (section, view) {
+        section.querySelectorAll('[data-flow-panel]').forEach((panel) => {
+            panel.hidden = panel.dataset.flowPanel !== view;
+        });
+        section.querySelectorAll('[data-flow-view]').forEach((button) => {
+            button.setAttribute('aria-pressed', button.dataset.flowView === view ? 'true' : 'false');
+        });
+    }
+
+    /**
+     * Initialize both Money Flow views and the switch between them once the page data is available.
      * @returns {void}
      */
     function init () {
         const data = window.__analysisData;
-        if (!data) {
+        const section = document.querySelector('.money-flow');
+        if (!data || !section) {
             return;
         }
 
-        let chart = renderMoneyFlow(data.moneyFlow);
-        if (!chart) {
-            return;
+        // Narrow screens draw the flow without amounts, so the table opens to carry them
+        const table = section.querySelector('[data-flow-table]');
+        if (table && section.clientWidth < 576) {
+            table.open = true;
         }
-        // A theme switch redraws the chart in the new colours without a reload (#489)
+
+        const toggle = section.querySelector('[data-flow-switch]');
+        if (toggle) {
+            toggle.hidden = false;
+            showView(section, rememberedView());
+            toggle.addEventListener('click', (event) => {
+                const button = event.target.closest('[data-flow-view]');
+                if (!button) {
+                    return;
+                }
+                showView(section, button.dataset.flowView);
+                try {
+                    window.localStorage.setItem(VIEW_KEY, button.dataset.flowView);
+                } catch (e) {
+                    // Storage unavailable: the choice lasts until the page reloads
+                }
+            });
+        }
+
+        let charts = [renderMoneyFlow(data.moneyFlow), renderSteps(data.moneyFlow)];
+        // A theme switch redraws the charts in the new colours without a reload (#489)
         window.ChartPalette.subscribe(() => {
-            if (chart) {
-                chart.destroy();
-            }
-            chart = renderMoneyFlow(data.moneyFlow);
+            charts.forEach((chart) => chart && chart.destroy());
+            charts = [renderMoneyFlow(data.moneyFlow), renderSteps(data.moneyFlow)];
         });
     }
 

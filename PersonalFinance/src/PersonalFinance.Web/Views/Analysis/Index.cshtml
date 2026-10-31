@@ -1,5 +1,8 @@
+@using System.Globalization
+@using System.Text.Encodings.Web
 @using System.Text.Json
 @using System.Text.Json.Serialization
+@using Microsoft.AspNetCore.Html
 @using PersonalFinance.Shared.Enums
 @model AnalysisDashboardViewModel
 
@@ -7,46 +10,54 @@
     ViewData["Title"] = L["Analysis.Title"].Value;
     var activeSourceName = AnalysisText.SourceName(L, Model.ActiveSource);
     var periodLabel = Model.PeriodLabel ?? L["Analysis.Period.ThisPeriod"].Value;
-    // The summary cards total one month, or the whole year when no month is selected.
-    var totalForLabel = L.Named("Analysis.Summary.TotalFor",
-        ("period", Model.SelectedMonth.HasValue ? Model.MonthName : Model.SelectedYear.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+    var currency = Model.ReportingCurrency;
+    var invariant = CultureInfo.InvariantCulture;
+    // An amount inside a translated sentence, emphasised; the sentence's own words stay translatable around it.
+    Func<string, IHtmlContent> strong = text => new HtmlString($"<strong>{HtmlEncoder.Default.Encode(text)}</strong>");
+    Func<decimal, string> whole = amount => MoneyFormatter.FormatWhole(amount, currency);
+    // Share of a bar's width as an invariant CSS percentage
+    Func<decimal, decimal, string> widthOf = (amount, max) =>
+        (max > 0 ? Math.Min(amount / max * 100m, 100m) : 0m).ToString("0.##", invariant);
+    var toneIcon = new Dictionary<string, string> { ["over"] = "▲", ["near"] = "●", ["ahead"] = "●", ["ok"] = "✓" };
+    var showMonthChips = Model.AvailableMonths.Count > 1 ||
+                         (Model.SelectedMonth.HasValue && !Model.AvailableMonths.Contains(Model.SelectedMonth.Value));
+    var chipMonths = Model.AvailableMonths
+        .Concat(Model.SelectedMonth.HasValue ? new[] { Model.SelectedMonth.Value } : Array.Empty<int>())
+        .Distinct().OrderBy(m => m).ToList();
 }
 
-<div class="analysis-page" data-currency="@Model.ReportingCurrency">
-    <!-- Page header -->
-    <header class="analysis-page-header mb-4">
-        <div class="analysis-page-header__content d-flex flex-wrap justify-content-between align-items-center gap-3">
-            <div class="analysis-page-header__text">
-                <h1 class="analysis-page-header__title">
-                    <span class="analysis-page-header__icon" aria-hidden="true">
-                        <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
-                            <path
-                                d="M4 11H2v3h2v-3zm5-4H7v7h2V7zm5-5h-2v12h2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1h-2zM7 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H7zm-5 4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1H2z"/>
-                        </svg>
-                    </span>
-                    @L["Analysis.Header.Title"]
-                </h1>
-                <p class="analysis-page-header__subtitle">@L["Analysis.Header.Subtitle"]</p>
-            </div>
-            <div class="analysis-page-header__controls">
-                <partial name="_DataSourceToggle" model="Model.ActiveSource"/>
-                @if (Model.RemovableSources.Any())
-                {
-                    <div class="analysis-source-removal mt-1 small">
-                        @foreach (BudgetDataSource source in Model.RemovableSources)
-                        {
-                            <a asp-action="RemoveSource" asp-route-source="@source"
-                               class="link-danger me-3">@L.Named("Analysis.Header.RemoveSourceLink", ("source", AnalysisText.SourceName(L, source)))</a>
-                        }
-                    </div>
-                }
-            </div>
+<div class="analysis-page" data-currency="@currency">
+    <header class="analysis-page-header">
+        <div class="analysis-page-header__text">
+            <h1 class="analysis-page-header__title">
+                <span class="analysis-page-header__icon" aria-hidden="true">
+                    <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+                        <path
+                            d="M4 11H2v3h2v-3zm5-4H7v7h2V7zm5-5h-2v12h2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1h-2zM7 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H7zm-5 4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1H2z"/>
+                    </svg>
+                </span>
+                @L["Analysis.Header.Title"]
+            </h1>
+            <p class="analysis-page-header__subtitle">@L["Analysis.Header.Subtitle"]</p>
+        </div>
+        <div class="analysis-page-header__controls">
+            <partial name="_DataSourceToggle" model="Model.ActiveSource"/>
+            @if (Model.RemovableSources.Any())
+            {
+                <div class="analysis-source-removal small">
+                    @foreach (BudgetDataSource source in Model.RemovableSources)
+                    {
+                        <a asp-action="RemoveSource" asp-route-source="@source"
+                           class="link-danger">@L.Named("Analysis.Header.RemoveSourceLink", ("source", AnalysisText.SourceName(L, source)))</a>
+                    }
+                </div>
+            }
         </div>
     </header>
 
     @if (!string.IsNullOrEmpty(Model.StatusMessage))
     {
-        <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
             @Model.StatusMessage
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="@L["Common.Close"]"></button>
         </div>
@@ -54,7 +65,7 @@
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
             @Model.ErrorMessage
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="@L["Common.Close"]"></button>
         </div>
@@ -62,11 +73,11 @@
 
     @if (Model.AvailableYears.Any() || Model.SelectedYear > 0)
     {
-        <!-- Period selector -->
-        <div class="analysis-period-selector mb-4">
-            <form method="get" asp-action="Index" class="d-flex flex-wrap align-items-center gap-2">
+        <!-- Period: the year, then one click per month -->
+        <nav class="analysis-period" aria-label="@L["Analysis.Period.Label"]">
+            <form method="get" asp-action="Index" class="analysis-period__year">
                 <label for="yearSelect" class="visually-hidden">@L["Analysis.Period.SelectYear"]</label>
-                <select name="year" id="yearSelect" class="form-select form-select-sm w-auto"
+                <select name="year" id="yearSelect" class="form-select form-select-sm"
                         onchange="this.form.submit()">
                     @if (Model.SelectedYear > 0 && !Model.AvailableYears.Contains(Model.SelectedYear))
                     {
@@ -78,26 +89,27 @@
                                 selected="@(year == Model.SelectedYear ? "selected" : null)">@year</option>
                     }
                 </select>
-
-                @if (Model.AvailableMonths.Count > 1 || (Model.SelectedMonth.HasValue && !Model.AvailableMonths.Contains(Model.SelectedMonth.Value)))
-                {
-                    <label for="monthSelect" class="visually-hidden">@L["Analysis.Period.SelectMonth"]</label>
-                    <select name="month" id="monthSelect" class="form-select form-select-sm w-auto"
-                            onchange="this.form.submit()">
-                        <option value="">@L["Analysis.Period.AllMonths"]</option>
-                        @if (Model.SelectedMonth.HasValue && !Model.AvailableMonths.Contains(Model.SelectedMonth.Value))
-                        {
-                            <option value="@Model.SelectedMonth.Value" selected="selected">@AnalysisText.MonthName(Model.SelectedMonth.Value)</option>
-                        }
-                        @foreach (var month in Model.AvailableMonths)
-                        {
-                            <option value="@month"
-                                    selected="@(Model.SelectedMonth == month ? "selected" : null)">@AnalysisText.MonthName(month)</option>
-                        }
-                    </select>
-                }
+                <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">@L["Analysis.Period.SelectYear"]</button></noscript>
             </form>
-        </div>
+            @if (showMonthChips)
+            {
+                <ul class="analysis-period__months">
+                    <li>
+                        <a class="analysis-period__chip" asp-action="Index" asp-route-year="@Model.SelectedYear"
+                           aria-current="@(Model.SelectedMonth.HasValue ? null : "page")">@L["Analysis.Period.AllMonths"]</a>
+                    </li>
+                    @foreach (var month in chipMonths)
+                    {
+                        <li>
+                            <a class="analysis-period__chip" asp-action="Index" asp-route-year="@Model.SelectedYear"
+                               asp-route-month="@month"
+                               aria-label="@AnalysisText.MonthYear(Model.SelectedYear > 0 ? Model.SelectedYear : DateTime.Today.Year, month)"
+                               aria-current="@(Model.SelectedMonth == month ? "page" : null)">@AnalysisText.ShortMonthName(month)</a>
+                        </li>
+                    }
+                </ul>
+            }
+        </nav>
     }
 
     @if (!Model.HasData)
@@ -143,145 +155,191 @@
     }
     else
     {
-        <!-- Summary cards -->
-        <div class="row g-3 mb-4">
-            <div class="col-6 col-lg-3">
-                <div class="analysis-card analysis-card--income h-100">
-                    <div class="analysis-card__label">@L["Analysis.Summary.Income"]</div>
-                    <div class="analysis-card__value">@MoneyFormatter.FormatWhole(Model.TotalIncome, Model.ReportingCurrency)</div>
-                    <div class="analysis-card__sub">@totalForLabel</div>
+        var previous = Model.PreviousTrendPoint;
+        var previousMonthName = previous is null ? string.Empty : AnalysisText.MonthName(previous.MonthNumber);
+        var hasVelocity = Model.DailyBurnRate > 0 && Model.DaysInVelocityMonth > 0;
+        var velocityMonthName = AnalysisText.MonthName(Model.VelocityMonth);
+        var spentSoFar = Model.DailyBurnRate * (decimal)Model.DaysElapsed;
+        var budgetUsed = Model.BudgetConsumptionPercent.ToString("F1");
+        var projectionGap = Model.ProjectedMonthlySpend - Model.BudgetedExpenses;
+
+        <!-- The month in one sentence, then its pace -->
+        <section class="analysis-story" aria-labelledby="analysisHeadline">
+            <p class="analysis-story__eyebrow">@L.Named("Analysis.Story.Eyebrow", ("period", periodLabel), ("source", activeSourceName))</p>
+            <h2 class="analysis-story__headline" id="analysisHeadline">
+                @if (Model.NetSavings >= 0)
+                {
+                    @L.NamedHtml("Analysis.Story.Headline", null,
+                        ("period", new HtmlString(HtmlEncoder.Default.Encode(periodLabel))),
+                        ("expenses", strong(whole(Model.TotalExpenses))),
+                        ("income", strong(whole(Model.TotalIncome))),
+                        ("net", new HtmlString($"<strong class=\"analysis-amount--positive\">{HtmlEncoder.Default.Encode(whole(Model.NetSavings))}</strong>")),
+                        ("rate", strong(Model.SavingsRate.ToString("F1") + "%")))
+                }
+                else
+                {
+                    @L.NamedHtml("Analysis.Story.HeadlineShortfall", null,
+                        ("period", new HtmlString(HtmlEncoder.Default.Encode(periodLabel))),
+                        ("expenses", strong(whole(Model.TotalExpenses))),
+                        ("income", strong(whole(Model.TotalIncome))),
+                        ("shortfall", new HtmlString($"<strong class=\"analysis-amount--negative\">{HtmlEncoder.Default.Encode(whole(-Model.NetSavings))}</strong>")))
+                }
+            </h2>
+            @if (hasVelocity)
+            {
+                <p class="analysis-story__status">
+                    <span class="analysis-pill analysis-pill--@Model.PaceTone"><span aria-hidden="true">@toneIcon[Model.PaceTone]</span>@Model.VelocityStatusLabel</span>
+                    <span>
+                        @if (Model.IsVelocityMonthOpen)
+                        {
+                            var daysLeft = (int)Math.Ceiling(Model.DaysRemaining);
+                            @L.Plural("Analysis.Pace.UsedWithDaysLeft", daysLeft, ("used", budgetUsed), ("month", velocityMonthName))
+                            @(" ")
+                            @L.Named(projectionGap > 0 ? "Analysis.Pace.EndsOver" : "Analysis.Pace.EndsUnder",
+                                ("projected", whole(Model.ProjectedMonthlySpend)), ("difference", whole(Math.Abs(projectionGap))))
+                        }
+                        else
+                        {
+                            @L.Named("Analysis.Pace.Closed", ("month", velocityMonthName), ("used", budgetUsed), ("budget", whole(Model.BudgetedExpenses)))
+                        }
+                    </span>
+                </p>
+            }
+        </section>
+
+        <!-- Summary: each figure with its change from last month and its trend this year -->
+        <div class="analysis-kpis">
+            @{
+                var kpis = new[]
+                {
+                    (Label: L["Analysis.Summary.Income"].Value, Value: whole(Model.TotalIncome), Series: "income", Css: "",
+                        Change: previous is null ? (decimal?)null : Model.TotalIncome - previous.Income, GoodWhenUp: true, IsRate: false),
+                    (Label: L["Analysis.Summary.Expenses"].Value, Value: whole(Model.TotalExpenses), Series: "expenses", Css: "",
+                        Change: previous is null ? (decimal?)null : Model.TotalExpenses - previous.Expenses, GoodWhenUp: false, IsRate: false),
+                    (Label: L["Analysis.Summary.NetSavings"].Value, Value: whole(Model.NetSavings), Series: "netSavings",
+                        Css: Model.NetSavings >= 0 ? "analysis-amount--positive" : "analysis-amount--negative",
+                        Change: previous is null ? (decimal?)null : Model.NetSavings - previous.NetSavings, GoodWhenUp: true, IsRate: false),
+                    (Label: L["Analysis.Summary.SavingsRate"].Value, Value: Model.SavingsRate.ToString("F1") + "%", Series: "savingsRate", Css: "",
+                        Change: previous is null ? (decimal?)null : Model.SavingsRate - previous.SavingsRate, GoodWhenUp: true, IsRate: true)
+                };
+            }
+            @foreach (var kpi in kpis)
+            {
+                <div class="analysis-kpi">
+                    <span class="analysis-kpi__label">@kpi.Label</span>
+                    <span class="analysis-kpi__value @kpi.Css">@kpi.Value</span>
+                    @if (kpi.Change is 0m)
+                    {
+                        <span class="analysis-kpi__change">@L.Named("Analysis.Summary.NoChange", ("month", previousMonthName))</span>
+                    }
+                    else if (kpi.Change is { } change)
+                    {
+                        var good = kpi.GoodWhenUp ? change >= 0 : change <= 0;
+                        var amount = kpi.IsRate
+                            ? L.Named("Analysis.Summary.RatePoints", ("value", Math.Abs(change).ToString("F1")))
+                            : whole(Math.Abs(change));
+                        <span class="analysis-kpi__change">
+                            <span class="@(good ? "analysis-amount--positive" : "analysis-amount--negative")"><span aria-hidden="true">@(change >= 0 ? "▲" : "▼")</span>
+                                @L.Named(change >= 0 ? "Analysis.Summary.ChangeUp" : "Analysis.Summary.ChangeDown", ("amount", amount), ("month", previousMonthName))</span>
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="analysis-kpi__change">@L.Named("Analysis.Summary.TotalFor", ("period", periodLabel))</span>
+                    }
+                    @if (Model.TrendPoints.Count > 1)
+                    {
+                        <div class="analysis-kpi__spark" aria-hidden="true">
+                            <canvas data-spark="@kpi.Series"></canvas>
+                        </div>
+                    }
                 </div>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div class="analysis-card analysis-card--expenses h-100">
-                    <div class="analysis-card__label">@L["Analysis.Summary.Expenses"]</div>
-                    <div class="analysis-card__value">@MoneyFormatter.FormatWhole(Model.TotalExpenses, Model.ReportingCurrency)</div>
-                    <div class="analysis-card__sub">@totalForLabel</div>
-                </div>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div class="analysis-card analysis-card--savings h-100">
-                    <div class="analysis-card__label">@L["Analysis.Summary.NetSavings"]</div>
-                    <div class="analysis-card__value @(Model.NetSavings >= 0 ? "analysis-amount--positive" : "analysis-amount--negative")">
-                        @MoneyFormatter.FormatWhole(Model.NetSavings, Model.ReportingCurrency)</div>
-                    <div class="analysis-card__sub">@L["Analysis.Summary.IncomeMinusExpenses"]</div>
-                </div>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div class="analysis-card analysis-card--rate h-100">
-                    <div class="analysis-card__label">@L["Analysis.Summary.SavingsRate"]</div>
-                    <div class="analysis-card__value">@Model.SavingsRate.ToString("F1")%</div>
-                    <div class="analysis-card__sub">@L["Analysis.Summary.OfTotalIncome"]</div>
-                </div>
-            </div>
+            }
         </div>
         <partial name="_ConversionCaption" model="Model.Conversion"/>
 
-        <!-- Spending Velocity section -->
-        @if (Model.DailyBurnRate > 0)
+        <!-- Am I on pace? -->
+        @if (hasVelocity)
         {
-            var budgetUsed = Model.BudgetConsumptionPercent.ToString("F1");
-            var timeElapsed = Model.TimeElapsedPercent.ToString("F1");
-            <div class="analysis-section mb-4">
-                <div class="analysis-section__header">
-                    <h2 class="analysis-section__title">@L["Analysis.Velocity.Title"]</h2>
-                    <span
-                        class="analysis-section__badge @(Model.VelocityStatus == "On Track" ? "bg-success" : Model.VelocityStatus == "Over Budget" ? "bg-danger" : "bg-warning")">
-                        @Model.VelocityStatusLabel
-                    </span>
+            <section class="analysis-section" aria-labelledby="paceTitle">
+                <div>
+                    <h2 class="analysis-section__title" id="paceTitle">@L["Analysis.Pace.Title"]</h2>
+                    <p class="analysis-section__description">
+                        @if (Model.IsVelocityMonthOpen)
+                        {
+                            @L.Named("Analysis.Pace.Description", ("budget", whole(Model.BudgetedExpenses)))
+                        }
+                        else
+                        {
+                            @L.Named("Analysis.Pace.DescriptionClosed", ("month", velocityMonthName), ("budget", whole(Model.BudgetedExpenses)))
+                        }
+                    </p>
                 </div>
-
-                <div class="row g-3 mb-3">
-                    <div class="col-md-4">
-                        <div class="analysis-velocity-card">
-                            <div class="analysis-velocity-card__label">@L["Analysis.Velocity.DailyBurnRate"]</div>
-                            <div class="analysis-velocity-card__value">@MoneyFormatter.Format(Model.DailyBurnRate, Model.ReportingCurrency)</div>
-                            <div class="analysis-velocity-card__sub">@L["Analysis.Velocity.DailyBurnRateSub"]</div>
-                        </div>
+                <div class="analysis-pace">
+                    <div class="analysis-chart analysis-chart--pace">
+                        <canvas id="paceChart" role="img"
+                                aria-label="@L.Named("Analysis.Pace.ChartLabel", ("month", velocityMonthName), ("spent", whole(spentSoFar)), ("budget", whole(Model.BudgetedExpenses)))"></canvas>
                     </div>
-                    <div class="col-md-4">
-                        <div class="analysis-velocity-card">
-                            <div class="analysis-velocity-card__label">@L["Analysis.Velocity.Projected"]</div>
-                            <div class="analysis-velocity-card__value">
-                                @MoneyFormatter.FormatWhole(Model.ProjectedMonthlySpend, Model.ReportingCurrency)</div>
-                            <div class="analysis-velocity-card__sub">@L["Analysis.Velocity.ProjectedSub"]</div>
+                    <dl class="analysis-facts">
+                        <div class="analysis-fact">
+                            <dt>@L["Analysis.Velocity.DailyBurnRate"]</dt>
+                            <dd class="analysis-fact__value">@MoneyFormatter.Format(Model.DailyBurnRate, currency)</dd>
+                            <dd class="analysis-fact__sub">@L["Analysis.Velocity.DailyBurnRateSub"]</dd>
                         </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="analysis-velocity-card">
-                            <div class="analysis-velocity-card__label">@L["Analysis.Velocity.Budget"]</div>
-                            <div class="analysis-velocity-card__value">@MoneyFormatter.FormatWhole(Model.BudgetedExpenses, Model.ReportingCurrency)</div>
-                            <div class="analysis-velocity-card__sub">@L["Analysis.Velocity.BudgetSub"]</div>
+                        <div class="analysis-fact">
+                            <dt>@(Model.IsVelocityMonthOpen ? L["Analysis.Velocity.Projected"] : L["Analysis.Pace.MonthTotal"])</dt>
+                            <dd class="analysis-fact__value @(projectionGap > 0 ? "analysis-amount--negative" : "analysis-amount--positive")">@whole(Model.ProjectedMonthlySpend)</dd>
+                            <dd class="analysis-fact__sub">@L.Named(projectionGap > 0 ? "Analysis.Pace.OverBy" : "Analysis.Pace.UnderBy", ("amount", whole(Math.Abs(projectionGap))))</dd>
                         </div>
-                    </div>
+                        <div class="analysis-fact">
+                            <dt>@L["Analysis.Velocity.Budget"]</dt>
+                            <dd class="analysis-fact__value">@whole(Model.BudgetedExpenses)</dd>
+                            <dd class="analysis-fact__sub">@L.Named("Analysis.Pace.PerDay", ("amount", whole(Model.BudgetedExpenses / Model.DaysInVelocityMonth)))</dd>
+                        </div>
+                    </dl>
                 </div>
-
-                <!-- Budget consumption bar -->
-                <div class="analysis-progress-bar mb-3">
-                    <div class="analysis-progress-bar__labels">
-                        <span>@L.Named("Analysis.Velocity.BudgetUsed", ("percent", budgetUsed))</span>
-                        <span>@L.Named("Analysis.Velocity.TimeElapsed", ("percent", timeElapsed))</span>
-                    </div>
-                    <div class="analysis-progress-bar__track">
-                        <div class="analysis-progress-bar__fill analysis-progress-bar__fill--budget"
-                             style="width: @(Math.Min(Model.BudgetConsumptionPercent, 100).ToString(System.Globalization.CultureInfo.InvariantCulture))%"
-                             title="@L.Named("Analysis.Velocity.BudgetUsed", ("percent", budgetUsed))"></div>
-                        <div class="analysis-progress-bar__marker"
-                             style="left: @(Math.Min(Model.TimeElapsedPercent, 100).ToString(System.Globalization.CultureInfo.InvariantCulture))%"
-                             title="@L.Named("Analysis.Velocity.TimeElapsed", ("percent", timeElapsed))"></div>
-                    </div>
-                </div>
-
-                <!-- Weekly trend chart -->
-                @if (Model.WeeklyTrend.Any())
-                {
-                    <div class="analysis-chart-card">
-                        <h3 class="analysis-chart-card__title">@L["Analysis.Velocity.WeeklyTrend"]</h3>
-                        <div class="analysis-chart-card__canvas">
-                            <canvas id="weeklyTrendChart" height="200"></canvas>
-                        </div>
-                    </div>
-                }
-            </div>
+            </section>
         }
 
-        <!-- Trend chart -->
-        @if (Model.TrendPoints.Count > 1)
-        {
-            <div class="analysis-section mb-4">
-                <h2 class="analysis-section__title">@L["Analysis.Trends.Title"]</h2>
-                <div class="analysis-chart-card">
-                    <div class="analysis-chart-card__canvas">
-                        <canvas id="trendChart" height="250"></canvas>
-                    </div>
-                </div>
-            </div>
-        }
-
-        <!-- Money Flow: where this month's income went -->
+        <!-- Money Flow: where this month's income went, as a flow or step by step -->
         @if (Model.MoneyFlow is { } flow)
         {
             var shareHeading = flow.HasShortfall ? L["Analysis.MoneyFlow.ShareOfSpending"] : L["Analysis.MoneyFlow.ShareOfIncome"];
-            var shortfallAmount = new Microsoft.AspNetCore.Html.HtmlString(
-                $"<strong>{System.Text.Encodings.Web.HtmlEncoder.Default.Encode(MoneyFormatter.FormatWhole(flow.Shortfall, Model.ReportingCurrency))}</strong>");
-            <section class="analysis-section money-flow mb-4" aria-labelledby="moneyFlowTitle">
-                <h2 class="analysis-section__title" id="moneyFlowTitle">@L["Analysis.MoneyFlow.Title"]</h2>
-                <p class="text-muted small mb-3">@L.Named("Analysis.MoneyFlow.FromSource", ("month", flow.MonthLabel), ("source", activeSourceName))</p>
+            var stepRows = flow.TableRows.Count(r => r.Kind != MoneyFlowNodeKind.Saved) + 2 + (flow.HasShortfall ? 1 : 0);
+            <section class="analysis-section money-flow" aria-labelledby="moneyFlowTitle">
+                <div class="analysis-section__head">
+                    <div>
+                        <h2 class="analysis-section__title" id="moneyFlowTitle">@L["Analysis.MoneyFlow.Title"]</h2>
+                        <p class="analysis-section__description">@L.Named("Analysis.MoneyFlow.FromSource", ("month", flow.MonthLabel), ("source", activeSourceName))</p>
+                    </div>
+                    <div class="analysis-segmented" role="group" aria-label="@L["Analysis.MoneyFlow.ViewLabel"]" data-flow-switch hidden>
+                        <button type="button" data-flow-view="flow" aria-pressed="true">@L["Analysis.MoneyFlow.ViewFlow"]</button>
+                        <button type="button" data-flow-view="steps" aria-pressed="false">@L["Analysis.MoneyFlow.ViewSteps"]</button>
+                    </div>
+                </div>
                 @if (flow.HasShortfall)
                 {
-                    <p class="money-flow__note mb-3">
+                    <p class="money-flow__note">
                         @L.NamedHtml("Analysis.MoneyFlow.ShortfallNote", null,
-                            ("amount", shortfallAmount),
-                            ("month", new Microsoft.AspNetCore.Html.HtmlString(System.Text.Encodings.Web.HtmlEncoder.Default.Encode(flow.MonthName))))
+                            ("amount", strong(whole(flow.Shortfall))),
+                            ("month", new HtmlString(HtmlEncoder.Default.Encode(flow.MonthName))))
                     </p>
                 }
-                <div class="d-flex flex-column gap-3">
-                    <div class="analysis-chart-card order-2 order-sm-1">
-                        <div class="money-flow__canvas">
-                            <canvas id="moneyFlowChart" aria-hidden="true"></canvas>
-                        </div>
+                <div class="money-flow__panel" data-flow-panel="flow">
+                    <p class="analysis-section__hint">@L["Analysis.MoneyFlow.FlowHelp"]</p>
+                    <div class="money-flow__canvas">
+                        <canvas id="moneyFlowChart" aria-hidden="true"></canvas>
                     </div>
-                    <div class="table-responsive order-1 order-sm-2">
+                </div>
+                <div class="money-flow__panel" data-flow-panel="steps" hidden>
+                    <p class="analysis-section__hint">@L["Analysis.MoneyFlow.StepsHelp"]</p>
+                    <div class="analysis-chart" style="height: @((stepRows * 30 + 40).ToString(invariant))px">
+                        <canvas id="moneyFlowStepsChart" aria-hidden="true"></canvas>
+                    </div>
+                </div>
+                <details class="analysis-more" data-flow-table>
+                    <summary>@L["Analysis.Table.ShowTable"]</summary>
+                    <div class="table-responsive">
                         <table class="table align-middle analysis-table money-flow__table mb-0">
                             <caption class="visually-hidden">@L.Named("Analysis.MoneyFlow.Caption", ("month", flow.MonthLabel))</caption>
                             <thead>
@@ -306,7 +364,7 @@
                                             <span class="text-muted small">@L["Analysis.MoneyFlow.InOther"]</span>
                                         }
                                     </th>
-                                    <td class="text-end">@MoneyFormatter.FormatWhole(row.Amount, Model.ReportingCurrency)</td>
+                                    <td class="text-end">@whole(row.Amount)</td>
                                     <td class="text-end">@row.SharePercent.ToString("F1")%</td>
                                 </tr>
                             }
@@ -314,125 +372,150 @@
                             <tfoot>
                             <tr>
                                 <th scope="row">@L["Analysis.MoneyFlow.Income"]</th>
-                                <td class="text-end fw-semibold">@MoneyFormatter.FormatWhole(flow.Income, Model.ReportingCurrency)</td>
+                                <td class="text-end fw-semibold">@whole(flow.Income)</td>
                                 <td></td>
                             </tr>
                             @if (flow.HasShortfall)
                             {
                                 <tr class="money-flow__shortfall-row">
                                     <th scope="row">@L["Analysis.MoneyFlow.Shortfall"]</th>
-                                    <td class="text-end fw-semibold">@MoneyFormatter.FormatWhole(flow.Shortfall, Model.ReportingCurrency)</td>
+                                    <td class="text-end fw-semibold">@whole(flow.Shortfall)</td>
                                     <td></td>
                                 </tr>
                             }
                             </tfoot>
                         </table>
                     </div>
-                </div>
+                </details>
             </section>
         }
 
-        <!-- Category insights -->
-        @if (Model.Categories.Any())
+        <!-- Which categories need attention: spent against budget, the most used first -->
+        @if (Model.CategoriesByAttention.Any())
         {
-            <div class="analysis-section mb-4">
-                <h2 class="analysis-section__title">@L["Analysis.Categories.Title"]</h2>
-                <div class="row g-3">
-                    <div class="col-lg-6">
-                        <div class="analysis-chart-card">
-                            <div class="analysis-chart-card__canvas">
-                                <canvas id="categoryPieChart" height="300"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-6">
-                        <div class="analysis-chart-card">
-                            <div class="analysis-chart-card__canvas">
-                                <canvas id="categoryBarChart" height="300"></canvas>
-                            </div>
-                        </div>
-                    </div>
+            var scaleMax = Model.CategoryScaleMax;
+            <section class="analysis-section" aria-labelledby="categoriesTitle">
+                <div>
+                    <h2 class="analysis-section__title" id="categoriesTitle">@L["Analysis.Categories.Title"]</h2>
+                    <p class="analysis-section__description">@L["Analysis.Categories.Description"]</p>
                 </div>
-
-                <!-- Category table -->
-                <div class="table-responsive mt-3">
-                    <table class="table table-hover align-middle analysis-table">
-                        <thead>
-                        <tr>
-                            <th scope="col">@L["Analysis.Table.Category"]</th>
-                            <th scope="col" class="text-end">@L["Analysis.Table.Budgeted"]</th>
-                            <th scope="col" class="text-end">@L["Analysis.Table.Actual"]</th>
-                            <th scope="col" class="text-end">@L["Analysis.Table.Variance"]</th>
-                            <th scope="col" class="text-end">@L["Analysis.Table.PercentUsed"]</th>
-                            <th scope="col" class="text-end">@L["Analysis.Table.Status"]</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @foreach (var category in Model.Categories)
-                        {
+                <ul class="analysis-legend" aria-hidden="true">
+                    <li><i class="analysis-legend__swatch analysis-legend__swatch--over"></i>@L["Analysis.Status.OverBudget"]</li>
+                    <li><i class="analysis-legend__swatch analysis-legend__swatch--near"></i>@L["Analysis.Status.NearLimit"]</li>
+                    <li><i class="analysis-legend__swatch analysis-legend__swatch--ok"></i>@L["Analysis.Status.WithinBudget"]</li>
+                    <li><i class="analysis-legend__tick"></i>@L["Analysis.Velocity.Budget"]</li>
+                </ul>
+                <ul class="analysis-bullets">
+                    @foreach (var category in Model.CategoriesByAttention)
+                    {
+                        <li class="analysis-bullet">
+                            <div class="analysis-bullet__name">
+                                <span>@category.CategoryName</span>
+                                <span class="analysis-pill analysis-pill--@category.Tone"><span aria-hidden="true">@toneIcon[category.Tone]</span>@category.StatusLabel</span>
+                            </div>
+                            <div class="analysis-bullet__track" aria-hidden="true">
+                                <div class="analysis-bullet__fill analysis-bullet__fill--@category.Tone"
+                                     style="width: @widthOf(category.ActualAmount, scaleMax)%"></div>
+                                <div class="analysis-bullet__budget" style="left: @widthOf(category.BudgetedAmount, scaleMax)%"></div>
+                            </div>
+                            <div class="analysis-bullet__figures">
+                                <span>@L.Named("Analysis.Categories.OfBudget", ("actual", whole(category.ActualAmount)), ("budget", whole(category.BudgetedAmount)))</span>
+                                <small>
+                                    @L.Named(category.Variance < 0 ? "Analysis.Categories.Over" : "Analysis.Categories.Left", ("amount", whole(Math.Abs(category.Variance))))
+                                    · @L.Named("Analysis.Categories.PercentUsed", ("percent", category.PercentageUsed.ToString("F0")))
+                                </small>
+                            </div>
+                        </li>
+                    }
+                </ul>
+                <details class="analysis-more">
+                    <summary>@L["Analysis.Table.ShowTable"]</summary>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle analysis-table mb-0">
+                            <caption class="visually-hidden">@L["Analysis.Categories.Title"]</caption>
+                            <thead>
                             <tr>
-                                <td class="fw-semibold">@category.CategoryName</td>
-                                <td class="text-end">@MoneyFormatter.FormatWhole(category.BudgetedAmount, Model.ReportingCurrency)</td>
-                                <td class="text-end">@MoneyFormatter.FormatWhole(category.ActualAmount, Model.ReportingCurrency)</td>
-                                <td class="text-end @(category.Variance >= 0 ? "analysis-amount--positive" : "analysis-amount--negative")">
-                                    @(category.Variance >= 0 ? "+" : "")@MoneyFormatter.FormatWhole(category.Variance, Model.ReportingCurrency)
-                                </td>
-                                <td class="text-end">@category.PercentageUsed.ToString("F1")%</td>
-                                <td class="text-end">
-                                        <span
-                                            class="badge @(category.Status == "Within Budget" ? "bg-success" : category.Status == "Near Limit" ? "bg-warning" : "bg-danger")">
-                                            @category.StatusLabel
-                                        </span>
-                                </td>
+                                <th scope="col">@L["Analysis.Table.Category"]</th>
+                                <th scope="col" class="text-end">@L["Analysis.Table.Budgeted"]</th>
+                                <th scope="col" class="text-end">@L["Analysis.Table.Actual"]</th>
+                                <th scope="col" class="text-end">@L["Analysis.Table.Variance"]</th>
+                                <th scope="col" class="text-end">@L["Analysis.Table.PercentUsed"]</th>
+                                <th scope="col" class="text-end">@L["Analysis.Table.Status"]</th>
                             </tr>
-                        }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                            </thead>
+                            <tbody>
+                            @foreach (var category in Model.CategoriesByAttention)
+                            {
+                                <tr>
+                                    <th scope="row" class="fw-semibold">@category.CategoryName</th>
+                                    <td class="text-end">@whole(category.BudgetedAmount)</td>
+                                    <td class="text-end">@whole(category.ActualAmount)</td>
+                                    <td class="text-end @(category.Variance >= 0 ? "analysis-amount--positive" : "analysis-amount--negative")">
+                                        @(category.Variance >= 0 ? "+" : "")@whole(category.Variance)
+                                    </td>
+                                    <td class="text-end">@category.PercentageUsed.ToString("F1")%</td>
+                                    <td class="text-end">@category.StatusLabel</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            </section>
         }
 
-        <!-- Variance rankings -->
-        @if (Model.VarianceRankings.Any())
+        <!-- Monthly trend: income against expenses, then net savings -->
+        @if (Model.TrendPoints.Count > 1)
         {
-            <div class="analysis-section mb-4">
-                <h2 class="analysis-section__title">@L["Analysis.Variance.Title"]</h2>
-                <p class="text-muted small mb-3">@L["Analysis.Variance.Description"]</p>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle analysis-table">
-                        <thead>
-                        <tr>
-                            <th scope="col" style="width: 60px;">#</th>
-                            <th scope="col">@L["Analysis.Table.Category"]</th>
-                            <th scope="col" class="text-end">@L["Analysis.Table.Budgeted"]</th>
-                            <th scope="col" class="text-end">@L["Analysis.Table.Actual"]</th>
-                            <th scope="col" class="text-end">@L["Analysis.Table.Variance"]</th>
-                            <th scope="col" class="text-end">@L["Analysis.Table.Status"]</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @foreach (var ranking in Model.VarianceRankings)
-                        {
-                            <tr>
-                                <td>@ranking.Rank</td>
-                                <td class="fw-semibold">@ranking.CategoryName</td>
-                                <td class="text-end">@MoneyFormatter.FormatWhole(ranking.BudgetedAmount, Model.ReportingCurrency)</td>
-                                <td class="text-end">@MoneyFormatter.FormatWhole(ranking.ActualAmount, Model.ReportingCurrency)</td>
-                                <td class="text-end @(ranking.Variance >= 0 ? "analysis-amount--positive" : "analysis-amount--negative")">
-                                    @(ranking.Variance >= 0 ? "+" : "")@MoneyFormatter.FormatWhole(ranking.Variance, Model.ReportingCurrency)
-                                </td>
-                                <td class="text-end">
-                                        <span
-                                            class="badge @(ranking.Status == "Under Budget" ? "bg-success" : "bg-danger")">
-                                            @ranking.StatusLabel
-                                        </span>
-                                </td>
-                            </tr>
-                        }
-                        </tbody>
-                    </table>
+            <section class="analysis-section" aria-labelledby="trendTitle"
+                     data-month-url="@Url.Action("Index", new { year = Model.SelectedYear })">
+                <div>
+                    <h2 class="analysis-section__title" id="trendTitle">@L["Analysis.Trends.Title"]</h2>
+                    <p class="analysis-section__description">@L["Analysis.Trends.Description"]</p>
                 </div>
-            </div>
+                <ul class="analysis-legend" aria-hidden="true">
+                    <li><i class="analysis-legend__line analysis-legend__line--income"></i>@L["Analysis.Summary.Income"]</li>
+                    <li><i class="analysis-legend__line analysis-legend__line--expenses"></i>@L["Analysis.Summary.Expenses"]</li>
+                    <li><i class="analysis-legend__swatch analysis-legend__swatch--kept"></i>@L["Analysis.Trends.Kept"]</li>
+                    <li><i class="analysis-legend__swatch analysis-legend__swatch--net"></i>@L["Analysis.Summary.NetSavings"]</li>
+                </ul>
+                <div class="analysis-chart analysis-chart--trend">
+                    <canvas id="trendChart" role="img" aria-label="@L.Named("Analysis.Trends.ChartLabel", ("year", Model.SelectedYear))"></canvas>
+                </div>
+                <p class="analysis-chart__caption">@L["Analysis.Trends.NetHeading"]</p>
+                <div class="analysis-chart analysis-chart--net">
+                    <canvas id="netSavingsChart" aria-hidden="true"></canvas>
+                </div>
+                <details class="analysis-more">
+                    <summary>@L["Analysis.Table.ShowTable"]</summary>
+                    <div class="table-responsive">
+                        <table class="table align-middle analysis-table mb-0">
+                            <caption class="visually-hidden">@L.Named("Analysis.Trends.ChartLabel", ("year", Model.SelectedYear))</caption>
+                            <thead>
+                            <tr>
+                                <th scope="col">@L["Analysis.Table.Month"]</th>
+                                <th scope="col" class="text-end">@L["Analysis.Summary.Income"]</th>
+                                <th scope="col" class="text-end">@L["Analysis.Summary.Expenses"]</th>
+                                <th scope="col" class="text-end">@L["Analysis.Summary.NetSavings"]</th>
+                                <th scope="col" class="text-end">@L["Analysis.Summary.SavingsRate"]</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var point in Model.TrendPoints)
+                            {
+                                <tr>
+                                    <th scope="row" class="fw-normal">@point.MonthName</th>
+                                    <td class="text-end">@whole(point.Income)</td>
+                                    <td class="text-end">@whole(point.Expenses)</td>
+                                    <td class="text-end @(point.NetSavings >= 0 ? "analysis-amount--positive" : "analysis-amount--negative")">@whole(point.NetSavings)</td>
+                                    <td class="text-end">@point.SavingsRate.ToString("F1")%</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            </section>
         }
     }
 </div>
@@ -448,6 +531,18 @@
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
         };
+        var pace = Model.DailyBurnRate > 0 && Model.DaysInVelocityMonth > 0
+            ? new
+            {
+                daysInMonth = Model.DaysInVelocityMonth,
+                daysElapsed = Model.DaysElapsed,
+                spentSoFar = Model.DailyBurnRate * (decimal)Model.DaysElapsed,
+                projected = Model.ProjectedMonthlySpend,
+                budget = Model.BudgetedExpenses,
+                open = Model.IsVelocityMonthOpen,
+                tone = Model.PaceTone
+            }
+            : null;
     }
     <script src="~/lib/chartjs/chart.umd.min.js"></script>
     <script src="~/lib/chartjs-chart-sankey/dist/chartjs-chart-sankey.min.js"></script>
@@ -455,9 +550,10 @@
         // Pass data to JavaScript for chart rendering — must be set before dashboard.js loads
         // Use camelCase naming policy to match JavaScript property access in dashboard.js
         window.__analysisData = {
+            selectedMonth: @Html.Raw(JsonSerializer.Serialize(Model.SelectedMonth, jsonOptions)),
+            pace: @Html.Raw(JsonSerializer.Serialize(pace, jsonOptions)),
             weeklyTrend: @Html.Raw(JsonSerializer.Serialize(Model.WeeklyTrend, jsonOptions)),
             trendPoints: @Html.Raw(JsonSerializer.Serialize(Model.TrendPoints, jsonOptions)),
-            categories: @Html.Raw(JsonSerializer.Serialize(Model.Categories, jsonOptions)),
             moneyFlow: @Html.Raw(JsonSerializer.Serialize(Model.MoneyFlow, jsonOptions))
         };
     </script>
