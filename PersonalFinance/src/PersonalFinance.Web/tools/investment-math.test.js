@@ -37,7 +37,7 @@ const math = load();
  * @returns {object} The inputs.
  */
 function plan (changes) {
-    return Object.assign({ initial: 10000, monthly: 500, rate: 7, years: 20, increase: 0, fee: 0 }, changes);
+    return Object.assign({ initial: 10000, monthly: 500, rate: 7, years: 20, increase: 0, fee: 0, inflation: 0 }, changes);
 }
 
 /**
@@ -97,6 +97,55 @@ test('the year-by-year rows add up to the totals', () => {
     assertCents(sum('contributedYear') + sum('growthYear'), result.final);
 });
 
+test("in today's money, 10,000 kept for 10 years at 2.5% inflation is worth 7,811.98", () => {
+    // 10000 / 1.025^10.
+    const result = math.project(plan({ monthly: 0, rate: 0, years: 10, inflation: 2.5 }));
+
+    assert.strictEqual(result.final, 10000);
+    assertCents(result.real.final, 7811.98);
+    assertCents(result.real.rows[10].balance, 7811.98);
+    assert.strictEqual(result.real.rows[0].balance, 10000);
+});
+
+test("each year's deposits count at that year's prices in today's money", () => {
+    // 1200 / 1.025 in year 1, 1200 / 1.025^2 in year 2; the 2,400 balance is 2400 / 1.025^2 today.
+    const result = math.project(plan({ initial: 0, monthly: 100, rate: 0, years: 2, inflation: 2.5 }));
+
+    assertCents(result.real.contributed, 2312.91);
+    assertCents(result.real.final, 2284.35);
+    assertCents(result.real.growth, -28.55);
+});
+
+test("the fee's cost in today's money is what the fee took, at the last year's prices", () => {
+    const result = math.project(plan({ monthly: 0, years: 10, fee: 1, inflation: 2.5 }));
+
+    assertCents(result.real.feeCost, 1902.65 / Math.pow(1.025, 10));
+    assertCents(result.real.noFee, 20096.61 / Math.pow(1.025, 10));
+});
+
+test("at 0% inflation today's money is the same as future money", () => {
+    const result = math.project(plan({ increase: 2, fee: 0.3 }));
+
+    assert.strictEqual(result.real.final, result.final);
+    assert.strictEqual(result.real.contributed, result.contributed);
+    assert.deepStrictEqual(Array.from(result.real.rows, (row) => row.balance), Array.from(result.rows, (row) => row.balance));
+});
+
+test("the year-by-year rows add up to the totals in today's money too", () => {
+    const result = math.project(plan({ increase: 3, fee: 0.5, inflation: 3 }));
+    const real = result.real;
+    const sum = (field) => real.rows.reduce((total, row) => total + row[field], 0);
+
+    assert.strictEqual(real.rows.length, 21);
+    assert.deepStrictEqual(Object.assign({}, real.rows[0]),
+        { year: 0, contributedYear: 10000, growthYear: 0, contributed: 10000, balance: 10000, noFee: 10000 });
+    assertCents(sum('contributedYear'), real.contributed);
+    assertCents(real.rows[20].contributed, real.contributed);
+    assertCents(sum('growthYear'), real.growth);
+    assertCents(sum('contributedYear') + sum('growthYear'), real.final);
+    assert.ok(real.final < result.final);
+});
+
 test('growth overtakes what was put in the year 10,000 at 7.2% doubles: year 10', () => {
     // (1+0.006)^108 ≈ 1.91, (1+0.006)^120 ≈ 2.05.
     const result = math.project(plan({ monthly: 0, rate: 7.2, years: 30 }));
@@ -110,9 +159,11 @@ test('no milestone when growth never overtakes the deposits within the plan', ()
 });
 
 test('out-of-range and missing inputs are clamped before projecting', () => {
-    const inputs = math.normalize({ initial: -5, monthly: 'abc', rate: 40, years: 80.4, increase: -1, fee: 9 });
+    const inputs = math.normalize({ initial: -5, monthly: 'abc', rate: 40, years: 80.4, increase: -1, fee: 9, inflation: 12 });
 
-    assert.deepStrictEqual(Object.assign({}, inputs), { initial: 0, monthly: 0, rate: 15, years: 50, increase: 0, fee: 3 });
+    assert.deepStrictEqual(Object.assign({}, inputs),
+        { initial: 0, monthly: 0, rate: 15, years: 50, increase: 0, fee: 3, inflation: 10 });
+    assert.strictEqual(math.normalize({ inflation: -1 }).inflation, 0);
     assert.strictEqual(math.normalize({ years: 0 }).years, 1);
 });
 

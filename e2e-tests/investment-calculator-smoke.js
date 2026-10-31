@@ -1,7 +1,8 @@
 /**
  * Investment Calculator smoke test (spec #587): a fresh Account opens the calculator; the summary bar and the D3
  * balance chart show a projection; moving the monthly contribution slider changes the headline balance; a rate preset
- * sets the assumed return; and the fee tile reacts to a higher fund fee. Run from ui-test.js as Test 9m.
+ * sets the assumed return; the fee tile reacts to a higher fund fee; and the Today's money switch shows the headline
+ * and the year-by-year table in today's money. Run from ui-test.js as Test 9m.
  * Later slices extend it: Reach a goal, a lever previewed into Compare, a saved scenario that survives a reload.
  *
  * Expected texts are read from Resources/i18n/en.json, so a rewording does not break the test.
@@ -63,7 +64,7 @@ async function runInvestmentCalculatorSmoke({browser, base, pass, fail}) {
         const opening = await textOf(page, '#icFinal');
         check(/^\$\d{1,3}(,\d{3})+$/.test(opening), 'The summary bar shows the balance in dollars', `"${opening}"`);
         const series = await page.locator('#icBalanceChart path.ic-series').count();
-        check(series === 2, 'The balance chart draws the balance and what was put in', `${series} series`);
+        check(series === 3, "The balance chart draws the balance, what was put in and today's money", `${series} series`);
         check((await textOf(page, '#icMilestone')).length > 0, 'The balance tile says when growth overtakes deposits', 'empty');
 
         // 2. Moving the monthly contribution slider changes the results.
@@ -93,7 +94,21 @@ async function runInvestmentCalculatorSmoke({browser, base, pass, fail}) {
         check(amount(feeAfter) > amount(feeBefore), 'A 1% fund fee costs more than the 0.1% default',
             `"${feeBefore}" → "${feeAfter}"`);
 
-        // 5. The educational-estimate note links to the Disclaimer.
+        // 5. Today's money shows the headline at today's prices: less than in future money, and the label says so.
+        const nominal = await textOf(page, '#icFinal');
+        const rowsBefore = await page.locator('#icYearRows tr').count();
+        await page.locator('label[for="icTodaysMoney"]').click();
+        const real = await changedText(page, '#icFinal', nominal);
+        check(amount(real) > 0 && amount(real) < amount(nominal), "Today's money shows a smaller headline balance",
+            `"${nominal}" → "${real}"`);
+        const heroLabel = await textOf(page, '#icFinalLabel');
+        check(heroLabel.toLowerCase().includes('today'), "The headline label says it is in today's money", `"${heroLabel}"`);
+        check(await textOf(page, '#icOther') === nominal, 'The bar keeps the future-money balance beside it',
+            `"${await textOf(page, '#icOther')}"`);
+        check(rowsBefore > 1 && await textOf(page, '#icYearOther') === en['InvestmentCalculator.Js.Money.Future'],
+            "The year-by-year table lists every year and switches to today's money", `${rowsBefore} rows`);
+
+        // 6. The educational-estimate note links to the Disclaimer.
         const disclaimer = await page.locator('.ic-disclaimer a').getAttribute('href').catch(() => null);
         check(disclaimer === '/disclaimer', 'The estimate note links to the Disclaimer', `${disclaimer}`);
     } catch (error) {

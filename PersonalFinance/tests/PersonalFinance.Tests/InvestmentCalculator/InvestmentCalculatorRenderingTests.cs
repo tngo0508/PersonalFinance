@@ -135,6 +135,57 @@ public sealed partial class InvestmentCalculatorRenderingTests : IAsyncLifetime
         Assert.Contains("data-rate-preset=\"10\"", page, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Inflation_IsAnAssumptionOfZeroToTenPercent_StartingAtTwoAndAHalf()
+    {
+        string page = Calculator(await GetPageAsync());
+
+        string range = Tag(page, "id=\"icInflationRange\"");
+        Assert.Contains("min=\"0\"", range, StringComparison.Ordinal);
+        Assert.Contains("max=\"10\"", range, StringComparison.Ordinal);
+        Assert.Contains("value=\"2.5\"", range, StringComparison.Ordinal);
+        int more = page.IndexOf("class=\"ic-more\"", StringComparison.Ordinal);
+        Assert.True(more >= 0 && page.IndexOf("id=\"icInflationRange\"", StringComparison.Ordinal) > more,
+            "The inflation field is not inside More assumptions.");
+    }
+
+    [Fact]
+    public async Task TodaysMoney_IsASwitchInTheSummaryBar_OffByDefault()
+    {
+        string page = Calculator(await GetPageAsync());
+
+        string toggle = Tag(page, "id=\"icTodaysMoney\"");
+        Assert.Contains("type=\"checkbox\"", toggle, StringComparison.Ordinal);
+        Assert.Contains("role=\"switch\"", toggle, StringComparison.Ordinal);
+        Assert.DoesNotContain("checked", toggle, StringComparison.Ordinal);
+        Assert.Contains("<label class=\"form-check-label\" for=\"icTodaysMoney\">Today's money</label>", page,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task YearByYear_IsATableWithColumnHeaders()
+    {
+        string page = Calculator(await GetPageAsync());
+
+        int table = page.IndexOf("id=\"icYearTable\"", StringComparison.Ordinal);
+        Assert.True(table >= 0, "No year-by-year table.");
+        string head = page[table..page.IndexOf("</thead>", table, StringComparison.Ordinal)];
+        Assert.Equal(5, Regex.Count(head, "<th scope=\"col\""));
+        Assert.Contains("Balance", head, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EveryElementId_IsUnique()
+    {
+        string page = Calculator(await GetPageAsync());
+
+        string[] repeated = [.. Regex.Matches(page, "\\sid=\"([^\"]+)\"")
+            .GroupBy(match => match.Groups[1].Value)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)];
+        Assert.Empty(repeated);
+    }
+
     /// <summary>The opening tag of the first element carrying <paramref name="attribute"/>.</summary>
     private static string Tag(string html, string attribute)
     {

@@ -3,18 +3,24 @@
  * Investment Calculator page (#587): reads the slider rail, projects the plan with investment-math.js and hands the
  * result to the summary bar and the Overview tiles (investment-charts.js). Every amount is in the Reporting Currency
  * the view names on [data-investment-calculator]. Nothing is sent to the server.
+ *
+ * The Today's money switch shows the bar's numbers, the tiles' text, the donut and the year-by-year table in today's
+ * money (the projection's real half); the line and bar charts stay in future money, with today's money dashed.
  */
 (function () {
     'use strict';
 
-    const KEYS = ['initial', 'monthly', 'rate', 'years', 'increase', 'fee'];
+    const KEYS = ['initial', 'monthly', 'rate', 'years', 'increase', 'fee', 'inflation'];
     const STATUS_DELAY_MS = 600;
+    /** Where the year-by-year table starts open: wide enough for its five columns without a squeeze. */
+    const WIDE_TABLE_QUERY = '(min-width: 48em)';
 
     let root = null;
     let currency = 'USD';
     let projection = null;
     let frame = null;
     let statusTimer = null;
+    let todays = false;
 
     /**
      * The element with this id, or null.
@@ -154,26 +160,68 @@
     }
 
     /**
-     * Draw the three charts from the current projection.
+     * The projection as the Today's money switch shows it: the real half when on.
+     * @param {object} p - The projection.
+     * @returns {object} rows, final, contributed, growth, noFee, feeCost in the chosen money.
+     */
+    function shown (p) {
+        return todays ? p.real : p;
+    }
+
+    /**
+     * Fill the year-by-year table: the chosen money in the first columns, the other money in the last.
+     */
+    function drawTable () {
+        const body = byId('icYearRows');
+        if (!projection || !body) {
+            return;
+        }
+        const view = shown(projection);
+        const other = todays ? projection.rows : projection.real.rows;
+        const { titleX } = yearFormats();
+        setText('icYearCaption', PFI18n.t(todays ? 'InvestmentCalculator.Js.Table.CaptionToday' : 'InvestmentCalculator.Js.Table.Caption'));
+        setText('icYearOther', PFI18n.t(todays ? 'InvestmentCalculator.Js.Money.Future' : 'InvestmentCalculator.Js.Money.Today'));
+        body.replaceChildren(...view.rows.map((row, i) => {
+            const tr = document.createElement('tr');
+            const th = document.createElement('th');
+            th.scope = 'row';
+            th.textContent = titleX(row.year);
+            tr.appendChild(th);
+            [row.contributedYear, row.growthYear, row.balance, other[i].balance].forEach((amount, column) => {
+                const td = document.createElement('td');
+                td.textContent = money(amount);
+                if (column === 2) {
+                    td.className = 'ic-table__balance';
+                }
+                tr.appendChild(td);
+            });
+            return tr;
+        }));
+    }
+
+    /**
+     * Draw the charts from the current projection.
      */
     function drawCharts () {
         if (!projection) {
             return;
         }
         const p = projection;
+        const view = shown(p);
         const c = colours();
         const years = p.rows.length - 1;
         const common = Object.assign({ palette: c, formatY: compact, formatValue: money }, yearFormats());
         const name = (key) => PFI18n.t(`InvestmentCalculator.Js.Series.${key}`);
 
         InvestmentCharts.line(byId('icBalanceChart'), Object.assign({}, common, {
-            label: PFI18n.t('InvestmentCalculator.Js.Chart.Balance', {
+            label: PFI18n.t('InvestmentCalculator.Js.Chart.BalanceToday', {
                 start: money(p.rows[0].balance), final: money(p.final), years: PFI18n.formatNumber(years),
-                contributed: money(p.contributed)
+                real: money(p.real.final), contributed: money(p.contributed)
             }),
             series: [
                 { name: name('Balance'), color: c.balance, area: true, width: 3, values: p.rows.map((r) => ({ x: r.year, y: r.balance })) },
-                { name: name('PutIn'), color: c.contributed, values: p.rows.map((r) => ({ x: r.year, y: r.contributed })) }
+                { name: name('PutIn'), color: c.contributed, values: p.rows.map((r) => ({ x: r.year, y: r.contributed })) },
+                { name: name('TodaysMoney'), color: c.balance, dash: '6 4', width: 2, values: p.real.rows.map((r) => ({ x: r.year, y: r.balance })) }
             ],
             markers: p.milestoneYear === null
                 ? []
@@ -192,15 +240,32 @@
             ]
         }));
 
-        const growth = Math.max(0, p.growth);
+        const growth = Math.max(0, view.growth);
         InvestmentCharts.donut(byId('icDonut'), {
             palette: c,
-            centre: compact(p.final),
-            label: PFI18n.t('InvestmentCalculator.Js.Chart.Donut', { contributed: money(p.contributed), growth: money(growth) }),
+            centre: compact(view.final),
+            label: PFI18n.t('InvestmentCalculator.Js.Chart.Donut', { contributed: money(view.contributed), growth: money(growth) }),
             parts: [
-                { name: name('PutIn'), value: p.contributed, color: c.contributed },
+                { name: name('PutIn'), value: view.contributed, color: c.contributed },
                 { name: name('Growth'), value: growth, color: c.growth }
             ]
+        });
+
+        const last = p.rows[years];
+        InvestmentCharts.bars(byId('icBarsChart'), {
+            palette: c,
+            formatY: compact,
+            formatX: (year) => PFI18n.formatNumber(year),
+            label: PFI18n.t('InvestmentCalculator.Js.Chart.Bars', {
+                years: PFI18n.formatNumber(years), contributed: money(last.contributedYear), growth: money(last.growthYear)
+            }),
+            bars: p.rows.slice(1).map((r) => ({
+                x: r.year,
+                title: PFI18n.t('InvestmentCalculator.Js.Bars.Year', {
+                    year: PFI18n.formatNumber(r.year), contributed: money(r.contributedYear), growth: money(r.growthYear)
+                }),
+                parts: [{ value: r.contributedYear, color: c.contributed }, { value: r.growthYear, color: c.growth }]
+            }))
         });
     }
 
@@ -214,6 +279,7 @@
         frame = requestAnimationFrame(() => {
             frame = null;
             drawCharts();
+            drawTable();
         });
     }
 
@@ -224,17 +290,20 @@
         const plan = readInputs();
         KEYS.forEach((key) => showValue(key, plan[key]));
         projection = InvestmentMath.project(plan);
-        const p = projection;
-        const label = PFI18n.plural('InvestmentCalculator.Js.Bar.InYears', plan.years);
+        const p = shown(projection);
+        const label = PFI18n.plural(todays ? 'InvestmentCalculator.Js.Bar.InYearsToday' : 'InvestmentCalculator.Js.Bar.InYears', plan.years);
 
         setText('icFinalLabel', label);
         setText('icFinal', money(p.final));
         setText('icContributed', money(p.contributed));
         setText('icGrowth', money(p.growth));
+        setText('icOtherLabel', PFI18n.t(todays ? 'InvestmentCalculator.Js.Money.Future' : 'InvestmentCalculator.Js.Money.Today'));
+        setText('icOther', money(todays ? projection.final : projection.real.final));
 
-        setText('icMilestone', p.milestoneYear === null
+        const milestone = projection.milestoneYear;
+        setText('icMilestone', milestone === null
             ? PFI18n.t('InvestmentCalculator.Js.Milestone.NotYet')
-            : PFI18n.t('InvestmentCalculator.Js.Milestone.Reached', { year: PFI18n.formatNumber(p.milestoneYear) }));
+            : PFI18n.t('InvestmentCalculator.Js.Milestone.Reached', { year: PFI18n.formatNumber(milestone) }));
 
         const growth = Math.max(0, p.growth);
         const whole = p.contributed + growth;
@@ -308,6 +377,24 @@
     }
 
     /**
+     * Wire the Today's money switch, and open the year-by-year table where there is room for it.
+     */
+    function bindTodaysMoney () {
+        const toggle = byId('icTodaysMoney');
+        if (toggle) {
+            todays = toggle.checked;
+            toggle.addEventListener('change', () => {
+                todays = toggle.checked;
+                update();
+            });
+        }
+        const yearly = byId('icYearly');
+        if (yearly && window.matchMedia && window.matchMedia(WIDE_TABLE_QUERY).matches) {
+            yearly.open = true;
+        }
+    }
+
+    /**
      * Start the page.
      */
     function init () {
@@ -318,6 +405,7 @@
         currency = root.dataset.currency || 'USD';
         KEYS.forEach(bindField);
         bindPresets();
+        bindTodaysMoney();
         update();
 
         const tiles = root.querySelector('.ic-tiles');
