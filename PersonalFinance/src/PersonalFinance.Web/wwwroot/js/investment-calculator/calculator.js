@@ -539,13 +539,56 @@
     }
 
     /**
+     * Start the goal from one of the Account's Savings Goals (#593): its target becomes the goal amount and, for a
+     * dated goal, its years to the target date become the plan's years, with the tile asking "How much a month?".
+     * Nothing is written back to the Savings Goal.
+     * @param {HTMLOptionElement|undefined} option - The chosen option; the empty "Choose a goal" option does nothing.
+     */
+    function startFromSavingsGoal (option) {
+        const field = byId('icGoal');
+        const target = option ? parseFloat(option.dataset.target) : NaN;
+        if (!field || !Number.isFinite(target)) {
+            return;
+        }
+        field.value = String(target);
+        const years = parseInt(option.dataset.years, 10);
+        const hasYears = Number.isFinite(years);
+        if (hasYears) {
+            const yearsField = byId('icYears');
+            const yearsRange = byId('icYearsRange');
+            if (yearsField) {
+                yearsField.value = String(years);
+            }
+            if (yearsRange) {
+                yearsRange.value = String(years);
+            }
+            const monthly = byId('icGoalModeMonthly');
+            if (monthly) {
+                monthly.checked = true;
+            }
+        }
+        update();
+        const values = { amount: money(readTarget()), name: option.dataset.name || option.textContent };
+        if (hasYears) {
+            values.years = PFI18n.plural('InvestmentCalculator.Js.Years', readInputs().years);
+        }
+        clearTimeout(statusTimer);
+        setText('icGoalStatus', PFI18n.t(hasYears ? 'InvestmentCalculator.Js.Goal.FromYears' : 'InvestmentCalculator.Js.Goal.From', values));
+    }
+
+    /**
      * Wire the goal tile: its amount and question re-solve the goal; "Use this amount" puts the answer in the rail's
      * monthly contribution.
      */
     function bindGoal () {
         const field = byId('icGoal');
+        const from = byId('icGoalFrom');
         if (field) {
             field.addEventListener('input', () => {
+                // A typed amount is no longer the chosen Savings Goal's.
+                if (from) {
+                    from.value = '';
+                }
                 announceGoal = true;
                 update();
             });
@@ -562,6 +605,9 @@
                 update();
             });
         });
+        if (from) {
+            from.addEventListener('change', () => startFromSavingsGoal(from.selectedOptions[0]));
+        }
         const use = byId('icGoalUse');
         if (use) {
             use.addEventListener('click', () => {

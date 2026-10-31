@@ -499,6 +499,25 @@
     margin-bottom: 0.75rem;
 }
 
+/* Start from a Savings Goal (#593): optional, so it sits above the amount, set apart by a hairline. */
+.ic-goal__from {
+    display: grid;
+    gap: 0.3rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.ic-goal__select {
+    min-height: 2.75rem;
+    max-width: 100%;
+    text-overflow: ellipsis;
+}
+
+.ic-goal__from .ic-tile__hint {
+    margin: 0;
+}
+
 .ic-goal__modes {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
