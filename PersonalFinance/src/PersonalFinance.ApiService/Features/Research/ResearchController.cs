@@ -151,6 +151,16 @@ public class ResearchController : ControllerBase
     public async Task<IActionResult> GetWorld(CancellationToken cancellationToken = default) =>
         SnapshotOrUnavailable(await _researchService.GetWorldAsync(cancellationToken), WorldNeverLoaded);
 
+    /// <summary>
+    /// Gets each stored dataset's SourceAsOf and BuiltAt, without the datasets themselves. Always answers 200: the
+    /// list is empty when nothing has loaded.
+    /// </summary>
+    [HttpGet("status")]
+    [ProducesResponseType(typeof(ResearchStatusDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetStatus(CancellationToken cancellationToken = default) =>
+        Ok(await _researchService.GetStatusAsync(cancellationToken));
+
     /// <summary>200 with the snapshot, or 503 with <paramref name="reason"/> when the dataset has never loaded.</summary>
     private IActionResult SnapshotOrUnavailable<TSnapshot>(ResearchSnapshotResult<TSnapshot> result, string reason)
         where TSnapshot : class =>

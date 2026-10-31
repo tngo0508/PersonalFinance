@@ -73,6 +73,13 @@ public interface IResearchApi
     Task<WorldSnapshotDto> GetWorldAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets each stored dataset's SourceAsOf and BuiltAt, without the datasets themselves. Always answers 200; the
+    /// list is empty when nothing has loaded.
+    /// </summary>
+    [Get("/api/Research/status")]
+    Task<ResearchStatusDto> GetStatusAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets up to eight suggestions for the Companies tab's search box matching <paramref name="query"/> by ticker or
     /// company name. A rejected query answers 400, and a ticker list that has never loaded answers 503 with a
     /// <see cref="ResearchUnavailableDto"/>; Refit raises both as an <see cref="ApiException"/>.

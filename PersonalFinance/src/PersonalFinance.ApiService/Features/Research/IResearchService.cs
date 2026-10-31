@@ -60,6 +60,11 @@ public interface IResearchService
     Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets each stored dataset's SourceAsOf and BuiltAt without reading its payload; empty when nothing has loaded.
+    /// </summary>
+    Task<ResearchStatusDto> GetStatusAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Rebuilds every dataset built from one of <paramref name="sources"/>, each on its own; the others are skipped.
     /// A dataset's snapshot is replaced only when its build succeeds; a failed build is logged and leaves the previous
     /// snapshot in place.

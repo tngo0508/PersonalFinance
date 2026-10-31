@@ -87,6 +87,10 @@ internal sealed class ResearchService : IResearchService
         GetAsync<WorldSnapshotDto>(ResearchDatasets.World, cancellationToken);
 
     /// <inheritdoc />
+    public async Task<ResearchStatusDto> GetStatusAsync(CancellationToken cancellationToken = default) =>
+        new() { Datasets = await _store.ReadStatusAsync(cancellationToken) };
+
+    /// <inheritdoc />
     public async Task<ResearchRefreshSummary> RefreshAsync(ResearchSources sources = ResearchSources.All,
         CancellationToken cancellationToken = default)
     {
