@@ -2520,7 +2520,7 @@
   "Research.Home.Dataset.FundExposure": "Fund exposure by country and industry",
   "Research.Home.Dataset.World": "World market (World Bank)",
   "Research.Home.Dataset.Macro": "Inflation and interest rates (BLS, Federal Reserve)",
-  "Research.Home.Advice": "For information only. Not investment advice. No prices, no recommendations, nothing about you leaves this page.",
+  "Research.Home.Advice": "For information only. Not investment advice. No prices and no recommendations; your basket is kept only in the page address, never saved.",
   "Research.Js.Home.MixApplied": "Basket set to {name}.",
   "Research.Js.Common.Years.one": "{count} year",
   "Research.Js.Common.Years.other": "{count} years",

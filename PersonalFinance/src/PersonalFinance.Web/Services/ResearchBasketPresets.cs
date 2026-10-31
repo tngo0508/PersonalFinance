@@ -12,7 +12,7 @@ public static class ResearchBasketPresets
     public static IReadOnlyList<ResearchBasketPreset> All { get; } =
     [
         new("Research.Home.Preset.ThreeFund", [("VTI", 60), ("VXUS", 30), ("BND", 10)]),
-        new("Research.Home.Preset.SP500Only", [("VOO", 100)]),
+        new("Research.Home.Preset.SP500Only", [("SPY", 100)]),
         new("Research.Home.Preset.GrowthTilt", [("QQQ", 50), ("VTI", 50)]),
         new("Research.Home.Preset.Income", [("SCHD", 50), ("BND", 30), ("VNQ", 20)]),
     ];

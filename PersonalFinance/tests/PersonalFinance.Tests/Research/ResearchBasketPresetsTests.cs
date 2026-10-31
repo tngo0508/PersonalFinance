@@ -13,7 +13,7 @@ public class ResearchBasketPresetsTests
         Assert.Equal(
             [
                 ("Research.Home.Preset.ThreeFund", "VTI:60,VXUS:30,BND:10"),
-                ("Research.Home.Preset.SP500Only", "VOO:100"),
+                ("Research.Home.Preset.SP500Only", "SPY:100"),
                 ("Research.Home.Preset.GrowthTilt", "QQQ:50,VTI:50"),
                 ("Research.Home.Preset.Income", "SCHD:50,BND:30,VNQ:20"),
             ],

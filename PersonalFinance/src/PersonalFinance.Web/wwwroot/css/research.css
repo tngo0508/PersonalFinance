@@ -1503,6 +1503,7 @@ button.research-ranked__row:focus-visible {
 
 .research-home__starter:hover {
     border-color: var(--app-brand);
+    text-decoration: none;
     color: var(--app-brand-text);
 }
 
@@ -1591,6 +1592,7 @@ button.research-ranked__row:focus-visible {
 }
 
 .research-home__chip-remove {
+    position: relative;
     width: 2rem;
     height: 2rem;
     padding: 0;
@@ -1599,6 +1601,13 @@ button.research-ranked__row:focus-visible {
     background: var(--app-surface-secondary);
     color: var(--app-text);
     line-height: 1;
+}
+
+/* The visible circle is 32px; the hit area reaches 44px around it. */
+.research-home__chip-remove::before {
+    position: absolute;
+    inset: -6px;
+    content: "";
 }
 
 .research-home__chip-remove:hover {
@@ -1635,6 +1644,7 @@ button.research-ranked__row:focus-visible {
 
 .research-home__explore-link:hover {
     border-color: var(--app-brand);
+    text-decoration: none;
 }
 
 .research-home__explore-title {

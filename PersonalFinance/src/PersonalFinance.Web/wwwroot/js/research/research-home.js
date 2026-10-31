@@ -6,9 +6,11 @@
  *   (`pf.research.homeSteps`). When the storage cannot be read or written the strip simply shows.
  * - The basket card is drawn from the Fund Basket in the address (`ResearchBasket.get()`): a chip per fund with its
  *   share and a remove button, and "Open basket report"; it redraws on every `research:basketchange`.
- * - A starting mix sets the whole basket. A mix whose funds are not all Tracked Funds is hidden, judged from the search
- *   index the search box loads (`ResearchSearch.searchIndex`), so the page reads it only once; when the index cannot be
- *   read the mixes stay as they are.
+ * - A starting mix sets the whole basket. The mixes start hidden and show once checked against the search index the
+ *   search box loads (`ResearchSearch.searchIndex`, so the page reads it only once): a mix whose funds are not all
+ *   Tracked Funds stays hidden. When the index cannot be read every mix shows.
+ * - A starter link with `data-research-home-industry` opens the plain Sectors page until the index names that
+ *   industry's SEC office; then it opens the industry itself.
  */
 (function () {
     'use strict';
@@ -78,15 +80,16 @@
 
     /**
      * Draw one fund's chip: its ticker linking to its Fund page, its share and a remove button.
+     * @param {string} fundHref - The Fund pages' address with the app's base path, e.g. `/Research/Fund/`.
      * @param {{ticker: string, share: number}} fund - The fund.
      * @returns {HTMLLIElement} The chip.
      */
-    function chip (fund) {
+    function chip (fundHref, fund) {
         const item = document.createElement('li');
         item.className = 'research-home__chip';
         const link = document.createElement('a');
         link.className = 'research-home__chip-link';
-        link.href = `/Research/Fund/${encodeURIComponent(fund.ticker)}`;
+        link.href = `${fundHref}${encodeURIComponent(fund.ticker)}`;
         link.setAttribute('data-research-link', '');
         link.textContent = fund.ticker;
         const share = document.createElement('span');
@@ -116,6 +119,7 @@
         const filled = card.querySelector('[data-research-home-basket-filled]');
         const chips = card.querySelector('[data-research-home-basket-chips]');
         const title = card.querySelector('h2');
+        const fundHref = card.dataset.fundHref || '/Research/Fund/';
         if (!empty || !filled || !chips) {
             return;
         }
@@ -126,7 +130,7 @@
          */
         function draw () {
             const funds = basket.get();
-            chips.replaceChildren(...funds.map(chip));
+            chips.replaceChildren(...funds.map((fund) => chip(fundHref, fund)));
             empty.hidden = funds.length > 0;
             filled.hidden = funds.length === 0;
             // The shell's own listener ran before the chips existed, so their links get the basket here.
@@ -168,34 +172,73 @@
     }
 
     /**
-     * Hide each starting mix whose funds are not all in the search index's Tracked Funds, and the mixes' part when
-     * none is left. When the index cannot be read the mixes stay.
-     * @returns {Promise<void>} Resolves once the mixes are checked.
+     * Show the starting mixes whose funds are all Tracked Funds (all of them when the index is missing), and the mixes'
+     * part when any is shown.
+     * @param {?Object} index - The search index, or null when it could not be read.
+     * @returns {void}
      */
-    async function checkMixes () {
+    function showMixes (index) {
         const mixes = document.querySelector('[data-research-home-mixes]');
-        const search = window.ResearchSearch;
-        if (!mixes || !search || typeof search.searchIndex !== 'function') {
+        if (!mixes) {
             return;
         }
-        const box = document.querySelector('[data-research-search]');
-        let index;
-        try {
-            index = await search.searchIndex(box ? box.dataset.indexUrl : undefined);
-        } catch (error) {
-            return;
-        }
-        const tracked = new Set(((index && index.funds) || []).map((f) => String(f.ticker).toUpperCase()));
+        const tracked = index ? new Set((index.funds || []).map((f) => String(f.ticker).toUpperCase())) : null;
         let shown = 0;
         mixes.querySelectorAll('[data-research-home-mix]').forEach((item) => {
             const button = item.querySelector('[data-research-preset]');
             const tickers = button
                 ? button.dataset.researchPreset.split(',').map((part) => part.split(':')[0].toUpperCase())
                 : [];
-            item.hidden = tickers.length === 0 || !tickers.every((ticker) => tracked.has(ticker));
+            item.hidden = tickers.length === 0 || (tracked !== null && !tickers.every((ticker) => tracked.has(ticker)));
             shown += item.hidden ? 0 : 1;
         });
         mixes.hidden = shown === 0;
+    }
+
+    /**
+     * Point each industry starter at its industry, under the SEC office the index gives it. A starter whose industry
+     * the index does not list keeps the plain Sectors page.
+     * @param {Object} index - The search index.
+     * @returns {void}
+     */
+    function linkIndustries (index) {
+        const industries = index.industries || [];
+        document.querySelectorAll('a[data-research-home-industry]').forEach((link) => {
+            const wanted = link.dataset.researchHomeIndustry.toLowerCase();
+            const found = industries.find((i) => typeof i.name === 'string' && i.name.toLowerCase() === wanted);
+            if (!found) {
+                return;
+            }
+            // The link already carries the basket; keep its path (with the app's base) and set the focus.
+            const href = link.getAttribute('href');
+            const path = href.split(/[?#]/)[0];
+            const focus = found.office ? `${found.office}/${found.name}` : found.name;
+            link.setAttribute('href', `${path}?focus=${encodeURIComponent(focus)}`);
+            if (window.ResearchBasket) {
+                window.ResearchBasket.linkify(link.parentNode);
+            }
+        });
+    }
+
+    /**
+     * Read the search index once (shared with the search box), then show the mixes and link the industry starters.
+     * @returns {Promise<void>} Resolves once done.
+     */
+    async function applyIndex () {
+        const search = window.ResearchSearch;
+        const box = document.querySelector('[data-research-search]');
+        let index = null;
+        try {
+            if (search && typeof search.searchIndex === 'function') {
+                index = await search.searchIndex(box ? box.dataset.indexUrl : undefined);
+            }
+        } catch (error) {
+            index = null;
+        }
+        showMixes(index);
+        if (index) {
+            linkIndustries(index);
+        }
     }
 
     /**
@@ -205,7 +248,7 @@
     function init () {
         wireSteps();
         wireBasket();
-        checkMixes();
+        applyIndex();
     }
 
     if (document.readyState === 'loading') {

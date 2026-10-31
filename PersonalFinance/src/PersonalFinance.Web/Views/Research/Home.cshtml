@@ -4,14 +4,15 @@
 @{
     ViewData["Title"] = L["Research.Title"].Value;
     // Research links use their final paths: the pages that do not exist yet arrive in later releases.
-    (string Label, string Href)[] starters =
+    // The Semiconductors starter opens the plain Sectors page until research-home.js finds the industry (and its SEC
+    // office) in the search index; Home reads no snapshot, so the office is never written here.
+    (string Label, string Href, string? Industry)[] starters =
     [
-        ("VTI", Url.Content("~/Research/Fund/VTI")),
-        (L["Research.Home.Starter.Microsoft"].Value, Url.Content("~/Research/Company/MSFT")),
-        (L["Research.Home.Starter.Semiconductors"].Value,
-            Url.Content("~/Research/Sectors?focus=" + Uri.EscapeDataString("Manufacturing/Semiconductors & Related Devices"))),
-        (L["Research.Home.Starter.Japan"].Value, Url.Content("~/Research/World?country=Japan")),
-        (L["Research.Home.Starter.CompareFunds"].Value, Url.Content("~/Research/Funds")),
+        ("VTI", Url.Content("~/Research/Fund/VTI"), null),
+        (L["Research.Home.Starter.Microsoft"].Value, Url.Content("~/Research/Company/MSFT"), null),
+        (L["Research.Home.Starter.Semiconductors"].Value, Url.Content("~/Research/Sectors"), "Semiconductors & Related Devices"),
+        (L["Research.Home.Starter.Japan"].Value, Url.Content("~/Research/World?country=Japan"), null),
+        (L["Research.Home.Starter.CompareFunds"].Value, Url.Content("~/Research/Funds"), null),
     ];
     (string TitleKey, string TextKey, string Href)[] explore =
     [
@@ -29,8 +30,9 @@
 }
 
 @* Research Home: search first. It reads only the datasets' status (the freshness list), never a dataset; the basket
-   card is drawn from the address by js/research/research-home.js, which also hides the starting mixes whose funds are
-   not tracked (from the search index the search box loads) and keeps the first-visit strip dismissed. *@
+   card is drawn from the address by js/research/research-home.js, which also shows only the starting mixes whose funds
+   are tracked and points the Semiconductors starter at its industry (both from the search index the search box loads),
+   and keeps the first-visit strip dismissed. *@
 <div class="research research-home">
     <partial name="_ResearchNav" model="@("home")"/>
 
@@ -41,9 +43,19 @@
         <div class="research-home__starters">
             <span class="research-home__starters-label" id="research-home-try">@L["Research.Home.Try"]</span>
             <ul class="research-home__starter-list" aria-labelledby="research-home-try">
-                @foreach ((string label, string href) in starters)
+                @foreach ((string label, string href, string? industry) in starters)
                 {
-                    <li><a class="research-home__starter" href="@href" data-research-link>@label</a></li>
+                    <li>
+                        @if (industry is null)
+                        {
+                            <a class="research-home__starter" href="@href" data-research-link>@label</a>
+                        }
+                        else
+                        {
+                            <a class="research-home__starter" href="@href" data-research-link
+                               data-research-home-industry="@industry">@label</a>
+                        }
+                    </li>
                 }
             </ul>
         </div>
@@ -72,14 +84,16 @@
 
     <div class="research-home__grid">
         <section class="research-card research-home__basket" id="research-home-basket"
-                 aria-labelledby="research-home-basket-title" data-research-home-basket>
+                 aria-labelledby="research-home-basket-title" data-research-home-basket
+                 data-fund-href="@Url.Content("~/Research/Fund/")">
             <h2 class="research-card__title" id="research-home-basket-title" tabindex="-1">@L["Research.Nav.Basket"]</h2>
             <p class="research-home__basket-empty" data-research-home-basket-empty>@L["Research.Home.Basket.Empty"]</p>
             <div class="research-home__basket-filled" data-research-home-basket-filled hidden>
                 <ul class="research-home__chips" aria-label="@L["Research.Basket.ChipsLabel"]" data-research-home-basket-chips></ul>
                 <a class="btn btn-primary research-home__open" href="@Url.Content("~/Research/Basket")" data-research-link>@L["Research.Home.Basket.Open"]</a>
             </div>
-            <div class="research-home__mixes" data-research-home-mixes>
+            @* Hidden until research-home.js has checked the mixes against the Tracked Funds (all shown if it cannot). *@
+            <div class="research-home__mixes" data-research-home-mixes hidden>
                 <p class="research-home__mixes-label" id="research-home-mixes-label">@L["Research.Home.Basket.Mixes"]</p>
                 <ul class="research-home__mix-list" aria-labelledby="research-home-mixes-label">
                     @foreach (ResearchBasketPreset preset in Model.Presets)
