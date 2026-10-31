@@ -9,6 +9,7 @@ const {runMoneyBoundsSmoke} = require('./money-bounds-smoke');
 const {runThemeSmoke} = require('./theme-smoke');
 const {runLearningSmoke} = require('./learning-smoke');
 const {runChallengeSmoke} = require('./challenge-smoke');
+const {runInvestmentCalculatorSmoke} = require('./investment-calculator-smoke');
 
 (async () => {
     const results = {passed: 0, failed: 0, errors: []};
@@ -1001,6 +1002,16 @@ const {runChallengeSmoke} = require('./challenge-smoke');
             await runChallengeSmoke({browser, base, pass, fail});
         } catch (error) {
             fail(`Guild Hall Challenge smoke failed: ${error.message}`);
+        }
+
+        // =========================================================
+        // Test 9m: Investment Calculator smoke (#587): moving a slider changes the projection
+        // =========================================================
+        console.log('\n--- Test 9m: Investment Calculator Smoke ---');
+        try {
+            await runInvestmentCalculatorSmoke({browser, base, pass, fail});
+        } catch (error) {
+            fail(`Investment Calculator smoke failed: ${error.message}`);
         }
 
         // =========================================================

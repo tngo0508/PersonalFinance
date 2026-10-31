@@ -49,13 +49,8 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
         "Three Scenarios", "Reading the chart", "Got it", ">Close<", "aria-label=\"Close\""
     ];
 
-    private static readonly string[] CalculatorEnglish =
-    [
-        "Compound Growth Calculator", "See how your investments", "Investment Amount", "Initial Investment",
-        "Monthly Contribution", "Growth Parameters", "Annual Return Rate", "Time Period", "20 years",
-        "Future Value", "Total Contributions", "Interest Earned", "Growth Over Time", "Total Value",
-        "Investment growth chart", "Initial investment amount"
-    ];
+    // The calculator's text whose Vietnamese is already drafted; the redesign's newer keys wait for the i18n workflow.
+    private static readonly string[] CalculatorEnglish = ["Investment Calculator"];
 
     private static readonly string[] PresetKeys = ["fire", "coast", "traditional", "ultra", "conservative"];
 
@@ -217,8 +212,8 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
         AssertHides(html, CalculatorEnglish);
         Assert.Contains($"10.000{Nbsp}$", html, StringComparison.Ordinal);
         Dictionary<string, string> strings = Island(html, "InvestmentCalculator.Js.");
-        Assert.Equal(TestLocalization.Vietnamese("InvestmentCalculator.Js.Tooltip.Start"),
-            strings["InvestmentCalculator.Js.Tooltip.Start"]);
+        Assert.Equal(TestLocalization.Vietnamese("InvestmentCalculator.Js.Axis.Now"),
+            strings["InvestmentCalculator.Js.Axis.Now"]);
     }
 
     private async Task<string> GetAsync(string url, bool vietnamese)

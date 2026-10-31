@@ -1,426 +1,381 @@
 /* ==========================================================================
-   Investment Calculator Styles
-   "Indigo Ledger" design system — responsive, professional UI
+   Investment Calculator (#587): a pinned summary bar, the slider rail on the left and the Overview grid of chart
+   tiles. Colours are app tokens; chart series use the chart tokens, the same ChartPalette hands the D3 charts.
+   Sizes are in rem so the layout follows the text; the bar and rail pin only where the rail sits beside the grid.
    ========================================================================== */
 
-/* ==========================================================================
-   Page Container
-   ========================================================================== */
-
-.calculator-page {
+.ic-page {
+    --ic-gap: 1rem;
+    --ic-radius: var(--app-radius-l);
     padding: 0.5rem 0 2rem;
+    color: var(--app-text);
 }
 
-/* ==========================================================================
-   Page Header
-   ========================================================================== */
+/* ---------- Summary bar ---------- */
 
-.calculator-header {
-    margin-bottom: 0;
-    padding-bottom: 1.25rem;
-    border-bottom: 1px solid var(--app-border);
-}
-
-.calculator-header__content {
+.ic-bar {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
     flex-wrap: wrap;
-}
-
-.calculator-title {
-    display: flex;
     align-items: center;
-    gap: 0.75rem;
-    font-size: 1.5rem;
-    font-weight: var(--app-font-weight-bold);
-    color: var(--app-text);
-    margin: 0 0 0.25rem;
-    line-height: 1.3;
-}
-
-.calculator-title__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: var(--app-radius-m);
-    background: var(--app-brand-fill);
-    color: var(--app-text-on-brand);
-    flex-shrink: 0;
-}
-
-.calculator-title__icon svg {
-    width: 20px;
-    height: 20px;
-}
-
-.calculator-subtitle {
-    color: var(--app-text-muted);
-    font-size: var(--app-font-size-base);
-    margin: 0;
-    line-height: 1.5;
-}
-
-/* ==========================================================================
-   Cards
-   ========================================================================== */
-
-.calculator-card {
+    gap: 0.75rem 1.5rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: var(--ic-gap);
+    background: var(--app-surface);
     border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-m);
-    box-shadow: var(--app-shadow-2);
-    overflow: hidden;
-}
-
-.calculator-card__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.85rem 1.25rem;
-    border-bottom: 1px solid var(--app-border);
-    background: var(--app-surface-soft, var(--app-surface));
-}
-
-.calculator-card__header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-}
-
-.calculator-card__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: var(--app-radius-s);
-    background: var(--app-brand-bg);
-    color: var(--app-brand);
-    flex-shrink: 0;
-}
-
-.calculator-card__icon svg {
-    width: 16px;
-    height: 16px;
-}
-
-.calculator-card__icon--orange {
-    background: var(--app-accent-warning-soft);
-    color: var(--app-accent-warning);
-}
-
-.calculator-card__icon--green {
-    background: var(--app-accent-positive-bg);
-    color: var(--app-accent-positive);
-}
-
-.calculator-card__title {
-    font-size: var(--app-font-size-base);
-    font-weight: var(--app-font-weight-semibold);
-    color: var(--app-text);
-    margin: 0;
-}
-
-.calculator-card__body {
-    padding: 1.25rem;
-}
-
-/* ==========================================================================
-   Input Groups
-   ========================================================================== */
-
-.calculator-input-group {
-    margin-bottom: 1.25rem;
-}
-
-.calculator-input-group:last-child {
-    margin-bottom: 0;
-}
-
-.calculator-input-group .form-label {
-    font-size: var(--app-font-size-small);
-    font-weight: var(--app-font-weight-semibold);
-    color: var(--app-text-muted);
-    margin-bottom: 0.4rem;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-
-.calculator-value-display {
-    font-size: 1.1rem;
-    font-weight: var(--app-font-weight-bold);
-    color: var(--app-brand-text);
-    text-align: center;
-    margin-bottom: 0.4rem;
-    font-family: var(--app-font-mono);
-}
-
-.calculator-input-group .form-range {
-    width: 100%;
-    margin-bottom: 0.4rem;
-    min-height: 44px;
-    cursor: pointer;
-}
-
-.calculator-input-group .form-control {
-    height: 40px;
-    border-radius: var(--app-radius-s);
-    font-family: var(--app-font-mono);
-    font-size: var(--app-font-size-small);
-    text-align: center;
-    border: 1px solid var(--app-border);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.calculator-input-group .form-control:focus {
-    border-color: var(--app-brand);
-    box-shadow: 0 0 0 2px var(--app-brand-bg);
-    outline: none;
-}
-
-/* ==========================================================================
-   Result Metric Cards
-   ========================================================================== */
-
-.calculator-result-card {
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-m);
-    box-shadow: var(--app-shadow-2);
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.calculator-result-card:hover {
+    border-radius: var(--ic-radius);
     box-shadow: var(--app-shadow-4);
-    border-color: var(--app-border-hover);
 }
 
-.calculator-result-card .card-body {
-    padding: 1.25rem;
-    text-align: center;
+.ic-bar__title {
+    font-size: 1.25rem;
+    font-weight: var(--app-font-weight-bold);
+    margin: 0;
+    color: var(--app-text);
+}
+
+.ic-bar__nums {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.75rem;
+    flex: 1 1 auto;
+    margin: 0;
+}
+
+.ic-num {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 0.3rem;
+    min-width: 0;
 }
 
-.calculator-result-card__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: var(--app-radius-m);
-    background: var(--app-brand-bg);
-    color: var(--app-brand);
-    margin-bottom: 0.25rem;
-}
-
-.calculator-result-card__icon svg {
-    width: 20px;
-    height: 20px;
-}
-
-.calculator-result-card__icon--blue {
-    background: var(--app-info-bg);
-    color: var(--app-info-text);
-}
-
-.calculator-result-card__icon--green {
-    background: var(--app-accent-positive-bg);
-    color: var(--app-accent-positive);
-}
-
-.calculator-result-label {
-    font-size: var(--app-font-size-small);
-    color: var(--app-text-muted);
-    margin-bottom: 0.15rem;
+.ic-num dt {
+    font-size: 0.75rem;
     font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text-muted);
+    letter-spacing: 0.02em;
 }
 
-.calculator-result-value {
-    font-size: 1.5rem;
+.ic-num dd {
+    margin: 0;
+    font-size: 1.1rem;
     font-weight: var(--app-font-weight-bold);
-    color: var(--app-accent-positive);
-    font-family: var(--app-font-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.ic-num--hero dd {
+    font-size: 1.6rem;
     line-height: 1.2;
+    color: var(--app-brand-text);
 }
 
-/* ==========================================================================
-   Chart Container
-   ========================================================================== */
-
-.calculator-card--chart .calculator-card__body {
-    padding: 1.5rem;
+.ic-num__growth {
+    color: var(--app-positive-text);
 }
 
-.calculator-chart-container {
-    position: relative;
-    min-height: 350px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* ---------- Layout ---------- */
+
+.ic-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--ic-gap);
+    align-items: start;
+}
+
+.ic-main {
+    min-width: 0;
+}
+
+/* ---------- Slider rail ---------- */
+
+.ic-rail {
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--ic-radius);
+    padding: 1.1rem;
+}
+
+.ic-rail__title {
+    font-size: 1rem;
+    font-weight: var(--app-font-weight-bold);
+    margin: 0 0 0.75rem;
+}
+
+.ic-field {
     margin-bottom: 1rem;
 }
 
-#calcChart {
-    display: block;
-    max-width: 100%;
-}
-
-/* ==========================================================================
-   Chart Legend
-   ========================================================================== */
-
-.calculator-chart-legend {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    padding: 1rem 1.25rem;
-    background: var(--app-surface-soft, var(--app-surface));
-    border-radius: var(--app-radius-m);
-    border: 1px solid var(--app-border);
-}
-
-.calculator-chart-legend__item {
+.ic-field__head {
     display: flex;
-    align-items: center;
+    justify-content: space-between;
+    align-items: baseline;
     gap: 0.5rem;
 }
 
-.calculator-chart-legend__dot {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
-    flex-shrink: 0;
-}
-
-/* The chart's series colours (calculator.js reads the same tokens through ChartPalette) */
-.calculator-chart-legend__dot--value {
-    background: var(--app-chart-1);
-}
-
-.calculator-chart-legend__dot--contrib {
-    background: var(--app-chart-2);
-}
-
-.calculator-chart-legend__dot--interest {
-    background: var(--app-chart-3);
-}
-
-.calculator-chart-legend__label {
-    font-size: var(--app-font-size-small);
-    color: var(--app-text-muted);
+.ic-field__label {
+    font-size: 0.875rem;
     font-weight: var(--app-font-weight-semibold);
-    flex: 1 1 auto;
+    margin: 0;
 }
 
-.calculator-chart-legend__value {
-    font-size: var(--app-font-size-small);
-    color: var(--app-text);
+.ic-field__value {
     font-weight: var(--app-font-weight-bold);
-    font-family: var(--app-font-mono);
+    color: var(--app-brand-text);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
 
-/* ==========================================================================
-   Responsive Breakpoints
-   ========================================================================== */
-
-/* Tablet and below — single column layout */
-@media (max-width: 991px) {
-    .calculator-chart-container {
-        min-height: 280px;
-    }
-
-    #calcChart {
-        max-height: 320px !important;
-    }
-
-    .calculator-chart-legend {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.75rem;
-        padding: 0.85rem 1rem;
-    }
+.ic-field__range {
+    display: block;
+    width: 100%;
+    margin: 0.25rem 0;
 }
 
-/* Mobile — stacked layout, smaller chart */
-@media (max-width: 768px) {
-    .calculator-title {
-        font-size: 1.25rem;
-    }
-
-    .calculator-title__icon {
-        width: 32px;
-        height: 32px;
-    }
-
-    .calculator-title__icon svg {
-        width: 18px;
-        height: 18px;
-    }
-
-    .calculator-card__body {
-        padding: 1rem;
-    }
-
-    .calculator-card__header {
-        padding: 0.75rem 1rem;
-    }
-
-    .calculator-card--chart .calculator-card__body {
-        padding: 1rem;
-    }
-
-    .calculator-chart-container {
-        min-height: 250px;
-    }
-
-    #calcChart {
-        max-height: 280px !important;
-    }
-
-    .calculator-chart-legend {
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
-        padding: 0.75rem;
-    }
-
-    .calculator-result-value {
-        font-size: 1.25rem;
-    }
-
-    .calculator-result-card .card-body {
-        padding: 1rem;
-    }
+.ic-field__number {
+    font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 576px) {
-    .calculator-chart-container {
-        min-height: 220px;
-    }
-
-    #calcChart {
-        max-height: 250px !important;
-    }
+.ic-field__hint {
+    font-size: 0.75rem;
+    color: var(--app-text-muted);
+    margin: 0.25rem 0 0;
 }
 
-/* ==========================================================================
-   Accessibility
-   ========================================================================== */
+.ic-presets {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+}
 
-.calculator-input-group .form-range:focus-visible {
+.ic-preset {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    min-height: 2.75rem;
+    padding: 0.35rem 0.25rem;
+    font-size: 0.75rem;
+    color: var(--app-text);
+    background: var(--app-bg);
+    border: 1px solid var(--app-border-control);
+    border-radius: var(--app-radius-m);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ic-preset strong {
+    font-size: 0.875rem;
+}
+
+.ic-preset:hover {
+    border-color: var(--app-border-hover);
+}
+
+.ic-preset[aria-pressed="true"] {
+    background: var(--app-brand-soft);
+    border-color: var(--app-brand);
+    color: var(--app-brand-on-soft);
+}
+
+.ic-preset:focus-visible,
+.ic-more__summary:focus-visible,
+.ic-svg:focus-visible {
     outline: 2px solid var(--app-brand);
     outline-offset: 2px;
 }
 
-/* Reduced motion */
+.ic-more {
+    border-top: 1px solid var(--app-border);
+    padding-top: 0.75rem;
+}
+
+.ic-more__summary {
+    font-size: 0.9rem;
+    font-weight: var(--app-font-weight-semibold);
+    cursor: pointer;
+    margin-bottom: 0.75rem;
+    border-radius: var(--app-radius-s);
+}
+
+.ic-disclaimer {
+    font-size: 0.75rem;
+    color: var(--app-text-muted);
+    margin: 0.75rem 0 0;
+}
+
+/* ---------- Overview tiles ---------- */
+
+.ic-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: var(--ic-gap);
+}
+
+.ic-tile {
+    position: relative;
+    min-width: 0;
+    padding: 1rem;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--ic-radius);
+}
+
+.ic-tile--wide {
+    grid-column: 1 / -1;
+}
+
+.ic-tile__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.25rem 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.ic-tile__title {
+    font-size: 0.95rem;
+    font-weight: var(--app-font-weight-bold);
+    margin: 0;
+}
+
+.ic-tile__cost {
+    color: var(--app-negative-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.ic-tile__note {
+    font-size: 0.875rem;
+    margin: 0.5rem 0 0;
+}
+
+.ic-tile__hint {
+    font-size: 0.75rem;
+    color: var(--app-text-muted);
+    margin: 0.25rem 0 0;
+}
+
+.ic-legend,
+.ic-split {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.ic-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    font-size: 0.75rem;
+    color: var(--app-text-muted);
+}
+
+.ic-swatch {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    margin-right: 0.4rem;
+    vertical-align: -0.05em;
+}
+
+.ic-swatch--balance { background: var(--app-chart-1); }
+.ic-swatch--contributed { background: var(--app-chart-2); }
+.ic-swatch--growth,
+.ic-swatch--nofee { background: var(--app-chart-3); }
+
+.ic-chart {
+    position: relative;
+    width: 100%;
+    min-height: 13rem;
+}
+
+.ic-chart--small {
+    min-height: 11rem;
+}
+
+.ic-svg {
+    display: block;
+    max-width: 100%;
+    overflow: visible;
+}
+
+.ic-donut {
+    display: flex;
+    justify-content: center;
+    margin: 0.5rem 0;
+}
+
+.ic-split li {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.3rem 0;
+    font-size: 0.875rem;
+    border-top: 1px solid var(--app-border-subtle);
+}
+
+.ic-split strong {
+    font-variant-numeric: tabular-nums;
+}
+
+.ic-readout {
+    position: absolute;
+    z-index: 2;
+    pointer-events: none;
+    min-width: 9rem;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--app-chart-tooltip-text);
+    background: var(--app-chart-tooltip-bg);
+    border: 1px solid var(--app-chart-tooltip-border);
+    border-radius: var(--app-radius-m);
+    box-shadow: var(--app-shadow-8);
+    white-space: nowrap;
+}
+
+.ic-readout[hidden] {
+    display: none;
+}
+
+.ic-readout strong {
+    display: block;
+    margin-bottom: 0.15rem;
+}
+
+.ic-readout__swatch {
+    display: inline-block;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    margin-right: 0.35rem;
+}
+
+/* ---------- Wide screens: rail beside the grid, bar and rail pinned ---------- */
+
+@media (min-width: 62em) {
+    .ic-bar {
+        position: sticky;
+        top: var(--app-header-height);
+        z-index: 20;
+    }
+
+    .ic-layout {
+        grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+    }
+
+    .ic-rail {
+        position: sticky;
+        /* --ic-bar-height: the summary bar's measured height (calculator.js), so the rail pins just below it. */
+        top: calc(var(--app-header-height) + var(--ic-bar-height, 5rem) + var(--ic-gap));
+        max-height: calc(100vh - var(--app-header-height) - var(--ic-bar-height, 5rem) - 2 * var(--ic-gap));
+        overflow-y: auto;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .calculator-card,
-    .calculator-result-card,
-    .calculator-input-group .form-control {
+    .ic-preset {
         transition: none;
     }
 }

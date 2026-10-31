@@ -1,217 +1,160 @@
+@using System.Globalization
+@model InvestmentCalculatorViewModel
 @{
     ViewData["Title"] = L["InvestmentCalculator.Title"].Value;
-}
+    string currency = Model.CurrencyCode;
 
-@functions {
-    // calculator.js rewrites these on load; the server renders the same starting values so nothing jumps.
-    private static string Money(decimal amount)
-    {
-        return MoneyFormatter.FormatWhole(amount, SupportedCurrencies.Default.Code);
-    }
+    // Attribute values are invariant (the script and the browser read them); visible text follows the page culture.
+    static string Invariant(decimal value) => value.ToString(CultureInfo.InvariantCulture);
+    static string Percent(decimal value) => $"{value.ToString("0.##", CultureInfo.CurrentCulture)}%";
+    string Money(decimal amount) => MoneyFormatter.FormatWhole(amount, currency);
+
+    // The plan the page opens with; investment-math.js holds the same defaults and the rate and year bounds.
+    const decimal rate = 7m;
+    const int years = 20;
+    const decimal increase = 0m;
+    const decimal fee = 0.1m;
+    (string Key, decimal Rate)[] presets = [("Conservative", 4m), ("Base", 7m), ("Aggressive", 10m)];
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/investment-calculator.css" asp-append-version="true"/>
 }
 
-<div class="calculator-page">
-    <!-- Page Header -->
-    <div class="calculator-header mb-4">
-        <div class="calculator-header__content">
-            <div>
-                <h1 class="calculator-title">
-                    <span class="calculator-title__icon" aria-hidden="true">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path
-                                    d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-                    </span>
-                    @L["InvestmentCalculator.Header.Title"]
-                </h1>
-                <p class="calculator-subtitle">@L["InvestmentCalculator.Header.Subtitle"]</p>
+@* A slider and a number field for one input: the field is the labelled control, the slider moves with it. A money
+   field takes more than its slider's range; the slider then rests at its end. *@
+@{
+    void Field(string key, string label, decimal value, decimal min, decimal sliderMax, decimal max, decimal step,
+        string shown, string? hint = null)
+    {
+        <div class="ic-field" data-ic-field="@key">
+            <div class="ic-field__head">
+                <label class="ic-field__label" id="ic@(key)Label" for="ic@(key)">@label</label>
+                <output class="ic-field__value" id="ic@(key)Value" for="ic@(key)">@shown</output>
             </div>
+            <input type="range" class="form-range ic-field__range" id="ic@(key)Range" data-ic-input="@key"
+                   min="@Invariant(min)" max="@Invariant(sliderMax)" step="@Invariant(step)" value="@value.ToString(CultureInfo.InvariantCulture)"
+                   aria-labelledby="ic@(key)Label" aria-valuetext="@shown"/>
+            <input type="number" class="form-control form-control-sm ic-field__number" id="ic@(key)" data-ic-input="@key"
+                   inputmode="decimal" min="@Invariant(min)" max="@Invariant(max)" step="any" value="@value.ToString(CultureInfo.InvariantCulture)"
+                   aria-describedby="@(hint is null ? null : $"ic{key}Hint")"/>
+            @if (hint is not null)
+            {
+                <p class="ic-field__hint" id="ic@(key)Hint">@hint</p>
+            }
         </div>
-    </div>
+    }
+}
 
-    <!-- Two-Column Layout: Inputs + Results -->
-    <div class="row g-3">
-        <!-- Left Column: Input Parameters -->
-        <div class="col-lg-4">
-            <!-- Investment Amount Card -->
-            <div class="card calculator-card mb-3">
-                <div class="calculator-card__header">
-                    <div class="calculator-card__header-left">
-                        <div class="calculator-card__icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                 stroke-linejoin="round">
-                                <path d="M12 1v22"/>
-                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                            </svg>
-                        </div>
-                        <h2 class="calculator-card__title">@L["InvestmentCalculator.Amount.Title"]</h2>
-                    </div>
-                </div>
-                <div class="calculator-card__body">
-                    <div class="calculator-input-group">
-                        <label for="calcInitial" class="form-label">@L["InvestmentCalculator.Field.Initial"]</label>
-                        <div class="calculator-value-display" id="calcInitialValue">@Money(10_000m)</div>
-                        <input type="range" class="form-range" id="calcInitialRange" min="0" max="500000" step="1000"
-                               value="10000"
-                               aria-label="@L["InvestmentCalculator.Field.InitialAria"]"/>
-                        <input type="number" class="form-control" id="calcInitial" value="10000" min="0" step="1000"
-                               aria-label="@L["InvestmentCalculator.Field.InitialAria"]"/>
-                    </div>
-
-                    <div class="calculator-input-group">
-                        <label for="calcMonthly" class="form-label">@L["InvestmentCalculator.Field.Monthly"]</label>
-                        <div class="calculator-value-display" id="calcMonthlyValue">@Money(500m)</div>
-                        <input type="range" class="form-range" id="calcMonthlyRange" min="0" max="10000" step="50"
-                               value="500"
-                               aria-label="@L["InvestmentCalculator.Field.MonthlyAria"]"/>
-                        <input type="number" class="form-control" id="calcMonthly" value="500" min="0" step="50"
-                               aria-label="@L["InvestmentCalculator.Field.MonthlyAria"]"/>
-                    </div>
-                </div>
+<div class="ic-page" data-investment-calculator data-currency="@currency">
+    <section class="ic-bar" aria-labelledby="icTitle">
+        <h1 class="ic-bar__title" id="icTitle">@L["InvestmentCalculator.Title"]</h1>
+        <dl class="ic-bar__nums">
+            <div class="ic-num ic-num--hero">
+                <dt id="icFinalLabel">@L.Plural("InvestmentCalculator.Js.Bar.InYears", years)</dt>
+                <dd id="icFinal">&nbsp;</dd>
             </div>
-
-            <!-- Growth Parameters Card -->
-            <div class="card calculator-card">
-                <div class="calculator-card__header">
-                    <div class="calculator-card__header-left">
-                        <div class="calculator-card__icon calculator-card__icon--orange">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                 stroke-linejoin="round">
-                                <path d="m22 12-3.5-3.5"/>
-                                <path d="M4 16V10a2 2 0 0 1 2-2h3.5"/>
-                                <path d="M20 8V4a2 2 0 0 0-2-2h-3.5"/>
-                                <path d="M2 18v-4a2 2 0 0 1 2-2h3.5"/>
-                                <path d="M16 14v4a2 2 0 0 1-2 2h-3.5"/>
-                            </svg>
-                        </div>
-                        <h2 class="calculator-card__title">@L["InvestmentCalculator.Growth.Title"]</h2>
-                    </div>
-                </div>
-                <div class="calculator-card__body">
-                    <div class="calculator-input-group">
-                        <label for="calcRate" class="form-label">@L["InvestmentCalculator.Field.Rate"]</label>
-                        <div class="calculator-value-display" id="calcRateValue">7%</div>
-                        <input type="range" class="form-range" id="calcRateRange" min="1" max="15" step="0.5" value="7"
-                               aria-label="@L["InvestmentCalculator.Field.RateAria"]"/>
-                        <input type="number" class="form-control" id="calcRate" value="7" min="1" max="15" step="0.5"
-                               aria-label="@L["InvestmentCalculator.Field.RateAria"]"/>
-                    </div>
-
-                    <div class="calculator-input-group">
-                        <label for="calcYears" class="form-label">@L["InvestmentCalculator.Field.Years"]</label>
-                        <div class="calculator-value-display" id="calcYearsValue">@L.Plural("InvestmentCalculator.Js.Years", 20)</div>
-                        <input type="range" class="form-range" id="calcYearsRange" min="1" max="50" step="1" value="20"
-                               aria-label="@L["InvestmentCalculator.Field.YearsAria"]"/>
-                        <input type="number" class="form-control" id="calcYears" value="20" min="1" max="50" step="1"
-                               aria-label="@L["InvestmentCalculator.Field.YearsAria"]"/>
-                    </div>
-                </div>
+            <div class="ic-num">
+                <dt>@L["InvestmentCalculator.Bar.PutIn"]</dt>
+                <dd id="icContributed">&nbsp;</dd>
             </div>
-        </div>
-
-        <!-- Right Column: Results -->
-        <div class="col-lg-8">
-            <!-- Metric Cards -->
-            <div class="row g-3 mb-3">
-                <div class="col-sm-6 col-md-4">
-                    <div class="card calculator-result-card">
-                        <div class="card-body">
-                            <div class="calculator-result-card__icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                     stroke-linejoin="round">
-                                    <path d="M3 3v18h18"/>
-                                    <path d="m19 9-5 5-4-4-3 3"/>
-                                </svg>
-                            </div>
-                            <div class="calculator-result-label">@L["InvestmentCalculator.Result.FutureValue"]</div>
-                            <div class="calculator-result-value" id="calcFutureValue">@Money(0m)</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-4">
-                    <div class="card calculator-result-card">
-                        <div class="card-body">
-                            <div class="calculator-result-card__icon calculator-result-card__icon--blue">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                     stroke-linejoin="round">
-                                    <path d="M12 1v22"/>
-                                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                                </svg>
-                            </div>
-                            <div class="calculator-result-label">@L["InvestmentCalculator.Result.TotalContributions"]</div>
-                            <div class="calculator-result-value" id="calcTotalContributions">@Money(0m)</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-4">
-                    <div class="card calculator-result-card">
-                        <div class="card-body">
-                            <div class="calculator-result-card__icon calculator-result-card__icon--green">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                     stroke-linejoin="round">
-                                    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
-                                    <polyline points="16 7 22 7 22 13"/>
-                                </svg>
-                            </div>
-                            <div class="calculator-result-label">@L["InvestmentCalculator.Result.InterestEarned"]</div>
-                            <div class="calculator-result-value" id="calcTotalInterest">@Money(0m)</div>
-                        </div>
-                    </div>
-                </div>
+            <div class="ic-num">
+                <dt>@L["InvestmentCalculator.Bar.Growth"]</dt>
+                <dd id="icGrowth" class="ic-num__growth">&nbsp;</dd>
             </div>
+        </dl>
+        <p class="visually-hidden" id="icStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+    </section>
 
-            <!-- Chart -->
-            <div class="card calculator-card calculator-card--chart">
-                <div class="calculator-card__header">
-                    <div class="calculator-card__header-left">
-                        <div class="calculator-card__icon calculator-card__icon--green">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                 stroke-linejoin="round">
-                                <path d="M3 3v18h18"/>
-                                <path d="m19 9-5 5-4-4-3 3"/>
-                            </svg>
-                        </div>
-                        <h2 class="calculator-card__title">@L["InvestmentCalculator.Chart.Title"]</h2>
-                    </div>
-                </div>
-                <div class="calculator-card__body">
-                    <div class="calculator-chart-container">
-                        <canvas id="calcChart" aria-label="@L["InvestmentCalculator.Chart.Aria"]" role="img"></canvas>
-                    </div>
-                    <div class="calculator-chart-legend">
-                        <div class="calculator-chart-legend__item">
-                            <span class="calculator-chart-legend__dot calculator-chart-legend__dot--value"></span>
-                            <span class="calculator-chart-legend__label">@L["InvestmentCalculator.Legend.TotalValue"]</span>
-                            <span class="calculator-chart-legend__value" id="calcLegendValue">@Money(0m)</span>
-                        </div>
-                        <div class="calculator-chart-legend__item">
-                            <span class="calculator-chart-legend__dot calculator-chart-legend__dot--contrib"></span>
-                            <span class="calculator-chart-legend__label">@L["InvestmentCalculator.Legend.Contributions"]</span>
-                            <span class="calculator-chart-legend__value" id="calcLegendContrib">@Money(0m)</span>
-                        </div>
-                        <div class="calculator-chart-legend__item">
-                            <span class="calculator-chart-legend__dot calculator-chart-legend__dot--interest"></span>
-                            <span class="calculator-chart-legend__label">@L["InvestmentCalculator.Result.InterestEarned"]</span>
-                            <span class="calculator-chart-legend__value" id="calcLegendInterest">@Money(0m)</span>
-                        </div>
-                    </div>
-                </div>
+    <div class="ic-layout">
+        <aside class="ic-rail" aria-labelledby="icRailTitle">
+            <h2 class="ic-rail__title" id="icRailTitle">@L["InvestmentCalculator.Rail.Title"]</h2>
+
+            @{ Field("Initial", L["InvestmentCalculator.Field.Starting"], Model.Initial, 0m, Model.InitialSliderMax,
+                   Model.InitialMax, Model.InitialStep, Money(Model.Initial)); }
+            @{ Field("Monthly", L["InvestmentCalculator.Field.Monthly"], Model.Monthly, 0m, Model.MonthlySliderMax,
+                   Model.MonthlyMax, Model.MonthlyStep, Money(Model.Monthly)); }
+
+            <div class="ic-presets" role="group" aria-label="@L["InvestmentCalculator.Presets.Aria"]">
+                @foreach ((string key, decimal presetRate) in presets)
+                {
+                    <button type="button" class="ic-preset" data-rate-preset="@Invariant(presetRate)"
+                            aria-pressed="@(presetRate == rate ? "true" : "false")">
+                        <span>@L[$"InvestmentCalculator.Preset.{key}"]</span>
+                        <strong>@Percent(presetRate)</strong>
+                    </button>
+                }
             </div>
-        </div>
+            @{ Field("Rate", L["InvestmentCalculator.Field.Rate"], rate, 0m, 15m, 15m, 0.5m, Percent(rate),
+                   L["InvestmentCalculator.Field.RateHint"]); }
+            @{ Field("Years", L["InvestmentCalculator.Field.Years"], years, 1m, 50m, 50m, 1m,
+                   L.Plural("InvestmentCalculator.Js.Years", years)); }
+
+            <details class="ic-more">
+                <summary class="ic-more__summary">@L["InvestmentCalculator.More.Title"]</summary>
+                @{ Field("Increase", L["InvestmentCalculator.Field.Increase"], increase, 0m, 10m, 10m, 0.5m,
+                       Percent(increase), L["InvestmentCalculator.Field.IncreaseHint"]); }
+                @{ Field("Fee", L["InvestmentCalculator.Field.Fee"], fee, 0m, 3m, 3m, 0.05m, Percent(fee),
+                       L["InvestmentCalculator.Field.FeeHint"]); }
+            </details>
+
+            <p class="ic-disclaimer">
+                @L["InvestmentCalculator.Disclaimer.Text"]
+                <a asp-controller="Legal" asp-action="Disclaimer">@L["InvestmentCalculator.Disclaimer.Link"]</a>
+            </p>
+        </aside>
+
+        <section class="ic-main" aria-labelledby="icOverviewTitle">
+            <h2 class="visually-hidden" id="icOverviewTitle">@L["InvestmentCalculator.Overview.Title"]</h2>
+            @* Tiles fill an auto-fit grid; later slices add the year-by-year bars, the goal and the table. *@
+            <div class="ic-tiles">
+                <article class="ic-tile ic-tile--wide" aria-labelledby="icBalanceTitle">
+                    <header class="ic-tile__head">
+                        <h3 class="ic-tile__title" id="icBalanceTitle">@L["InvestmentCalculator.Tile.Balance"]</h3>
+                        <ul class="ic-legend" aria-hidden="true">
+                            <li><span class="ic-swatch ic-swatch--balance"></span>@L["InvestmentCalculator.Js.Series.Balance"]</li>
+                            <li><span class="ic-swatch ic-swatch--contributed"></span>@L["InvestmentCalculator.Js.Series.PutIn"]</li>
+                        </ul>
+                    </header>
+                    <div class="ic-chart" id="icBalanceChart"></div>
+                    <p class="ic-tile__note" id="icMilestone"></p>
+                    <p class="ic-tile__hint">@L["InvestmentCalculator.Tile.ChartHint"]</p>
+                </article>
+
+                <article class="ic-tile" aria-labelledby="icDonutTitle">
+                    <header class="ic-tile__head">
+                        <h3 class="ic-tile__title" id="icDonutTitle">@L["InvestmentCalculator.Tile.Donut"]</h3>
+                    </header>
+                    <div class="ic-donut" id="icDonut"></div>
+                    <ul class="ic-split" id="icSplit">
+                        <li><span class="ic-swatch ic-swatch--contributed"></span><span>@L["InvestmentCalculator.Js.Series.PutIn"]</span><strong id="icSplitContributed">&nbsp;</strong></li>
+                        <li><span class="ic-swatch ic-swatch--growth"></span><span>@L["InvestmentCalculator.Js.Series.Growth"]</span><strong id="icSplitGrowth">&nbsp;</strong></li>
+                    </ul>
+                </article>
+
+                <article class="ic-tile" aria-labelledby="icFeeTitle">
+                    <header class="ic-tile__head">
+                        <h3 class="ic-tile__title" id="icFeeTitle">
+                            @L["InvestmentCalculator.Tile.Fee"] <span class="ic-tile__cost" id="icFeeCost">&nbsp;</span>
+                        </h3>
+                        <ul class="ic-legend" aria-hidden="true">
+                            <li><span class="ic-swatch ic-swatch--nofee"></span>@L["InvestmentCalculator.Js.Series.WithoutFees"]</li>
+                            <li><span class="ic-swatch ic-swatch--balance"></span>@L["InvestmentCalculator.Js.Series.WithFees"]</li>
+                        </ul>
+                    </header>
+                    <div class="ic-chart ic-chart--small" id="icFeeChart"></div>
+                    <p class="ic-tile__note" id="icFeeNote"></p>
+                </article>
+            </div>
+        </section>
     </div>
 </div>
 
 <js-strings prefix="InvestmentCalculator.Js." />
 
 @section Scripts {
+    <script src="~/lib/d3/d3.min.js"></script>
+    <script src="~/js/investment-calculator/investment-math.js" asp-append-version="true"></script>
+    <script src="~/js/investment-calculator/investment-charts.js" asp-append-version="true"></script>
     <script src="~/js/investment-calculator/calculator.js" asp-append-version="true"></script>
 }
