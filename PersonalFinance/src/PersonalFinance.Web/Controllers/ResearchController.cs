@@ -79,6 +79,16 @@ public sealed class ResearchController : Controller
         Json(await _researchApi.GetFundIndustriesAsync(cancellationToken));
 
     /// <summary>
+    /// The search index of the page's search box, as JSON, from ApiService: it loads once, so the page does not carry
+    /// the lists. Read through the snapshot cache; an ApiService failure keeps its status code with a safe message and
+    /// is never cached.
+    /// </summary>
+    [HttpGet]
+    [JsonApiErrors]
+    public async Task<IActionResult> SearchIndex(CancellationToken cancellationToken = default) =>
+        Json(await _snapshotCache.GetOrReadAsync("search-index", _researchApi.GetSearchIndexAsync, cancellationToken));
+
+    /// <summary>
     /// Suggestions for the Companies tab's search box, as JSON, from ApiService. A rejected query is 400; an ApiService
     /// failure (such as 503 when the company list cannot be read) keeps its status code with a safe message.
     /// </summary>

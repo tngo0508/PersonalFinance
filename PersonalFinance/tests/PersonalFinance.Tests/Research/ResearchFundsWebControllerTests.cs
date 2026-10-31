@@ -200,4 +200,35 @@ public class ResearchFundsWebControllerTests
 
         Assert.Same(industries, Assert.IsType<JsonResult>(result).Value);
     }
+
+    [Fact]
+    public async Task SearchIndex_ReturnsTheIndexAsJson_ReadingApiServiceOnceThroughTheCache()
+    {
+        var index = new ResearchSearchIndexDto { Countries = ["Brazil"] };
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSearchIndexAsync), index);
+        ResearchController controller = CreateController(api);
+
+        IActionResult first = await controller.SearchIndex();
+        IActionResult second = await controller.SearchIndex();
+
+        Assert.Same(index, Assert.IsType<JsonResult>(first).Value);
+        Assert.Same(index, Assert.IsType<JsonResult>(second).Value);
+        Assert.Equal([nameof(IResearchApi.GetSearchIndexAsync)], proxy.Calls);
+    }
+
+    [Fact]
+    public async Task SearchIndex_WhenApiServiceFails_KeepsTheStatusWithASafeMessage()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Throws(nameof(IResearchApi.GetSearchIndexAsync), await NeverLoaded("secret internal reason"));
+        ResearchController controller = CreateController(api);
+
+        IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.SearchIndex());
+
+        ObjectResult error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, error.StatusCode);
+        Assert.DoesNotContain("secret internal reason", JsonSerializer.Serialize(error.Value));
+        Assert.False(string.IsNullOrWhiteSpace(JsonSerializer.Serialize(error.Value)));
+    }
 }

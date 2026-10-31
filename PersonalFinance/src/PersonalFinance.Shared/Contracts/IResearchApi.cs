@@ -73,6 +73,13 @@ public interface IResearchApi
     Task<WorldSnapshotDto> GetWorldAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the search index of the Research page's search box (Tracked Funds, industry offices, industries and
+    /// countries). Always answers 200; a part whose dataset has never loaded is empty.
+    /// </summary>
+    [Get("/api/Research/search-index")]
+    Task<ResearchSearchIndexDto> GetSearchIndexAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets each stored dataset's SourceAsOf and BuiltAt, without the datasets themselves. Always answers 200; the
     /// list is empty when nothing has loaded.
     /// </summary>

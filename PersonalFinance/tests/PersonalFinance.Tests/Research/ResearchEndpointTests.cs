@@ -24,6 +24,7 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
     private const string FundExposureUrl = "/api/Research/funds/exposure";
     private const string FundIndustriesUrl = "/api/Research/funds/industries";
     private const string WorldUrl = "/api/Research/world";
+    private const string SearchIndexUrl = "/api/Research/search-index";
     private const string StatusUrl = "/api/Research/status";
     private const string InternalKey = "http-test-shared-secret";
 
@@ -65,6 +66,9 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
 
         public Task<ResearchSnapshotResult<WorldSnapshotDto>> GetWorldAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchSnapshotResult<WorldSnapshotDto>(world));
+
+        public Task<ResearchSearchIndexDto> GetSearchIndexAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ResearchSearchIndexDto());
 
         public Task<ResearchStatusDto> GetStatusAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new ResearchStatusDto());
@@ -179,6 +183,7 @@ public class ResearchEndpointTests : IClassFixture<ApiServiceInternalKeyHttpTest
     [InlineData(FundExposureUrl)]
     [InlineData(FundIndustriesUrl)]
     [InlineData(WorldUrl)]
+    [InlineData(SearchIndexUrl)]
     public async Task Get_OverHttp_WithoutTheSharedSecret_IsRejected(string url)
     {
         HttpClient client = _host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

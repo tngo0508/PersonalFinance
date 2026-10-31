@@ -150,7 +150,7 @@ public class ResearchWebControllerTests
         Assert.Equal(
             [
                 nameof(ResearchController.Company), nameof(ResearchController.FundIndustries), nameof(ResearchController.Index),
-                nameof(ResearchController.Releases), nameof(ResearchController.Suggest),
+                nameof(ResearchController.Releases), nameof(ResearchController.SearchIndex), nameof(ResearchController.Suggest),
             ],
             typeof(ResearchController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
                 .Select(m => m.Name).Order(StringComparer.Ordinal));
