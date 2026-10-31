@@ -318,6 +318,15 @@ The short AI-written text under a Walk's result that explains how the suggested 
 never changes the suggestion.
 _Avoid_: AI note, advice, recommendation
 
+### Investment Scenario
+A named, saved set of Investment Calculator inputs: the starting amount, monthly contribution, assumed return, years,
+yearly contribution increase, inflation, fee and any applied what-if timing (DelayYears: the years before the plan
+starts; StopAfterYear: the last year of contributions, or none), in one currency, with an optional note.
+A Grow scenario keeps only the plan; a Goal scenario also keeps the goal target and whether the goal solves for the
+monthly amount or the years. A user keeps at most 20. Loading one puts its inputs back in the calculator; the
+projection is always worked out again, never stored. Information only: it is not advice and never moves money.
+_Avoid_: plan (the calculator's current inputs), portfolio, preset
+
 ### Savings Goals
 The Feature where a user sets a target amount, optionally with a target date, and records every movement of money
 toward it as a Contribution. The page shows each goal's saved amount against its target. Information only: it never

@@ -18,6 +18,7 @@ using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.Contracts;
 using PersonalFinance.Shared.DTOs.Feedback;
 using PersonalFinance.Shared.DTOs.NetWorth;
+using PersonalFinance.Shared.DTOs.SavingsGoals;
 using PersonalFinance.Shared.Enums;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Controllers;
@@ -51,10 +52,10 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
 
     private static readonly string[] CalculatorEnglish =
     [
-        "Compound Growth Calculator", "See how your investments", "Investment Amount", "Initial Investment",
-        "Monthly Contribution", "Growth Parameters", "Annual Return Rate", "Time Period", "20 years",
-        "Future Value", "Total Contributions", "Interest Earned", "Growth Over Time", "Total Value",
-        "Investment growth chart", "Initial investment amount"
+        "Investment Calculator", "Your plan", "Starting amount", "Monthly contribution", "Assumed yearly return",
+        "More assumptions", "Balance over time", "Where your balance comes from", "Fees cost you", "Reach a goal",
+        "Goal amount", "Compare what-ifs", "Year by year", "Read the disclaimer",
+        "Educational estimate using a fixed assumed return"
     ];
 
     private static readonly string[] PresetKeys = ["fire", "coast", "traditional", "ultra", "conservative"];
@@ -80,6 +81,14 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
         builder.Logging.ClearProviders();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton(netWorthApi);
+        (ISavingsGoalsApi savingsGoalsApi, ApiProxy<ISavingsGoalsApi> goalsProxy) = ApiProxy.Create<ISavingsGoalsApi>();
+        goalsProxy.Returns(nameof(ISavingsGoalsApi.GetSavingsGoalsAsync), new List<SavingsGoalDto>());
+        builder.Services.AddSingleton(savingsGoalsApi);
+        (IInvestmentScenariosApi scenariosApi, ApiProxy<IInvestmentScenariosApi> scenariosProxy) =
+            ApiProxy.Create<IInvestmentScenariosApi>();
+        scenariosProxy.Returns(nameof(IInvestmentScenariosApi.GetScenariosAsync),
+            new List<PersonalFinance.Shared.DTOs.InvestmentScenarios.InvestmentScenarioDto>());
+        builder.Services.AddSingleton(scenariosApi);
         builder.Services.AddSingleton<IUserPreferenceService, InMemoryUserPreferenceService>();
         builder.Services.AddSingleton<IFeedbackApi, NoFeedbackApi>();
         builder.Services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
@@ -217,8 +226,8 @@ public sealed partial class NetWorthPagesRenderingTests : IAsyncLifetime
         AssertHides(html, CalculatorEnglish);
         Assert.Contains($"10.000{Nbsp}$", html, StringComparison.Ordinal);
         Dictionary<string, string> strings = Island(html, "InvestmentCalculator.Js.");
-        Assert.Equal(TestLocalization.Vietnamese("InvestmentCalculator.Js.Tooltip.Start"),
-            strings["InvestmentCalculator.Js.Tooltip.Start"]);
+        Assert.Equal(TestLocalization.Vietnamese("InvestmentCalculator.Js.Axis.Now"),
+            strings["InvestmentCalculator.Js.Axis.Now"]);
     }
 
     private async Task<string> GetAsync(string url, bool vietnamese)

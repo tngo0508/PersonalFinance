@@ -1,426 +1,1227 @@
 /* ==========================================================================
-   Investment Calculator Styles
-   "Indigo Ledger" design system — responsive, professional UI
+   Investment Calculator (#587): a pinned summary bar, the slider rail on the left and the Overview grid of chart
+   tiles. Colours are app tokens; chart series use the chart tokens, the same ChartPalette hands the D3 charts.
+   Sizes are in rem so the layout follows the text; the bar and rail pin only where the rail sits beside the grid.
    ========================================================================== */
 
-/* ==========================================================================
-   Page Container
-   ========================================================================== */
-
-.calculator-page {
+.ic-page {
+    --ic-gap: 1rem;
+    --ic-radius: var(--app-radius-l);
     padding: 0.5rem 0 2rem;
+    color: var(--app-text);
 }
 
-/* ==========================================================================
-   Page Header
-   ========================================================================== */
+/* ---------- Summary bar ---------- */
 
-.calculator-header {
-    margin-bottom: 0;
-    padding-bottom: 1.25rem;
-    border-bottom: 1px solid var(--app-border);
-}
-
-.calculator-header__content {
+.ic-bar {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
     flex-wrap: wrap;
-}
-
-.calculator-title {
-    display: flex;
     align-items: center;
-    gap: 0.75rem;
-    font-size: 1.5rem;
-    font-weight: var(--app-font-weight-bold);
-    color: var(--app-text);
-    margin: 0 0 0.25rem;
-    line-height: 1.3;
-}
-
-.calculator-title__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: var(--app-radius-m);
-    background: var(--app-brand-fill);
-    color: var(--app-text-on-brand);
-    flex-shrink: 0;
-}
-
-.calculator-title__icon svg {
-    width: 20px;
-    height: 20px;
-}
-
-.calculator-subtitle {
-    color: var(--app-text-muted);
-    font-size: var(--app-font-size-base);
-    margin: 0;
-    line-height: 1.5;
-}
-
-/* ==========================================================================
-   Cards
-   ========================================================================== */
-
-.calculator-card {
+    gap: 0.75rem 1.5rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: var(--ic-gap);
+    background: var(--app-surface);
     border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-m);
-    box-shadow: var(--app-shadow-2);
-    overflow: hidden;
-}
-
-.calculator-card__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.85rem 1.25rem;
-    border-bottom: 1px solid var(--app-border);
-    background: var(--app-surface-soft, var(--app-surface));
-}
-
-.calculator-card__header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-}
-
-.calculator-card__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: var(--app-radius-s);
-    background: var(--app-brand-bg);
-    color: var(--app-brand);
-    flex-shrink: 0;
-}
-
-.calculator-card__icon svg {
-    width: 16px;
-    height: 16px;
-}
-
-.calculator-card__icon--orange {
-    background: var(--app-accent-warning-soft);
-    color: var(--app-accent-warning);
-}
-
-.calculator-card__icon--green {
-    background: var(--app-accent-positive-bg);
-    color: var(--app-accent-positive);
-}
-
-.calculator-card__title {
-    font-size: var(--app-font-size-base);
-    font-weight: var(--app-font-weight-semibold);
-    color: var(--app-text);
-    margin: 0;
-}
-
-.calculator-card__body {
-    padding: 1.25rem;
-}
-
-/* ==========================================================================
-   Input Groups
-   ========================================================================== */
-
-.calculator-input-group {
-    margin-bottom: 1.25rem;
-}
-
-.calculator-input-group:last-child {
-    margin-bottom: 0;
-}
-
-.calculator-input-group .form-label {
-    font-size: var(--app-font-size-small);
-    font-weight: var(--app-font-weight-semibold);
-    color: var(--app-text-muted);
-    margin-bottom: 0.4rem;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-
-.calculator-value-display {
-    font-size: 1.1rem;
-    font-weight: var(--app-font-weight-bold);
-    color: var(--app-brand-text);
-    text-align: center;
-    margin-bottom: 0.4rem;
-    font-family: var(--app-font-mono);
-}
-
-.calculator-input-group .form-range {
-    width: 100%;
-    margin-bottom: 0.4rem;
-    min-height: 44px;
-    cursor: pointer;
-}
-
-.calculator-input-group .form-control {
-    height: 40px;
-    border-radius: var(--app-radius-s);
-    font-family: var(--app-font-mono);
-    font-size: var(--app-font-size-small);
-    text-align: center;
-    border: 1px solid var(--app-border);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.calculator-input-group .form-control:focus {
-    border-color: var(--app-brand);
-    box-shadow: 0 0 0 2px var(--app-brand-bg);
-    outline: none;
-}
-
-/* ==========================================================================
-   Result Metric Cards
-   ========================================================================== */
-
-.calculator-result-card {
-    border: 1px solid var(--app-border);
-    border-radius: var(--app-radius-m);
-    box-shadow: var(--app-shadow-2);
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.calculator-result-card:hover {
+    border-radius: var(--ic-radius);
     box-shadow: var(--app-shadow-4);
-    border-color: var(--app-border-hover);
 }
 
-.calculator-result-card .card-body {
-    padding: 1.25rem;
-    text-align: center;
+.ic-bar__title {
+    font-size: 1.25rem;
+    font-weight: var(--app-font-weight-bold);
+    margin: 0;
+    color: var(--app-text);
+}
+
+.ic-bar__nums {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.75rem;
+    flex: 1 1 auto;
+    margin: 0;
+}
+
+.ic-num {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 0.3rem;
+    min-width: 0;
 }
 
-.calculator-result-card__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: var(--app-radius-m);
-    background: var(--app-brand-bg);
-    color: var(--app-brand);
-    margin-bottom: 0.25rem;
-}
-
-.calculator-result-card__icon svg {
-    width: 20px;
-    height: 20px;
-}
-
-.calculator-result-card__icon--blue {
-    background: var(--app-info-bg);
-    color: var(--app-info-text);
-}
-
-.calculator-result-card__icon--green {
-    background: var(--app-accent-positive-bg);
-    color: var(--app-accent-positive);
-}
-
-.calculator-result-label {
-    font-size: var(--app-font-size-small);
-    color: var(--app-text-muted);
-    margin-bottom: 0.15rem;
+.ic-num dt {
+    font-size: 0.75rem;
     font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text-muted);
+    letter-spacing: 0.02em;
 }
 
-.calculator-result-value {
-    font-size: 1.5rem;
+.ic-num dd {
+    margin: 0;
+    font-size: 1.1rem;
     font-weight: var(--app-font-weight-bold);
-    color: var(--app-accent-positive);
-    font-family: var(--app-font-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.ic-num--hero dd {
+    font-size: 1.6rem;
     line-height: 1.2;
+    color: var(--app-brand-text);
 }
 
-/* ==========================================================================
-   Chart Container
-   ========================================================================== */
-
-.calculator-card--chart .calculator-card__body {
-    padding: 1.5rem;
+.ic-num__growth {
+    color: var(--app-positive-text);
 }
 
-.calculator-chart-container {
-    position: relative;
-    min-height: 350px;
+/* The other money (today's or future) reads as a secondary figure. */
+.ic-num--other dd {
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text-muted);
+}
+
+.ic-bar__tools {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    justify-content: center;
-    margin-bottom: 1rem;
+    gap: 0.5rem 1rem;
 }
 
-#calcChart {
-    display: block;
-    max-width: 100%;
-}
-
-/* ==========================================================================
-   Chart Legend
-   ========================================================================== */
-
-.calculator-chart-legend {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    padding: 1rem 1.25rem;
-    background: var(--app-surface-soft, var(--app-surface));
-    border-radius: var(--app-radius-m);
-    border: 1px solid var(--app-border);
-}
-
-.calculator-chart-legend__item {
+.ic-switch {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    min-height: 2.75rem;
+    margin: 0;
+    padding-left: 0;
+    white-space: nowrap;
 }
 
-.calculator-chart-legend__dot {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
-    flex-shrink: 0;
+.ic-switch .form-check-input {
+    float: none;
+    margin: 0;
+    width: 2.5em;
+    height: 1.35em;
+    cursor: pointer;
 }
 
-/* The chart's series colours (calculator.js reads the same tokens through ChartPalette) */
-.calculator-chart-legend__dot--value {
-    background: var(--app-chart-1);
-}
-
-.calculator-chart-legend__dot--contrib {
-    background: var(--app-chart-2);
-}
-
-.calculator-chart-legend__dot--interest {
-    background: var(--app-chart-3);
-}
-
-.calculator-chart-legend__label {
-    font-size: var(--app-font-size-small);
-    color: var(--app-text-muted);
+.ic-switch .form-check-label {
+    font-size: 0.875rem;
     font-weight: var(--app-font-weight-semibold);
-    flex: 1 1 auto;
+    cursor: pointer;
 }
 
-.calculator-chart-legend__value {
-    font-size: var(--app-font-size-small);
-    color: var(--app-text);
+/* ---------- Layout ---------- */
+
+.ic-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--ic-gap);
+    align-items: start;
+}
+
+.ic-main {
+    min-width: 0;
+}
+
+/* ---------- Slider rail ---------- */
+
+.ic-rail {
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--ic-radius);
+    padding: 1.1rem;
+}
+
+.ic-rail__title {
+    font-size: 1rem;
     font-weight: var(--app-font-weight-bold);
-    font-family: var(--app-font-mono);
+    margin: 0 0 0.75rem;
 }
 
-/* ==========================================================================
-   Responsive Breakpoints
-   ========================================================================== */
-
-/* Tablet and below — single column layout */
-@media (max-width: 991px) {
-    .calculator-chart-container {
-        min-height: 280px;
-    }
-
-    #calcChart {
-        max-height: 320px !important;
-    }
-
-    .calculator-chart-legend {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.75rem;
-        padding: 0.85rem 1rem;
-    }
+.ic-field {
+    margin-bottom: 1rem;
 }
 
-/* Mobile — stacked layout, smaller chart */
-@media (max-width: 768px) {
-    .calculator-title {
-        font-size: 1.25rem;
-    }
-
-    .calculator-title__icon {
-        width: 32px;
-        height: 32px;
-    }
-
-    .calculator-title__icon svg {
-        width: 18px;
-        height: 18px;
-    }
-
-    .calculator-card__body {
-        padding: 1rem;
-    }
-
-    .calculator-card__header {
-        padding: 0.75rem 1rem;
-    }
-
-    .calculator-card--chart .calculator-card__body {
-        padding: 1rem;
-    }
-
-    .calculator-chart-container {
-        min-height: 250px;
-    }
-
-    #calcChart {
-        max-height: 280px !important;
-    }
-
-    .calculator-chart-legend {
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
-        padding: 0.75rem;
-    }
-
-    .calculator-result-value {
-        font-size: 1.25rem;
-    }
-
-    .calculator-result-card .card-body {
-        padding: 1rem;
-    }
+.ic-field__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem;
 }
 
-@media (max-width: 576px) {
-    .calculator-chart-container {
-        min-height: 220px;
-    }
-
-    #calcChart {
-        max-height: 250px !important;
-    }
+.ic-field__label {
+    font-size: 0.875rem;
+    font-weight: var(--app-font-weight-semibold);
+    margin: 0;
 }
 
-/* ==========================================================================
-   Accessibility
-   ========================================================================== */
+.ic-field__value {
+    font-weight: var(--app-font-weight-bold);
+    color: var(--app-brand-text);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
 
-.calculator-input-group .form-range:focus-visible {
+.ic-field__range {
+    display: block;
+    width: 100%;
+    margin: 0.25rem 0;
+}
+
+.ic-field__number {
+    font-variant-numeric: tabular-nums;
+}
+
+.ic-field__hint {
+    font-size: 0.75rem;
+    color: var(--app-text-muted);
+    margin: 0.25rem 0 0;
+}
+
+.ic-presets {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+}
+
+.ic-preset {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    min-height: 2.75rem;
+    padding: 0.35rem 0.25rem;
+    font-size: 0.75rem;
+    color: var(--app-text);
+    background: var(--app-bg);
+    border: 1px solid var(--app-border-control);
+    border-radius: var(--app-radius-m);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ic-preset strong {
+    font-size: 0.875rem;
+}
+
+.ic-preset:hover {
+    border-color: var(--app-border-hover);
+}
+
+.ic-preset[aria-pressed="true"] {
+    background: var(--app-brand-soft);
+    border-color: var(--app-brand);
+    color: var(--app-brand-on-soft);
+}
+
+.ic-preset:focus-visible,
+.ic-more__summary:focus-visible,
+.ic-years__summary:focus-visible,
+.ic-table-wrap:focus-visible,
+.ic-svg:focus-visible {
     outline: 2px solid var(--app-brand);
     outline-offset: 2px;
 }
 
-/* Reduced motion */
+.ic-more {
+    border-top: 1px solid var(--app-border);
+    padding-top: 0.75rem;
+}
+
+.ic-more__summary {
+    font-size: 0.9rem;
+    font-weight: var(--app-font-weight-semibold);
+    cursor: pointer;
+    margin-bottom: 0.75rem;
+    border-radius: var(--app-radius-s);
+}
+
+.ic-disclaimer {
+    font-size: 0.75rem;
+    color: var(--app-text-muted);
+    margin: 0.75rem 0 0;
+}
+
+/* ---------- Overview tiles ---------- */
+
+.ic-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: var(--ic-gap);
+}
+
+.ic-tile {
+    position: relative;
+    min-width: 0;
+    padding: 1rem;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--ic-radius);
+}
+
+.ic-tile--wide {
+    grid-column: 1 / -1;
+}
+
+.ic-tile__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.25rem 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.ic-tile__title {
+    font-size: 0.95rem;
+    font-weight: var(--app-font-weight-bold);
+    margin: 0;
+}
+
+.ic-tile__cost {
+    color: var(--app-negative-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.ic-tile__note {
+    font-size: 0.875rem;
+    margin: 0.5rem 0 0;
+}
+
+.ic-tile__hint {
+    font-size: 0.75rem;
+    color: var(--app-text-muted);
+    margin: 0.25rem 0 0;
+}
+
+.ic-legend,
+.ic-split {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.ic-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    font-size: 0.75rem;
+    color: var(--app-text-muted);
+}
+
+.ic-swatch {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    margin-right: 0.4rem;
+    vertical-align: -0.05em;
+}
+
+.ic-swatch--balance { background: var(--app-chart-1); }
+.ic-swatch--contributed { background: var(--app-chart-2); }
+.ic-swatch--growth,
+.ic-swatch--nofee { background: var(--app-chart-3); }
+
+/* Today's money is the balance colour, dashed, as on the chart. */
+.ic-swatch--today {
+    width: 1rem;
+    height: 0;
+    border-radius: 0;
+    border-top: 2px dashed var(--app-chart-1);
+    vertical-align: 0.2em;
+}
+
+/* The goal line: dash-dot in the fifth chart colour, as on the chart. */
+.ic-swatch--goal {
+    width: 1rem;
+    height: 0;
+    border-radius: 0;
+    border-top: 2px dashed var(--app-chart-5);
+    vertical-align: 0.2em;
+}
+
+.ic-chart {
+    position: relative;
+    width: 100%;
+    min-height: 13rem;
+}
+
+.ic-chart--small {
+    min-height: 11rem;
+}
+
+.ic-svg {
+    display: block;
+    max-width: 100%;
+    overflow: visible;
+}
+
+.ic-donut {
+    display: flex;
+    justify-content: center;
+    margin: 0.5rem 0;
+}
+
+.ic-split li {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.3rem 0;
+    font-size: 0.875rem;
+    border-top: 1px solid var(--app-border-subtle);
+}
+
+.ic-split strong {
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Year by year ---------- */
+
+.ic-years__summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    cursor: pointer;
+    list-style: none;
+    border-radius: var(--app-radius-s);
+}
+
+.ic-years__summary::-webkit-details-marker {
+    display: none;
+}
+
+.ic-years__summary::before {
+    content: "";
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease;
+}
+
+.ic-years[open] .ic-years__summary::before {
+    transform: rotate(45deg);
+}
+
+.ic-table-wrap {
+    max-height: 24rem;
+    overflow: auto;
+    margin-top: 0.5rem;
+    border: 1px solid var(--app-border-subtle);
+    border-radius: var(--app-radius-m);
+}
+
+.ic-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.ic-table th,
+.ic-table td {
+    padding: 0.4rem 0.75rem;
+    text-align: right;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.ic-table th:first-child {
+    text-align: left;
+}
+
+.ic-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    font-size: 0.75rem;
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text-muted);
+    background: var(--app-surface);
+}
+
+.ic-table tbody th {
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.ic-table__balance {
+    font-weight: var(--app-font-weight-bold);
+}
+
+.ic-table tbody tr:last-child > * {
+    border-bottom: 0;
+}
+
+.ic-readout {
+    position: absolute;
+    z-index: 2;
+    pointer-events: none;
+    min-width: 9rem;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--app-chart-tooltip-text);
+    background: var(--app-chart-tooltip-bg);
+    border: 1px solid var(--app-chart-tooltip-border);
+    border-radius: var(--app-radius-m);
+    box-shadow: var(--app-shadow-8);
+    white-space: nowrap;
+}
+
+.ic-readout[hidden] {
+    display: none;
+}
+
+.ic-readout strong {
+    display: block;
+    margin-bottom: 0.15rem;
+}
+
+.ic-readout__swatch {
+    display: inline-block;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    margin-right: 0.35rem;
+}
+
+/* ---------- Reach a goal tile ---------- */
+
+.ic-goal {
+    display: flex;
+    flex-direction: column;
+}
+
+.ic-goal__target {
+    margin-bottom: 0.75rem;
+}
+
+/* Start from a Savings Goal (#593): optional, so it sits above the amount, set apart by a hairline. */
+.ic-goal__from {
+    display: grid;
+    gap: 0.3rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.ic-goal__select {
+    min-height: 2.75rem;
+    max-width: 100%;
+    text-overflow: ellipsis;
+}
+
+.ic-goal__from .ic-tile__hint {
+    margin: 0;
+}
+
+.ic-goal__modes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+    margin: 0 0 0.75rem;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+
+.ic-goal__mode {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
+    font-weight: var(--app-font-weight-semibold);
+    text-align: center;
+    color: var(--app-text);
+    background: var(--app-bg);
+    border: 1px solid var(--app-border-control);
+    border-radius: var(--app-radius-m);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ic-goal__mode:hover {
+    border-color: var(--app-border-hover);
+}
+
+.btn-check:checked + .ic-goal__mode {
+    background: var(--app-brand-soft);
+    border-color: var(--app-brand);
+    color: var(--app-brand-on-soft);
+}
+
+.btn-check:focus-visible + .ic-goal__mode,
+.ic-goal__use:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+.ic-goal__answer {
+    margin: 0 0 0.75rem;
+}
+
+.ic-goal__headline {
+    display: block;
+    font-size: 1.5rem;
+    line-height: 1.2;
+    font-weight: var(--app-font-weight-bold);
+    color: var(--app-brand-text);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.ic-goal__detail {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--app-text-muted);
+}
+
+.ic-progress {
+    height: 0.6rem;
+    overflow: hidden;
+    background: var(--app-border);
+    border-radius: 999px;
+}
+
+.ic-progress__fill {
+    width: 0;
+    height: 100%;
+    background: var(--app-chart-1);
+    border-radius: inherit;
+    transition: width 0.2s ease;
+}
+
+.ic-goal__use {
+    align-self: flex-start;
+    min-height: 2.75rem;
+    margin-top: 0.75rem;
+    padding: 0.4rem 1rem;
+    font-size: 0.875rem;
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-brand-on-soft);
+    background: var(--app-brand-soft);
+    border: 1px solid var(--app-brand);
+    border-radius: var(--app-radius-m);
+    cursor: pointer;
+}
+
+.ic-goal__use:hover {
+    background: var(--app-bg);
+}
+
+.ic-goal__use[hidden],
+.ic-tile__hint[hidden] {
+    display: none;
+}
+
+/* ---------- View switch (Overview / Compare what-ifs) ---------- */
+
+.ic-bar__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+}
+
+.ic-views {
+    display: inline-flex;
+    gap: 0.25rem;
+    padding: 0.2rem;
+    background: var(--app-bg);
+    border: 1px solid var(--app-border);
+    border-radius: 999px;
+}
+
+.ic-view {
+    min-height: 2.75rem;
+    padding: 0.3rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-text-muted);
+    background: transparent;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.ic-view:hover {
+    color: var(--app-text);
+}
+
+.ic-view[aria-selected="true"] {
+    color: var(--app-brand-on-soft);
+    background: var(--app-brand-soft);
+    box-shadow: inset 0 0 0 1px var(--app-brand);
+}
+
+.ic-main[hidden] {
+    display: none;
+}
+
+/* ---------- Timing note in the rail (an applied "start later" or "stop adding") ---------- */
+
+.ic-timing {
+    margin: 0 0 1rem;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.8rem;
+    background: var(--app-brand-soft);
+    color: var(--app-brand-on-soft);
+    border-radius: var(--app-radius-m);
+}
+
+.ic-timing[hidden] {
+    display: none;
+}
+
+.ic-timing__text {
+    margin: 0 0 0.25rem;
+}
+
+.ic-timing__reset {
+    min-height: 2.75rem;
+    padding: 0;
+    font-weight: var(--app-font-weight-semibold);
+    color: inherit;
+    text-decoration: underline;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+/* ---------- What-if levers and preview ---------- */
+
+.ic-whatif__hint {
+    margin: 0 0 0.75rem;
+}
+
+.ic-levers {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
+    gap: 0.5rem;
+}
+
+.ic-lever {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+    min-height: 2.75rem;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+    text-align: left;
+    color: var(--app-text);
+    background: var(--app-bg);
+    border: 1px solid var(--app-border-control);
+    border-radius: var(--app-radius-m);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ic-lever:hover {
+    border-color: var(--app-border-hover);
+}
+
+.ic-lever[aria-pressed="true"] {
+    background: var(--app-brand-soft);
+    border-color: var(--app-brand);
+    box-shadow: inset 0 0 0 1px var(--app-brand);
+}
+
+.ic-lever__diff {
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.ic-lever__diff--up,
+.ic-cmp__diff--up {
+    color: var(--app-positive-text);
+}
+
+.ic-lever__diff--down,
+.ic-cmp__diff--down {
+    color: var(--app-negative-text);
+}
+
+.ic-preview {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    border: 1px dashed var(--app-brand);
+    border-radius: var(--app-radius-m);
+}
+
+.ic-preview[hidden] {
+    display: none;
+}
+
+.ic-preview__text {
+    flex: 1 1 16rem;
+    margin: 0;
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.ic-preview__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.ic-preview__full {
+    flex: 1 1 100%;
+    margin: 0;
+}
+
+.ic-preview__full[hidden] {
+    display: none;
+}
+
+.ic-action {
+    min-height: 2.75rem;
+    padding: 0.4rem 1rem;
+    font-size: 0.875rem;
+    font-weight: var(--app-font-weight-semibold);
+    color: var(--app-brand-on-soft);
+    background: var(--app-surface);
+    border: 1px solid var(--app-brand);
+    border-radius: var(--app-radius-m);
+    cursor: pointer;
+}
+
+.ic-action--primary {
+    color: var(--app-text-on-brand);
+    background: var(--app-brand);
+}
+
+.ic-action:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* ---------- Comparison ---------- */
+
+.ic-cmp {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: 0.5rem;
+    margin: 0 0 0.5rem;
+    padding: 0;
+    list-style: none;
+}
+
+.ic-cmp__item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: start;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--app-bg);
+    border: 1px solid var(--app-border-subtle);
+    border-radius: var(--app-radius-m);
+}
+
+.ic-cmp__swatch {
+    width: 1rem;
+    height: 0;
+    margin-top: 0.6rem;
+    border-top: 3px solid var(--app-chart-1);
+}
+
+.ic-cmp__item--1 .ic-cmp__swatch { border-top-color: var(--app-chart-2); }
+.ic-cmp__item--2 .ic-cmp__swatch { border-top-color: var(--app-chart-5); }
+
+.ic-cmp__body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    font-size: 0.85rem;
+}
+
+.ic-cmp__final {
+    font-size: 1.05rem;
+    font-weight: var(--app-font-weight-bold);
+    font-variant-numeric: tabular-nums;
+}
+
+.ic-cmp__diff {
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.ic-cmp__edit {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    margin-top: 0.4rem;
+}
+
+.ic-cmp__edit label {
+    font-size: 0.75rem;
+    color: var(--app-text-muted);
+}
+
+.ic-cmp__input {
+    max-width: 10rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.ic-cmp__remove {
+    width: 2.75rem;
+    height: 2.75rem;
+    margin: -0.5rem -0.5rem 0 0;
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--app-text-muted);
+    background: none;
+    border: 0;
+    border-radius: var(--app-radius-m);
+    cursor: pointer;
+}
+
+.ic-cmp__remove:hover {
+    color: var(--app-text);
+    background: var(--app-surface);
+}
+
+.ic-view:focus-visible,
+.ic-lever:focus-visible,
+.ic-action:focus-visible,
+.ic-cmp__remove:focus-visible,
+.ic-timing__reset:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+/* ---------- Saved scenarios (#592) ---------- */
+
+.ic-bar__saved {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.ic-bar__saved .ic-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.ic-bar__saved .ic-action svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.ic-count {
+    min-width: 1.5rem;
+    padding: 0 0.4rem;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.5rem;
+    text-align: center;
+    color: var(--app-brand-on-soft);
+    background: var(--app-bg);
+    border-radius: 999px;
+}
+
+.ic-count:empty {
+    display: none;
+}
+
+.ic-bar__current {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--app-text-muted);
+}
+
+.ic-bar__current[hidden] {
+    display: none;
+}
+
+/* On a phone the panel is a section at the end of the page. */
+.ic-saved {
+    margin-top: var(--ic-gap);
+    padding: 1rem;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--ic-radius);
+}
+
+.ic-saved:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+.ic-saved__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.ic-saved__title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: var(--app-font-weight-bold);
+}
+
+.ic-saved__close {
+    width: 2.75rem;
+    height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--app-text-muted);
+    background: none;
+    border: 0;
+    border-radius: var(--app-radius-m);
+    cursor: pointer;
+}
+
+.ic-saved__close:hover {
+    color: var(--app-text);
+    background: var(--app-bg);
+}
+
+.ic-saved__close[hidden],
+.ic-saved__empty[hidden],
+.ic-saved__error[hidden],
+.ic-saved__backdrop[hidden] {
+    display: none;
+}
+
+.ic-saved__room,
+.ic-saved__empty {
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+    color: var(--app-text-muted);
+}
+
+.ic-saved__error {
+    margin: 0.5rem 0 0;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    color: var(--app-negative-text);
+    background: var(--app-negative-bg);
+    border-radius: var(--app-radius-m);
+}
+
+.ic-saved__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ic-saved__item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.75rem;
+    background: var(--app-bg);
+    border: 1px solid var(--app-border-subtle);
+    border-radius: var(--app-radius-m);
+}
+
+/* The scenario the plan came from: a brand edge, not colour alone (the bar also names it). */
+.ic-saved__item.is-current {
+    border-color: var(--app-brand);
+    box-shadow: inset 4px 0 0 var(--app-brand);
+}
+
+.ic-saved__name {
+    margin: 0;
+    font-weight: var(--app-font-weight-semibold);
+    overflow-wrap: anywhere;
+}
+
+.ic-saved__headline {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: var(--app-font-weight-bold);
+    font-variant-numeric: tabular-nums;
+    color: var(--app-brand-text);
+}
+
+.ic-saved__meta,
+.ic-saved__note,
+.ic-saved__other {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--app-text-muted);
+    overflow-wrap: anywhere;
+}
+
+.ic-saved__other {
+    color: var(--app-text);
+}
+
+.ic-saved__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+}
+
+.ic-saved__act {
+    min-height: 2.75rem;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.8rem;
+}
+
+.ic-action--danger,
+.ic-saved__act--delete {
+    color: var(--app-negative-text);
+    border-color: var(--app-negative-text);
+}
+
+.ic-action--primary.ic-action--danger {
+    color: var(--app-surface);
+    background: var(--app-negative-text);
+}
+
+.ic-saved__unavailable .unavailable-state {
+    margin: 0;
+}
+
+/* Save, rename and delete: a native modal dialog. */
+.ic-dialog {
+    width: min(28rem, calc(100vw - 2rem));
+    padding: 1.25rem;
+    color: var(--app-text);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: var(--ic-radius);
+    box-shadow: var(--app-shadow-16);
+}
+
+.ic-dialog::backdrop {
+    background: var(--app-overlay);
+}
+
+.ic-dialog__title {
+    margin: 0 0 0.75rem;
+    font-size: 1.15rem;
+    font-weight: var(--app-font-weight-bold);
+}
+
+.ic-dialog__text {
+    margin: 0 0 0.75rem;
+    font-size: 0.9rem;
+}
+
+.ic-dialog__fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.ic-dialog__fields .form-control {
+    margin-bottom: 0.5rem;
+}
+
+.ic-dialog__text[hidden],
+.ic-dialog__fields[hidden],
+.ic-dialog__error[hidden],
+.ic-dialog__actions [hidden] {
+    display: none;
+}
+
+.ic-dialog__error {
+    margin: 0 0 0.75rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    color: var(--app-negative-text);
+    background: var(--app-negative-bg);
+    border-radius: var(--app-radius-m);
+}
+
+.ic-dialog__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.ic-saved__close:focus-visible,
+.ic-dialog .form-control:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+/* ---------- Wide screens: rail beside the grid, bar and rail pinned ---------- */
+
+@media (min-width: 62em) {
+    .ic-bar {
+        position: sticky;
+        top: var(--app-header-height);
+        z-index: 20;
+    }
+
+    .ic-layout {
+        grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+    }
+
+    /* From the wide layout up the panel is a drawer on the right, opened by Saved (investment-scenarios.js). */
+    .ic-saved {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1045;
+        width: min(26rem, 90vw);
+        margin: 0;
+        overflow-y: auto;
+        border-radius: var(--ic-radius) 0 0 var(--ic-radius);
+        box-shadow: var(--app-shadow-16);
+        transform: translateX(100%);
+        visibility: hidden;
+        transition: transform 0.2s ease, visibility 0.2s;
+    }
+
+    .ic-saved.is-open {
+        transform: none;
+        visibility: visible;
+    }
+
+    .ic-saved__list {
+        grid-template-columns: 1fr;
+    }
+
+    .ic-saved__backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1040;
+        background: var(--app-overlay);
+    }
+
+    .ic-rail {
+        position: sticky;
+        /* --ic-bar-height: the summary bar's measured height (calculator.js), so the rail pins just below it. */
+        top: calc(var(--app-header-height) + var(--ic-bar-height, 5rem) + var(--ic-gap));
+        max-height: calc(100vh - var(--app-header-height) - var(--ic-bar-height, 5rem) - 2 * var(--ic-gap));
+        overflow-y: auto;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .calculator-card,
-    .calculator-result-card,
-    .calculator-input-group .form-control {
+    .ic-preset,
+    .ic-view,
+    .ic-lever,
+    .ic-goal__mode,
+    .ic-progress__fill,
+    .ic-years__summary::before,
+    .ic-saved {
         transition: none;
     }
 }

@@ -184,6 +184,68 @@ public class DataExportServiceTests
     }
 
     [Fact]
+    public async Task Export_InvestmentScenarios_CarryEveryInput_OldestFirst_WithoutDeletedOrOtherAccountsScenarios()
+    {
+        await using AppDbContext db = CreateContext();
+        var newer = new InvestmentScenario
+        {
+            UserId = UserId,
+            Name = "Retire at 60",
+            Note = "Base case",
+            Mode = InvestmentScenarioMode.Goal,
+            CurrencyCode = "VND",
+            InitialAmount = 250_000_000m,
+            MonthlyContribution = 12_500_000m,
+            AssumedReturn = 7.25m,
+            Years = 25,
+            ContributionIncrease = 2m,
+            Inflation = 2.5m,
+            Fee = 0.1m,
+            DelayYears = 2,
+            StopAfterYear = 20,
+            GoalTarget = 12_500_000_000m,
+            GoalSolveFor = InvestmentGoalSolveFor.Years,
+            CreatedAt = new DateTime(2026, 10, 2, 0, 0, 0, DateTimeKind.Utc),
+            UpdatedAt = new DateTime(2026, 10, 5, 0, 0, 0, DateTimeKind.Utc)
+        };
+        var older = new InvestmentScenario
+        {
+            UserId = UserId, Name = "Starter", AssumedReturn = 4m, Years = 10,
+            CreatedAt = new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
+        var deleted = new InvestmentScenario { UserId = UserId, Name = "deleted", Years = 5 };
+        deleted.SoftDelete();
+        var theirs = new InvestmentScenario { UserId = OtherUserId, Name = "theirs", Years = 5 };
+        db.InvestmentScenarios.AddRange(newer, older, deleted, theirs);
+        await db.SaveChangesAsync();
+
+        DataExportDto export = await CreateService(db).ExportAsync(UserId);
+
+        Assert.Equal(["Starter", "Retire at 60"], export.InvestmentScenarios.Select(s => s.Name));
+        DataExportInvestmentScenarioDto scenario = export.InvestmentScenarios[1];
+        Assert.Equal(("Base case", "Goal", "VND"), (scenario.Note, scenario.Mode, scenario.CurrencyCode));
+        Assert.Equal((250_000_000m, 12_500_000m), (scenario.InitialAmount, scenario.MonthlyContribution));
+        Assert.Equal((7.25m, 25, 2m, 2.5m, 0.1m), (scenario.AssumedReturn, scenario.Years,
+            scenario.ContributionIncrease, scenario.Inflation, scenario.Fee));
+        Assert.Equal((2, (int?)20), (scenario.DelayYears, scenario.StopAfterYear));
+        Assert.Equal((12_500_000_000m, "Years"), (scenario.GoalTarget, scenario.GoalSolveFor));
+        Assert.Equal(new DateTime(2026, 10, 2, 0, 0, 0, DateTimeKind.Utc), scenario.CreatedAtUtc);
+        Assert.Equal(new DateTime(2026, 10, 5, 0, 0, 0, DateTimeKind.Utc), scenario.UpdatedAtUtc);
+        Assert.Equal(("Grow", (string?)null, (decimal?)null), (export.InvestmentScenarios[0].Mode,
+            export.InvestmentScenarios[0].GoalSolveFor, export.InvestmentScenarios[0].GoalTarget));
+    }
+
+    [Fact]
+    public void InvestmentScenarioSection_HoldsNoIdOrAccountId()
+    {
+        string[] properties = typeof(DataExportInvestmentScenarioDto).GetProperties().Select(p => p.Name).ToArray();
+
+        Assert.DoesNotContain("Id", properties);
+        Assert.DoesNotContain("UserId", properties);
+        Assert.DoesNotContain("IsDeleted", properties);
+    }
+
+    [Fact]
     public void PriorityWalkSection_HoldsNoIdOrAccountId()
     {
         string[] properties = typeof(DataExportPriorityWalkDto).GetProperties().Select(p => p.Name).ToArray();
@@ -227,6 +289,7 @@ public class DataExportServiceTests
         Assert.Equal("Regular", Assert.Single(Assert.Single(export.SavingsGoals).Contributions).Kind);
         Assert.Single(export.SavedArticles);
         Assert.Single(export.PriorityWalks);
+        Assert.Single(export.InvestmentScenarios);
         Assert.Equal("Approved", Assert.Single(export.Community.Strategies).Status);
         Assert.Single(export.Community.Comments);
         Assert.Equal("CheeringYouOn", Assert.Single(export.Community.Reactions).Kind);

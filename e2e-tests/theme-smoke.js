@@ -256,40 +256,40 @@ async function checkDarkContrast(page, name, selectors, report) {
 }
 
 /**
- * What the Investment Calculator's canvas shows, next to the tokens it should show: the background in the top padding,
- * where only the background is drawn, and the first series at the centre of the total value's end dot.
+ * What the Investment Calculator's D3 balance chart shows, next to the tokens it should show: the colour the browser
+ * computes for an axis label (the chart axis token) and for the balance line (the first series token). Waits two
+ * frames first: the page redraws its charts on the frame after a theme change.
  * @param {import('playwright').Page} page - The Investment Calculator.
  * @returns {Promise<{theme: string, marker: boolean, background: {token: string, pixel: number[]|null},
  *     series: {token: string, pixel: number[]|null}}>} marker: the page has not reloaded since the check set it.
+ *     background holds the axis sample, the name the shared helpers below read.
  */
 async function chartState(page) {
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     return page.evaluate(() => {
-        const canvas = document.getElementById('calcChart');
         const root = document.documentElement;
         const style = getComputedStyle(root);
-        const dpr = window.devicePixelRatio || 1;
-        const meta = canvas ? canvas._chartMeta : null;
-        const pixelAt = (x, y) => (canvas && canvas.width > 0
-            ? Array.from(canvas.getContext('2d').getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data).slice(0, 3)
-            : null);
-        const last = meta && meta.points.length > 0 ? meta.points[meta.points.length - 1] : null;
+        const rgb = (element, property) => {
+            const match = element ? getComputedStyle(element)[property].match(/[\d.]+/g) : null;
+            return match ? match.slice(0, 3).map(Number) : null;
+        };
         return {
             theme: root.getAttribute('data-theme'),
             marker: window.__chartThemeCheck === true,
             background: {
-                token: style.getPropertyValue('--app-surface').trim(),
-                pixel: canvas ? pixelAt(canvas.width / dpr / 2, 4) : null
+                token: style.getPropertyValue('--app-chart-axis').trim(),
+                pixel: rgb(document.querySelector('#icBalanceChart .tick text'), 'fill')
             },
             series: {
                 token: style.getPropertyValue('--app-chart-1').trim(),
-                pixel: last ? pixelAt(meta.toCanvasX(last.x), meta.toCanvasY(last.y)) : null
+                pixel: rgb(document.querySelector('#icBalanceChart path.ic-series'), 'stroke')
             }
         };
     });
 }
 
 /**
- * Does a sampled canvas pixel show its token's colour?
+ * Does a sampled chart colour show its token's colour?
  * @param {{token: string, pixel: number[]|null}} sample - From chartState.
  * @returns {boolean}
  */
@@ -302,7 +302,7 @@ function pixelMatchesToken(sample) {
 }
 
 /**
- * Does the canvas show the theme's chart background and first series?
+ * Does the chart show the theme's axis and first series colours?
  * @param {object} state - From chartState.
  * @returns {boolean}
  */
@@ -333,24 +333,24 @@ async function chooseTheme(page, theme) {
 
 /**
  * The Investment Calculator's chart takes its colours from the chart palette (#483): switching the theme restyles the
- * canvas without a reload. Leaves the page in dark mode, as it found it.
+ * D3 chart without a reload. Leaves the page in dark mode, as it found it.
  * @param {import('playwright').Page} page - A signed-in page in dark mode.
  * @param {string} base - The Web app's base URL.
  * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
  */
 async function checkChartRestyles(page, base, report) {
     await page.goto(`${base}/InvestmentCalculator`, {waitUntil: 'networkidle', timeout: TIMEOUT});
-    await page.locator('#calcChart').waitFor({state: 'visible', timeout: TIMEOUT});
+    await page.locator('#icBalanceChart path.ic-series').first().waitFor({state: 'attached', timeout: TIMEOUT});
     await page.evaluate(() => { window.__chartThemeCheck = true; });
 
     const dark = await chartState(page);
-    check(dark.theme === 'dark' && chartMatchesTokens(dark), 'Chart: the canvas shows the dark chart background and series',
+    check(dark.theme === 'dark' && chartMatchesTokens(dark), 'Chart: the balance chart shows the dark axis and series colours',
         JSON.stringify(dark), report);
 
     await chooseTheme(page, 'light');
     const light = await chartState(page);
     check(light.theme === 'light' && light.marker && chartMatchesTokens(light) && chartPixels(light) !== chartPixels(dark),
-        'Chart: switching to Light restyles the canvas without a reload', JSON.stringify(light), report);
+        'Chart: switching to Light restyles the chart without a reload', JSON.stringify(light), report);
 
     await chooseTheme(page, 'dark');
     const back = await chartState(page);

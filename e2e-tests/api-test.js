@@ -194,6 +194,24 @@ const {execSync} = require('child_process');
     }
 
     // =========================================================
+    // Test 6b: Investment Scenarios API endpoints (require auth — expect 401)
+    // =========================================================
+    console.log('\n--- Test 6b: Investment Scenarios API (Auth Required) ---');
+    try {
+        const resp = curl({url: `${apiBase}/api/InvestmentScenarios`, followRedirects: false});
+        console.log(`  /api/InvestmentScenarios status: ${resp.statusCode}`);
+        if (resp.statusCode === 401 || resp.statusCode === 403) {
+            pass('Investment Scenarios API correctly requires authentication');
+        } else if (resp.statusCode === 200) {
+            pass('Investment Scenarios API returned 200 (may be pre-authenticated)');
+        } else {
+            fail(`Investment Scenarios API returned unexpected status: ${resp.statusCode}`);
+        }
+    } catch (error) {
+        fail(`Investment Scenarios API check failed: ${error.message}`);
+    }
+
+    // =========================================================
     // Test 7: Watchlist API endpoints (require auth — expect 401)
     // =========================================================
     console.log('\n--- Test 7: Watchlist API (Auth Required) ---');

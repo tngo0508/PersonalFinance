@@ -1,671 +1,831 @@
-/* global PFI18n, ChartPalette */
+/* global PFI18n, ChartPalette, InvestmentMath, InvestmentCharts, InvestmentCompare, InvestmentScenarios */
 /**
- * Investment Calculator — Compound growth projection.
+ * Investment Calculator page (#587): reads the slider rail, projects the plan with investment-math.js and hands the
+ * result to the summary bar and the Overview tiles (investment-charts.js). Every amount is in the Reporting Currency
+ * the view names on [data-investment-calculator]. Nothing is sent to the server.
+ *
+ * The Today's money switch shows the bar's numbers, the tiles' text, the donut and the year-by-year table in today's
+ * money (the projection's real half); the line and bar charts stay in future money, with today's money dashed.
+ *
+ * The Reach a goal tile (#590) holds its own goal amount and solves it with InvestmentMath.solveGoal, in today's money
+ * when the switch is on; the balance chart draws the goal as a horizontal line with a marker at the year it is reached.
+ *
+ * Compare what-ifs (#591) lives in investment-compare.js; this script hands it every new plan. An applied lever can
+ * start the plan later or stop its deposits (timing); the rail has no field for those, so a note there says so.
+ *
+ * Saved Investment Scenarios (#592) live in investment-scenarios.js: this script hands it the plan and the goal, and
+ * loads a scenario's inputs back into the rail and the goal tile. A scenario saves the goal only once the goal tile
+ * has been used (or a goal scenario was loaded).
  */
 (function () {
     'use strict';
 
-    let calcChartTooltip = { visible: false, x: 0, y: 0, text: '' };
-    let calcChartResizeTimer = null;
+    const KEYS = ['initial', 'monthly', 'rate', 'years', 'increase', 'fee', 'inflation'];
+    const STATUS_DELAY_MS = 600;
+    /** Where the year-by-year table starts open: wide enough for its five columns without a squeeze. */
+    const WIDE_TABLE_QUERY = '(min-width: 48em)';
+
+    let root = null;
+    let currency = 'USD';
+    let projection = null;
+    let frame = null;
+    let statusTimer = null;
+    let todays = false;
+    /** The goal tile's last answer (InvestmentMath.solveGoal) and target, for the balance chart. */
+    let goal = null;
+    let goalTarget = 0;
+    /** Set by the goal tile's own controls, so only they announce its answer. */
+    let announceGoal = false;
+    /** When the plan starts and stops adding, set by an applied what-if: InvestmentMath's delay and stopAt. */
+    let timing = { delay: 0, stopAt: null };
+    /** The Compare what-ifs controller (investment-compare.js), or null without it. */
+    let compare = null;
+    /** The Saved panel's controller (investment-scenarios.js), or null without it. */
+    let scenarios = null;
+    /** True once the goal tile was used or a goal scenario loaded: a saved scenario then keeps the goal. */
+    let goalTouched = false;
 
     /**
-     * Format a currency value.
-     * @param {number} value - The value to format.
-     * @returns {string} The formatted currency string.
+     * The element with this id, or null.
+     * @param {string} id - The element id.
+     * @returns {HTMLElement|null} The element.
      */
-    function formatCurrency (value) {
-        return PFI18n.formatMoney(value, null, { whole: true });
+    function byId (id) {
+        return document.getElementById(id);
     }
 
     /**
-     * The chart's theme colours from the shared chart palette (core/chart-palette.js, issue #483). The series match
-     * the legend dots in investment-calculator.css: total value, contributions, then interest.
-     * @returns {object} The palette, plus value, contrib and interest: the colours of the three series.
+     * Set an element's text when it exists.
+     * @param {string} id - The element id.
+     * @param {string} text - The text.
      */
-    function chartColors () {
+    function setText (id, text) {
+        const el = byId(id);
+        if (el) {
+            el.textContent = text;
+        }
+    }
+
+    /**
+     * The field id stem of an input key: initial → Initial.
+     * @param {string} key - The input key.
+     * @returns {string} The stem used in the element ids.
+     */
+    function stem (key) {
+        return key.charAt(0).toUpperCase() + key.slice(1);
+    }
+
+    /**
+     * An amount as whole money in the Reporting Currency.
+     * @param {number} amount - The amount.
+     * @returns {string} E.g. $300,851.
+     */
+    function money (amount) {
+        return PFI18n.formatMoney(amount, currency, { whole: true });
+    }
+
+    /**
+     * An amount in compact form for chart axes.
+     * @param {number} amount - The amount.
+     * @returns {string} E.g. $300K.
+     */
+    function compact (amount) {
+        return PFI18n.formatCompactMoney(amount, currency);
+    }
+
+    /**
+     * A rate in percent.
+     * @param {number} value - The rate, e.g. 7.5.
+     * @returns {string} E.g. 7.5%.
+     */
+    function percent (value) {
+        return `${PFI18n.formatNumber(value, { maximumFractionDigits: 2 })}%`;
+    }
+
+    /**
+     * How an input's value reads beside its label.
+     * @param {string} key - The input key.
+     * @param {number} value - The value.
+     * @returns {string} The display text.
+     */
+    function display (key, value) {
+        if (key === 'initial' || key === 'monthly') {
+            return money(value);
+        }
+        if (key === 'years') {
+            return PFI18n.plural('InvestmentCalculator.Js.Years', value);
+        }
+        return percent(value);
+    }
+
+    /**
+     * The plan as the number fields hold it, normalized to the math module's bounds.
+     * @returns {object} The inputs.
+     */
+    function readInputs () {
+        const raw = Object.assign({}, timing);
+        KEYS.forEach((key) => {
+            const field = byId(`ic${stem(key)}`);
+            raw[key] = field ? parseFloat(field.value) : NaN;
+        });
+        const plan = InvestmentMath.normalize(raw);
+        ['initial', 'monthly'].forEach((key) => {
+            const field = byId(`ic${stem(key)}`);
+            const max = field ? parseFloat(field.max) : NaN;
+            if (Number.isFinite(max)) {
+                plan[key] = Math.min(plan[key], max);
+            }
+        });
+        return plan;
+    }
+
+    /**
+     * Update one input's label value and slider text, and the presets' pressed state for the rate.
+     * @param {string} key - The input key.
+     * @param {number} value - The normalized value.
+     */
+    function showValue (key, value) {
+        const text = display(key, value);
+        setText(`ic${stem(key)}Value`, text);
+        const range = byId(`ic${stem(key)}Range`);
+        if (range) {
+            range.setAttribute('aria-valuetext', text);
+        }
+        if (key === 'rate') {
+            root.querySelectorAll('[data-rate-preset]').forEach((button) => {
+                button.setAttribute('aria-pressed', String(parseFloat(button.dataset.ratePreset) === value));
+            });
+        }
+    }
+
+    /**
+     * The colours of the page's series from the chart palette.
+     * @returns {object} The palette plus balance, contributed and growth.
+     */
+    function colours () {
         const palette = ChartPalette.read();
         return Object.assign(palette, {
-            value: palette.series[0],
-            contrib: palette.series[1],
-            interest: palette.series[2]
+            balance: palette.series[0], contributed: palette.series[1], growth: palette.series[2], goal: palette.series[4]
         });
     }
 
     /**
-     * Initialize the calculator inputs and event listeners.
+     * The year labels for the charts' axis and readout.
+     * @returns {{formatX: Function, titleX: Function}} The formatters.
      */
-    function initCalculator () {
-        const inputs = [
-            {
-                rangeId: 'calcInitialRange',
-                numId: 'calcInitial',
-                valId: 'calcInitialValue',
-                format: v => formatCurrency(v)
-            },
-            {
-                rangeId: 'calcMonthlyRange',
-                numId: 'calcMonthly',
-                valId: 'calcMonthlyValue',
-                format: v => formatCurrency(v)
-            },
-            { rangeId: 'calcRateRange', numId: 'calcRate', valId: 'calcRateValue', format: v => `${PFI18n.formatNumber(Number(v) || 0) }%` },
-            {
-                rangeId: 'calcYearsRange',
-                numId: 'calcYears',
-                valId: 'calcYearsValue',
-                format: v => PFI18n.plural('InvestmentCalculator.Js.Years', Number(v) || 0)
-            }
-        ];
-
-        inputs.forEach(({ rangeId, numId, valId, format }) => {
-            const range = document.getElementById(rangeId);
-            const num = document.getElementById(numId);
-            const val = document.getElementById(valId);
-            if (!range || !num || !val) {
-                return;
-            }
-
-            range.addEventListener('input', () => {
-                num.value = range.value;
-                val.textContent = format(range.value);
-                calculateInvestment();
-            });
-            num.addEventListener('input', () => {
-                range.value = num.value;
-                val.textContent = format(num.value);
-                calculateInvestment();
-            });
-        });
-
-        calculateInvestment();
-        setupCalcChartTooltip();
-        setupCalcChartResize();
-    }
-
-    /**
-     * Setup resize handler for responsive chart.
-     */
-    function setupCalcChartResize () {
-        const container = document.querySelector('.calculator-chart-container');
-        if (!container) {
-            return;
-        }
-
-        const observer = new ResizeObserver(() => {
-            if (calcChartResizeTimer) {
-                cancelAnimationFrame(calcChartResizeTimer);
-            }
-            calcChartResizeTimer = requestAnimationFrame(() => {
-                const initial = parseFloat(document.getElementById('calcInitial')?.value) || 0;
-                const monthly = parseFloat(document.getElementById('calcMonthly')?.value) || 0;
-                const rate = parseFloat(document.getElementById('calcRate')?.value) || 0;
-                const years = parseInt(document.getElementById('calcYears')?.value) || 0;
-                drawCalcChart(initial, monthly, rate, years);
-                calcChartResizeTimer = null;
-            });
-        });
-        observer.observe(container);
-
-        // The canvas reads the chart palette when it draws, so a theme switch only needs a redraw (issue #483)
-        ChartPalette.subscribe(redrawCalcChartWithTooltip);
-    }
-
-    /**
-     * Calculate investment growth and update the UI.
-     */
-    function calculateInvestment () {
-        const initial = parseFloat(document.getElementById('calcInitial')?.value) || 0;
-        const monthly = parseFloat(document.getElementById('calcMonthly')?.value) || 0;
-        const rate = parseFloat(document.getElementById('calcRate')?.value) || 0;
-        const years = parseInt(document.getElementById('calcYears')?.value) || 0;
-
-        const monthlyRate = rate / 100 / 12;
-        const months = years * 12;
-
-        let futureValue;
-        if (monthlyRate === 0) {
-            futureValue = initial + monthly * months;
-        } else {
-            futureValue = initial * Math.pow(1 + monthlyRate, months) + monthly * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate);
-        }
-
-        const totalContributions = initial + monthly * months;
-        const totalInterest = futureValue - totalContributions;
-
-        const fvEl = document.getElementById('calcFutureValue');
-        const tcEl = document.getElementById('calcTotalContributions');
-        const tiEl = document.getElementById('calcTotalInterest');
-
-        if (fvEl) {
-            fvEl.textContent = formatCurrency(futureValue);
-        }
-        if (tcEl) {
-            tcEl.textContent = formatCurrency(totalContributions);
-        }
-        if (tiEl) {
-            tiEl.textContent = formatCurrency(totalInterest);
-        }
-
-        drawCalcChart(initial, monthly, rate, years);
-    }
-
-    /**
-     * Get chart dimensions based on container size.
-     * @returns {Object|null} The chart dimensions.
-     */
-    function getCalcChartDimensions () {
-        const canvas = document.getElementById('calcChart');
-        if (!canvas) {
-            return null;
-        }
-        const container = canvas.parentElement;
-        if (!container) {
-            return null;
-        }
-        const containerWidth = Math.max(1, container.clientWidth - 24);
-        const maxWidth = 800;
-        const w = Math.min(maxWidth, containerWidth);
-        const h = Math.round(w * 0.7);
-        return { w, h };
-    }
-
-    /**
-     * Draw the investment growth chart.
-     * @param {number} initial - Initial investment.
-     * @param {number} monthly - Monthly contribution.
-     * @param {number} rate - Annual return rate.
-     * @param {number} years - Time period in years.
-     */
-    function drawCalcChart (initial, monthly, rate, years) {
-        const canvas = document.getElementById('calcChart');
-        if (!canvas) {
-            return;
-        }
-        const ctx = canvas.getContext('2d');
-        const dpr = window.devicePixelRatio || 1;
-        const dims = getCalcChartDimensions();
-        if (!dims) {
-            return;
-        }
-        const w = dims.w;
-        const h = dims.h;
-        canvas.width = w * dpr;
-        canvas.height = h * dpr;
-        canvas.style.width = `${w }px`;
-        canvas.style.height = `${h }px`;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-        const padding = { top: 16, right: 24, bottom: 50, left: 68 };
-        const chartW = w - padding.left - padding.right;
-        const chartH = h - padding.top - padding.bottom;
-
-        ctx.clearRect(0, 0, w, h);
-
-        // Generate data points
-        const monthlyRate = rate / 100 / 12;
-        const points = [];
-        const contribPoints = [];
-        const step = Math.max(1, Math.floor(years / 50));
-
-        for (let y = 0; y <= years; y += step) {
-            const m = y * 12;
-            let fv;
-            if (monthlyRate === 0) {
-                fv = initial + monthly * m;
-            } else {
-                fv = initial * Math.pow(1 + monthlyRate, m) + monthly * ((Math.pow(1 + monthlyRate, m) - 1) / monthlyRate);
-            }
-            const contrib = initial + monthly * m;
-            points.push({ x: y, y: fv });
-            contribPoints.push({ x: y, y: contrib });
-        }
-
-        const maxVal = Math.max(...points.map(p => p.y), 1);
-        const niceMax = niceScaleMax(maxVal);
-        const gridLines = 5;
-
-        function toCanvasX (year) {
-            return padding.left + (year / years) * chartW;
-        }
-
-        function toCanvasY (val) {
-            return padding.top + chartH - (val / niceMax) * chartH;
-        }
-
-        const colors = chartColors();
-
-        // Background
-        ctx.fillStyle = colors.background;
-        roundRect(ctx, 0, 0, w, h, 8);
-        ctx.fill();
-
-        // Grid lines
-        ctx.strokeStyle = colors.grid;
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
-        for (let i = 0; i <= gridLines; i++) {
-            const y = padding.top + (chartH / gridLines) * i;
-            ctx.beginPath();
-            ctx.moveTo(padding.left, y);
-            ctx.lineTo(w - padding.right, y);
-            ctx.stroke();
-
-            const val = niceMax - (niceMax / gridLines) * i;
-            ctx.fillStyle = colors.axis;
-            ctx.font = '500 12px Inter, system-ui, -apple-system, sans-serif';
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(formatAxisValue(val), padding.left - 10, y);
-        }
-        ctx.setLineDash([]);
-
-        // X-axis labels
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillStyle = colors.axis;
-        ctx.font = '500 12px Inter, system-ui, -apple-system, sans-serif';
-        const xStep = Math.max(1, Math.floor(years / 7));
-        for (let y = 0; y <= years; y += xStep) {
-            const x = toCanvasX(y);
-            const tickY = padding.top + chartH;
-            ctx.beginPath();
-            ctx.strokeStyle = colors.grid;
-            ctx.lineWidth = 1;
-            ctx.moveTo(x, tickY);
-            ctx.lineTo(x, tickY + 4);
-            ctx.stroke();
-            ctx.fillText(y === 0
+    function yearFormats () {
+        return {
+            formatX: (year) => (year === 0
                 ? PFI18n.t('InvestmentCalculator.Js.Axis.Now')
-                : PFI18n.t('InvestmentCalculator.Js.Axis.Years', { count: PFI18n.formatNumber(y) }), x, tickY + 8);
-        }
-
-        // Smooth curve helper
-        function drawSmoothCurve (data) {
-            if (data.length < 2) {
-                return;
-            }
-            const coords = data.map(p => ({ x: toCanvasX(p.x), y: toCanvasY(p.y) }));
-            ctx.beginPath();
-            ctx.moveTo(coords[0].x, coords[0].y);
-            for (let i = 0; i < coords.length - 1; i++) {
-                const p0 = coords[Math.max(0, i - 1)];
-                const p1 = coords[i];
-                const p2 = coords[i + 1];
-                const p3 = coords[Math.min(coords.length - 1, i + 2)];
-                const cp1x = p1.x + (p2.x - p0.x) / 6;
-                const cp1y = p1.y + (p2.y - p0.y) / 6;
-                const cp2x = p2.x - (p3.x - p1.x) / 6;
-                const cp2y = p2.y - (p3.y - p1.y) / 6;
-                ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
-            }
-        }
-
-        // Interest earned area fill (between contributions and total value lines)
-        const interestGrad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
-        interestGrad.addColorStop(0, ChartPalette.withAlpha(colors.interest, 0.25));
-        interestGrad.addColorStop(1, ChartPalette.withAlpha(colors.interest, 0.02));
-        ctx.beginPath();
-        ctx.moveTo(toCanvasX(0), toCanvasY(contribPoints[0].y));
-        contribPoints.forEach(p => {
-            ctx.lineTo(toCanvasX(p.x), toCanvasY(p.y));
-        });
-        for (let i = points.length - 1; i >= 0; i--) {
-            ctx.lineTo(toCanvasX(points[i].x), toCanvasY(points[i].y));
-        }
-        ctx.closePath();
-        ctx.fillStyle = interestGrad;
-        ctx.fill();
-
-        // Contributions area fill
-        const contribGrad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
-        contribGrad.addColorStop(0, ChartPalette.withAlpha(colors.contrib, 0.15));
-        contribGrad.addColorStop(1, ChartPalette.withAlpha(colors.contrib, 0.02));
-        ctx.beginPath();
-        ctx.moveTo(toCanvasX(0), padding.top + chartH);
-        contribPoints.forEach(p => {
-            ctx.lineTo(toCanvasX(p.x), toCanvasY(p.y));
-        });
-        ctx.lineTo(toCanvasX(years), padding.top + chartH);
-        ctx.closePath();
-        ctx.fillStyle = contribGrad;
-        ctx.fill();
-
-        // Smooth lines
-        drawSmoothCurve(contribPoints);
-        ctx.strokeStyle = colors.contrib;
-        ctx.lineWidth = 2.5;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-        ctx.stroke();
-
-        drawSmoothCurve(points);
-        ctx.strokeStyle = colors.value;
-        ctx.lineWidth = 3;
-        ctx.stroke();
-
-        // End-point dots
-        function drawDot (data, color) {
-            const last = data[data.length - 1];
-            const cx = toCanvasX(last.x);
-            const cy = toCanvasY(last.y);
-            ctx.beginPath();
-            ctx.arc(cx, cy, 7, 0, Math.PI * 2);
-            ctx.fillStyle = ChartPalette.withAlpha(colors.background, 0.3);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-            ctx.fillStyle = color;
-            ctx.fill();
-            ctx.strokeStyle = colors.background;
-            ctx.lineWidth = 2;
-            ctx.stroke();
-        }
-
-        drawDot(contribPoints, colors.contrib);
-        drawDot(points, colors.value);
-
-        // Update HTML legend with final values
-        updateLegend(points, contribPoints);
-
-        // Store chart metadata for tooltip
-        canvas._chartMeta = { padding, chartW, chartH, points, contribPoints, niceMax, years, toCanvasX, toCanvasY };
+                : PFI18n.t('InvestmentCalculator.Js.Axis.Year', { year: PFI18n.formatNumber(year) })),
+            titleX: (year) => (year === 0
+                ? PFI18n.t('InvestmentCalculator.Js.Tooltip.Today')
+                : PFI18n.t('InvestmentCalculator.Js.Tooltip.Year', { year: PFI18n.formatNumber(year) }))
+        };
     }
 
     /**
-   * Update the HTML legend with final chart values.
-   * @param {Array} points - Total value data points.
-   * @param {Array} contribPoints - Contributions data points.
-   */
-    function updateLegend (points, contribPoints) {
-        if (points.length === 0 || contribPoints.length === 0) {
-            return;
-        }
-        const lastValue = points[points.length - 1].y;
-        const lastContrib = contribPoints[contribPoints.length - 1].y;
-        const lastInterest = lastValue - lastContrib;
-
-        const valueEl = document.getElementById('calcLegendValue');
-        const contribEl = document.getElementById('calcLegendContrib');
-        const interestEl = document.getElementById('calcLegendInterest');
-
-        if (valueEl) {
-            valueEl.textContent = formatCurrency(lastValue);
-        }
-        if (contribEl) {
-            contribEl.textContent = formatCurrency(lastContrib);
-        }
-        if (interestEl) {
-            interestEl.textContent = formatCurrency(lastInterest);
-        }
-    }
-
-    /**
-     * Round a max value up to a "nice" number for axis scaling.
-     * @param {number} rawMax - The raw maximum value.
-     * @returns {number} The nice maximum value.
+     * The projection as the Today's money switch shows it: the real half when on.
+     * @param {object} p - The projection.
+     * @returns {object} rows, final, contributed, growth, noFee, feeCost in the chosen money.
      */
-    function niceScaleMax (rawMax) {
-        if (rawMax <= 0) {
-            return 100;
+    function shown (p) {
+        return todays ? p.real : p;
+    }
+
+    /**
+     * The goal amount as its field holds it: at least 0 and at most the field's max.
+     * @returns {number} The target.
+     */
+    function readTarget () {
+        const field = byId('icGoal');
+        const value = field ? parseFloat(field.value) : NaN;
+        const max = field ? parseFloat(field.max) : NaN;
+        const target = Number.isFinite(value) ? Math.max(0, value) : 0;
+        return Number.isFinite(max) ? Math.min(target, max) : target;
+    }
+
+    /**
+     * The goal tile's chosen question: 'monthly' (How much a month?) or 'years' (How long?).
+     * @returns {string} The mode.
+     */
+    function goalMode () {
+        const years = byId('icGoalModeYears');
+        return years && years.checked ? 'years' : 'monthly';
+    }
+
+    /**
+     * The sentence the balance chart's description adds about the goal.
+     * @returns {string} The sentence, or empty without a goal.
+     */
+    function goalSentence () {
+        if (!goal || goalTarget <= 0) {
+            return '';
         }
-        const magnitude = Math.pow(10, Math.floor(Math.log10(rawMax)));
-        const normalized = rawMax / magnitude;
-        let nice;
-        if (normalized <= 1) {
-            nice = 1;
-        } else if (normalized <= 1.5) {
-            nice = 1.5;
-        } else if (normalized <= 2) {
-            nice = 2;
-        } else if (normalized <= 3) {
-            nice = 3;
-        } else if (normalized <= 5) {
-            nice = 5;
-        } else if (normalized <= 7.5) {
-            nice = 7.5;
+        return goal.reachedYear === null
+            ? PFI18n.t('InvestmentCalculator.Js.Chart.GoalNotReached', { target: money(goalTarget) })
+            : PFI18n.t('InvestmentCalculator.Js.Chart.GoalReached', {
+                target: money(goalTarget), year: PFI18n.formatNumber(goal.reachedYear)
+            });
+    }
+
+    /**
+     * Solve the goal for the plan and fill the goal tile: the answer, the progress bar, the today's-money note and
+     * the "Use this amount" button.
+     * @param {object} plan - The normalized inputs.
+     * @returns {string} The answer as one sentence pair, for the goal's live region.
+     */
+    function updateGoal (plan) {
+        goalTarget = readTarget();
+        goal = InvestmentMath.solveGoal(plan, { target: goalTarget, mode: goalMode(), todays });
+        const target = money(goalTarget);
+        const yearsText = (count) => PFI18n.plural('InvestmentCalculator.Js.Years', count);
+        setText('icGoalValue', target);
+
+        const monthlyField = byId('icMonthly');
+        const monthlyMax = monthlyField ? parseFloat(monthlyField.max) : NaN;
+        const tooHigh = goal.kind === 'monthly' && Number.isFinite(monthlyMax) && goal.monthly > monthlyMax;
+        let headline = '';
+        let detail = '';
+        if (goal.kind === 'monthly') {
+            headline = PFI18n.t('InvestmentCalculator.Js.Goal.Monthly', { amount: money(goal.monthly) });
+            detail = PFI18n.t('InvestmentCalculator.Js.Goal.MonthlyDetail', { target, years: yearsText(goal.year) });
+            if (tooHigh) {
+                detail = `${detail} ${PFI18n.t('InvestmentCalculator.Js.Goal.TooHigh', { max: money(monthlyMax) })}`;
+            }
+        } else if (goal.kind === 'years') {
+            headline = yearsText(goal.year);
+            detail = PFI18n.t('InvestmentCalculator.Js.Goal.YearsDetail', { target, monthly: money(plan.monthly) });
+        } else if (goal.kind === 'already') {
+            headline = PFI18n.t('InvestmentCalculator.Js.Goal.Already');
+            detail = goal.year === 0
+                ? PFI18n.t('InvestmentCalculator.Js.Goal.AlreadyNow', { target })
+                : PFI18n.t('InvestmentCalculator.Js.Goal.AlreadyYear', { target, year: PFI18n.formatNumber(goal.year) });
         } else {
-            nice = 10;
+            const horizon = goal.noDeposits ? goal.year : InvestmentMath.LIMITS.years.max;
+            headline = PFI18n.t('InvestmentCalculator.Js.Goal.Unreachable', { years: yearsText(horizon) });
+            detail = PFI18n.t(goal.noDeposits ? 'InvestmentCalculator.Js.Goal.NoDeposits' : 'InvestmentCalculator.Js.Goal.Shortfall', {
+                monthly: money(plan.monthly), amount: money(goal.shortfall), year: PFI18n.formatNumber(horizon)
+            });
         }
-        return nice * magnitude;
+        setText('icGoalAnswer', headline);
+        setText('icGoalDetail', detail);
+
+        const filled = Math.max(0, Math.min(1, goal.progress));
+        const asPercent = (value) => PFI18n.formatNumber(value, { style: 'percent', maximumFractionDigits: 0 });
+        const bar = byId('icGoalProgress');
+        if (bar) {
+            bar.setAttribute('aria-valuenow', String(Math.round(filled * 100)));
+            bar.setAttribute('aria-valuetext', PFI18n.t('InvestmentCalculator.Js.Goal.ProgressText', { percent: asPercent(goal.progress) }));
+        }
+        const fill = byId('icGoalProgressFill');
+        if (fill) {
+            fill.style.width = `${filled * 100}%`;
+        }
+        setText('icGoalProgressLabel', goal.reachedYear === null
+            ? PFI18n.t('InvestmentCalculator.Js.Goal.Progress', { percent: asPercent(goal.progress), years: yearsText(plan.years) })
+            : PFI18n.t(goal.reachedYear === 0 ? 'InvestmentCalculator.Js.Goal.ProgressNow' : 'InvestmentCalculator.Js.Goal.ProgressReached',
+                { year: PFI18n.formatNumber(goal.reachedYear) }));
+
+        const note = byId('icGoalNote');
+        if (note) {
+            const year = goal.kind === 'years' ? goal.year : plan.years;
+            note.hidden = !todays || goalTarget <= 0;
+            note.textContent = note.hidden
+                ? ''
+                : PFI18n.t('InvestmentCalculator.Js.Goal.Today', {
+                    amount: money(goalTarget * Math.pow(1 + plan.inflation / 100, year)), year: PFI18n.formatNumber(year)
+                });
+        }
+
+        const use = byId('icGoalUse');
+        if (use) {
+            use.hidden = goal.kind !== 'monthly' || tooHigh || goal.monthly === plan.monthly;
+            use.textContent = goal.kind === 'monthly'
+                ? PFI18n.t('InvestmentCalculator.Js.Goal.Use', { amount: money(goal.monthly) })
+                : '';
+        }
+        return `${headline}. ${detail}`;
     }
 
     /**
-     * Format a currency value for axis labels.
-     * @param {number} val - The value to format.
-     * @returns {string} The formatted string.
+     * Fill the year-by-year table: the chosen money in the first columns, the other money in the last.
      */
-    function formatAxisValue (val) {
-        return PFI18n.formatCompactMoney(val);
-    }
-
-    /**
-     * Draw a rounded rectangle path.
-     * @param {CanvasRenderingContext2D} ctx - The canvas context.
-     * @param {number} x - X coordinate.
-     * @param {number} y - Y coordinate.
-     * @param {number} w - Width.
-     * @param {number} h - Height.
-     * @param {number} r - Corner radius.
-     */
-    function roundRect (ctx, x, y, w, h, r) {
-        ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.lineTo(x + w - r, y);
-        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-        ctx.lineTo(x + w, y + h - r);
-        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-        ctx.lineTo(x + r, y + h);
-        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-        ctx.lineTo(x, y + r);
-        ctx.quadraticCurveTo(x, y, x + r, y);
-        ctx.closePath();
-    }
-
-    /**
-     * Setup chart hover tooltip.
-     */
-    function setupCalcChartTooltip () {
-        const canvas = document.getElementById('calcChart');
-        if (!canvas) {
+    function drawTable () {
+        const body = byId('icYearRows');
+        if (!projection || !body) {
             return;
         }
+        const view = shown(projection);
+        const other = todays ? projection.rows : projection.real.rows;
+        const { titleX } = yearFormats();
+        setText('icYearCaption', PFI18n.t(todays ? 'InvestmentCalculator.Js.Table.CaptionToday' : 'InvestmentCalculator.Js.Table.Caption'));
+        setText('icYearOther', PFI18n.t(todays ? 'InvestmentCalculator.Js.Money.Future' : 'InvestmentCalculator.Js.Money.Today'));
+        body.replaceChildren(...view.rows.map((row, i) => {
+            const tr = document.createElement('tr');
+            const th = document.createElement('th');
+            th.scope = 'row';
+            th.textContent = titleX(row.year);
+            tr.appendChild(th);
+            [row.contributedYear, row.growthYear, row.balance, other[i].balance].forEach((amount, column) => {
+                const td = document.createElement('td');
+                td.textContent = money(amount);
+                if (column === 2) {
+                    td.className = 'ic-table__balance';
+                }
+                tr.appendChild(td);
+            });
+            return tr;
+        }));
+    }
 
-        canvas.addEventListener('mousemove', (e) => {
-            const meta = canvas._chartMeta;
-            if (!meta) {
-                return;
-            }
-            const rect = canvas.getBoundingClientRect();
-            const mx = e.clientX - rect.left;
-            const my = e.clientY - rect.top;
+    /**
+     * Draw the charts from the current projection.
+     */
+    function drawCharts () {
+        if (!projection) {
+            return;
+        }
+        const p = projection;
+        const view = shown(p);
+        const c = colours();
+        const years = p.rows.length - 1;
+        const common = Object.assign({ palette: c, formatY: compact, formatValue: money }, yearFormats());
+        const name = (key) => PFI18n.t(`InvestmentCalculator.Js.Series.${key}`);
 
-            const { padding, chartW, chartH, points, contribPoints, years, toCanvasX } = meta;
+        InvestmentCharts.line(byId('icBalanceChart'), Object.assign({}, common, {
+            label: [
+                PFI18n.t('InvestmentCalculator.Js.Chart.BalanceToday', {
+                    start: money(p.rows[0].balance), final: money(p.final), years: PFI18n.formatNumber(years),
+                    real: money(p.real.final), contributed: money(p.contributed)
+                }),
+                goalSentence()
+            ].join(' ').trim(),
+            series: [
+                { name: name('Balance'), color: c.balance, area: true, width: 3, values: p.rows.map((r) => ({ x: r.year, y: r.balance })) },
+                { name: name('PutIn'), color: c.contributed, values: p.rows.map((r) => ({ x: r.year, y: r.contributed })) },
+                { name: name('TodaysMoney'), color: c.balance, dash: '6 4', width: 2, values: p.real.rows.map((r) => ({ x: r.year, y: r.balance })) }
+            ],
+            // With Today's money on, the goal is today's money: its line reads against the dashed line.
+            goal: goalTarget > 0 ? { y: goalTarget, color: c.goal, label: name('Goal') } : null,
+            markers: [
+                p.milestoneYear === null
+                    ? null
+                    : { x: p.milestoneYear, color: c.growth, label: PFI18n.t('InvestmentCalculator.Js.Milestone.Marker') },
+                !goal || goal.reachedYear === null || goalTarget <= 0
+                    ? null
+                    : { x: goal.reachedYear, color: c.goal, label: PFI18n.t('InvestmentCalculator.Js.Goal.Marker') }
+            ].filter(Boolean)
+        }));
 
-            if (mx < padding.left || mx > padding.left + chartW || my < padding.top || my > padding.top + chartH) {
-                calcChartTooltip.visible = false;
-                redrawCalcChartWithTooltip();
-                return;
-            }
+        InvestmentCharts.line(byId('icFeeChart'), Object.assign({}, common, {
+            heightEm: 11,
+            label: PFI18n.t('InvestmentCalculator.Js.Chart.Fee', {
+                years: PFI18n.formatNumber(years), withFees: money(p.final), withoutFees: money(p.noFee)
+            }),
+            // The no-fee line is dashed and drawn last, so a small fee's gap still shows above the balance.
+            series: [
+                { name: name('WithFees'), color: c.balance, area: true, values: p.rows.map((r) => ({ x: r.year, y: r.balance })) },
+                { name: name('WithoutFees'), color: c.growth, dash: '6 4', values: p.rows.map((r) => ({ x: r.year, y: r.noFee })) }
+            ]
+        }));
 
-            const ratio = (mx - padding.left) / chartW;
-            const hoveredYear = Math.round(ratio * years);
-            const clampedYear = Math.max(0, Math.min(years, hoveredYear));
-
-            const valuePoint = points.find(p => p.x === clampedYear) || nearestPoint(points, clampedYear);
-            const contribPoint = contribPoints.find(p => p.x === clampedYear) || nearestPoint(contribPoints, clampedYear);
-
-            if (!valuePoint) {
-                calcChartTooltip.visible = false;
-                redrawCalcChartWithTooltip();
-                return;
-            }
-
-            const cx = toCanvasX(valuePoint.x);
-            calcChartTooltip = {
-                visible: true,
-                x: cx,
-                year: valuePoint.x,
-                value: valuePoint.y,
-                contribution: contribPoint ? contribPoint.y : 0
-            };
-            redrawCalcChartWithTooltip();
+        const growth = Math.max(0, view.growth);
+        InvestmentCharts.donut(byId('icDonut'), {
+            palette: c,
+            centre: compact(view.final),
+            label: PFI18n.t('InvestmentCalculator.Js.Chart.Donut', { contributed: money(view.contributed), growth: money(growth) }),
+            parts: [
+                { name: name('PutIn'), value: view.contributed, color: c.contributed },
+                { name: name('Growth'), value: growth, color: c.growth }
+            ]
         });
 
-        canvas.addEventListener('mouseleave', () => {
-            calcChartTooltip.visible = false;
-            redrawCalcChartWithTooltip();
-        });
-    }
-
-    /**
-     * Find the nearest data point to a given year.
-     * @param {Array} data - The data points.
-     * @param {number} year - The target year.
-     * @returns {Object} The nearest point.
-     */
-    function nearestPoint (data, year) {
-        let best = data[0];
-        let bestDist = Math.abs(best.x - year);
-        for (let i = 1; i < data.length; i++) {
-            const d = Math.abs(data[i].x - year);
-            if (d < bestDist) {
-                bestDist = d;
-                best = data[i];
-            }
-        }
-        return best;
-    }
-
-    /**
-     * Redraw the chart with tooltip if visible.
-     */
-    function redrawCalcChartWithTooltip () {
-        const initial = parseFloat(document.getElementById('calcInitial')?.value) || 0;
-        const monthly = parseFloat(document.getElementById('calcMonthly')?.value) || 0;
-        const rate = parseFloat(document.getElementById('calcRate')?.value) || 0;
-        const years = parseInt(document.getElementById('calcYears')?.value) || 0;
-        drawCalcChart(initial, monthly, rate, years);
-
-        if (calcChartTooltip.visible) {
-            drawCalcChartTooltip();
-        }
-    }
-
-    /**
-     * Draw the tooltip on the chart.
-     */
-    function drawCalcChartTooltip () {
-        const canvas = document.getElementById('calcChart');
-        if (!canvas) {
-            return;
-        }
-        const ctx = canvas.getContext('2d');
-        const meta = canvas._chartMeta;
-        if (!meta) {
-            return;
-        }
-
-        const { toCanvasY, padding, chartH } = meta;
-        const { x: cx, year, value, contribution } = calcChartTooltip;
-        const colors = chartColors();
-
-        // Vertical guide line
-        ctx.beginPath();
-        ctx.strokeStyle = ChartPalette.withAlpha(colors.axis, 0.3);
-        ctx.lineWidth = 1;
-        ctx.setLineDash([3, 3]);
-        ctx.moveTo(cx, padding.top);
-        ctx.lineTo(cx, padding.top + chartH);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Dot on value line
-        const vy = toCanvasY(value);
-        ctx.beginPath();
-        ctx.arc(cx, vy, 5, 0, Math.PI * 2);
-        ctx.fillStyle = colors.value;
-        ctx.fill();
-        ctx.strokeStyle = colors.background;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Dot on contribution line
-        const cy = toCanvasY(contribution);
-        ctx.beginPath();
-        ctx.arc(cx, cy, 5, 0, Math.PI * 2);
-        ctx.fillStyle = colors.contrib;
-        ctx.fill();
-        ctx.strokeStyle = colors.background;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Tooltip box
-        const lines = [
-            year === 0 ? PFI18n.t('InvestmentCalculator.Js.Tooltip.Start') : PFI18n.plural('InvestmentCalculator.Js.Tooltip.Years', year),
-            PFI18n.t('InvestmentCalculator.Js.Tooltip.Value', { amount: formatCurrency(value) }),
-            PFI18n.t('InvestmentCalculator.Js.Tooltip.Contributions', { amount: formatCurrency(contribution) })
-        ];
-
-        ctx.font = '700 12px Inter, system-ui, -apple-system, sans-serif';
-        const lineH = 18;
-        const boxPad = 10;
-        // Wide enough for the longest line: translated labels and amounts vary in length.
-        const textW = Math.max(...lines.map((line) => ctx.measureText(line).width));
-        const boxW = Math.max(150, Math.ceil(textW) + boxPad * 2);
-        const boxH = lines.length * lineH + 12;
-
-        let boxX = cx + 12;
-        let boxY = vy - boxH / 2;
-
-        const canvasWidth = parseInt(canvas.style.width, 10) || 400;
-        if (boxX + boxW > canvasWidth - padding.right) {
-            boxX = cx - boxW - 12;
-        }
-        if (boxY < padding.top) {
-            boxY = padding.top;
-        }
-        if (boxY + boxH > padding.top + chartH) {
-            boxY = padding.top + chartH - boxH;
-        }
-
-        // Shadow: the tooltip surface, faint (the light theme's navy; #489)
-        ctx.shadowColor = window.ChartPalette.withAlpha(colors.tooltip.background, 0.12);
-        ctx.shadowBlur = 12;
-        ctx.shadowOffsetY = 4;
-
-        // Background
-        ctx.fillStyle = colors.tooltip.background;
-        roundRect(ctx, boxX, boxY, boxW, boxH, 8);
-        ctx.fill();
-
-        // Reset shadow
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetY = 0;
-
-        // Border
-        ctx.strokeStyle = colors.tooltip.border;
-        ctx.lineWidth = 1;
-        roundRect(ctx, boxX, boxY, boxW, boxH, 8);
-        ctx.stroke();
-
-        // Text
-        ctx.fillStyle = colors.tooltip.text;
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
-
-        lines.forEach((line, i) => {
-            const isTitle = i === 0;
-            ctx.font = isTitle ? '700 12px Inter, system-ui, -apple-system, sans-serif' : '500 12px Inter, system-ui, -apple-system, sans-serif';
-            ctx.fillText(line, boxX + boxPad, boxY + boxPad + i * lineH);
+        const last = p.rows[years];
+        InvestmentCharts.bars(byId('icBarsChart'), {
+            palette: c,
+            formatY: compact,
+            formatX: (year) => PFI18n.formatNumber(year),
+            label: PFI18n.t('InvestmentCalculator.Js.Chart.Bars', {
+                years: PFI18n.formatNumber(years), contributed: money(last.contributedYear), growth: money(last.growthYear)
+            }),
+            bars: p.rows.slice(1).map((r) => ({
+                x: r.year,
+                title: PFI18n.t('InvestmentCalculator.Js.Bars.Year', {
+                    year: PFI18n.formatNumber(r.year), contributed: money(r.contributedYear), growth: money(r.growthYear)
+                }),
+                parts: [{ value: r.contributedYear, color: c.contributed }, { value: r.growthYear, color: c.growth }]
+            }))
         });
     }
 
-    // Initialize on DOM ready
+    /**
+     * Schedule a chart redraw on the next frame, once however many changes arrive.
+     */
+    function scheduleCharts () {
+        if (frame) {
+            cancelAnimationFrame(frame);
+        }
+        frame = requestAnimationFrame(() => {
+            frame = null;
+            drawCharts();
+            drawTable();
+            if (compare) {
+                compare.draw();
+            }
+        });
+    }
+
+    /**
+     * Say in the rail when the plan starts later or stops adding (an applied what-if), with a way back.
+     * @param {object} plan - The normalized inputs.
+     */
+    function showTiming (plan) {
+        const note = byId('icTiming');
+        if (!note) {
+            return;
+        }
+        const parts = [];
+        if (plan.delay > 0) {
+            parts.push(PFI18n.t('InvestmentCalculator.Js.Timing.Delay', { year: PFI18n.formatNumber(plan.delay) }));
+        }
+        if (plan.stopAt !== null) {
+            parts.push(PFI18n.t('InvestmentCalculator.Js.Timing.Stop', { year: PFI18n.formatNumber(plan.stopAt) }));
+        }
+        note.hidden = parts.length === 0;
+        setText('icTimingText', parts.join(' '));
+    }
+
+    /**
+     * Make the given inputs the plan: write them to the rail (and the timing the rail has no field for), then update.
+     * @param {object} inputs - The inputs (an applied what-if).
+     */
+    function applyPlan (inputs) {
+        const plan = InvestmentMath.normalize(inputs);
+        KEYS.forEach((key) => {
+            const field = byId(`ic${stem(key)}`);
+            const range = byId(`ic${stem(key)}Range`);
+            if (field) {
+                field.value = String(plan[key]);
+            }
+            if (range) {
+                range.value = String(plan[key]);
+            }
+        });
+        timing = { delay: plan.delay, stopAt: plan.stopAt };
+        update();
+    }
+
+    /**
+     * Wire the timing note's reset: the plan starts now and keeps adding.
+     */
+    function bindTiming () {
+        const reset = byId('icTimingReset');
+        if (!reset) {
+            return;
+        }
+        reset.addEventListener('click', () => {
+            timing = { delay: 0, stopAt: null };
+            update();
+            const years = byId('icYears');
+            if (years) {
+                years.focus();
+            }
+        });
+    }
+
+    /**
+     * Project the plan and update the summary bar, the tiles' text and the charts.
+     */
+    function update () {
+        const plan = readInputs();
+        KEYS.forEach((key) => showValue(key, plan[key]));
+        projection = InvestmentMath.project(plan);
+        const p = shown(projection);
+        const label = PFI18n.plural(todays ? 'InvestmentCalculator.Js.Bar.InYearsToday' : 'InvestmentCalculator.Js.Bar.InYears', plan.years);
+
+        setText('icFinalLabel', label);
+        setText('icFinal', money(p.final));
+        setText('icContributed', money(p.contributed));
+        setText('icGrowth', money(p.growth));
+        setText('icOtherLabel', PFI18n.t(todays ? 'InvestmentCalculator.Js.Money.Future' : 'InvestmentCalculator.Js.Money.Today'));
+        setText('icOther', money(todays ? projection.final : projection.real.final));
+
+        const milestone = projection.milestoneYear;
+        setText('icMilestone', milestone === null
+            ? PFI18n.t('InvestmentCalculator.Js.Milestone.NotYet')
+            : PFI18n.t('InvestmentCalculator.Js.Milestone.Reached', { year: PFI18n.formatNumber(milestone) }));
+
+        const growth = Math.max(0, p.growth);
+        const whole = p.contributed + growth;
+        const share = (part) => PFI18n.formatNumber(whole > 0 ? part / whole : 0, { style: 'percent', maximumFractionDigits: 0 });
+        setText('icSplitContributed', PFI18n.t('InvestmentCalculator.Js.Split.Value', { amount: money(p.contributed), percent: share(p.contributed) }));
+        setText('icSplitGrowth', PFI18n.t('InvestmentCalculator.Js.Split.Value', { amount: money(growth), percent: share(growth) }));
+
+        setText('icFeeCost', money(p.feeCost));
+        setText('icFeeNote', plan.fee > 0
+            ? PFI18n.t('InvestmentCalculator.Js.Fee.Note', { fee: percent(plan.fee), amount: money(p.noFee) })
+            : PFI18n.t('InvestmentCalculator.Js.Fee.None'));
+
+        const goalText = updateGoal(plan);
+        showTiming(plan);
+        if (compare) {
+            compare.update(plan);
+        }
+        if (scenarios) {
+            scenarios.update(plan);
+        }
+
+        // The goal tile's own controls announce its answer; everything else announces the plan.
+        const goalOnly = announceGoal;
+        announceGoal = false;
+        clearTimeout(statusTimer);
+        statusTimer = setTimeout(() => {
+            if (goalOnly) {
+                setText('icGoalStatus', goalText);
+                return;
+            }
+            setText('icStatus', PFI18n.t('InvestmentCalculator.Js.Status', {
+                label, final: money(p.final), contributed: money(p.contributed), growth: money(p.growth)
+            }));
+        }, STATUS_DELAY_MS);
+
+        scheduleCharts();
+    }
+
+    /**
+     * Keep a slider and its number field together: moving one sets the other, then the page updates.
+     * @param {string} key - The input key.
+     */
+    function bindField (key) {
+        const range = byId(`ic${stem(key)}Range`);
+        const field = byId(`ic${stem(key)}`);
+        if (!range || !field) {
+            return;
+        }
+        range.addEventListener('input', () => {
+            field.value = range.value;
+            update();
+        });
+        field.addEventListener('input', () => {
+            const value = parseFloat(field.value);
+            if (Number.isFinite(value)) {
+                range.value = String(value);
+            }
+            update();
+        });
+        // On leaving the field, show the value the projection used (e.g. 50 years for 80).
+        field.addEventListener('change', () => {
+            const value = readInputs()[key];
+            field.value = String(value);
+            range.value = String(value);
+            update();
+        });
+    }
+
+    /**
+     * Wire the rate presets: each sets the assumed return.
+     */
+    function bindPresets () {
+        root.querySelectorAll('[data-rate-preset]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const rate = button.dataset.ratePreset;
+                const field = byId('icRate');
+                const range = byId('icRateRange');
+                if (field) {
+                    field.value = rate;
+                }
+                if (range) {
+                    range.value = rate;
+                }
+                update();
+            });
+        });
+    }
+
+    /**
+     * Wire the Today's money switch, and open the year-by-year table where there is room for it.
+     */
+    function bindTodaysMoney () {
+        const toggle = byId('icTodaysMoney');
+        if (toggle) {
+            todays = toggle.checked;
+            toggle.addEventListener('change', () => {
+                todays = toggle.checked;
+                update();
+            });
+        }
+        const yearly = byId('icYearly');
+        if (yearly && window.matchMedia && window.matchMedia(WIDE_TABLE_QUERY).matches) {
+            yearly.open = true;
+        }
+    }
+
+    /**
+     * Start the goal from one of the Account's Savings Goals (#593): its target becomes the goal amount and, for a
+     * dated goal, its years to the target date become the plan's years, with the tile asking "How much a month?".
+     * Nothing is written back to the Savings Goal.
+     * @param {HTMLOptionElement|undefined} option - The chosen option; the empty "Choose a goal" option does nothing.
+     */
+    function startFromSavingsGoal (option) {
+        const field = byId('icGoal');
+        const target = option ? parseFloat(option.dataset.target) : NaN;
+        if (!field || !Number.isFinite(target)) {
+            return;
+        }
+        field.value = String(target);
+        const years = parseInt(option.dataset.years, 10);
+        const hasYears = Number.isFinite(years);
+        if (hasYears) {
+            const yearsField = byId('icYears');
+            const yearsRange = byId('icYearsRange');
+            if (yearsField) {
+                yearsField.value = String(years);
+            }
+            if (yearsRange) {
+                yearsRange.value = String(years);
+            }
+            const monthly = byId('icGoalModeMonthly');
+            if (monthly) {
+                monthly.checked = true;
+            }
+        }
+        update();
+        const values = { amount: money(readTarget()), name: option.dataset.name || option.textContent };
+        if (hasYears) {
+            values.years = PFI18n.plural('InvestmentCalculator.Js.Years', readInputs().years);
+        }
+        clearTimeout(statusTimer);
+        setText('icGoalStatus', PFI18n.t(hasYears ? 'InvestmentCalculator.Js.Goal.FromYears' : 'InvestmentCalculator.Js.Goal.From', values));
+    }
+
+    /**
+     * Wire the goal tile: its amount and question re-solve the goal; "Use this amount" puts the answer in the rail's
+     * monthly contribution.
+     */
+    function bindGoal () {
+        const field = byId('icGoal');
+        const from = byId('icGoalFrom');
+        if (field) {
+            field.addEventListener('input', () => {
+                // A typed amount is no longer the chosen Savings Goal's.
+                if (from) {
+                    from.value = '';
+                }
+                goalTouched = true;
+                announceGoal = true;
+                update();
+            });
+            // On leaving the field, show the amount the goal used (e.g. 0 for a negative entry).
+            field.addEventListener('change', () => {
+                field.value = String(readTarget());
+                announceGoal = true;
+                update();
+            });
+        }
+        root.querySelectorAll('input[name="icGoalMode"]').forEach((radio) => {
+            radio.addEventListener('change', () => {
+                goalTouched = true;
+                announceGoal = true;
+                update();
+            });
+        });
+        if (from) {
+            from.addEventListener('change', () => {
+                goalTouched = true;
+                startFromSavingsGoal(from.selectedOptions[0]);
+            });
+        }
+        const use = byId('icGoalUse');
+        if (use) {
+            use.addEventListener('click', () => {
+                if (!goal || goal.kind !== 'monthly') {
+                    return;
+                }
+                const amount = String(goal.monthly);
+                const monthly = byId('icMonthly');
+                const range = byId('icMonthlyRange');
+                if (monthly) {
+                    monthly.value = amount;
+                }
+                if (range) {
+                    range.value = amount;
+                }
+                const used = PFI18n.t('InvestmentCalculator.Js.Goal.Used', { amount: money(goal.monthly) });
+                update();
+                // The button hides once the plan uses the amount; keep focus in the tile on the chosen question.
+                const checked = root.querySelector('input[name="icGoalMode"]:checked');
+                if (checked) {
+                    checked.focus();
+                }
+                clearTimeout(statusTimer);
+                setText('icGoalStatus', used);
+            });
+        }
+    }
+
+    /**
+     * Load a saved Investment Scenario (#592): its inputs become the plan (with the timing an applied what-if left),
+     * a goal scenario also sets the goal tile, and the page shows Overview, with the goal tile in view for a goal.
+     * @param {object} scenario - The scenario, as the server sends it.
+     */
+    function loadScenario (scenario) {
+        const isGoal = scenario.mode === InvestmentScenarios.MODES.goal && Number(scenario.goalTarget) > 0;
+        goalTouched = isGoal;
+        if (isGoal) {
+            const field = byId('icGoal');
+            if (field) {
+                field.value = String(Number(scenario.goalTarget));
+            }
+            const mode = byId(InvestmentScenarios.goalModeOf(scenario.goalSolveFor) === 'years' ? 'icGoalModeYears' : 'icGoalModeMonthly');
+            if (mode) {
+                mode.checked = true;
+            }
+            const from = byId('icGoalFrom');
+            if (from) {
+                from.value = '';
+            }
+        }
+        const overview = byId('icViewOverviewTab');
+        if (overview && overview.getAttribute('aria-selected') !== 'true') {
+            overview.click();
+        }
+        applyPlan({
+            initial: Number(scenario.initialAmount),
+            monthly: Number(scenario.monthlyContribution),
+            rate: Number(scenario.assumedReturn),
+            years: Number(scenario.years),
+            increase: Number(scenario.contributionIncrease),
+            inflation: Number(scenario.inflation),
+            fee: Number(scenario.fee),
+            delay: Number(scenario.delayYears) || 0,
+            stopAt: scenario.stopAfterYear === null || scenario.stopAfterYear === undefined ? null : Number(scenario.stopAfterYear)
+        });
+        const tile = isGoal ? root.querySelector('.ic-goal') : null;
+        if (tile && typeof tile.scrollIntoView === 'function') {
+            const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            tile.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
+        }
+    }
+
+    /**
+     * Start the page.
+     */
+    function init () {
+        root = document.querySelector('[data-investment-calculator]');
+        if (!root || typeof InvestmentMath === 'undefined' || typeof InvestmentCharts === 'undefined') {
+            return;
+        }
+        currency = root.dataset.currency || 'USD';
+        KEYS.forEach(bindField);
+        bindPresets();
+        bindTodaysMoney();
+        bindGoal();
+        bindTiming();
+        if (typeof InvestmentCompare !== 'undefined') {
+            compare = InvestmentCompare.create(root, {
+                money,
+                compact,
+                percent,
+                colours,
+                yearFormats,
+                shown,
+                applyPlan,
+                monthlyMax: () => {
+                    const field = byId('icMonthly');
+                    return field ? parseFloat(field.max) : NaN;
+                },
+                onView: scheduleCharts
+            });
+        }
+        if (typeof InvestmentScenarios !== 'undefined') {
+            scenarios = InvestmentScenarios.create(root, {
+                currency,
+                plan: readInputs,
+                goal: () => ({ target: readTarget(), mode: goalMode(), touched: goalTouched }),
+                load: loadScenario,
+                compare,
+                money: (amount, code) => PFI18n.formatMoney(amount, code || currency, { whole: true })
+            });
+        }
+        update();
+
+        const bar = root.querySelector('.ic-bar');
+        if (typeof ResizeObserver !== 'undefined') {
+            // Both views' tiles: a view that was hidden draws once it has a size.
+            const resized = new ResizeObserver(scheduleCharts);
+            root.querySelectorAll('.ic-tiles').forEach((tiles) => resized.observe(tiles));
+            // The rail pins below the bar, whose height changes as its numbers wrap.
+            if (bar) {
+                new ResizeObserver(() => root.style.setProperty('--ic-bar-height', `${bar.offsetHeight}px`)).observe(bar);
+            }
+        }
+        ChartPalette.subscribe(scheduleCharts);
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initCalculator);
+        document.addEventListener('DOMContentLoaded', init);
     } else {
-        initCalculator();
+        init();
     }
-
 })();

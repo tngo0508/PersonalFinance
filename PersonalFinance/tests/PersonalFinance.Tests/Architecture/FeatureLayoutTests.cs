@@ -19,7 +19,7 @@ public class FeatureLayoutTests
     [
         "NetWorth", "BudgetPlanner", "BudgetTracker", "Analysis", "GoogleDrive", "SavingsGoals", "Community",
         "Watchlist", "AiAssistant", "Feedback", "Admin", "AccountLifecycle", "Search", "Dashboard", "LandingPage", "Legal",
-        "InvestmentCalculator", "Research", "MoneyPriorities", "CurrencyConverter", "Learning"
+        "InvestmentCalculator", "InvestmentScenarios", "Research", "MoneyPriorities", "CurrencyConverter", "Learning"
     ];
 
     private static readonly Assembly ApiServiceAssembly = typeof(InfrastructureServiceExtensions).Assembly;

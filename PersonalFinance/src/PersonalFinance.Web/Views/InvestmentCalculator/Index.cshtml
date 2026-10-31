@@ -1,217 +1,423 @@
+@using System.Globalization
+@using System.Text.Json
+@model InvestmentCalculatorViewModel
 @{
     ViewData["Title"] = L["InvestmentCalculator.Title"].Value;
-}
+    string currency = Model.CurrencyCode;
 
-@functions {
-    // calculator.js rewrites these on load; the server renders the same starting values so nothing jumps.
-    private static string Money(decimal amount)
-    {
-        return MoneyFormatter.FormatWhole(amount, SupportedCurrencies.Default.Code);
-    }
+    // Attribute values are invariant (the script and the browser read them); visible text follows the page culture.
+    static string Invariant(decimal value) => value.ToString(CultureInfo.InvariantCulture);
+    static string Percent(decimal value) => $"{value.ToString("0.##", CultureInfo.CurrentCulture)}%";
+    string Money(decimal amount) => MoneyFormatter.FormatWhole(amount, currency);
+
+    // The plan the page opens with; investment-math.js holds the same defaults and the rate and year bounds.
+    const decimal rate = 7m;
+    const int years = 20;
+    const decimal increase = 0m;
+    const decimal fee = 0.1m;
+    const decimal inflation = 2.5m;
+    (string Key, decimal Rate)[] presets = [("Conservative", 4m), ("Base", 7m), ("Aggressive", 10m)];
+
+    // Overview or Compare what-ifs (#591): ?view=compare opens Compare; the script keeps the query string in step.
+    bool compareView = string.Equals(Context.Request.Query["view"], "compare", StringComparison.OrdinalIgnoreCase);
+    // The what-if levers, in InvestmentMath.LEVERS order; the script writes each one's label and difference.
+    string[] levers = ["monthly", "rate", "delay", "stop", "fee"];
+
+    // Saved Investment Scenarios (#592): the page script lists them from this attribute (Razor encodes it).
+    string scenarioJson = JsonSerializer.Serialize(Model.Scenarios, JsonSerializerOptions.Web);
+    bool savingOff = Model.ScenariosUnavailable;
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/investment-calculator.css" asp-append-version="true"/>
 }
 
-<div class="calculator-page">
-    <!-- Page Header -->
-    <div class="calculator-header mb-4">
-        <div class="calculator-header__content">
-            <div>
-                <h1 class="calculator-title">
-                    <span class="calculator-title__icon" aria-hidden="true">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path
-                                    d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-                    </span>
-                    @L["InvestmentCalculator.Header.Title"]
-                </h1>
-                <p class="calculator-subtitle">@L["InvestmentCalculator.Header.Subtitle"]</p>
+@* A slider and a number field for one input: the field is the labelled control, the slider moves with it. A money
+   field takes more than its slider's range; the slider then rests at its end. *@
+@{
+    void Field(string key, string label, decimal value, decimal min, decimal sliderMax, decimal max, decimal step,
+        string shown, string? hint = null)
+    {
+        <div class="ic-field" data-ic-field="@key">
+            <div class="ic-field__head">
+                <label class="ic-field__label" id="ic@(key)Label" for="ic@(key)">@label</label>
+                <output class="ic-field__value" id="ic@(key)Value" for="ic@(key)">@shown</output>
+            </div>
+            <input type="range" class="form-range ic-field__range" id="ic@(key)Range" data-ic-input="@key"
+                   min="@Invariant(min)" max="@Invariant(sliderMax)" step="@Invariant(step)" value="@value.ToString(CultureInfo.InvariantCulture)"
+                   aria-labelledby="ic@(key)Label" aria-valuetext="@shown"/>
+            <input type="number" class="form-control form-control-sm ic-field__number" id="ic@(key)" data-ic-input="@key"
+                   inputmode="decimal" min="@Invariant(min)" max="@Invariant(max)" step="any" value="@value.ToString(CultureInfo.InvariantCulture)"
+                   aria-describedby="@(hint is null ? null : $"ic{key}Hint")"/>
+            @if (hint is not null)
+            {
+                <p class="ic-field__hint" id="ic@(key)Hint">@hint</p>
+            }
+        </div>
+    }
+}
+
+<div class="ic-page" data-investment-calculator data-currency="@currency">
+    <section class="ic-bar" aria-labelledby="icTitle">
+        <div class="ic-bar__head">
+            <h1 class="ic-bar__title" id="icTitle">@L["InvestmentCalculator.Title"]</h1>
+            <div class="ic-views" role="tablist" aria-label="@L["InvestmentCalculator.View.Aria"]">
+                <button type="button" class="ic-view" role="tab" id="icViewOverviewTab" data-ic-view="overview"
+                        aria-controls="icOverview" aria-selected="@(compareView ? "false" : "true")"
+                        tabindex="@(compareView ? "-1" : "0")">@L["InvestmentCalculator.View.Overview"]</button>
+                <button type="button" class="ic-view" role="tab" id="icViewCompareTab" data-ic-view="compare"
+                        aria-controls="icCompare" aria-selected="@(compareView ? "true" : "false")"
+                        tabindex="@(compareView ? "0" : "-1")">@L["InvestmentCalculator.View.Compare"]</button>
             </div>
         </div>
+        <dl class="ic-bar__nums">
+            <div class="ic-num ic-num--hero">
+                <dt id="icFinalLabel">@L.Plural("InvestmentCalculator.Js.Bar.InYears", years)</dt>
+                <dd id="icFinal">&nbsp;</dd>
+            </div>
+            <div class="ic-num">
+                <dt>@L["InvestmentCalculator.Bar.PutIn"]</dt>
+                <dd id="icContributed">&nbsp;</dd>
+            </div>
+            <div class="ic-num">
+                <dt>@L["InvestmentCalculator.Bar.Growth"]</dt>
+                <dd id="icGrowth" class="ic-num__growth">&nbsp;</dd>
+            </div>
+            <div class="ic-num ic-num--other">
+                <dt id="icOtherLabel">@L["InvestmentCalculator.Js.Money.Today"]</dt>
+                <dd id="icOther">&nbsp;</dd>
+            </div>
+        </dl>
+        @* The bar's tools: Today's money, and the saved scenarios (#592): Saved opens the drawer, Save saves the plan. *@
+        <div class="ic-bar__tools">
+            <div class="ic-bar__saved">
+                <button type="button" class="ic-action" id="icSavedOpen" aria-controls="icSaved" aria-expanded="false">
+                    <i data-lucide="bookmark" aria-hidden="true"></i>
+                    <span>@L["InvestmentCalculator.Saved.Open"]</span>
+                    <span class="ic-count" id="icSavedCount">@(savingOff ? "" : Model.Scenarios.Count.ToString(CultureInfo.CurrentCulture))</span>
+                </button>
+                <button type="button" class="ic-action ic-action--primary" id="icSave" disabled="@savingOff"
+                        aria-describedby="@(savingOff ? "icSaveOff" : null)">
+                    <i data-lucide="save" aria-hidden="true"></i>
+                    <span>@L["InvestmentCalculator.Saved.Save"]</span>
+                </button>
+                @if (savingOff)
+                {
+                    <span class="visually-hidden" id="icSaveOff">@L["InvestmentCalculator.Saved.SaveOff"]</span>
+                }
+            </div>
+            <p class="ic-bar__current" id="icSavedCurrent" hidden></p>
+            <div class="form-check form-switch ic-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="icTodaysMoney"
+                       aria-describedby="icTodaysMoneyHint"/>
+                <label class="form-check-label" for="icTodaysMoney">@L["InvestmentCalculator.Bar.TodaysMoney"]</label>
+                <span class="visually-hidden" id="icTodaysMoneyHint">@L["InvestmentCalculator.Bar.TodaysMoneyHint"]</span>
+            </div>
+        </div>
+        <p class="visually-hidden" id="icStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+    </section>
+
+    <div class="ic-layout">
+        <aside class="ic-rail" aria-labelledby="icRailTitle">
+            <h2 class="ic-rail__title" id="icRailTitle">@L["InvestmentCalculator.Rail.Title"]</h2>
+
+            @{ Field("Initial", L["InvestmentCalculator.Field.Starting"], Model.Initial, 0m, Model.InitialSliderMax,
+                   Model.InitialMax, Model.InitialStep, Money(Model.Initial)); }
+            @{ Field("Monthly", L["InvestmentCalculator.Field.Monthly"], Model.Monthly, 0m, Model.MonthlySliderMax,
+                   Model.MonthlyMax, Model.MonthlyStep, Money(Model.Monthly)); }
+
+            <div class="ic-presets" role="group" aria-label="@L["InvestmentCalculator.Presets.Aria"]">
+                @foreach ((string key, decimal presetRate) in presets)
+                {
+                    <button type="button" class="ic-preset" data-rate-preset="@Invariant(presetRate)"
+                            aria-pressed="@(presetRate == rate ? "true" : "false")">
+                        <span>@L[$"InvestmentCalculator.Preset.{key}"]</span>
+                        <strong>@Percent(presetRate)</strong>
+                    </button>
+                }
+            </div>
+            @{ Field("Rate", L["InvestmentCalculator.Field.Rate"], rate, 0m, 15m, 15m, 0.5m, Percent(rate),
+                   L["InvestmentCalculator.Field.RateHint"]); }
+            @{ Field("Years", L["InvestmentCalculator.Field.Years"], years, 1m, 50m, 50m, 1m,
+                   L.Plural("InvestmentCalculator.Js.Years", years)); }
+
+            @* A plan that starts later or stops adding (an applied what-if) says so here; the rail has no field for it. *@
+            <div class="ic-timing" id="icTiming" hidden>
+                <p class="ic-timing__text" id="icTimingText"></p>
+                <button type="button" class="ic-timing__reset" id="icTimingReset">@L["InvestmentCalculator.Timing.Reset"]</button>
+            </div>
+
+            <details class="ic-more">
+                <summary class="ic-more__summary">@L["InvestmentCalculator.More.Title"]</summary>
+                @{ Field("Increase", L["InvestmentCalculator.Field.Increase"], increase, 0m, 10m, 10m, 0.5m,
+                       Percent(increase), L["InvestmentCalculator.Field.IncreaseHint"]); }
+                @{ Field("Fee", L["InvestmentCalculator.Field.Fee"], fee, 0m, 3m, 3m, 0.05m, Percent(fee),
+                       L["InvestmentCalculator.Field.FeeHint"]); }
+                @{ Field("Inflation", L["InvestmentCalculator.Field.Inflation"], inflation, 0m, 10m, 10m, 0.1m,
+                       Percent(inflation), L["InvestmentCalculator.Field.InflationHint"]); }
+            </details>
+
+            <p class="ic-disclaimer">
+                @L["InvestmentCalculator.Disclaimer.Text"]
+                <a asp-controller="Legal" asp-action="Disclaimer">@L["InvestmentCalculator.Disclaimer.Link"]</a>
+            </p>
+        </aside>
+
+        <section class="ic-main" id="icOverview" role="tabpanel" aria-labelledby="icViewOverviewTab" hidden="@compareView">
+            <h2 class="visually-hidden" id="icOverviewTitle">@L["InvestmentCalculator.Overview.Title"]</h2>
+            @* Tiles fill an auto-fit grid. *@
+            <div class="ic-tiles">
+                <article class="ic-tile ic-tile--wide" aria-labelledby="icBalanceTitle">
+                    <header class="ic-tile__head">
+                        <h3 class="ic-tile__title" id="icBalanceTitle">@L["InvestmentCalculator.Tile.Balance"]</h3>
+                        <ul class="ic-legend" aria-hidden="true">
+                            <li><span class="ic-swatch ic-swatch--balance"></span>@L["InvestmentCalculator.Js.Series.Balance"]</li>
+                            <li><span class="ic-swatch ic-swatch--contributed"></span>@L["InvestmentCalculator.Js.Series.PutIn"]</li>
+                            <li><span class="ic-swatch ic-swatch--today"></span>@L["InvestmentCalculator.Js.Series.TodaysMoney"]</li>
+                            <li><span class="ic-swatch ic-swatch--goal"></span>@L["InvestmentCalculator.Js.Series.Goal"]</li>
+                        </ul>
+                    </header>
+                    <div class="ic-chart" id="icBalanceChart"></div>
+                    <p class="ic-tile__note" id="icMilestone"></p>
+                    <p class="ic-tile__hint">@L["InvestmentCalculator.Tile.ChartHint"]</p>
+                </article>
+
+                <article class="ic-tile" aria-labelledby="icDonutTitle">
+                    <header class="ic-tile__head">
+                        <h3 class="ic-tile__title" id="icDonutTitle">@L["InvestmentCalculator.Tile.Donut"]</h3>
+                    </header>
+                    <div class="ic-donut" id="icDonut"></div>
+                    <ul class="ic-split" id="icSplit">
+                        <li><span class="ic-swatch ic-swatch--contributed"></span><span>@L["InvestmentCalculator.Js.Series.PutIn"]</span><strong id="icSplitContributed">&nbsp;</strong></li>
+                        <li><span class="ic-swatch ic-swatch--growth"></span><span>@L["InvestmentCalculator.Js.Series.Growth"]</span><strong id="icSplitGrowth">&nbsp;</strong></li>
+                    </ul>
+                </article>
+
+                <article class="ic-tile" aria-labelledby="icFeeTitle">
+                    <header class="ic-tile__head">
+                        <h3 class="ic-tile__title" id="icFeeTitle">
+                            @L["InvestmentCalculator.Tile.Fee"] <span class="ic-tile__cost" id="icFeeCost">&nbsp;</span>
+                        </h3>
+                        <ul class="ic-legend" aria-hidden="true">
+                            <li><span class="ic-swatch ic-swatch--nofee"></span>@L["InvestmentCalculator.Js.Series.WithoutFees"]</li>
+                            <li><span class="ic-swatch ic-swatch--balance"></span>@L["InvestmentCalculator.Js.Series.WithFees"]</li>
+                        </ul>
+                    </header>
+                    <div class="ic-chart ic-chart--small" id="icFeeChart"></div>
+                    <p class="ic-tile__note" id="icFeeNote"></p>
+                </article>
+
+                <article class="ic-tile" aria-labelledby="icBarsTitle">
+                    <header class="ic-tile__head">
+                        <h3 class="ic-tile__title" id="icBarsTitle">@L["InvestmentCalculator.Tile.Bars"]</h3>
+                        <ul class="ic-legend" aria-hidden="true">
+                            <li><span class="ic-swatch ic-swatch--contributed"></span>@L["InvestmentCalculator.Js.Series.PutIn"]</li>
+                            <li><span class="ic-swatch ic-swatch--growth"></span>@L["InvestmentCalculator.Js.Series.Growth"]</li>
+                        </ul>
+                    </header>
+                    <div class="ic-chart ic-chart--small" id="icBarsChart"></div>
+                </article>
+
+                @* Reach a goal (#590): the goal amount lives here, not in the rail. The script solves it with
+                   InvestmentMath.solveGoal; "Use this amount" sets the rail's monthly contribution. *@
+                <article class="ic-tile ic-goal" aria-labelledby="icGoalTitle">
+                    <header class="ic-tile__head">
+                        <h3 class="ic-tile__title" id="icGoalTitle">@L["InvestmentCalculator.Tile.Goal"]</h3>
+                    </header>
+                    @* Start from a Savings Goal (#593): read once by the controller, never written. Choosing one sets the
+                       goal amount and, for a dated goal, the rail's years. *@
+                    @if (Model.SavingsGoals.Count > 0)
+                    {
+                        <div class="ic-goal__from">
+                            <label class="ic-field__label" for="icGoalFrom">@L["InvestmentCalculator.Goal.From"]</label>
+                            <select class="form-select form-select-sm ic-goal__select" id="icGoalFrom"
+                                    aria-describedby="icGoalFromHint">
+                                <option value="" selected>@L["InvestmentCalculator.Goal.From.None"]</option>
+                                @foreach (SavingsGoalOption option in Model.SavingsGoals)
+                                {
+                                    string target = Money(option.Target);
+                                    string text = option.ConvertedFrom is null
+                                        ? L["InvestmentCalculator.Goal.From.Option", option.Name, target]
+                                        : L["InvestmentCalculator.Goal.From.OptionConverted", option.Name, target, option.ConvertedFrom];
+                                    @* An undated goal's data-years is empty: the script then leaves the years alone. *@
+                                    <option value="@option.Id" data-goal-id="@option.Id" data-name="@option.Name"
+                                            data-target="@Invariant(option.Target)" data-years="@option.Years">@text</option>
+                                }
+                            </select>
+                            <p class="ic-tile__hint" id="icGoalFromHint">@L["InvestmentCalculator.Goal.From.Hint"]</p>
+                        </div>
+                    }
+                    else if (Model.SavingsGoalsUnavailable)
+                    {
+                        <p class="ic-tile__hint" id="icGoalFromUnavailable">@L["InvestmentCalculator.Goal.From.Unavailable"]</p>
+                    }
+                    @if (Model.SavingsGoalsWithoutRate > 0)
+                    {
+                        <p class="ic-tile__hint" id="icGoalFromNoRate">@L["InvestmentCalculator.Goal.From.NoRate"]</p>
+                    }
+                    <div class="ic-goal__target">
+                        <div class="ic-field__head">
+                            <label class="ic-field__label" for="icGoal">@L["InvestmentCalculator.Goal.Target"]</label>
+                            <output class="ic-field__value" id="icGoalValue" for="icGoal">@Money(Model.Goal)</output>
+                        </div>
+                        <input type="number" class="form-control form-control-sm ic-field__number" id="icGoal"
+                               inputmode="decimal" min="0" max="@Invariant(Model.GoalMax)" step="any"
+                               value="@Model.Goal.ToString(CultureInfo.InvariantCulture)"/>
+                    </div>
+                    <fieldset class="ic-goal__modes">
+                        <legend class="visually-hidden">@L["InvestmentCalculator.Goal.SolveFor"]</legend>
+                        <input type="radio" class="btn-check" name="icGoalMode" id="icGoalModeMonthly" value="monthly" checked/>
+                        <label class="ic-goal__mode" for="icGoalModeMonthly">@L["InvestmentCalculator.Goal.Mode.Monthly"]</label>
+                        <input type="radio" class="btn-check" name="icGoalMode" id="icGoalModeYears" value="years"/>
+                        <label class="ic-goal__mode" for="icGoalModeYears">@L["InvestmentCalculator.Goal.Mode.Years"]</label>
+                    </fieldset>
+                    <p class="ic-goal__answer">
+                        <strong class="ic-goal__headline" id="icGoalAnswer">&nbsp;</strong>
+                        <span class="ic-goal__detail" id="icGoalDetail"></span>
+                    </p>
+                    <div class="ic-progress" id="icGoalProgress" role="progressbar" aria-labelledby="icGoalProgressLabel"
+                         aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                        <div class="ic-progress__fill" id="icGoalProgressFill"></div>
+                    </div>
+                    <p class="ic-tile__note" id="icGoalProgressLabel"></p>
+                    <p class="ic-tile__hint" id="icGoalNote" hidden></p>
+                    <button type="button" class="ic-goal__use" id="icGoalUse" hidden></button>
+                    <p class="visually-hidden" id="icGoalStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+                </article>
+
+                @* Collapsed until the script opens it on wide screens; on a phone the table is long. *@
+                <details class="ic-tile ic-tile--wide ic-years" id="icYearly">
+                    <summary class="ic-years__summary">
+                        <h3 class="ic-tile__title" id="icYearsTitle">@L["InvestmentCalculator.Tile.Years"]</h3>
+                    </summary>
+                    <div class="ic-table-wrap" role="region" aria-labelledby="icYearsTitle" tabindex="0">
+                        <table class="ic-table" id="icYearTable">
+                            <caption class="visually-hidden" id="icYearCaption">@L["InvestmentCalculator.Js.Table.Caption"]</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">@L["InvestmentCalculator.Table.Year"]</th>
+                                    <th scope="col">@L["InvestmentCalculator.Table.PutIn"]</th>
+                                    <th scope="col">@L["InvestmentCalculator.Table.Growth"]</th>
+                                    <th scope="col">@L["InvestmentCalculator.Table.Balance"]</th>
+                                    <th scope="col" id="icYearOther">@L["InvestmentCalculator.Js.Money.Today"]</th>
+                                </tr>
+                            </thead>
+                            <tbody id="icYearRows"></tbody>
+                        </table>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        @* Compare what-ifs (#591): the levers preview a one-change variant of the plan as a dashed line; the comparison
+           holds the plan and up to two variants. investment-compare.js fills it. *@
+        <section class="ic-main ic-compare" id="icCompare" role="tabpanel" aria-labelledby="icViewCompareTab" hidden="@(!compareView)">
+            <h2 class="visually-hidden" id="icCompareTitle">@L["InvestmentCalculator.View.Compare"]</h2>
+            <div class="ic-tiles">
+                <article class="ic-tile ic-tile--wide ic-whatif" aria-labelledby="icWhatIfTitle">
+                    <header class="ic-tile__head">
+                        <h3 class="ic-tile__title" id="icWhatIfTitle">@L["InvestmentCalculator.WhatIf.Title"]</h3>
+                    </header>
+                    <p class="ic-tile__hint ic-whatif__hint" id="icWhatIfHint">@L["InvestmentCalculator.WhatIf.Hint"]</p>
+                    <div class="ic-levers" id="icLevers" role="group" aria-labelledby="icWhatIfTitle"
+                         aria-describedby="icWhatIfHint" data-monthly-step="@Invariant(Model.LeverMonthly)">
+                        @foreach (string lever in levers)
+                        {
+                            <button type="button" class="ic-lever" data-lever="@lever" aria-pressed="false">
+                                <span class="ic-lever__label">&nbsp;</span>
+                                <strong class="ic-lever__diff">&nbsp;</strong>
+                            </button>
+                        }
+                    </div>
+                    <div class="ic-preview" id="icPreview" hidden>
+                        <p class="ic-preview__text" id="icPreviewText"></p>
+                        <div class="ic-preview__actions">
+                            <button type="button" class="ic-action ic-action--primary" id="icPreviewApply">@L["InvestmentCalculator.WhatIf.Apply"]</button>
+                            <button type="button" class="ic-action" id="icPreviewAdd"
+                                    aria-describedby="icPreviewFull">@L["InvestmentCalculator.WhatIf.Add"]</button>
+                        </div>
+                        <p class="ic-tile__hint ic-preview__full" id="icPreviewFull" hidden>@L["InvestmentCalculator.WhatIf.Full"]</p>
+                    </div>
+                </article>
+
+                <article class="ic-tile ic-tile--wide ic-comparison" aria-labelledby="icComparisonTitle">
+                    <header class="ic-tile__head">
+                        <h3 class="ic-tile__title" id="icComparisonTitle">@L["InvestmentCalculator.Comparison.Title"]</h3>
+                    </header>
+                    <ul class="ic-cmp" id="icCmpList" aria-labelledby="icComparisonTitle"></ul>
+                    <p class="ic-tile__hint" id="icCmpRoom"></p>
+                    <div class="ic-chart" id="icCompareChart"></div>
+                    <p class="ic-tile__hint">@L["InvestmentCalculator.Tile.ChartHint"]</p>
+                </article>
+            </div>
+            <p class="visually-hidden" id="icCompareStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+        </section>
     </div>
 
-    <!-- Two-Column Layout: Inputs + Results -->
-    <div class="row g-3">
-        <!-- Left Column: Input Parameters -->
-        <div class="col-lg-4">
-            <!-- Investment Amount Card -->
-            <div class="card calculator-card mb-3">
-                <div class="calculator-card__header">
-                    <div class="calculator-card__header-left">
-                        <div class="calculator-card__icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                 stroke-linejoin="round">
-                                <path d="M12 1v22"/>
-                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                            </svg>
-                        </div>
-                        <h2 class="calculator-card__title">@L["InvestmentCalculator.Amount.Title"]</h2>
-                    </div>
-                </div>
-                <div class="calculator-card__body">
-                    <div class="calculator-input-group">
-                        <label for="calcInitial" class="form-label">@L["InvestmentCalculator.Field.Initial"]</label>
-                        <div class="calculator-value-display" id="calcInitialValue">@Money(10_000m)</div>
-                        <input type="range" class="form-range" id="calcInitialRange" min="0" max="500000" step="1000"
-                               value="10000"
-                               aria-label="@L["InvestmentCalculator.Field.InitialAria"]"/>
-                        <input type="number" class="form-control" id="calcInitial" value="10000" min="0" step="1000"
-                               aria-label="@L["InvestmentCalculator.Field.InitialAria"]"/>
-                    </div>
-
-                    <div class="calculator-input-group">
-                        <label for="calcMonthly" class="form-label">@L["InvestmentCalculator.Field.Monthly"]</label>
-                        <div class="calculator-value-display" id="calcMonthlyValue">@Money(500m)</div>
-                        <input type="range" class="form-range" id="calcMonthlyRange" min="0" max="10000" step="50"
-                               value="500"
-                               aria-label="@L["InvestmentCalculator.Field.MonthlyAria"]"/>
-                        <input type="number" class="form-control" id="calcMonthly" value="500" min="0" step="50"
-                               aria-label="@L["InvestmentCalculator.Field.MonthlyAria"]"/>
-                    </div>
-                </div>
+    @* Saved scenarios (#592): a section at the end of the page on a phone, a slide-out drawer beside the page from the
+       wide layout up (investment-scenarios.js opens it as a dialog). Each scenario is inputs only; the script works out
+       its headline result. *@
+    <section class="ic-saved" id="icSaved" aria-labelledby="icSavedTitle" tabindex="-1"
+             data-scenarios="@(savingOff ? "[]" : scenarioJson)" data-max="@Model.MaxScenarios"
+             data-unavailable="@(savingOff ? "true" : "false")">
+        <header class="ic-saved__head">
+            <h2 class="ic-saved__title" id="icSavedTitle">@L["InvestmentCalculator.Saved.Title"]</h2>
+            <button type="button" class="ic-saved__close" id="icSavedClose" aria-label="@L["InvestmentCalculator.Saved.Close"]" hidden>
+                <i data-lucide="x" aria-hidden="true"></i>
+            </button>
+        </header>
+        @if (savingOff)
+        {
+            <div class="ic-saved__unavailable" id="icSavedUnavailable">
+                <partial name="_UnavailableState" model="@(new PersonalFinance.Web.Infrastructure.UnavailableStateViewModel
+                {
+                    PageTitle = L["InvestmentCalculator.Title"].Value,
+                    Heading = L["InvestmentCalculator.Saved.Unavailable"].Value,
+                    RetryController = "InvestmentCalculator"
+                })"/>
             </div>
+        }
+        else
+        {
+            <p class="ic-saved__room" id="icSavedRoom"></p>
+            <p class="ic-saved__empty" id="icSavedEmpty" hidden="@(Model.Scenarios.Count > 0)">@L["InvestmentCalculator.Saved.Empty"]</p>
+            <ul class="ic-saved__list" id="icSavedList" aria-labelledby="icSavedTitle"></ul>
+            <p class="ic-saved__error" id="icSavedError" role="alert" hidden></p>
+        }
+        <p class="visually-hidden" id="icSavedStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+    </section>
+    <div class="ic-saved__backdrop" id="icSavedBackdrop" hidden></div>
 
-            <!-- Growth Parameters Card -->
-            <div class="card calculator-card">
-                <div class="calculator-card__header">
-                    <div class="calculator-card__header-left">
-                        <div class="calculator-card__icon calculator-card__icon--orange">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                 stroke-linejoin="round">
-                                <path d="m22 12-3.5-3.5"/>
-                                <path d="M4 16V10a2 2 0 0 1 2-2h3.5"/>
-                                <path d="M20 8V4a2 2 0 0 0-2-2h-3.5"/>
-                                <path d="M2 18v-4a2 2 0 0 1 2-2h3.5"/>
-                                <path d="M16 14v4a2 2 0 0 1-2 2h-3.5"/>
-                            </svg>
-                        </div>
-                        <h2 class="calculator-card__title">@L["InvestmentCalculator.Growth.Title"]</h2>
-                    </div>
-                </div>
-                <div class="calculator-card__body">
-                    <div class="calculator-input-group">
-                        <label for="calcRate" class="form-label">@L["InvestmentCalculator.Field.Rate"]</label>
-                        <div class="calculator-value-display" id="calcRateValue">7%</div>
-                        <input type="range" class="form-range" id="calcRateRange" min="1" max="15" step="0.5" value="7"
-                               aria-label="@L["InvestmentCalculator.Field.RateAria"]"/>
-                        <input type="number" class="form-control" id="calcRate" value="7" min="1" max="15" step="0.5"
-                               aria-label="@L["InvestmentCalculator.Field.RateAria"]"/>
-                    </div>
-
-                    <div class="calculator-input-group">
-                        <label for="calcYears" class="form-label">@L["InvestmentCalculator.Field.Years"]</label>
-                        <div class="calculator-value-display" id="calcYearsValue">@L.Plural("InvestmentCalculator.Js.Years", 20)</div>
-                        <input type="range" class="form-range" id="calcYearsRange" min="1" max="50" step="1" value="20"
-                               aria-label="@L["InvestmentCalculator.Field.YearsAria"]"/>
-                        <input type="number" class="form-control" id="calcYears" value="20" min="1" max="50" step="1"
-                               aria-label="@L["InvestmentCalculator.Field.YearsAria"]"/>
-                    </div>
-                </div>
+    @* Save, rename and delete ask here: a native modal dialog keeps focus inside and closes on Escape. *@
+    <dialog class="ic-dialog" id="icSaveDialog" aria-labelledby="icSaveDialogTitle">
+        <form class="ic-dialog__form" id="icSaveForm" novalidate>
+            <h2 class="ic-dialog__title" id="icSaveDialogTitle">@L["InvestmentCalculator.Saved.SaveTitle"]</h2>
+            <p class="ic-dialog__text" id="icSaveDialogText" hidden></p>
+            <div class="ic-dialog__fields" id="icSaveFields">
+                <label class="ic-field__label" for="icSaveName">@L["InvestmentCalculator.Saved.Name"]</label>
+                <input type="text" class="form-control" id="icSaveName" maxlength="@InvestmentCalculatorLimits.ScenarioNameMaxLength"
+                       autocomplete="off" required aria-describedby="icSaveError"/>
+                <label class="ic-field__label" for="icSaveNote">@L["InvestmentCalculator.Saved.Note"]</label>
+                <textarea class="form-control" id="icSaveNote" rows="3" maxlength="@InvestmentCalculatorLimits.ScenarioNoteMaxLength"></textarea>
             </div>
-        </div>
-
-        <!-- Right Column: Results -->
-        <div class="col-lg-8">
-            <!-- Metric Cards -->
-            <div class="row g-3 mb-3">
-                <div class="col-sm-6 col-md-4">
-                    <div class="card calculator-result-card">
-                        <div class="card-body">
-                            <div class="calculator-result-card__icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                     stroke-linejoin="round">
-                                    <path d="M3 3v18h18"/>
-                                    <path d="m19 9-5 5-4-4-3 3"/>
-                                </svg>
-                            </div>
-                            <div class="calculator-result-label">@L["InvestmentCalculator.Result.FutureValue"]</div>
-                            <div class="calculator-result-value" id="calcFutureValue">@Money(0m)</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-4">
-                    <div class="card calculator-result-card">
-                        <div class="card-body">
-                            <div class="calculator-result-card__icon calculator-result-card__icon--blue">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                     stroke-linejoin="round">
-                                    <path d="M12 1v22"/>
-                                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                                </svg>
-                            </div>
-                            <div class="calculator-result-label">@L["InvestmentCalculator.Result.TotalContributions"]</div>
-                            <div class="calculator-result-value" id="calcTotalContributions">@Money(0m)</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-4">
-                    <div class="card calculator-result-card">
-                        <div class="card-body">
-                            <div class="calculator-result-card__icon calculator-result-card__icon--green">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                     stroke-linejoin="round">
-                                    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
-                                    <polyline points="16 7 22 7 22 13"/>
-                                </svg>
-                            </div>
-                            <div class="calculator-result-label">@L["InvestmentCalculator.Result.InterestEarned"]</div>
-                            <div class="calculator-result-value" id="calcTotalInterest">@Money(0m)</div>
-                        </div>
-                    </div>
-                </div>
+            <p class="ic-dialog__error" id="icSaveError" role="alert" hidden></p>
+            <div class="ic-dialog__actions">
+                <button type="submit" class="ic-action ic-action--primary" id="icSaveUpdate" value="update" hidden></button>
+                <button type="submit" class="ic-action ic-action--primary" id="icSaveNew" value="new">@L["InvestmentCalculator.Saved.SaveNew"]</button>
+                <button type="button" class="ic-action" id="icSaveCancel">@L["InvestmentCalculator.Saved.Cancel"]</button>
             </div>
-
-            <!-- Chart -->
-            <div class="card calculator-card calculator-card--chart">
-                <div class="calculator-card__header">
-                    <div class="calculator-card__header-left">
-                        <div class="calculator-card__icon calculator-card__icon--green">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                 stroke-linejoin="round">
-                                <path d="M3 3v18h18"/>
-                                <path d="m19 9-5 5-4-4-3 3"/>
-                            </svg>
-                        </div>
-                        <h2 class="calculator-card__title">@L["InvestmentCalculator.Chart.Title"]</h2>
-                    </div>
-                </div>
-                <div class="calculator-card__body">
-                    <div class="calculator-chart-container">
-                        <canvas id="calcChart" aria-label="@L["InvestmentCalculator.Chart.Aria"]" role="img"></canvas>
-                    </div>
-                    <div class="calculator-chart-legend">
-                        <div class="calculator-chart-legend__item">
-                            <span class="calculator-chart-legend__dot calculator-chart-legend__dot--value"></span>
-                            <span class="calculator-chart-legend__label">@L["InvestmentCalculator.Legend.TotalValue"]</span>
-                            <span class="calculator-chart-legend__value" id="calcLegendValue">@Money(0m)</span>
-                        </div>
-                        <div class="calculator-chart-legend__item">
-                            <span class="calculator-chart-legend__dot calculator-chart-legend__dot--contrib"></span>
-                            <span class="calculator-chart-legend__label">@L["InvestmentCalculator.Legend.Contributions"]</span>
-                            <span class="calculator-chart-legend__value" id="calcLegendContrib">@Money(0m)</span>
-                        </div>
-                        <div class="calculator-chart-legend__item">
-                            <span class="calculator-chart-legend__dot calculator-chart-legend__dot--interest"></span>
-                            <span class="calculator-chart-legend__label">@L["InvestmentCalculator.Result.InterestEarned"]</span>
-                            <span class="calculator-chart-legend__value" id="calcLegendInterest">@Money(0m)</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+        </form>
+    </dialog>
+    @Html.AntiForgeryToken()
 </div>
 
 <js-strings prefix="InvestmentCalculator.Js." />
 
 @section Scripts {
+    <script src="~/lib/d3/d3.min.js"></script>
+    <script src="~/js/investment-calculator/investment-math.js" asp-append-version="true"></script>
+    <script src="~/js/investment-calculator/investment-charts.js" asp-append-version="true"></script>
+    <script src="~/js/investment-calculator/investment-compare.js" asp-append-version="true"></script>
+    <script src="~/js/investment-calculator/investment-scenarios.js" asp-append-version="true"></script>
     <script src="~/js/investment-calculator/calculator.js" asp-append-version="true"></script>
 }
