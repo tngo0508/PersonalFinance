@@ -721,7 +721,10 @@ async function runThemeSmoke({browser, base, pass, fail}) {
 
         // The Dashboard and Money Priorities (#489): dark contrast.
         await page.goto(`${base}/Dashboard`, {waitUntil: 'networkidle', timeout: TIMEOUT});
-        await checkDarkContrast(page, 'Dashboard', CONTRAST_PAGES.dashboard, report);
+        // On the first of a month the Today calendar has no past days, so their text is left out of the check that day.
+        const hasPastDays = await page.locator('.dash-today__day.is-past').count() > 0;
+        await checkDarkContrast(page, 'Dashboard',
+            CONTRAST_PAGES.dashboard.filter((selector) => hasPastDays || selector !== '.dash-today__day.is-past'), report);
         await page.goto(`${base}/MoneyPriorities`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Money Priorities', CONTRAST_PAGES.moneyPriorities, report);
 
