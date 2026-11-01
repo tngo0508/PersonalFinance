@@ -38,7 +38,7 @@ public class ResearchControllerLocalizationTests
     {
         using var culture = new UiCultureScope("en");
 
-        IActionResult result = await CreateController().Company("not a ticker!");
+        IActionResult result = await CreateController().CompanyProfile("not a ticker!");
 
         Assert.Equal("Enter a ticker or company name.", ErrorOf(result));
     }

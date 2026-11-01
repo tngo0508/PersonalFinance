@@ -1,0 +1,36 @@
+@model ResearchCompanyPageViewModel
+
+@{
+    ViewData["Title"] = (Model.Ticker is null ? L["Research.Company.Title"].Value : Model.Ticker) + " · " + L["Research.Title"].Value;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/research.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/research-companies.css" asp-append-version="true"/>
+}
+
+@* Research Company: the company lookup at /Research/Company/{ticker?}, in the panel the tabbed page's Companies tab
+   shares (_CompanyPanel). It reads no snapshot: the panel fetches the profile, press releases and suggestions. *@
+<div class="research research-company-page">
+    <partial name="_ResearchNav" model="@("company")"/>
+
+    <header class="research-header">
+        <h1 class="research-header__title">@L["Research.Company.Title"]</h1>
+        <p class="research-header__subtitle">@L["Research.Company.Lead"]</p>
+        <p class="research-header__pill">@L["Research.Header.Disclaimer"]</p>
+    </header>
+
+    <partial name="_CompanyPanel" model="Model.Panel"/>
+
+    @* Summarises each lookup for screen readers. *@
+    <p class="visually-hidden" id="research-live" aria-live="polite"></p>
+</div>
+
+@section Scripts {
+    <js-strings prefix="Research.Js." />
+    <script src="~/js/research/research-page.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-basket.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-search.js" asp-append-version="true"></script>
+    <script src="~/lib/d3/d3.min.js"></script>
+    <script src="~/js/research/research-companies.js" asp-append-version="true"></script>
+}

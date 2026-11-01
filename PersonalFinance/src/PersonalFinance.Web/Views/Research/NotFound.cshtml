@@ -1,14 +1,15 @@
 @model ResearchNotFoundViewModel
 
 @{
-    ViewData["Title"] = L["Research.NotFound.Title"].Value + " · " + L["Research.Title"].Value;
+    string title = Model.IsCompany ? L["Research.NotFound.CompanyTitle"].Value : L["Research.NotFound.Title"].Value;
+    ViewData["Title"] = title + " · " + L["Research.Title"].Value;
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/research.css" asp-append-version="true"/>
 }
 
-@* Research "not found" (status 404): the address names no Tracked Fund, or its ticker was rejected. The large search
+@* Research "not found" (status 404): the address names no Tracked Fund, or a fund's or company's ticker was rejected. The large search
    box and the list of every fund lead on; when the funds data could not be read, its Unavailable State says so. *@
 <div class="research research-not-found">
     <partial name="_ResearchNav" model="@("funds")"/>
@@ -20,9 +21,9 @@
     else
     {
         <header class="research-header">
-            <h1 class="research-header__title">@L["Research.NotFound.Title"]</h1>
+            <h1 class="research-header__title">@title</h1>
             <p class="research-header__subtitle">
-                @(Model.Ticker is null ? L["Research.NotFound.Rejected"] : L.Named("Research.NotFound.Fund", ("ticker", Model.Ticker)))
+                @(Model.IsCompany ? L["Research.NotFound.CompanyRejected"] : Model.Ticker is null ? L["Research.NotFound.Rejected"] : L.Named("Research.NotFound.Fund", ("ticker", Model.Ticker)))
             </p>
         </header>
         <partial name="_ResearchSearch" model="@(new ResearchSearchViewModel("research-not-found-search", Large: true, CssClass: "research-not-found__search"))"/>
