@@ -85,10 +85,11 @@ public sealed partial class ResearchNewsRenderingTests : IAsyncLifetime
 
     private static readonly string[] NewsEnglish =
     [
-        "Stay informed with the latest personal finance news and articles.", "Finance news sections",
-        "Search articles...", "Search news articles", "Filter by topic", "All Topics", "All Sources", "Last updated:",
-        "Refresh news", "Unable to refresh", "AI-generated summary", "Save article to watchlist", "Summarize with AI",
-        "My Watchlist", "Articles you've saved for later reading.", " article<"
+        "Budgeting, investing and retirement stories from trusted sources, newest first.",
+        "Search headlines and sources", "Search news articles", "Filter by topic", "Filter by source", "All Sources",
+        "Last updated:", "Refresh news", "AI-generated summary", "Save article to watchlist", "Summarize with AI",
+        "My Watchlist", "Your watchlist and news sources", ">Sources<", ">Older<", "(opens in a new tab)",
+        "Loading your saved articles", " article<"
     ];
 
     private static readonly string[] NewsEmptyEnglish =

@@ -1359,7 +1359,6 @@ listed here.
 | Warm window | KEDA cron rule `cron-business-hours` in `api-service.bicep` and `web-service.bicep` | 08:00 to 22:00 America/Los_Angeles, production only | Keep one replica of each app warm ([ADR 0011](adr/0011-warm-window-instead-of-always-on-replicas.md)) |
 | `ApiServiceStartupWarmer` | `Web/Infrastructure/ApiServiceStartupWarmer.cs`, the only `IHostedService` | once per Web replica start | `GET /alive` on the ApiService so both wake together |
 | `ApiServiceWarmer` | `Web/Infrastructure/ApiServiceWarmer.cs`, called from the Login page | at most once per 2 minutes | Same ping, before the first authenticated request |
-| News auto-refresh | `Web/wwwroot/js/news/news.js` | every 5 minutes while the News page is open | Re-fetch `/News/Refresh`; the ApiService caches feeds for 5 minutes in `IMemoryCache` |
 | SEC request gate | `ApiService/Features/Research/Adapters/SecRequestGate.cs` | during a refresh or company lookup | Throttle SEC EDGAR calls to 5 per second |
 
 ## 16. Localization

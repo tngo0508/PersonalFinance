@@ -24,7 +24,7 @@
      * @returns {void}
      */
     function init () {
-        const buttons = document.querySelectorAll('.finance-hub-summarize-btn');
+        const buttons = document.querySelectorAll('.news-summarize-btn');
         buttons.forEach((btn) => {
             btn.addEventListener('click', handleSummarize);
         });
@@ -45,14 +45,18 @@
             return;
         }
 
-        // Find the associated summary container
-        const card = btn.closest('.finance-hub-card');
-        if (!card) {
+        // The summary panel the button controls
+        const summaryContainer = document.getElementById(btn.getAttribute('aria-controls'));
+        const summaryContent = summaryContainer ? summaryContainer.querySelector('.news-summary-content') : null;
+        const label = btn.querySelector('.news-summarize-label') || btn;
+
+        // A second click closes an open summary
+        if (summaryContainer && !summaryContainer.hidden && !inFlight.has(articleUrl)) {
+            summaryContainer.hidden = true;
+            btn.setAttribute('aria-expanded', 'false');
             return;
         }
-
-        const summaryContainer = card.querySelector('.finance-hub-card-summary');
-        const summaryContent = summaryContainer ? summaryContainer.querySelector('.finance-hub-summary-content') : null;
+        btn.setAttribute('aria-expanded', 'true');
 
         // Check cache first
         if (summaryCache.has(articleUrl)) {
@@ -72,8 +76,8 @@
 
         // Set loading state
         btn.disabled = true;
-        const originalText = btn.textContent;
-        btn.textContent = PFI18n.t('News.Js.Summary.Loading');
+        const originalText = label.textContent;
+        label.textContent = PFI18n.t('News.Js.Summary.Loading');
         btn.setAttribute('aria-busy', 'true');
 
         if (summaryContent) {
@@ -132,7 +136,7 @@
         } finally {
             inFlight.delete(articleUrl);
             btn.disabled = false;
-            btn.textContent = originalText;
+            label.textContent = originalText;
             btn.removeAttribute('aria-busy');
         }
     }
@@ -144,15 +148,16 @@
      * @returns {void}
      */
     function showError (btn, message) {
+        const label = btn.querySelector('.news-summarize-label') || btn;
         btn.disabled = false;
-        btn.textContent = PFI18n.t('News.Js.Summary.Retry');
-        btn.classList.add('finance-hub-summarize-error');
+        label.textContent = PFI18n.t('News.Js.Summary.Retry');
+        btn.classList.add('news-summarize-error');
         btn.title = message;
 
         // Remove error state after 3 seconds
         setTimeout(() => {
-            btn.classList.remove('finance-hub-summarize-error');
-            btn.textContent = PFI18n.t('News.Js.Summary.Button');
+            btn.classList.remove('news-summarize-error');
+            label.textContent = PFI18n.t('News.Js.Summary.Button');
             btn.title = PFI18n.t('News.Js.Summary.Title');
         }, 3000);
     }

@@ -74,25 +74,6 @@ public sealed class NewsController : Controller
     }
 
     /// <summary>
-    /// Returns JSON article data for AJAX-based page refresh. A failure reaches the script as an error status with
-    /// <c>{ "error": "..." }</c> (see <see cref="JsonApiErrorsAttribute"/>).
-    /// </summary>
-    [HttpGet]
-    [Produces("application/json")]
-    [JsonApiErrors]
-    public async Task<IActionResult> Refresh([FromQuery] NewsQueryDto query, CancellationToken cancellationToken = default)
-    {
-        NewsFeedDto feed = await GetNewsAsync(query, cancellationToken);
-
-        return Json(new NewsRefreshResponse
-        {
-            Success = true,
-            Articles = feed.Articles,
-            LastRefreshed = _timeProvider.GetUtcNow().UtcDateTime,
-        });
-    }
-
-    /// <summary>
     /// Reads the feed. When ApiService rejects the filters (for example, an overlong search), its 400 body is the feed
     /// with no articles and the filter options, so filters no article can match find nothing rather than showing the
     /// page as unavailable.

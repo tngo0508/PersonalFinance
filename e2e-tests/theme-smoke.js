@@ -55,8 +55,8 @@ const CONTRAST_PAGES = {
     // Community (the Guild Hall, seeded in E2E), News, and the AI chat widget open on the Dashboard (#488)
     community: ['.community-title', '.community-subtitle', '.community-section-title', '.community-rail-title',
         '.community-pin-guidance', '.community-btn', '.community-eyebrow', '.community-pseudonym-name'],
-    news: ['.finance-hub-title', '.finance-hub-subtitle', '.finance-hub-tab-btn.active',
-        '.finance-hub-tab-btn:not(.active)', '.finance-hub-search-btn'],
+    news: ['.news-title', '.news-subtitle', '.news-chip[aria-current="page"]', '.news-chip:not([aria-current])',
+        '.news-search-btn', '.news-group-title', '.news-rail-card h2'],
     chatWidget: ['.ai-chat-header h2', '.ai-chat-header p', '.ai-chat-eyebrow', '.ai-chat-welcome-text', '.ai-chat-chip',
         '.ai-chat-disclaimer'],
     // Research (#486): the Sectors treemap (a chart view) and the World map (a map view), on the seeded snapshots

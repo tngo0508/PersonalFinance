@@ -8,243 +8,206 @@
     // "12/31/2025 at 2:05 PM" in English: the request culture's short date and time.
     string DateAndTime(DateTime value) =>
         L.Named("News.DateAndTime", ("date", value.ToString("d", culture)), ("time", value.ToString("t", culture)));
+
+    // The river groups articles by age rather than calendar day, so the groups need no time zone.
+    DateTime now = Model.LastRefreshed ?? DateTime.UtcNow;
+    string AgeGroup(DateTime published) => (now - published).TotalHours switch
+    {
+        < 24 => "News.Group.Day",
+        < 24 * 7 => "News.Group.Week",
+        _ => "News.Group.Older",
+    };
+
+    bool filtered = !string.IsNullOrEmpty(Model.SearchQuery) || !string.IsNullOrEmpty(Model.SelectedCategory)
+        || !string.IsNullOrEmpty(Model.SelectedSource);
+    string? FilterUrl(string? category, string? source) =>
+        Url.Action("Index", "News", new { category, source, search = Model.SearchQuery });
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/news.css" asp-append-version="true"/>
 }
 
-<div class="finance-hub">
-    <!-- Page Header -->
-    <div class="finance-hub-header">
-        <div class="finance-hub-header-content">
-            <div class="finance-hub-icon" aria-hidden="true">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2.5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4Z"/>
-                </svg>
-            </div>
-            <div>
-                <h1 class="finance-hub-title">@L["News.Title"]</h1>
-                <p class="finance-hub-subtitle">@L["News.Subtitle"]</p>
-            </div>
+<div class="news-page">
+    <header class="news-head">
+        <div>
+            <h1 class="news-title">@L["News.Title"]</h1>
+            <p class="news-subtitle">@L["News.Subtitle"]</p>
         </div>
-    </div>
+        @if (Model.LastRefreshed.HasValue)
+        {
+            <div class="news-refresh">
+                @* <!time> opts out of TimeAgoTagHelper, which replaces the whole element text with a relative time; this line shows the refresh date and time. *@
+                <!time datetime="@Model.LastRefreshed.Value.ToString("o")">
+                    @L.Named("News.LastUpdated", ("time", DateAndTime(Model.LastRefreshed.Value)))
+                </!time>
+                <a class="news-icon-btn" href="@Context.Request.Path@Context.Request.QueryString" aria-label="@L["News.Refresh.Title"]" title="@L["News.Refresh.Title"]">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                    </svg>
+                </a>
+            </div>
+        }
+    </header>
 
-    <!-- Tab Navigation -->
-    <ul class="finance-hub-tabs" role="tablist" aria-label="@L["News.Tabs.Label"]">
-        <li class="finance-hub-tab" role="presentation">
-            <button class="finance-hub-tab-btn active" id="tab-news" role="tab" aria-controls="panel-news" aria-selected="true" data-tab="news">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2.5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4Z"/></svg>
-                @L["News.Tab.News"]
-            </button>
-        </li>
-        <li class="finance-hub-tab" role="presentation">
-            <button class="finance-hub-tab-btn" id="tab-watchlist" role="tab" aria-controls="panel-watchlist" aria-selected="false" data-tab="watchlist">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-                @L["News.Tab.Watchlist"]
-            </button>
-        </li>
-    </ul>
-
-    <!-- Error Message -->
-    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    @if (string.IsNullOrEmpty(Model.ErrorMessage))
     {
-        <div class="finance-hub-alert alert-danger" role="alert">
-            <strong>@L["News.Message.LoadFailedTitle"]</strong>
-            <p>@Model.ErrorMessage</p>
+        <div class="news-toolbar">
+            <form method="get" class="news-search" role="search" id="newsFilterForm">
+                @if (!string.IsNullOrEmpty(Model.SelectedCategory))
+                {
+                    <input type="hidden" name="category" value="@Model.SelectedCategory"/>
+                }
+                @if (!string.IsNullOrEmpty(Model.SelectedSource))
+                {
+                    <input type="hidden" name="source" value="@Model.SelectedSource"/>
+                }
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+                <input type="search" name="search" class="news-search-input" value="@Model.SearchQuery"
+                       placeholder="@L["News.Filter.SearchPlaceholder"]" aria-label="@L["News.Filter.SearchLabel"]" autocomplete="off"/>
+                <button type="submit" class="btn btn-primary news-search-btn">@L["News.Filter.Search"]</button>
+            </form>
+            <nav class="news-chips" aria-label="@L["News.Filter.Topic"]">
+                <a class="news-chip" href="@FilterUrl(null, Model.SelectedSource)" aria-current="@(string.IsNullOrEmpty(Model.SelectedCategory) ? "page" : null)">@L["News.Filter.AllTopics"]</a>
+                @foreach (string topic in Model.Topics)
+                {
+                    <a class="news-chip" href="@FilterUrl(topic, Model.SelectedSource)" data-topic="@topic"
+                       aria-current="@(Model.SelectedCategory == topic ? "page" : null)">@topic</a>
+                }
+            </nav>
         </div>
     }
 
-    <!-- ==================== NEWS PANEL ==================== -->
-    <div class="finance-hub-panel active" id="panel-news" role="tabpanel" aria-labelledby="tab-news">
-        <!-- Search and Filters -->
-        <div class="finance-hub-filters card">
-            <form method="get" class="finance-hub-filter-form" id="newsFilterForm">
-                <div class="finance-hub-search-box">
-                    <svg class="finance-hub-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <div class="news-layout">
+        <main class="news-river" aria-labelledby="news-river-title">
+            <h2 id="news-river-title" class="visually-hidden">@L["News.River.Title"]</h2>
+
+            @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+            {
+                <div class="news-state news-state-error" role="alert">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
+                    </svg>
+                    <h3>@L["News.Message.LoadFailedTitle"]</h3>
+                    <p>@Model.ErrorMessage</p>
+                    <a class="btn btn-primary" href="@Url.Action("Index", "News")">@L["News.Refresh.Button"]</a>
+                </div>
+            }
+            else if (Model.Articles.Count == 0)
+            {
+                <div class="news-state">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
                     </svg>
-                    <input type="text" name="search" class="form-control finance-hub-search-input"
-                           value="@Model.SearchQuery" placeholder="@L["News.Filter.SearchPlaceholder"]" aria-label="@L["News.Filter.SearchLabel"]"/>
+                    <h3>@L["News.Empty.Title"]</h3>
+                    <p>@L["News.Empty.Text"]</p>
+                    <a href="@Url.Action("Index", "News")" class="btn btn-outline-secondary">@L["News.Empty.ViewAll"]</a>
                 </div>
-
-                <!-- Personal Finance Category Filter -->
-                <div class="finance-hub-filter-group">
-                    <select name="category" id="categoryFilter" class="form-select finance-hub-filter-select" onchange="this.form.submit()" aria-label="@L["News.Filter.Topic"]">
-                        <option value="">@L["News.Filter.AllTopics"]</option>
-                        @foreach (var cat in Model.Topics)
-                        {
-                            <option value="@cat" selected="@(Model.SelectedCategory == cat)">@cat</option>
-                        }
-                    </select>
-                </div>
-
-                <!-- Source Filter -->
-                @if (Model.Sources.Count > 0)
-                {
-                    <div class="finance-hub-filter-group">
-                        <select name="source" id="sourceFilter" class="form-select finance-hub-filter-select" onchange="this.form.submit()" aria-label="@L["News.Filter.Source"]">
-                            <option value="">@L["News.Filter.AllSources"]</option>
-                            @foreach (var src in Model.Sources)
-                            {
-                                <option value="@src.Name" selected="@(Model.SelectedSource == src.Name)">@src.Name</option>
-                            }
-                        </select>
-                    </div>
-                }
-
-                <div class="finance-hub-filter-actions">
-                    <button type="submit" class="btn btn-primary finance-hub-search-btn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-                        </svg>
-                        @L["News.Filter.Search"]
-                    </button>
-                    @if (!string.IsNullOrEmpty(Model.SearchQuery) || !string.IsNullOrEmpty(Model.SelectedCategory) || !string.IsNullOrEmpty(Model.SelectedSource))
+            }
+            else
+            {
+                <p class="news-count">
+                    <span>@L.NamedHtml("News.ArticleCount." + LocalizerExtensions.PluralCategory(CultureInfo.CurrentUICulture, Model.Articles.Count), null,
+                        ("count", new HtmlString($"<strong>{Model.Articles.Count.ToString("N0", culture)}</strong>")))</span>
+                    @if (filtered)
                     {
-                        <a href="@Url.Action("Index", "News")" class="btn finance-hub-clear-btn">@L["News.Filter.Clear"]</a>
+                        <a class="news-clear" href="@Url.Action("Index", "News")">@L["News.Filter.Clear"]</a>
                     }
-                </div>
-            </form>
-        </div>
-
-        @if (Model.LastRefreshed.HasValue)
-        {
-            <div class="finance-hub-refresh-bar">
-                @* <!time> opts out of TimeAgoTagHelper, which replaces the whole element text with a relative time; this bar shows the refresh date and time. *@
-                <!time class="finance-hub-refresh-time" datetime="@Model.LastRefreshed.Value.ToString("o")">
-                    @L.Named("News.LastUpdated", ("time", DateAndTime(Model.LastRefreshed.Value)))
-                </!time>
-                <button type="button" class="btn finance-hub-refresh-btn" id="refreshBtn" title="@L["News.Refresh.Title"]">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
-                        <path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
-                    </svg>
-                    @L["News.Refresh.Button"]
-                </button>
-            </div>
-            <div class="finance-hub-alert alert-danger" id="newsRefreshError" role="alert" hidden>
-                <strong>@L["News.Refresh.FailedTitle"]</strong>
-                <p id="newsRefreshErrorMessage"></p>
-            </div>
-        }
-
-        @if (Model.IsLoading)
-        {
-            <div class="finance-hub-loading">
-                <div class="finance-hub-spinner"></div>
-                <p>@L["News.Loading"]</p>
-            </div>
-        }
-        else if (Model?.Articles?.Any() == true)
-        {
-            <div class="finance-hub-results-info">
-                <span>@L.NamedHtml("News.ArticleCount." + LocalizerExtensions.PluralCategory(CultureInfo.CurrentUICulture, Model.Articles.Count), null,
-                    ("count", new HtmlString($"<strong>{Model.Articles.Count.ToString("N0", culture)}</strong>")))</span>
-            </div>
-            <div class="finance-hub-grid" id="newsGrid">
-                @foreach (var article in Model.Articles)
+                </p>
+                bool lead = true;
+                foreach (var group in Model.Articles.GroupBy(a => AgeGroup(a.PublishedAt)))
                 {
-                    <article class="finance-hub-card" data-article-url="@article.Url">
-                        @if (!string.IsNullOrEmpty(article.ImageUrl))
-                        {
-                            <a href="@article.Url" class="finance-hub-card-img-link" target="_blank" rel="noopener noreferrer">
-                                <div class="finance-hub-card-img">
-                                    <img src="@article.ImageUrl" alt="" loading="lazy" onerror="this.parentElement.parentElement.style.display='none'"/>
-                                </div>
-                            </a>
-                        }
-                        <div class="finance-hub-card-body">
-                            <div class="finance-hub-card-meta">
-                                <span class="finance-hub-badge source-badge" title="@article.Source">@article.Source</span>
-                                <span class="finance-hub-badge category-badge">@article.Category</span>
-                            </div>
-                            <h3 class="finance-hub-card-title">
-                                <a href="@article.Url" target="_blank" rel="noopener noreferrer">@article.Title</a>
-                            </h3>
-                            @if (!string.IsNullOrEmpty(article.Description))
+                    <section class="news-group" aria-label="@L[group.Key]">
+                        <h3 class="news-group-title">@L[group.Key]</h3>
+                        <ol class="news-list">
+                            @foreach (var article in group)
                             {
-                                <p class="finance-hub-card-desc">@article.Description</p>
+                                bool hasImage = !string.IsNullOrEmpty(article.ImageUrl);
+                                string summaryId = "summary-" + article.Url.GetHashCode().ToString("x", CultureInfo.InvariantCulture);
+                                <li class="news-item@(lead ? " is-lead" : "")@(hasImage ? " has-img" : "")" data-article-url="@article.Url">
+                                    <div class="news-item-text">
+                                        <p class="news-meta">
+                                            <span class="news-source">@article.Source</span>
+                                            <span class="news-topic" data-topic="@article.Category">@article.Category</span>
+                                            <time datetime="@article.PublishedAt.ToString("o")" title="@DateAndTime(article.PublishedAt)"></time>
+                                        </p>
+                                        <h4 class="news-headline">
+                                            <a href="@article.Url" target="_blank" rel="noopener noreferrer">@article.Title<span class="visually-hidden"> @L["News.OpensInNewTab"]</span></a>
+                                        </h4>
+                                        @if (!string.IsNullOrEmpty(article.Description))
+                                        {
+                                            <p class="news-desc">@article.Description</p>
+                                        }
+                                        <div class="news-actions">
+                                            <button type="button" class="news-action news-save-btn" aria-pressed="false"
+                                                    data-title="@article.Title" data-url="@article.Url" data-source="@article.Source"
+                                                    data-category="@article.Category" data-image-url="@article.ImageUrl"
+                                                    title="@L["News.Js.Save.Title"]" aria-label="@L["News.Js.Save.Label"]">
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                                                <span class="news-save-label">@L["News.Js.Save.Button"]</span>
+                                            </button>
+                                            <button type="button" class="news-action news-summarize-btn" aria-expanded="false" aria-controls="@summaryId"
+                                                    data-article-url="@article.Url" data-article-title="@article.Title" data-article-description="@article.Description"
+                                                    title="@L["News.Js.Summary.Title"]" aria-label="@L["News.Summary.Label"]">
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                                <span class="news-summarize-label">@L["News.Js.Summary.Button"]</span>
+                                            </button>
+                                        </div>
+                                        <div class="news-summary" id="@summaryId" aria-live="polite" hidden>
+                                            <div class="news-summary-content"></div>
+                                            <p class="news-summary-disclosure">@L["News.Summary.Disclosure"]</p>
+                                        </div>
+                                    </div>
+                                    @if (hasImage)
+                                    {
+                                        <div class="news-thumb"><img src="@article.ImageUrl" alt="" loading="lazy"/></div>
+                                    }
+                                </li>
+                                lead = false;
                             }
-                            <div class="finance-hub-card-summary" id="summary-@article.Url.GetHashCode()"
-                                 data-article-url="@article.Url" data-article-title="@article.Title"
-                                 data-article-description="@article.Description" hidden>
-                                <div class="finance-hub-summary-content"></div>
-                                <div class="finance-hub-summary-disclosure">
-                                    <small>@L["News.Summary.Disclosure"]</small>
-                                </div>
-                            </div>
-                            <div class="finance-hub-card-footer">
-                                <!time class="finance-hub-card-time" datetime="@article.PublishedAt.ToString("o")" title="@DateAndTime(article.PublishedAt)">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                                    </svg>
-                                    <span class="article-time-label"></span>
-                                </!time>
-                                <div class="finance-hub-card-actions">
-                                    <button type="button" class="btn btn-sm finance-hub-save-btn"
-                                            data-title="@article.Title"
-                                            data-url="@article.Url"
-                                            data-source="@article.Source"
-                                            data-category="@article.Category"
-                                            data-image-url="@article.ImageUrl"
-                                            title="@L["News.Js.Save.Title"]" aria-label="@L["News.Js.Save.Label"]">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-                                        </svg>
-                                        @L["News.Js.Save.Button"]
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline finance-hub-summarize-btn"
-                                            data-article-url="@article.Url"
-                                            data-article-title="@article.Title"
-                                            data-article-description="@article.Description"
-                                            title="@L["News.Js.Summary.Title"]" aria-label="@L["News.Summary.Label"]">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                             stroke="currentColor" stroke-width="2">
-                                            <path d="M12 20h9"/>
-                                            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-                                        </svg>
-                                        @L["News.Js.Summary.Button"]
-                                    </button>
-                                    <a href="@article.Url" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline finance-hub-read-more">
-                                        @L["News.Js.Read"]
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
-                                        </svg>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </article>
+                        </ol>
+                    </section>
                 }
-            </div>
-        }
-        else
-        {
-            <div class="finance-hub-empty">
-                <div class="finance-hub-empty-icon" aria-hidden="true">
-                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Z"/>
-                    </svg>
-                </div>
-                <h3>@L["News.Empty.Title"]</h3>
-                <p>@L["News.Empty.Text"]</p>
-                <a href="@Url.Action("Index", "News")" class="btn btn-primary">@L["News.Empty.ViewAll"]</a>
-            </div>
-        }
-    </div>
+            }
+        </main>
 
-    <!-- ==================== WATCHLIST PANEL ==================== -->
-    <div class="finance-hub-panel" id="panel-watchlist" role="tabpanel" aria-labelledby="tab-watchlist">
-        <div class="watchlist-section">
-            <div class="watchlist-header">
-                <h2>@L["News.Watchlist.Title"]</h2>
-                <p>@L["News.Watchlist.Subtitle"]</p>
-            </div>
-            <div id="watchlistGrid" class="watchlist-grid">
-                <!-- Loaded via JS -->
-            </div>
-        </div>
+        <aside class="news-rail" aria-label="@L["News.Rail.Label"]">
+            <details class="news-rail-card" open data-news-rail>
+                <summary>
+                    <h2>@L["News.Watchlist.Title"]</h2>
+                    <span class="news-pill" id="watchlistCount" hidden></span>
+                </summary>
+                <ul class="news-watchlist" id="watchlistList" aria-live="polite"></ul>
+                <p class="news-rail-note" id="watchlistMessage">@L["News.Js.Watchlist.Loading"]</p>
+            </details>
+
+            @if (Model.Sources.Count > 0 && string.IsNullOrEmpty(Model.ErrorMessage))
+            {
+                <details class="news-rail-card" open data-news-rail>
+                    <summary><h2>@L["News.Sources.Title"]</h2></summary>
+                    <nav aria-label="@L["News.Filter.Source"]">
+                        <ul class="news-sources">
+                            <li>
+                                <a href="@FilterUrl(Model.SelectedCategory, null)" aria-current="@(string.IsNullOrEmpty(Model.SelectedSource) ? "page" : null)">
+                                    <span class="news-source-name">@L["News.Filter.AllSources"]</span>
+                                </a>
+                            </li>
+                            @foreach (var source in Model.Sources)
+                            {
+                                <li>
+                                    <a href="@FilterUrl(Model.SelectedCategory, source.Name)" aria-current="@(Model.SelectedSource == source.Name ? "page" : null)">
+                                        <span class="news-source-name">@source.Name</span>
+                                        <span class="news-topic" data-topic="@source.Category">@source.Category</span>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                </details>
+            }
+        </aside>
     </div>
 </div>
 
