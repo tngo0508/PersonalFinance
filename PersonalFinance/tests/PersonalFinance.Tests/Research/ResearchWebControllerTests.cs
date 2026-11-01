@@ -1,7 +1,6 @@
 using System.Net;
 using System.Reflection;
 using System.Text;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -18,8 +17,9 @@ using ResearchController = PersonalFinance.Web.Controllers.ResearchController;
 namespace PersonalFinance.Tests.Research;
 
 /// <summary>
-/// The Web Research page reads each dataset from ApiService through <see cref="IResearchApi"/>. A dataset that has
-/// never loaded (503), or that cannot be read, shows that tab's Unavailable State instead of an empty chart.
+/// The Web Research pages read each dataset from ApiService through <see cref="IResearchApi"/>. A dataset that has
+/// never loaded (503), or that cannot be read, shows that section's Unavailable State instead of an empty chart. The old
+/// tabbed page's addresses redirect to the pages.
 /// </summary>
 public class ResearchWebControllerTests
 {
@@ -51,9 +51,6 @@ public class ResearchWebControllerTests
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
 
-    private static ResearchViewModel ViewModelOf(IActionResult result) =>
-        Assert.IsType<ResearchViewModel>(Assert.IsType<ViewResult>(result).Model);
-
     private static async Task<ApiException> ApiFailure(HttpStatusCode status, string body)
     {
         var response = new HttpResponseMessage(status)
@@ -65,27 +62,26 @@ public class ResearchWebControllerTests
     }
 
     [Fact]
-    public async Task Index_LogsANeverLoadedDatasetAsOneLine_AndOtherFailuresAsWarningsWithTheError()
+    public async Task ReadAsync_LogsANeverLoadedDatasetAsOneLine_AndOtherFailuresAsWarningsWithTheError()
     {
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
-        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
-        proxy.Throws(nameof(IResearchApi.GetFundOverlapAsync), await ApiFailure(HttpStatusCode.ServiceUnavailable,
-            """{"reason":"The fund overlap data has not loaded yet."}"""));
-        proxy.Throws(nameof(IResearchApi.GetWorldAsync), await ApiFailure(HttpStatusCode.InternalServerError, "{}"));
+        proxy.Throws(nameof(IResearchApi.GetSectorsAsync), await ApiFailure(HttpStatusCode.ServiceUnavailable,
+            """{"reason":"The Sectors data has not loaded yet."}"""));
+        proxy.Throws(nameof(IResearchApi.GetFundsAsync), await ApiFailure(HttpStatusCode.InternalServerError, "{}"));
         var logger = new RecordingLogger<ResearchController>();
         var controller = new ResearchController(api, TestResearchCache.Create(), logger, TestLocalization.Localizer)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
 
-        await controller.Index();
+        await controller.Sectors();
 
         (LogLevel Level, string Message, Exception? Exception) neverLoaded =
-            Assert.Single(logger.Entries, e => e.Message.Contains("fund overlap", StringComparison.Ordinal));
-        Assert.Equal((LogLevel.Information, "The Research fund overlap data has not loaded yet"), (neverLoaded.Level, neverLoaded.Message));
+            Assert.Single(logger.Entries, e => e.Message.Contains("Sectors", StringComparison.Ordinal));
+        Assert.Equal((LogLevel.Information, "The Research Sectors data has not loaded yet"), (neverLoaded.Level, neverLoaded.Message));
         Assert.Null(neverLoaded.Exception);
         (LogLevel Level, string Message, Exception? Exception) failed =
-            Assert.Single(logger.Entries, e => e.Message.Contains("World", StringComparison.Ordinal));
+            Assert.Single(logger.Entries, e => e.Message.Contains("funds", StringComparison.Ordinal));
         Assert.Equal(LogLevel.Warning, failed.Level);
         Assert.NotNull(failed.Exception);
     }
@@ -97,56 +93,25 @@ public class ResearchWebControllerTests
     }
 
     [Fact]
-    public async Task Index_ReadsEachDatasetOncePerLifetime_AcrossTwoRequests()
+    public async Task ReadAsync_ReadsEachDatasetOncePerLifetime_AcrossTwoRequests()
     {
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
         proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot)
-            .Returns(nameof(IResearchApi.GetFundsAsync), new FundsSnapshotDto())
-            .Returns(nameof(IResearchApi.GetWorldAsync), new WorldSnapshotDto())
-            .Returns(nameof(IResearchApi.GetFundOverlapAsync), new FundOverlapSnapshotDto())
-            .Returns(nameof(IResearchApi.GetFundReturnsAsync), new FundReturnsSnapshotDto())
-            .Returns(nameof(IResearchApi.GetMacroAsync), new MacroSnapshotDto())
-            .Returns(nameof(IResearchApi.GetFundFactsAsync), new FundFactsSnapshotDto())
-            .Returns(nameof(IResearchApi.GetFundExposureAsync), new FundExposureSnapshotDto());
+            .Returns(nameof(IResearchApi.GetFundsAsync), new FundsSnapshotDto());
         ResearchController controller = CreateController(api);
 
-        await controller.Index();
-        await controller.Index();
+        await controller.Sectors();
+        await controller.Sectors();
 
-        Assert.Equal(8, proxy.Calls.Count);
-        Assert.Equal(8, proxy.Calls.Distinct().Count());
+        Assert.Equal(2, proxy.Calls.Count);
+        Assert.Equal(2, proxy.Calls.Distinct().Count());
     }
 
     [Fact]
-    public async Task Index_HoldsTheSectorsSnapshot_OpeningOnTheLatestYear()
+    public void Controller_HasOnlyThePagesAndTheDataTheirScriptsFetch()
     {
-        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
-        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
-
-        ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
-
-        Assert.False(model.Sectors.Unavailable);
-        Assert.Same(Snapshot, model.Sectors.Snapshot);
-        Assert.Equal(new DateOnly(2025, 12, 31), model.Sectors.AsOf);
-        Assert.Equal("2025", model.Sectors.LatestPeriod!.Period);
-    }
-
-    [Fact]
-    public async Task Index_ReadsTheSectorsSnapshotOnce_AndOnlyTheCompaniesTabAndTheSectorsBasketFetchMore_SoTheChartNeedsNoFurtherRoundTrip()
-    {
-        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
-        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
-
-        ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
-
-        // The view embeds the whole snapshot as JSON for the chart, so the page makes no API call of its own.
-        Assert.Equal([nameof(IResearchApi.GetSectorsAsync), nameof(IResearchApi.GetFundsAsync), nameof(IResearchApi.GetWorldAsync),
-                nameof(IResearchApi.GetFundOverlapAsync), nameof(IResearchApi.GetFundReturnsAsync), nameof(IResearchApi.GetMacroAsync),
-                nameof(IResearchApi.GetFundFactsAsync), nameof(IResearchApi.GetFundExposureAsync)],
-            proxy.Calls);
-        Assert.Same(Snapshot, model.Sectors.Snapshot);
-        // The only other actions are the Companies tab's search, lookup and press releases, the pages, and the Sectors basket view's
-        // data, which it fetches when first shown so the page does not carry it.
+        // Besides the pages, the only actions are the search index and suggestions, the company lookup and press releases,
+        // and the Sectors basket view's data, which it fetches when first shown so the page does not carry it.
         Assert.Equal(
             [
                 nameof(ResearchController.Basket),
@@ -163,28 +128,11 @@ public class ResearchWebControllerTests
     }
 
     [Fact]
-    public async Task Index_WhenTheSectorsDataHasNeverLoaded_MarksTheTabUnavailable()
-    {
-        string body = JsonSerializer.Serialize(new ResearchUnavailableDto { Reason = "The Sectors data has not loaded yet." },
-            JsonSerializerOptions.Web);
-        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
-        proxy.Throws(nameof(IResearchApi.GetSectorsAsync), await ApiFailure(HttpStatusCode.ServiceUnavailable, body));
-
-        ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
-
-        Assert.True(model.Sectors.Unavailable);
-        Assert.Null(model.Sectors.Snapshot);
-        Assert.Null(model.Sectors.AsOf);
-        Assert.Equal("Research", model.Sectors.UnavailableState.RetryController);
-        Assert.False(string.IsNullOrWhiteSpace(model.Sectors.UnavailableState.Heading));
-    }
-
-    [Fact]
-    public async Task Index_WhenApiServiceIsUnreachable_MarksTheTabUnavailable_WithoutExceptionDetails()
+    public async Task Sectors_WhenApiServiceIsUnreachable_ShowsTheUnavailableState_WithoutExceptionDetails()
     {
         (IResearchApi api, ApiProxy<IResearchApi> _) = ApiProxy.Create<IResearchApi>();
 
-        ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
+        ResearchSectorsPageViewModel model = SectorsModelOf(await CreateController(api).Sectors());
 
         Assert.True(model.Sectors.Unavailable);
         Assert.DoesNotContain("unreachable", model.Sectors.UnavailableState.Heading, StringComparison.OrdinalIgnoreCase);
@@ -192,14 +140,83 @@ public class ResearchWebControllerTests
 
     // Every dataset is read through one ReadAsync, so this proves its cancellation filter for all of them.
     [Fact]
-    public async Task Index_WhenTheRequestIsCancelled_DoesNotSwallowTheCancellation()
+    public async Task ReadAsync_WhenTheRequestIsCancelled_DoesNotSwallowTheCancellation()
     {
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
         proxy.Throws(nameof(IResearchApi.GetSectorsAsync), new OperationCanceledException(cts.Token));
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateController(api).Index(cancellationToken: cts.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateController(api).Sectors(cancellationToken: cts.Token));
+    }
+
+    // The old tabbed page's addresses keep working: each tab moves to its page, keeping a well-formed basket.
+    [Theory]
+    [InlineData("sectors", "Sectors", null, null)]
+    [InlineData("SECTORS", "Sectors", null, null)]
+    [InlineData("funds", "Basket", null, null)]
+    [InlineData("etfs", "Basket", null, null)]
+    [InlineData("performance", "Basket", null, "basket-growth")]
+    [InlineData("risk", "Funds", "risk", null)]
+    [InlineData("world", "World", null, null)]
+    [InlineData("companies", "Company", null, null)]
+    public async Task Index_RedirectsEachOldTab_KeepingTheBasket(string tab, string action, string? view, string? fragment)
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+
+        RedirectToActionResult redirect = Assert.IsType<RedirectToActionResult>(
+            await CreateController(api).Index(tab, basket: " VTI:100 "));
+
+        Assert.Equal((action, fragment), (redirect.ActionName, redirect.Fragment));
+        Assert.Equal("VTI:100", redirect.RouteValues!["basket"]);
+        Assert.Equal(view, redirect.RouteValues.TryGetValue("view", out object? v) ? v : null);
+        Assert.Empty(proxy.Calls);
+    }
+
+    [Theory]
+    [InlineData("brk.b", "BRK-B")] // As SEC lists it.
+    [InlineData("<script>", null)]
+    [InlineData("TOOLONGTICKER", null)]
+    [InlineData(null, null)]
+    public async Task Index_RedirectsTheOldCompaniesTab_WithAUsableTickerOnly(string? ticker, string? expected)
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> _) = ApiProxy.Create<IResearchApi>();
+
+        RedirectToActionResult redirect = Assert.IsType<RedirectToActionResult>(
+            await CreateController(api).Index("companies", ticker, "SPY:60,<script>"));
+
+        Assert.Equal(nameof(ResearchController.Company), redirect.ActionName);
+        Assert.Equal(expected, redirect.RouteValues!["ticker"]);
+        Assert.Null(redirect.RouteValues["basket"]);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("nonsense")]
+    public async Task Index_WithNoOrAnUnknownTab_ShowsHome(string? tab)
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetStatusAsync), new ResearchStatusDto());
+
+        ViewResult view = Assert.IsType<ViewResult>(await CreateController(api).Index(tab));
+
+        Assert.Equal("Home", view.ViewName);
+        Assert.IsType<ResearchHomeViewModel>(view.Model);
+    }
+
+    [Theory]
+    [InlineData("VTI:100", "VTI:100")]
+    [InlineData("SPY 60", null)]
+    [InlineData(null, null)]
+    public void Home_RedirectsToTheResearchAddress_KeepingAWellFormedBasket(string? basket, string? expected)
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> _) = ApiProxy.Create<IResearchApi>();
+
+        RedirectToActionResult redirect = Assert.IsType<RedirectToActionResult>(CreateController(api).Home(basket));
+
+        Assert.Equal(nameof(ResearchController.Index), redirect.ActionName);
+        Assert.Equal(expected, redirect.RouteValues!["basket"]);
     }
 
     private static readonly WorldSnapshotDto World = new()
@@ -209,59 +226,6 @@ public class ResearchWebControllerTests
         Countries = [new WorldCountryDto { Id = "840", Iso3 = "USA", Name = "United States" }],
         Values = [new WorldPeriodDto { Period = "2024", Countries = [new WorldCountryValueDto { Country = 0, MarketCap = 5e13m, PercentOfGdp = 172.4m }] }],
     };
-
-    [Fact]
-    public async Task Index_HoldsTheWorldSnapshot()
-    {
-        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
-        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
-        proxy.Returns(nameof(IResearchApi.GetWorldAsync), World);
-
-        ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
-
-        Assert.False(model.World.Unavailable);
-        Assert.Same(World, model.World.Snapshot);
-        Assert.Equal(new DateOnly(2026, 10, 8), model.World.AsOf);
-    }
-
-    [Fact]
-    public async Task Index_WhenTheWorldDataHasNeverLoaded_MarksOnlyTheWorldTabUnavailable()
-    {
-        string body = JsonSerializer.Serialize(new ResearchUnavailableDto { Reason = "The World data has not loaded yet." },
-            JsonSerializerOptions.Web);
-        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
-        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot);
-        proxy.Throws(nameof(IResearchApi.GetWorldAsync), await ApiFailure(HttpStatusCode.ServiceUnavailable, body));
-
-        ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
-
-        Assert.True(model.World.Unavailable);
-        Assert.Null(model.World.AsOf);
-        Assert.Equal("Research", model.World.UnavailableState.RetryController);
-        Assert.False(string.IsNullOrWhiteSpace(model.World.UnavailableState.Heading));
-        Assert.False(model.Sectors.Unavailable);
-    }
-
-    [Fact]
-    public async Task Index_WhenOnlyTheSectorsDataFails_KeepsTheWorldAndFundsTabs()
-    {
-        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
-        proxy.Throws(nameof(IResearchApi.GetSectorsAsync), await ApiFailure(HttpStatusCode.ServiceUnavailable, "{}"));
-        proxy.Returns(nameof(IResearchApi.GetWorldAsync), World);
-        proxy.Returns(nameof(IResearchApi.GetFundsAsync), new FundsSnapshotDto
-        {
-            AsOf = new DateOnly(2026, 6, 30),
-            Periods = ["2026 Q2"],
-            Funds = [new TrackedFundDto { Ticker = "SPY", Name = "SPDR S&P 500 ETF Trust" }],
-            Values = [new FundsPeriodDto { Period = "2026 Q2", Funds = [new FundHoldingsDto { Ticker = "SPY", HoldingCount = 504 }] }],
-        });
-
-        ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
-
-        Assert.True(model.Sectors.Unavailable);
-        Assert.False(model.World.Unavailable);
-        Assert.False(model.Funds.Unavailable);
-    }
 
     private static ResearchHomeViewModel HomeModelOf(IActionResult result) =>
         Assert.IsType<ResearchHomeViewModel>(Assert.IsType<ViewResult>(result).Model);
@@ -289,7 +253,7 @@ public class ResearchWebControllerTests
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
         proxy.Returns(nameof(IResearchApi.GetStatusAsync), Status);
 
-        IActionResult result = await CreateController(api).Home();
+        IActionResult result = await CreateController(api).Index();
 
         Assert.IsType<ViewResult>(result);
         Assert.Equal([nameof(IResearchApi.GetStatusAsync)], proxy.Calls);
@@ -301,7 +265,7 @@ public class ResearchWebControllerTests
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
         proxy.Returns(nameof(IResearchApi.GetStatusAsync), Status);
 
-        ResearchHomeViewModel model = HomeModelOf(await CreateController(api).Home());
+        ResearchHomeViewModel model = HomeModelOf(await CreateController(api).Index());
 
         // The user-facing datasets in the page's order; the internal ones the status also lists are left out.
         Assert.Equal(
@@ -321,7 +285,7 @@ public class ResearchWebControllerTests
     {
         (IResearchApi api, ApiProxy<IResearchApi> _) = ApiProxy.Create<IResearchApi>();
 
-        ResearchHomeViewModel model = HomeModelOf(await CreateController(api).Home());
+        ResearchHomeViewModel model = HomeModelOf(await CreateController(api).Index());
 
         Assert.Equal(8, model.Datasets.Count);
         Assert.All(model.Datasets, d => Assert.Null(d.AsOf));
@@ -334,10 +298,10 @@ public class ResearchWebControllerTests
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
         ResearchController controller = CreateController(api);
 
-        ResearchHomeViewModel failed = HomeModelOf(await controller.Home());
+        ResearchHomeViewModel failed = HomeModelOf(await controller.Index());
         proxy.Returns(nameof(IResearchApi.GetStatusAsync), Status);
-        ResearchHomeViewModel first = HomeModelOf(await controller.Home());
-        ResearchHomeViewModel second = HomeModelOf(await controller.Home());
+        ResearchHomeViewModel first = HomeModelOf(await controller.Index());
+        ResearchHomeViewModel second = HomeModelOf(await controller.Index());
 
         Assert.All(failed.Datasets, d => Assert.Null(d.AsOf));
         Assert.Equal(new DateOnly(2026, 10, 30), first.Datasets[0].AsOf);

@@ -46,39 +46,57 @@ public sealed class ResearchController : Controller
         BadRequest(new { error = _localizer["Research.Message.InvalidCompanyInput"].Value });
 
     /// <summary>
-    /// Displays the Research page, opening on the Sectors tab at the latest year, or on <paramref name="tab"/> when it
-    /// names a tab. On the Companies tab, <paramref name="ticker"/> is the company to look up; an unknown tab or a
-    /// rejected ticker is ignored.
+    /// The Research Home page at <c>/Research</c>: the search box, starting points, the Fund Basket and when each dataset
+    /// is as of. It reads only the datasets' status, through the snapshot cache, never a dataset itself; when the status
+    /// cannot be read the page still renders, with every dataset not loaded. An old tab address
+    /// (<c>?tab=sectors</c>, ...) redirects (302) to the page that replaced the tab, keeping a well-formed
+    /// <paramref name="basket"/> (see <see cref="OldTabRedirect"/>); an unknown <paramref name="tab"/> shows Home.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] string? tab = null, [FromQuery] string? ticker = null,
-        CancellationToken cancellationToken = default)
+        [FromQuery] string? basket = null, CancellationToken cancellationToken = default)
     {
-        // The datasets are read side by side, so the page waits for the slowest one rather than for all in turn.
-        Task<SectorsSnapshotDto?> sectors = ReadAsync(_researchApi.GetSectorsAsync, ResearchCacheKeys.Sectors, "Sectors", cancellationToken);
-        Task<FundsSnapshotDto?> funds = ReadAsync(_researchApi.GetFundsAsync, ResearchCacheKeys.Funds, "funds", cancellationToken);
-        Task<WorldSnapshotDto?> world = ReadAsync(_researchApi.GetWorldAsync, ResearchCacheKeys.World, "World", cancellationToken);
-        Task<FundOverlapSnapshotDto?> overlap = ReadAsync(_researchApi.GetFundOverlapAsync, ResearchCacheKeys.FundOverlap, "fund overlap", cancellationToken);
-        Task<FundReturnsSnapshotDto?> returns = ReadAsync(_researchApi.GetFundReturnsAsync, ResearchCacheKeys.FundReturns, "fund returns", cancellationToken);
-        Task<MacroSnapshotDto?> macro = ReadAsync(_researchApi.GetMacroAsync, ResearchCacheKeys.Macro, "macro", cancellationToken);
-        Task<FundFactsSnapshotDto?> facts = ReadAsync(_researchApi.GetFundFactsAsync, ResearchCacheKeys.FundFacts, "fund facts", cancellationToken);
-        Task<FundExposureSnapshotDto?> exposure = ReadAsync(_researchApi.GetFundExposureAsync, ResearchCacheKeys.FundExposure, "fund exposure", cancellationToken);
-        await Task.WhenAll(sectors, funds, world, overlap, returns, macro, facts, exposure);
-        return View(new ResearchViewModel(_localizer, await sectors, await funds, await world, tab, ticker, await overlap,
-            await returns, await macro, await facts, await exposure));
+        RedirectToActionResult? redirect = OldTabRedirect(tab, ticker, basket);
+        if (redirect is not null)
+        {
+            return redirect;
+        }
+
+        ResearchStatusDto? status = await ReadAsync(_researchApi.GetStatusAsync, ResearchCacheKeys.Status, "status",
+            cancellationToken);
+        return View("Home", new ResearchHomeViewModel(status));
     }
 
     /// <summary>
-    /// The Research Home page: the search box, starting points, the Fund Basket and when each dataset is as of. It reads
-    /// only the datasets' status, through the snapshot cache, never a dataset itself; when the status cannot be read the
-    /// page still renders, with every dataset not loaded.
+    /// Where an address of the old tabbed Research page now goes: <c>sectors</c> to Sectors, <c>funds</c> and
+    /// <c>etfs</c> to the Basket page, <c>performance</c> to the Basket page's growth section, <c>risk</c> to the Funds
+    /// page's risk view, <c>world</c> to World, and <c>companies</c> to the Company page with its
+    /// <paramref name="ticker"/> (dropped when rejected). Null for no tab or an unknown one, which show Home.
     /// </summary>
-    [HttpGet]
-    public async Task<IActionResult> Home(CancellationToken cancellationToken = default)
+    private RedirectToActionResult? OldTabRedirect(string? tab, string? ticker, string? basket)
     {
-        ResearchStatusDto? status = await ReadAsync(_researchApi.GetStatusAsync, ResearchCacheKeys.Status, "status",
-            cancellationToken);
-        return View(new ResearchHomeViewModel(status));
+        string? trimmedBasket = basket?.Trim();
+        string? keptBasket = ResearchAddress.IsWellFormedBasket(trimmedBasket) ? trimmedBasket : null;
+        string? companyTicker = CompanyLookupRules.TryNormalizeTicker(ticker, out string? normalized) ? normalized : null;
+        return tab?.Trim().ToLowerInvariant() switch
+        {
+            "sectors" => RedirectToAction(nameof(Sectors), new { basket = keptBasket }),
+            "funds" or "etfs" => RedirectToAction(nameof(Basket), new { basket = keptBasket }),
+            "performance" => RedirectToAction(nameof(Basket), "Research", new { basket = keptBasket }, "basket-growth"),
+            "risk" => RedirectToAction(nameof(Funds), new { view = ResearchFundsPageViewModel.RiskView, basket = keptBasket }),
+            "world" => RedirectToAction(nameof(World), new { basket = keptBasket }),
+            "companies" => RedirectToAction(nameof(Company), new { ticker = companyTicker, basket = keptBasket }),
+            _ => null,
+        };
+    }
+
+    /// <summary>The address Home had before it moved to <c>/Research</c>: redirects there (302), keeping the basket.</summary>
+    [HttpGet]
+    public IActionResult Home([FromQuery] string? basket = null)
+    {
+        string? trimmedBasket = basket?.Trim();
+        return RedirectToAction(nameof(Index),
+            new { basket = ResearchAddress.IsWellFormedBasket(trimmedBasket) ? trimmedBasket : null });
     }
 
     /// <summary>

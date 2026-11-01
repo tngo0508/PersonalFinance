@@ -207,17 +207,17 @@ public class UnavailableStateTests
     }
 
     [Fact]
-    public async Task ResearchIndex_WhenApiFails_RendersThePage_WithTheUnavailableStateOnTheSectorsTabOnly()
+    public async Task ResearchSectors_WhenApiFails_RendersThePage_WithTheUnavailableStateOnTheChartOnly()
     {
         (IResearchApi? api, ApiProxy<IResearchApi> _) = ApiProxy.Create<IResearchApi>();
         ResearchController controller = WithContext(new ResearchController(api, TestResearchCache.Create(), NullLogger<ResearchController>.Instance, TestLocalization.Localizer));
 
-        IActionResult result = await controller.Index();
+        IActionResult result = await controller.Sectors();
 
-        // The page itself renders, so tabs whose data loaded keep working; the failed tab carries its own state.
+        // The page itself renders, with the search and the basket; the section whose data failed carries its own state.
         ViewResult view = Assert.IsType<ViewResult>(result);
         Assert.NotEqual(UnavailableStateExtensions.UnavailableViewName, view.ViewName);
-        ResearchViewModel model = Assert.IsType<ResearchViewModel>(view.Model);
+        ResearchSectorsPageViewModel model = Assert.IsType<ResearchSectorsPageViewModel>(view.Model);
         Assert.True(model.Sectors.Unavailable);
         Assert.Equal("Research", model.Sectors.UnavailableState.RetryController);
         Assert.False(string.IsNullOrWhiteSpace(model.Sectors.UnavailableState.Heading));

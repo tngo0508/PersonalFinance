@@ -12,6 +12,7 @@
          data-research-companies
          data-suggest-url="@Url.Action("Suggest", "Research")"
          data-company-url="@Url.Action("CompanyProfile", "Research")"
+         data-d3-src="@Url.Content("~/lib/d3/d3.min.js")"
          data-releases-url="@Url.Action("Releases", "Research")"
          data-company-page="@(Model.InTab ? null : Url.Content("~/Research/Company"))"
          data-fund-url="@Url.Content("~/Research/Fund/")"

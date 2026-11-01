@@ -10,7 +10,8 @@
 }
 
 @* Research Company: the company lookup at /Research/Company/{ticker?}, in the panel the tabbed page's Companies tab
-   shares (_CompanyPanel). It reads no snapshot: the panel fetches the profile, press releases and suggestions. *@
+   shares (_CompanyPanel). It reads no snapshot: the panel fetches the profile, press releases and suggestions, and loads D3 only
+   when a profile has figures to chart. *@
 <div class="research research-company-page">
     <partial name="_ResearchNav" model="@("company")"/>
 
@@ -31,6 +32,5 @@
     <script src="~/js/research/research-page.js" asp-append-version="true"></script>
     <script src="~/js/research/research-basket.js" asp-append-version="true"></script>
     <script src="~/js/research/research-search.js" asp-append-version="true"></script>
-    <script src="~/lib/d3/d3.min.js"></script>
     <script src="~/js/research/research-companies.js" asp-append-version="true"></script>
 }
