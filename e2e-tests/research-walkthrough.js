@@ -1,8 +1,9 @@
 /**
  * Research first-session walkthrough (spec #217, Testing Decisions): the steps a new Account takes through the
  * Sectors page (Sectors 1 to 7, which were Research 2 to 6e on the Sectors tab before the Sectors page shared its panel)
- * the Funds page (Funds 1 to 4: table sort, risk roles, correlation, holdings list), the tabbed page's Funds and World
- * tabs, then the Companies tab's 8 steps (spec #242, Company 1 to 8). Run from ui-test.js as
+ * the Funds page (Funds 1 to 4: table sort, risk roles, correlation, holdings list), the tabbed page's Funds tab, the
+ * Basket page (Research 7b to 7j on its editor, overlap, correlation, growth and risk sections, and Basket 1: the
+ * overview against the risk chart), the World page and the tabbed page's World tab, then the Companies tab's 8 steps (spec #242, Company 1 to 8). Run from ui-test.js as
  * Test 9c.
  *
  * Needs the ApiService started in Development with E2E_SEED_RESEARCH=true, which stores small fixture snapshots
@@ -672,25 +673,22 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
-        // Step 7b: the Fund Basket bar shows on the Funds tab only; funds are picked by keyboard, weights scale to 100%,
-        // "Use equal weights" resets them, and the basket lives in the address so a reload keeps it.
+        // Step 7b (Basket page): the editor sits in the page's rail; funds are picked by keyboard, weights scale to 100%,
+        // "Use equal weights" resets them, and the basket lives in the address so a reload keeps it. Removing the last
+        // fund leaves only the prompt with the starting mixes, and a mix opens the sections again; "Copy link" says
+        // whether it copied.
         await step('Research 7b', fail, async () => {
+            await page.goto(`${base}/Research/Basket?basket=SPY`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             const bar = page.locator('#research-basket');
             const search = page.locator('#research-basket-search');
             const basketParam = () => new URL(page.url()).searchParams.get('basket');
-            const shownOnFunds = await bar.isVisible();
-            // The Sectors tab has a basket view, so the bar shows there too; the Companies tab has none.
-            await page.click('#research-tab-sectors');
-            const shownOnSectors = await bar.isVisible();
-            await page.click('#research-tab-companies');
-            const hiddenOnCompanies = !(await bar.isVisible());
-            await page.click('#research-tab-funds');
+            const shown = await bar.isVisible();
+            const navCurrent = (await page.locator('.research-nav__link[aria-current="page"]').textContent()).trim();
+            const sections = await page.locator('.research-basket-sections__link').count();
 
             await search.fill('qq');
-            const option = page.locator('#research-basket-options [role="option"]', {hasText: 'QQQ'});
+            const option = page.locator('#research-basket-options [role="option"]', {hasText: 'SPY'});
             const grouped = await page.locator('#research-basket-options .research-basket__group-label').first().textContent();
-            await search.press('Enter');
-            await search.press('ArrowDown');
             await search.press('Enter');
             const picked = basketParam();
             await page.locator('#research-basket-chips [data-ticker="SPY"] input').fill('70');
@@ -709,23 +707,39 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             await page.waitForTimeout(400);
             const narrowFits = !(await scrollsSideways(page));
             await page.setViewportSize({width: 1280, height: 800});
+            await page.click('#research-basket-copy');
+            // Copied or not (headless browsers may refuse the clipboard), the status says which within a few seconds.
+            await page.waitForFunction(() => (document.getElementById('research-basket-copy-status')?.textContent || '').trim().length > 0,
+                null, { timeout: 5000 }).catch(() => {});
+            const copyStatus = (await page.locator('#research-basket-copy-status').textContent()).trim();
             await page.locator('#research-basket-chips [data-ticker="SPY"] .research-basket__remove').click();
             const removed = basketParam();
-            const ok = shownOnFunds && shownOnSectors && hiddenOnCompanies && (await option.count()) === 0 && Boolean(grouped) &&
-                picked === 'QQQ,SPY' && weighted === 'QQQ:50,SPY:70' && scaled && equal === 'QQQ,SPY' &&
-                restored.join(',') === 'QQQ,SPY' && narrowFits && removed === 'QQQ';
+            await page.locator('#research-basket-chips [data-ticker="QQQ"] .research-basket__remove').click();
+            const emptyShown = await page.locator('#research-basket-empty').isVisible();
+            const sectionsHidden = !(await page.locator('#basket-overview').isVisible());
+            await Promise.all([
+                page.waitForURL(/basket=SPY(%3A|:)100/, {timeout: TIMEOUT}),
+                page.locator('#research-basket-empty a', {hasText: 'S&P 500 only'}).click()
+            ]);
+            await page.waitForLoadState('networkidle');
+            const fromMix = await page.locator('#research-basket-chips [data-ticker]').evaluateAll((chips) => chips.map((c) => c.dataset.ticker));
+            const ok = shown && navCurrent.startsWith('Your basket') && sections === 7 && (await option.count()) === 0 && Boolean(grouped) &&
+                picked === 'SPY,QQQ' && weighted === 'SPY:70,QQQ:50' && scaled && equal === 'SPY,QQQ' &&
+                restored.join(',') === 'SPY,QQQ' && narrowFits && copyStatus.length > 0 && removed === 'QQQ' &&
+                emptyShown && sectionsHidden && fromMix.join(',') === 'SPY';
             if (ok) {
-                pass(`Research 7b: the basket bar picks QQQ then SPY by keyboard (grouped under "${grouped.trim()}"), scales 50/70, resets to equal, survives a reload and removes SPY`);
+                pass(`Research 7b: the Basket page's editor adds QQQ by keyboard (grouped under "${grouped.trim()}"), scales 70/50, resets to equal, survives a reload, copies the link ("${copyStatus}"); an empty basket shows the prompt and "S&P 500 only" opens the sections`);
             } else {
-                fail(`Research 7b: shown ${shownOnFunds}/${shownOnSectors}/${!hiddenOnCompanies}, picked ${picked}, weighted ${weighted}, ` +
-                    `scaled ${scaled}, equal ${equal}, restored ${restored}, fits at 320px ${narrowFits}, removed ${removed}`);
+                fail(`Research 7b: shown ${shown}, nav "${navCurrent}", sections ${sections}, picked ${picked}, weighted ${weighted}, ` +
+                    `scaled ${scaled}, equal ${equal}, restored ${restored}, fits at 320px ${narrowFits}, copy "${copyStatus}", removed ${removed}, ` +
+                    `empty ${emptyShown}/${sectionsHidden}, from the mix ${fromMix}`);
             }
         });
 
         // Step 7c: a link with an untracked fund keeps the rest and says so; the parser drops bad weights and repeats,
         // and keeps only the first five funds.
         await step('Research 7c', fail, async () => {
-            await page.goto(`${base}/Research?tab=funds&basket=SPY:60,XYZ:20,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.goto(`${base}/Research/Basket?basket=SPY:60,XYZ:20,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             const notice = (await page.locator('#research-basket-notice').textContent()).trim();
             const kept = new URL(page.url()).searchParams.get('basket');
             const parsed = await page.evaluate(() => {
@@ -787,7 +801,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
         // Step 7e: the correlation matrix shows the basket's funds with the precomputed 3-year value printed, switches to
         // 1 year, asks for another fund with one left, and shows every tracked fund with "All tracked funds".
         await step('Research 7e', fail, async () => {
-            await page.goto(`${base}/Research?tab=funds&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.goto(`${base}/Research/Basket?basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             const expected = await page.evaluate(() => {
                 const data = JSON.parse(document.getElementById('research-fund-returns-data').textContent);
                 const value = (years) => data.windows.find((w) => w.years === years).correlations[0].correlation.toFixed(2);
@@ -818,10 +832,10 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
-        // Step 7f: the Performance tab grows 100 in the basket and each fund; the basket line, the table and the switch to
+        // Step 7f: the Basket page's growth section grows 100 in the basket and each fund; the basket line, the table and the switch to
         // inflation-adjusted values match figures computed here from the fixture's monthly returns and CPI.
         await step('Research 7f', fail, async () => {
-            await page.goto(`${base}/Research?tab=performance&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.goto(`${base}/Research/Basket?basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             const expected = await page.evaluate(() => {
                 const returns = JSON.parse(document.getElementById('research-fund-returns-data').textContent);
                 const macro = JSON.parse(document.getElementById('research-macro-data').textContent);
@@ -877,7 +891,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
         // Step 7g: with SPY in the basket, the chart compares it with QQQ; the crosshair moves by keyboard and stays on one
         // x across the three panels; the 1Y preset sets the brush, and the table follows it.
         await step('Research 7g', fail, async () => {
-            await page.goto(`${base}/Research?tab=performance&basket=SPY`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.goto(`${base}/Research/Basket?basket=SPY`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             const tip = async () => (await page.locator('#research-performance-tooltip span').allTextContents()).map((t) => t.trim());
             const aligned = () => page.evaluate(() => {
                 const group = document.querySelector('.research-performance__crosshair');
@@ -926,7 +940,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
         // Step 7h: the chart shades the derived hiking cycle with a label, marks the basket's worst fall with the figure
         // the callout gives, and receives the configured recessions; a 1-year period leaves the earlier band out.
         await step('Research 7h', fail, async () => {
-            await page.goto(`${base}/Research?tab=performance&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.goto(`${base}/Research/Basket?basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             const macro = await page.evaluate(() => JSON.parse(document.getElementById('research-macro-data').textContent));
             const monthName = (iso) => new Date(`${iso.slice(0, 7)}-15T00:00:00Z`).toLocaleString('en-US', {month: 'long', year: 'numeric', timeZone: 'UTC'});
             const cycle = macro.hikingCycles[0];
@@ -952,11 +966,11 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
-        // Step 7i: the Risk vs return tab plots the funds' precomputed figures and the basket diamond computed here from the
+        // Step 7i: the Basket page's risk section plots the funds' precomputed figures and the basket diamond computed here from the
         // fixture; focusing a bubble opens its card (expense ratio, or n/a for SPY); the table sorts by Sharpe ratio and a
         // negative Sharpe ratio reads with a minus sign.
         await step('Research 7i', fail, async () => {
-            await page.goto(`${base}/Research?tab=risk&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.goto(`${base}/Research/Basket?basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             const expected = await page.evaluate(() => {
                 const returns = JSON.parse(document.getElementById('research-fund-returns-data').textContent);
                 const macro = JSON.parse(document.getElementById('research-macro-data').textContent);
@@ -1009,14 +1023,14 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
         // moves aside on a leader line); role chips hide funds without repainting the rest; the corners are described
         // against the basket, and nothing on the tab gives advice.
         await step('Research 7j', fail, async () => {
-            await page.goto(`${base}/Research?tab=risk&basket=SPY`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.goto(`${base}/Research/Basket?basket=SPY`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             const labelBoxes = () => page.evaluate(() => Array.from(document.querySelectorAll('#research-risk-chart .research-risk__label'))
                 .map((t) => { const b = t.getBBox(); return { label: t.textContent, x: b.x, y: b.y, w: b.width, h: b.height }; }));
             const boxes = await labelBoxes();
             const overlapping = boxes.some((a, i) => boxes.some((b, j) => j > i &&
                 a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h));
             const leaders = await page.locator('#research-risk-chart .research-risk__leader').count();
-            await page.goto(`${base}/Research?tab=risk&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.goto(`${base}/Research/Basket?basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             const quadrants = (await page.locator('.research-risk__quadrant').allTextContents()).map((t) => t.trim());
             const fill = () => page.evaluate(() => getComputedStyle(document.querySelector('#research-risk-chart [data-ticker="SPY"] circle')).fill);
             const spyBefore = await fill();
@@ -1027,7 +1041,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             const pressed = await page.locator('#research-risk-roles button', {hasText: 'US broad'}).getAttribute('aria-pressed');
             await page.locator('#research-risk-roles button', {hasText: 'US broad'}).click();
             const restored = await page.locator('#research-risk-chart .research-risk__point').count();
-            const words = (await page.locator('#research-panel-risk').innerText()).toLowerCase();
+            const words = (await page.locator('#research-risk').innerText()).toLowerCase();
             const advice = ['efficient', ' best', ' buy', 'should', 'recommend'].filter((w) => words.includes(w));
             const ok = boxes.length === 3 && !overlapping && leaders >= 1 &&
                 quadrants.length === 4 && quadrants.includes('Higher return, smaller swings than your basket') &&
@@ -1038,6 +1052,45 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             } else {
                 fail(`Research 7j: boxes ${JSON.stringify(boxes)} overlapping ${overlapping}, leaders ${leaders}, quadrants ${JSON.stringify(quadrants)}, chips ${JSON.stringify(chips)}, ` +
                     `pressed ${pressed}, shown ${shownAfter}, fill ${spyBefore}/${spyAfter}, restored ${restored}, advice ${JSON.stringify(advice)}`);
+            }
+        });
+
+        // Basket 1: the overview's figures are the risk chart's basket point for the same basket and window (both come
+        // from research-basket-math.js); SPY filed no fee, so the average is QQQ's and the note names SPY; the countries
+        // section shows the basket map alone, and the Sectors switch leaves the Basket page's address alone.
+        await step('Basket 1', fail, async () => {
+            await page.goto(`${base}/Research/Basket?basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const text = async (id) => (await page.locator(`#${id}`).textContent()).trim();
+            const card = async () => (await page.locator('#research-risk-card span').allTextContents()).map((t) => t.trim());
+            const overview = {
+                annualReturn: await text('research-basket-overview-return'),
+                volatility: await text('research-basket-overview-volatility'),
+                sharpe: await text('research-basket-overview-sharpe'),
+                fee: await text('research-basket-overview-fee'),
+                us: await text('research-basket-overview-us'),
+                note: await text('research-basket-overview-note')
+            };
+            await page.focus('#research-risk-chart [data-ticker="Your basket"]');
+            const threeYears = await card();
+            await page.click('[data-basket-overview-years="1"]');
+            await page.click('[data-risk-years="1"]');
+            const oneYearReturn = await text('research-basket-overview-return');
+            await page.focus('#research-risk-chart [data-ticker="Your basket"]');
+            const oneYear = await card();
+            const worldAlone = await page.locator('#research-world-basket').isVisible() &&
+                !(await page.locator('#research-world-views').isVisible());
+            const address = new URL(page.url());
+            const ok = threeYears.includes(`Annualized return: ${overview.annualReturn} a year`) &&
+                threeYears.includes(`Volatility: ${overview.volatility}`) &&
+                threeYears.some((r) => r.startsWith(`Sharpe ratio: ${overview.sharpe} (`)) &&
+                oneYear.includes(`Annualized return: ${oneYearReturn} a year`) && oneYearReturn !== overview.annualReturn &&
+                overview.fee === '0.19%' && overview.note.includes('leaves out SPY') && /%$/.test(overview.us) &&
+                worldAlone && !address.searchParams.has('view') && address.searchParams.get('basket') === 'SPY:60,QQQ:40';
+            if (ok) {
+                pass(`Basket 1: the overview (${overview.annualReturn}, ${overview.volatility}, Sharpe ${overview.sharpe}) matches the risk chart's basket point over 3 and 1 years; fee ${overview.fee} without SPY; ${overview.us} in US issuers`);
+            } else {
+                fail(`Basket 1: overview ${JSON.stringify(overview)}, 3Y card ${JSON.stringify(threeYears)}, 1Y ${oneYearReturn} vs ${JSON.stringify(oneYear)}, ` +
+                    `world alone ${worldAlone}, address ${address.search}`);
             }
         });
 

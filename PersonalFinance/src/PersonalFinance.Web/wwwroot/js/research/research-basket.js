@@ -19,8 +19,13 @@
  * and edited only by the "Add to basket" buttons. On every page the basket follows the user between Research pages:
  * `withBasket(href, funds)` puts it on a link, `linkify(root)` rewrites each `a[data-research-link]` on load and on
  * every change, a `[data-research-basket-toggle="TICKER"]` button adds or removes its fund (pressed while in the
- * basket, disabled while the basket is full), and `[data-research-basket-count]` shows how many funds it holds. On a
- * page without the bar, `ResearchBasket.remove(ticker)` and `ResearchBasket.set(value)` also edit it.
+ * basket, disabled while the basket is full), and `[data-research-basket-count]` shows how many funds it holds.
+ * `ResearchBasket.remove(ticker)` and `ResearchBasket.set(value)` also edit it.
+ *
+ * On a page without tabs (the Basket page) the bar always shows. There, a `[data-research-basket-preset="VTI:60,…"]`
+ * button replaces the basket with a starting mix, a `[data-research-basket-copy="status-id"]` button copies the page's
+ * address and says so in that status element, and each `[data-research-basket-when="empty|filled"]` part shows only
+ * while the basket is empty or holds a fund.
  */
 (function () {
     'use strict';
@@ -41,6 +46,10 @@
     const TOGGLE_ATTRIBUTE = 'data-research-basket-toggle';
     const LINK_SELECTOR = 'a[data-research-link]';
     const COUNT_SELECTOR = '[data-research-basket-count]';
+    const WHEN_ATTRIBUTE = 'data-research-basket-when';
+    const PRESET_ATTRIBUTE = 'data-research-basket-preset';
+    const COPY_ATTRIBUTE = 'data-research-basket-copy';
+    const COPY_TIMEOUT_MS = 2000;
     let trackedTickers = [];
     let store = null;
     const ENTRY = /^([A-Za-z0-9.-]{1,10})(?::(\d{1,3}))?$/;
@@ -547,7 +556,17 @@
         if (fromLink.invalid || fromLink.tooMany) {
             publish();
         }
-        return { get, add: addFund, remove: (ticker) => removeFund(ticker, false) };
+        return {
+            get,
+            add: addFund,
+            remove: (ticker) => removeFund(ticker, false),
+            set (value) {
+                funds = parse(value, tracked.map((f) => f.ticker)).funds;
+                showNotice('');
+                render();
+                publish();
+            }
+        };
     }
 
     /**
@@ -632,6 +651,38 @@
         document.querySelectorAll(COUNT_SELECTOR).forEach((count) => {
             count.textContent = PFI18n.formatNumber(funds.length);
         });
+        document.querySelectorAll(`[${WHEN_ATTRIBUTE}]`).forEach((part) => {
+            part.hidden = part.getAttribute(WHEN_ATTRIBUTE) !== (funds.length === 0 ? 'empty' : 'filled');
+        });
+    }
+
+    /**
+     * Copy the page's address, which holds the basket, and say so in the button's status.
+     * @param {HTMLElement} button - The "Copy link" button.
+     * @returns {Promise<void>}
+     */
+    async function copyLink (button) {
+        const status = document.getElementById(button.getAttribute(COPY_ATTRIBUTE));
+        let copied = false;
+        try {
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                // A browser that never answers (a permission prompt left open) counts as a failure after a moment.
+                const write = async () => {
+                    await navigator.clipboard.writeText(window.location.href);
+                    return true;
+                };
+                copied = await Promise.race([
+                    write(),
+                    new Promise((resolve) => setTimeout(() => resolve(false), COPY_TIMEOUT_MS))
+                ]);
+            }
+        } catch (error) {
+            copied = false;
+        }
+        if (status) {
+            status.textContent = PFI18n.t(copied ? 'Research.Js.Basket.Copied' : 'Research.Js.Basket.CopyFailed');
+            status.hidden = false;
+        }
     }
 
     /**
@@ -640,7 +691,18 @@
      */
     function wireShell () {
         document.addEventListener('click', (event) => {
-            const button = event.target instanceof Element ? event.target.closest(`[${TOGGLE_ATTRIBUTE}]`) : null;
+            const target = event.target instanceof Element ? event.target : null;
+            const preset = target ? target.closest(`[${PRESET_ATTRIBUTE}]`) : null;
+            if (preset && store.set) {
+                store.set(preset.getAttribute(PRESET_ATTRIBUTE));
+                return;
+            }
+            const copy = target ? target.closest(`[${COPY_ATTRIBUTE}]`) : null;
+            if (copy) {
+                copyLink(copy);
+                return;
+            }
+            const button = target ? target.closest(`[${TOGGLE_ATTRIBUTE}]`) : null;
             if (!button || button.disabled) {
                 return;
             }
@@ -680,9 +742,14 @@
             const tracked = data.funds.map((f) => ({ ticker: f.ticker, name: f.name, role: f.role || null }));
             trackedTickers = tracked.map((f) => f.ticker);
             store = createBasket(bar, tracked);
-            const selected = document.querySelector('.research [role="tab"][aria-selected="true"]');
-            showFor(bar, selected ? selected.dataset.researchTab : null);
-            document.addEventListener('research:tabchange', (event) => showFor(bar, event.detail.tabId));
+            if (document.querySelector('.research [role="tablist"]')) {
+                const selected = document.querySelector('.research [role="tab"][aria-selected="true"]');
+                showFor(bar, selected ? selected.dataset.researchTab : null);
+                document.addEventListener('research:tabchange', (event) => showFor(bar, event.detail.tabId));
+            } else {
+                // A page without tabs (the Basket page) carries the bar only where it is used.
+                bar.hidden = false;
+            }
         } else if (bar) {
             // The old Research page without its Tracked Funds: the bar's tabs show their own Unavailable State.
             return;
@@ -690,11 +757,9 @@
             store = createAddressBasket();
         }
         window.ResearchBasket.get = store.get;
-        if (store.set) {
-            // Only a page without the bar edits the basket from outside it: Home's chips and starting mixes.
-            window.ResearchBasket.remove = store.remove;
-            window.ResearchBasket.set = store.set;
-        }
+        // Other scripts edit the basket from outside the bar: Home's chips and starting mixes.
+        window.ResearchBasket.remove = store.remove;
+        window.ResearchBasket.set = store.set;
         wireShell();
     }
 

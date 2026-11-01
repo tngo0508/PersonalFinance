@@ -14,7 +14,8 @@
     string optionalAttributes = string.Concat(
         Model.InTab && showBasket ? " data-research-basket" : string.Empty,
         showSectors && Model.Focus is not null ? $" data-research-focus=\"{encoder.Encode(Model.Focus)}\"" : string.Empty,
-        showBasket && Model.View is not null ? $" data-research-sectors-view=\"{encoder.Encode(Model.View)}\"" : string.Empty);
+        showBasket && Model.View is not null ? $" data-research-sectors-view=\"{encoder.Encode(Model.View)}\"" : string.Empty,
+        Model.FixedAddress ? " data-research-fixed-address" : string.Empty);
 }
 
 @* The Sectors panel: on the Sectors page on its own, on the tabbed Research page as its Sectors tab. It keeps the id

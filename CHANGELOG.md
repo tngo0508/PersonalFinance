@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.5.0] - 2026-11-01
+
+### Added
+
+- **Research Basket page**: a Basket page of the Research redesign at `/Research/Basket`, not linked from the main menu yet, shows everything about your Fund Basket in one place.
+  - An overview of the basket's annualized return, volatility, Sharpe ratio, average expense ratio and share in US issuers over 1, 3 or 5 years; a fund that files no expense ratio is left out of the average and named.
+  - Growth, risk vs return, overlap, correlation, sectors and countries follow, with a section list that stays beside them on wide screens.
+  - The basket editor sits beside the sections, with starting mixes and "Copy link". An empty basket shows one prompt with the starting mixes.
+  - A section whose data has not loaded shows its own "couldn't load" message; the rest still show.
+
+### Changed
+
+- **Basket figures**: the risk chart's basket point and the Basket page's overview now come from one shared calculation, so they always agree.
+
 ## [17.4.0] - 2026-10-31
 
 ### Added
