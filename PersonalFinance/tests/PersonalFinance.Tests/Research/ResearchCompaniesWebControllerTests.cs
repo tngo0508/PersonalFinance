@@ -94,7 +94,7 @@ public class ResearchCompaniesWebControllerTests
         var lookup = new CompanyLookupResultDto { Kind = CompanyLookupKinds.Fund, Ticker = "SPY" };
         proxy.Returns(nameof(IResearchApi.GetCompanyAsync), lookup);
 
-        IActionResult result = await CreateController(api).Company("spy");
+        IActionResult result = await CreateController(api).CompanyProfile("spy");
 
         Assert.Same(lookup, Assert.IsType<JsonResult>(result).Value);
     }
@@ -121,7 +121,7 @@ public class ResearchCompaniesWebControllerTests
     {
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
 
-        IActionResult result = await CreateController(api).Company(ticker);
+        IActionResult result = await CreateController(api).CompanyProfile(ticker);
 
         Assert.IsType<BadRequestObjectResult>(result);
         Assert.Empty(proxy.Calls);
@@ -170,7 +170,7 @@ public class ResearchCompaniesWebControllerTests
 
     [Theory]
     [InlineData(nameof(ResearchController.Suggest))]
-    [InlineData(nameof(ResearchController.Company))]
+    [InlineData(nameof(ResearchController.CompanyProfile))]
     [InlineData(nameof(ResearchController.Releases))]
     public void CompanyActions_MapApiServiceFailuresToJsonErrors(string action)
     {

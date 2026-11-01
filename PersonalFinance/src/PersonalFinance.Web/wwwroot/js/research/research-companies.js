@@ -1,14 +1,18 @@
 /* global PFI18n */
 /**
- * Research Companies tab: look up a company registered with the SEC by ticker or name and show its Company Profile
- * (identity, annual figures as four D3 bar charts and a table, press releases, recent filings), for information only.
- * The press releases load from `data-releases-url` after the profile shows, so a slow or failed read never delays it.
+ * Research company lookup, on the Company page and the tabbed page's Companies tab: look up a company registered with
+ * the SEC by ticker or name and show its Company Profile (identity, annual figures as four D3 bar charts and a table,
+ * press releases, recent filings), for information only. The press releases load from `data-releases-url` after the
+ * profile shows, so a slow or failed read never delays it.
  *
  * The search box is a WAI-ARIA combobox: suggestions come from the panel's `data-suggest-url` as the user types, and
- * choosing one (or pressing Enter) fetches the profile from `data-company-url`. The ticker is kept in the address
+ * choosing one (or pressing Enter) fetches the profile from `data-company-url`. The ticker is kept in the address, in
+ * the path on the Company page (`data-company-page`, e.g. `/Research/Company/MSFT`) and in the query in the tab
  * (`?tab=companies&ticker=MSFT`): each lookup adds a history entry, so Back returns to the previous company or to the
- * empty search. The charts repeat the table, which is their accessible equivalent; under prefers-reduced-motion they
- * change without a transition.
+ * empty search. A Tracked Fund's ticker (from the search index) opens that fund's page (`data-fund-url`), keeping the
+ * basket; another fund's says it is a fund and links to the Funds page (`data-funds-url`). The panel opens on
+ * `data-research-ticker`'s profile, or with `data-research-query` typed and its suggestions open. The charts repeat the
+ * table, which is their accessible equivalent; under prefers-reduced-motion they change without a transition.
  *
  * Needs research-page.js (window.ResearchPage) and D3 loaded first.
  */
@@ -363,6 +367,9 @@
         const suggestUrl = panel.dataset.suggestUrl;
         const companyUrl = panel.dataset.companyUrl;
         const releasesUrl = panel.dataset.releasesUrl;
+        const pageBase = panel.dataset.companyPage || null;
+        const fundUrl = panel.dataset.fundUrl || null;
+        const fundsUrl = panel.dataset.fundsUrl || null;
         const releases = {
             section: panel.querySelector('[data-research-company-releases]'),
             loading: panel.querySelector('[data-research-releases-loading]'),
@@ -387,7 +394,6 @@
         let releasesRequest = null;
         // The ticker whose press releases were announced since its lookup, so a Retry does not announce them again.
         let releasesAnnouncedFor = null;
-        let currentTicker = null;
 
         // ----- Suggestions (WAI-ARIA combobox with a listbox popup) -----
 
@@ -704,7 +710,6 @@
                 lookupRequest.abort();
             }
             abortReleases();
-            currentTicker = null;
             profileHost.hidden = true;
             message.hidden = true;
             loading.hidden = true;
@@ -722,12 +727,58 @@
          */
         function rememberTicker (ticker) {
             const url = new URL(window.location.href);
-            if (url.searchParams.get('ticker') === ticker && url.searchParams.get('tab') === 'companies') {
-                return;
+            if (pageBase) {
+                if (tickerInAddress() === ticker) {
+                    return;
+                }
+                url.pathname = `${pageBase}/${encodeURIComponent(ticker)}`;
+                url.searchParams.delete('q');
+            } else {
+                if (url.searchParams.get('ticker') === ticker && url.searchParams.get('tab') === 'companies') {
+                    return;
+                }
+                url.searchParams.set('tab', 'companies');
+                url.searchParams.set('ticker', ticker);
             }
-            url.searchParams.set('tab', 'companies');
-            url.searchParams.set('ticker', ticker);
             window.history.pushState({ researchTicker: ticker }, '', url);
+        }
+
+        /**
+         * The ticker the address holds: after the Company page's path, or in the tab's query.
+         * @returns {string|null} The ticker, or null.
+         */
+        function tickerInAddress () {
+            const url = new URL(window.location.href);
+            if (!pageBase) {
+                return toTicker(url.searchParams.get('ticker') || '');
+            }
+            const path = new URL(pageBase, window.location.href).pathname.replace(/\/$/, '');
+            const rest = url.pathname.startsWith(`${path}/`) ? url.pathname.slice(path.length + 1) : '';
+            return toTicker(decodeURIComponent(rest));
+        }
+
+        /**
+         * The address of a Tracked Fund's page with the basket, or null when the ticker is not a Tracked Fund (or the
+         * search index cannot be read, which leaves the lookup to say what the ticker is).
+         * @param {string} ticker - The checked ticker.
+         * @returns {Promise<string|null>} The address, or null.
+         */
+        async function trackedFundPage (ticker) {
+            if (!fundUrl || !window.ResearchSearch || typeof window.ResearchSearch.searchIndex !== 'function') {
+                return null;
+            }
+            let index = null;
+            try {
+                index = await window.ResearchSearch.searchIndex();
+            } catch (error) {
+                return null;
+            }
+            const tracked = (index && Array.isArray(index.funds) ? index.funds : []).some((f) => f.ticker === ticker);
+            if (!tracked) {
+                return null;
+            }
+            const href = `${fundUrl}${encodeURIComponent(ticker)}`;
+            return window.ResearchBasket ? window.ResearchBasket.withBasket(href, window.ResearchBasket.get()) : href;
         }
 
         /**
@@ -748,10 +799,18 @@
             abortReleases();
             releasesAnnouncedFor = null;
             lookupRequest = new AbortController();
+            const request = lookupRequest;
             if (options.push) {
+                const fundPage = await trackedFundPage(normalized);
+                if (request !== lookupRequest) {
+                    return;
+                }
+                if (fundPage) {
+                    window.location.assign(fundPage);
+                    return;
+                }
                 rememberTicker(normalized);
             }
-            currentTicker = normalized;
             message.hidden = true;
             loading.hidden = false;
             try {
@@ -791,11 +850,9 @@
                 profileHost.hidden = true;
                 if (result.kind === 'fund') {
                     const link = element('a', '', PFI18n.t('Research.Js.Companies.SeeFunds'));
-                    link.href = '?tab=funds';
-                    link.addEventListener('click', (event) => {
-                        event.preventDefault();
-                        page.selectTabById('funds');
-                    });
+                    const funds = fundsUrl || '/Research/Funds';
+                    link.href = window.ResearchBasket ? window.ResearchBasket.withBasket(funds, window.ResearchBasket.get()) : funds;
+                    link.setAttribute('data-research-link', '');
                     const [before, after] = PFI18n.t('Research.Js.Companies.IsFund', { ticker: normalized }).split('{link}');
                     showMessage([before, link, after || ''].filter((part) => part !== ''));
                     page.announce(PFI18n.t('Research.Js.Companies.IsFundAnnounce', { ticker: normalized }));
@@ -859,37 +916,32 @@
         });
 
         window.addEventListener('popstate', () => {
-            const url = new URL(window.location.href);
-            const tab = url.searchParams.get('tab');
-            if (tab) {
-                page.selectTabById(tab);
+            const tab = new URL(window.location.href).searchParams.get('tab');
+            if (!pageBase && tab && tab !== 'companies') {
+                return;
             }
-            const ticker = toTicker(url.searchParams.get('ticker') || '');
-            if (tab === 'companies' && ticker) {
+            const ticker = tickerInAddress();
+            if (ticker) {
                 input.value = ticker;
                 lookUp(ticker, { push: false });
-            } else if (tab === 'companies' || !tab) {
+            } else {
                 clearProfile();
             }
         });
 
-        document.addEventListener('research:tabchange', (event) => {
-            if (event.detail && event.detail.tabId === 'companies' && currentTicker &&
-                typeof window.history.replaceState === 'function') {
-                const url = new URL(window.location.href);
-                url.searchParams.set('ticker', currentTicker);
-                window.history.replaceState(window.history.state, '', url);
-            }
-        });
-
-        const initial = toTicker(panel.dataset.initialTicker || '');
+        const initial = toTicker(panel.dataset.researchTicker || '');
+        const query = (panel.dataset.researchQuery || '').trim();
         if (initial) {
             lookUp(initial, { push: false });
+        } else if (query) {
+            input.value = query;
+            input.focus();
+            suggest();
         }
     }
 
     /**
-     * Wire the Companies tab, if the page has one.
+     * Wire the company lookup, if the page has one.
      * @returns {void}
      */
     function init () {

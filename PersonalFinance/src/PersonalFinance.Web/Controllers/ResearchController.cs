@@ -175,7 +175,7 @@ public sealed class ResearchController : Controller
     {
         if (!CompanyLookupRules.TryNormalizeTicker(ticker, out string? normalized))
         {
-            return FundNotFound(new ResearchNotFoundViewModel());
+            return ResearchNotFound(new ResearchNotFoundViewModel());
         }
 
         Task<FundsSnapshotDto?> funds = ReadAsync(_researchApi.GetFundsAsync, ResearchCacheKeys.Funds, "funds", cancellationToken);
@@ -190,7 +190,7 @@ public sealed class ResearchController : Controller
         if (fundsSnapshot is null)
         {
             Dictionary<string, string> retryRoute = new(StringComparer.Ordinal) { ["ticker"] = normalized };
-            return FundNotFound(new ResearchNotFoundViewModel
+            return ResearchNotFound(new ResearchNotFoundViewModel
             {
                 Ticker = normalized,
                 FundsUnavailableState = new UnavailableStateViewModel
@@ -207,7 +207,7 @@ public sealed class ResearchController : Controller
         TrackedFundDto? fund = fundsSnapshot.Funds.FirstOrDefault(f => string.Equals(f.Ticker, normalized, StringComparison.OrdinalIgnoreCase));
         if (fund is null)
         {
-            return FundNotFound(new ResearchNotFoundViewModel { Ticker = normalized });
+            return ResearchNotFound(new ResearchNotFoundViewModel { Ticker = normalized });
         }
 
         return View(new ResearchFundPageViewModel(_localizer, fund, fundsSnapshot, await returns, await macro, await facts,
@@ -215,7 +215,7 @@ public sealed class ResearchController : Controller
     }
 
     /// <summary>The Research "not found" page, with status 404.</summary>
-    private ViewResult FundNotFound(ResearchNotFoundViewModel model)
+    private ViewResult ResearchNotFound(ResearchNotFoundViewModel model)
     {
         ViewResult view = View("NotFound", model);
         view.StatusCode = StatusCodes.Status404NotFound;
@@ -263,12 +263,48 @@ public sealed class ResearchController : Controller
             : InvalidCompanyInput();
 
     /// <summary>
+    /// The Research Company page at <c>/Research/Company/{ticker?}</c>: the company lookup on its own page. Without a
+    /// ticker it opens on an empty search, which <paramref name="q"/> (when <see cref="CompanyLookupRules.TryNormalizeQuery"/>
+    /// accepts it) pre-fills with its suggestions open; a rejected <paramref name="q"/> is ignored. A ticker it rejects
+    /// gets the "not found" page with status 404. A Tracked Fund's ticker redirects to that fund's page, keeping
+    /// <paramref name="basket"/>: only then is a snapshot read, the funds data through the cache; when it cannot be read
+    /// the lookup shows here as for any other ticker. The profile itself is fetched by the page from
+    /// <see cref="CompanyProfile"/>.
+    /// </summary>
+    [HttpGet("Research/Company/{ticker?}")]
+    public async Task<IActionResult> Company(string? ticker, [FromQuery] string? q = null, [FromQuery] string? basket = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(ticker))
+        {
+            return View(new ResearchCompanyPageViewModel(null,
+                CompanyLookupRules.TryNormalizeQuery(q, out string? query) ? query : null));
+        }
+
+        if (!CompanyLookupRules.TryNormalizeTicker(ticker, out string? normalized))
+        {
+            return ResearchNotFound(new ResearchNotFoundViewModel { IsCompany = true });
+        }
+
+        FundsSnapshotDto? funds = await ReadAsync(_researchApi.GetFundsAsync, ResearchCacheKeys.Funds, "funds", cancellationToken);
+        if (funds?.Funds.Any(f => string.Equals(f.Ticker, normalized, StringComparison.OrdinalIgnoreCase)) == true)
+        {
+            string? trimmedBasket = basket?.Trim();
+            return RedirectToAction(nameof(Fund),
+                new { ticker = normalized, basket = ResearchAddress.IsWellFormedBasket(trimmedBasket) ? trimmedBasket : null });
+        }
+
+        return View(new ResearchCompanyPageViewModel(normalized, null));
+    }
+
+    /// <summary>
     /// The Company Profile lookup of <paramref name="ticker"/>, as JSON, from ApiService. A rejected ticker is 400; an
     /// ApiService failure (429 too many lookups, 503 SEC EDGAR unreachable) keeps its status code with a safe message.
+    /// It was the <c>Company</c> action until the Company page took that address.
     /// </summary>
     [HttpGet]
     [JsonApiErrors]
-    public async Task<IActionResult> Company([FromQuery] string? ticker, CancellationToken cancellationToken = default) =>
+    public async Task<IActionResult> CompanyProfile([FromQuery] string? ticker, CancellationToken cancellationToken = default) =>
         CompanyLookupRules.TryNormalizeTicker(ticker, out string? normalized)
             ? Json(await _researchApi.GetCompanyAsync(normalized, cancellationToken))
             : InvalidCompanyInput();

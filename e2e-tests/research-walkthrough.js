@@ -3,7 +3,7 @@
  * Sectors page (Sectors 1 to 7, which were Research 2 to 6e on the Sectors tab before the Sectors page shared its panel)
  * the Funds page (Funds 1 to 4: table sort, risk roles, correlation, holdings list), the tabbed page's Funds tab, the
  * Basket page (Research 7b to 7j on its editor, overlap, correlation, growth and risk sections, and Basket 1: the
- * overview against the risk chart), the World page and the tabbed page's World tab, then the Companies tab's 8 steps (spec #242, Company 1 to 8). Run from ui-test.js as
+ * overview against the risk chart), the World page and the tabbed page's World tab, then the Company page's 9 steps (spec #242, Company 1 to 9). Run from ui-test.js as
  * Test 9c.
  *
  * Needs the ApiService started in Development with E2E_SEED_RESEARCH=true, which stores small fixture snapshots
@@ -1513,8 +1513,8 @@ async function barHeights(page) {
 }
 
 /**
- * The Companies tab (spec #242): search, the profile, filings, press releases (spec #271), Back, a fund, reduced
- * motion and a phone.
+ * The Company page (spec #242, at /Research/Company): search, the profile, filings, press releases (spec #271), Back,
+ * a fund, reduced motion, a phone, and the address (a tracked fund's page, a pre-filled query, a rejected ticker).
  * @param {{browser: import('playwright').Browser, context: import('playwright').BrowserContext,
  *          page: import('playwright').Page, base: string, pass: Function, fail: Function, watch: Function}} suite -
  *     The walkthrough's browser, signed-in context and page.
@@ -1523,17 +1523,16 @@ async function barHeights(page) {
 async function runCompaniesSteps({browser, context, page, base, pass, fail, watch}) {
     const panel = '#research-panel-companies';
 
-    // Company 1: the tab puts itself in the address and opens on an empty search with no suggested companies.
+    // Company 1: the Company page opens on an empty search with no suggested companies.
     await step('Company 1', fail, async () => {
-        await page.goto(`${base}/Research`, {waitUntil: 'networkidle', timeout: TIMEOUT});
-        await page.click('#research-tab-companies');
+        await page.goto(`${base}/Research/Company`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         const url = new URL(page.url());
         const placeholder = await page.locator('#research-company-input').getAttribute('placeholder');
         const options = await page.locator('#research-company-suggestions [role="option"]').count();
         const profileHidden = await page.locator(`${panel} [data-research-company-profile]`).isHidden();
-        if (url.searchParams.get('tab') === 'companies' && placeholder === 'e.g. MSFT or Microsoft' && options === 0 &&
+        if (url.pathname.endsWith('/Research/Company') && placeholder === 'e.g. MSFT or Microsoft' && options === 0 &&
             profileHidden) {
-            pass('Company 1: the Companies tab sets tab=companies and opens on an empty search');
+            pass('Company 1: /Research/Company opens on an empty search');
         } else {
             fail(`Company 1: url "${page.url()}", placeholder "${placeholder}", options ${options}, profile hidden ${profileHidden}`);
         }
@@ -1560,11 +1559,11 @@ async function runCompaniesSteps({browser, context, page, base, pass, fail, watc
         await page.waitForFunction(() => document.getElementById('research-live').textContent.includes('Example Corp'),
             null, {timeout: TIMEOUT});
         const name = (await page.locator(`${panel} [data-field="name"]`).textContent()).trim();
-        const ticker = new URL(page.url()).searchParams.get('ticker');
-        if (active && name === 'Example Corp' && ticker === 'EXMP') {
-            pass('Company 2: arrow keys and Enter load Example Corp, set ticker=EXMP and announce it');
+        const path = new URL(page.url()).pathname;
+        if (active && name === 'Example Corp' && path.endsWith('/Research/Company/EXMP')) {
+            pass('Company 2: arrow keys and Enter load Example Corp, put EXMP in the path and announce it');
         } else {
-            fail(`Company 2: active "${active}", name "${name}", ticker "${ticker}"`);
+            fail(`Company 2: active "${active}", name "${name}", path "${path}"`);
         }
     });
 
@@ -1606,7 +1605,7 @@ async function runCompaniesSteps({browser, context, page, base, pass, fail, watc
             const exampleCorpHidden = await page.locator(`${panel} [data-research-company-releases]`).isHidden();
             const other = watch(await context.newPage());
             try {
-                await other.goto(`${base}/Research?tab=companies&ticker=EXGL`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+                await other.goto(`${base}/Research/Company/EXGL`, {waitUntil: 'networkidle', timeout: TIMEOUT});
                 await other.waitForSelector(`${panel} [data-research-company-profile]:not([hidden])`, {timeout: TIMEOUT});
                 const exampleGlobalHidden = await other.locator(`${panel} [data-research-company-releases]`).isHidden();
                 if (exampleCorpHidden && exampleGlobalHidden) {
@@ -1642,7 +1641,7 @@ async function runCompaniesSteps({browser, context, page, base, pass, fail, watc
         await step('Releases 2', fail, async () => {
             const other = watch(await context.newPage());
             try {
-                await other.goto(`${base}/Research?tab=companies&ticker=EXGL`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+                await other.goto(`${base}/Research/Company/EXGL`, {waitUntil: 'networkidle', timeout: TIMEOUT});
                 const empty = other.locator(`${panel} [data-research-releases-empty]`);
                 await empty.waitFor({state: 'visible', timeout: TIMEOUT});
                 const text = (await empty.textContent()).trim();
@@ -1662,29 +1661,34 @@ async function runCompaniesSteps({browser, context, page, base, pass, fail, watc
     await step('Company 5', fail, async () => {
         await page.goBack({waitUntil: 'commit'});
         await page.waitForSelector(`${panel} [data-research-company-profile][hidden]`, {state: 'attached', timeout: TIMEOUT});
-        const ticker = new URL(page.url()).searchParams.get('ticker');
+        const path = new URL(page.url()).pathname;
         const value = await page.locator('#research-company-input').inputValue();
-        if (!ticker && value === '' && await page.locator(panel).isVisible()) {
-            pass('Company 5: Back returns to the empty search on the Companies tab');
+        if (path.endsWith('/Research/Company') && value === '' && await page.locator(panel).isVisible()) {
+            pass('Company 5: Back returns to the empty search at /Research/Company');
         } else {
             fail(`Company 5: url "${page.url()}", input "${value}"`);
         }
     });
 
-    // Company 6: a fund ticker says so and links to the Funds tab.
+    // Company 6: a fund Research does not track says so and links to the Funds page; a tracked fund's ticker opens that
+    // fund's page instead, keeping the basket.
     await step('Company 6', fail, async () => {
+        await page.goto(`${base}/Research/Company?basket=SPY`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         const input = page.locator('#research-company-input');
         await input.fill('EXFD');
         await input.press('Enter');
         const message = page.locator(`${panel} [data-research-company-message]`);
         await message.waitFor({state: 'visible', timeout: TIMEOUT});
         const text = await message.textContent();
-        await message.locator('a', {hasText: 'Funds tab'}).click();
-        const fundsSelected = await page.locator('#research-tab-funds').getAttribute('aria-selected');
-        if (/is a fund/.test(text) && fundsSelected === 'true') {
-            pass('Company 6: a fund ticker says it is a fund and its link opens the Funds tab');
+        const fundsLink = new URL(await message.locator('a').getAttribute('href'), base);
+        await input.fill('qqq');
+        await Promise.all([page.waitForURL(/\/Research\/Fund\/QQQ/, {timeout: TIMEOUT}), input.press('Enter')]);
+        const opened = new URL(page.url());
+        if (/is a fund/.test(text) && fundsLink.pathname.endsWith('/Research/Funds') && fundsLink.searchParams.get('basket') === 'SPY' &&
+            opened.pathname.endsWith('/Research/Fund/QQQ') && opened.searchParams.get('basket') === 'SPY') {
+            pass(`Company 6: EXFD says it is a fund and links to the Funds page; QQQ opens ${opened.pathname}${opened.search}`);
         } else {
-            fail(`Company 6: message "${text}", Funds selected "${fundsSelected}"`);
+            fail(`Company 6: message "${text}", funds link "${fundsLink}", QQQ opened "${opened}"`);
         }
     });
 
@@ -1693,7 +1697,7 @@ async function runCompaniesSteps({browser, context, page, base, pass, fail, watc
         const reduced = watch(await context.newPage());
         try {
             await reduced.emulateMedia({reducedMotion: 'reduce'});
-            await reduced.goto(`${base}/Research?tab=companies&ticker=EXMP`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await reduced.goto(`${base}/Research/Company/EXMP`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             await reduced.waitForSelector(`${panel} .research-companies__bar`, {timeout: TIMEOUT});
             const atOnce = await barHeights(reduced);
             await reduced.waitForTimeout(1200);
@@ -1719,7 +1723,7 @@ async function runCompaniesSteps({browser, context, page, base, pass, fail, watc
         });
         try {
             const mobile = watch(await phone.newPage());
-            await mobile.goto(`${base}/Research?tab=companies&ticker=EXMP`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await mobile.goto(`${base}/Research/Company/EXMP`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             await mobile.waitForSelector(`${panel} [data-research-company-table] table`, {timeout: TIMEOUT});
             const wide = await scrollsSideways(mobile);
             const chartsShown = await mobile.locator(`${panel} [data-research-company-charts]`).isVisible();
@@ -1732,6 +1736,26 @@ async function runCompaniesSteps({browser, context, page, base, pass, fail, watc
             }
         } finally {
             await phone.close();
+        }
+    });
+
+    // Company 9: the address. /Research/Company/QQQ redirects to the fund's page with the basket; ?q= pre-fills the search
+    // with its suggestions open; a rejected ticker gets the 404 "not found" page.
+    await step('Company 9', fail, async () => {
+        await page.goto(`${base}/Research/Company/qqq?basket=SPY`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        const redirected = new URL(page.url());
+        await page.goto(`${base}/Research/Company?q=exa`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await page.waitForSelector('#research-company-suggestions [role="option"]', {timeout: TIMEOUT}).catch(() => {});
+        const prefilled = await page.locator('#research-company-input').inputValue();
+        const suggested = await page.locator('#research-company-suggestions .research-companies__option-ticker').allTextContents();
+        const rejected = await page.goto(`${base}/Research/Company/%3Cscript%3E`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        const title = (await page.locator('h1').first().textContent()).trim();
+        const search = await page.locator('#research-not-found-search').count();
+        if (redirected.pathname.endsWith('/Research/Fund/QQQ') && redirected.searchParams.get('basket') === 'SPY' &&
+            prefilled === 'exa' && suggested.includes('EXMP') && rejected.status() === 404 && title === 'Company not found' && search === 1) {
+            pass(`Company 9: /Research/Company/qqq opens ${redirected.pathname}${redirected.search}; ?q=exa suggests ${suggested.join(', ')}; <script> is a 404`);
+        } else {
+            fail(`Company 9: redirected "${redirected}", prefilled "${prefilled}" ${JSON.stringify(suggested)}, rejected ${rejected.status()} "${title}" search ${search}`);
         }
     });
 }

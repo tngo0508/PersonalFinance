@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.7.0] - 2026-11-01
+
+### Added
+
+- **Research Company page**: the company lookup has its own page at `/Research/Company`, opened from the Research search and not linked from the main menu yet.
+  - `/Research/Company/MSFT` opens that company's profile, and each lookup keeps its ticker in the address, so Back returns to the previous one.
+  - `?q=` fills in the search with its suggestions open.
+  - A fund Research tracks opens that fund's page instead, keeping your basket. Another fund says it is a fund and links to the Funds page.
+  - An address that does not name a company gets a "not found" page with a search box.
+
 ## [17.6.0] - 2026-11-01
 
 ### Added

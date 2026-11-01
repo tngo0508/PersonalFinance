@@ -150,7 +150,8 @@ public class ResearchWebControllerTests
         Assert.Equal(
             [
                 nameof(ResearchController.Basket),
-                nameof(ResearchController.Company), nameof(ResearchController.Fund), nameof(ResearchController.FundIndustries),
+                nameof(ResearchController.Company), nameof(ResearchController.CompanyProfile), nameof(ResearchController.Fund),
+                nameof(ResearchController.FundIndustries),
                 nameof(ResearchController.Funds),
                 nameof(ResearchController.Home),
                 nameof(ResearchController.Index),
