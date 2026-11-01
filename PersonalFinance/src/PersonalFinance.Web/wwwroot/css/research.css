@@ -1858,3 +1858,128 @@ button.research-ranked__row:focus-visible {
     font-weight: var(--app-font-weight-semibold);
     font-variant-numeric: tabular-nums;
 }
+
+/* ---------------------------------------------------------------------------
+   Fund page (/Research/Fund/{ticker}): the header with the fund's figures and
+   the basket toggle, then its sections, one under another.
+   --------------------------------------------------------------------------- */
+.research-fund-header__ticker {
+    margin: 0;
+    color: var(--app-brand-text);
+    font-family: var(--app-font-mono);
+    font-size: var(--app-font-size-large);
+    font-weight: var(--app-font-weight-bold);
+}
+
+.research-fund-header__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    margin-top: var(--app-spacing-m);
+}
+
+.research-fund-header__actions a.research-chip {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+/* The toggle says "Add to basket" until pressed, then "In your basket". */
+.research-basket-toggle[aria-pressed="true"] .research-basket-toggle__add,
+.research-basket-toggle[aria-pressed="false"] .research-basket-toggle__remove {
+    display: none;
+}
+
+.research-fund-sections {
+    display: grid;
+    gap: var(--app-spacing-l);
+    min-width: 0;
+}
+
+.research-similar__columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: var(--app-spacing-l);
+    margin-top: var(--app-spacing-m);
+}
+
+.research-similar__title {
+    margin: 0 0 var(--app-spacing-s);
+    font-size: var(--app-font-size-base);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-similar__list,
+.research-fund-holdings,
+.research-fund-money__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.research-similar__list li,
+.research-fund-holdings__item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--app-spacing-xs) var(--app-spacing-s);
+    padding: var(--app-spacing-xs) 0;
+    border-bottom: 1px solid var(--app-border);
+}
+
+.research-fund-holdings__item a {
+    flex: 1 1 12rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.research-fund-holdings__category {
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-fund-holdings__percent,
+.research-fund-money__percent {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+}
+
+.research-fund-money .research-view-toggle {
+    margin-top: var(--app-spacing-s);
+}
+
+.research-fund-money__part[hidden],
+#research-fund-offices-status[hidden] {
+    display: none;
+}
+
+.research-fund-money__item {
+    display: grid;
+    grid-template-columns: minmax(0, 12rem) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--app-spacing-s);
+    padding: var(--app-spacing-xs) 0;
+}
+
+.research-fund-money__name {
+    overflow-wrap: anywhere;
+}
+
+/* The bar's length is the share, set inline as --research-share (0 to 1). */
+.research-fund-money__bar {
+    height: 0.625rem;
+    border-radius: var(--app-radius-s);
+    background: linear-gradient(to right, var(--app-brand) calc(var(--research-share, 0) * 100%), var(--app-surface-secondary) 0);
+}
+
+/* The Fund page's own fund in the risk chart: a ring and a darker label. */
+.research-risk__point--highlight .research-risk__bubble {
+    fill-opacity: 1;
+    stroke: var(--app-text);
+    stroke-width: 2.5;
+}
+
+.research-risk__label--highlight {
+    fill: var(--app-text);
+}

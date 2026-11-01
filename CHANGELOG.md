@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.6.0] - 2026-11-01
+
+### Added
+
+- **Research Fund page**: each tracked fund has its own page at `/Research/Fund/{ticker}`, opened from the Research search and not linked from the main menu yet.
+  - A header with the fund's name, role, net assets, expense ratio (or "not filed") and 1-, 3- and 5-year annualized returns, with "Add to basket" and "Compare all funds".
+  - Growth of 100 in the fund, compared with your basket or any other tracked fund; risk vs return with the fund ringed and your basket's diamond.
+  - Similar funds by holdings overlap and by correlation, its 10 largest holdings linked to the company search by name, and where its money goes by issuer country or, on demand, by SEC office.
+  - An unknown fund gets a "not found" page with status 404 and a search box. A section whose data has not loaded shows its own "couldn't load" message; the holdings still show.
+
 ## [17.5.0] - 2026-11-01
 
 ### Added

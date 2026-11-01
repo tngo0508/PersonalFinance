@@ -15,6 +15,10 @@
  * federal funds rate) and the configured recessions, and a marker shows the basket's worst fall from a high. The
  * browser only weights and compounds the monthly returns of the snapshots.
  *
+ * On the Fund page the card carries `data-performance-fund="TICKER"`: that fund takes the basket's place as the one
+ * line drawn, and "Compare with" offers "Your basket" (first, and chosen when the basket holds a fund with returns)
+ * besides every other Tracked Fund; the wording names the fund where it would name the basket.
+ *
  * Reads the fund returns (`research-fund-returns-data`), macro (`research-macro-data`) and funds (`research-funds-data`,
  * for names) data islands, and the basket from `window.ResearchBasket`, redrawing on `research:basketchange`.
  */
@@ -37,6 +41,12 @@
     const TOOLTIP_ID = 'research-performance-tooltip';
     const READOUT_ID = 'research-performance-readout';
     const DEFAULT_COMPARE = 'VT';
+    const FUND_ATTRIBUTE = 'data-performance-fund';
+    // The "Compare with" value of the basket, on the Fund page; never a ticker, which is upper case.
+    const BASKET_COMPARE = 'basket';
+    // The keys that name the basket, each with a Fund page twin (Research.Js.Performance.Fund.*) naming the fund.
+    const FUND_KEYS = new Set(['BasketMinus', 'DiffTitle', 'DiffTitleNone', 'AllInBasket', 'ChartBelowCompare', 'ChartWorst',
+        'LegendWorst', 'GrowthReal', 'TotalReturnLabel']);
     const MIN_MONTHS = 3;
     const MARGIN = { right: 64, left: 48 };
     const MAIN = { top: 16, height: 270 };
@@ -299,7 +309,8 @@
      * @param {Object} full - The full model.
      * @param {{from: number, to: number}} range - The period, as indexes into the full model's months.
      * @param {boolean} real - True to adjust for inflation.
-     * @param {string|null} compare - The ticker to compare the basket with, or null.
+     * @param {string|null} compare - The ticker to compare the basket with, "basket" for the basket on the Fund page, or
+     *     null.
      * @returns {Object} The view.
      */
     function periodView (full, range, real, compare) {
@@ -327,15 +338,20 @@
                 afterInflation: inflation === null ? null : ((1 + nominal.total / 100) / (1 + inflation / 100) - 1) * 100
             };
         };
-        const lines = full.fundReturns.map(({ fund, returns }) => line(fund.ticker, fund.slot, slice(returns), false));
-        const basket = line(PFI18n.t('Research.Js.Common.YourBasket'), 0, slice(full.basketReturns), true);
+        const lines = full.subjectLabel
+            ? []
+            : full.fundReturns.map(({ fund, returns }) => line(fund.ticker, fund.slot, slice(returns), false));
+        const basket = line(full.subjectLabel || PFI18n.t('Research.Js.Common.YourBasket'), 0, slice(full.basketReturns), true);
         lines.push(basket);
         let comparison = null;
-        if (compare && full.series.has(compare)) {
-            const raw = full.returnsOf(compare).slice(range.from, range.to + 1);
+        const compareReturns = compare === BASKET_COMPARE
+            ? full.compareBasket
+            : (compare && full.series.has(compare) ? full.returnsOf(compare) : null);
+        if (compareReturns) {
+            const raw = compareReturns.slice(range.from, range.to + 1);
             if (raw.every((r) => r !== null)) {
                 const values = growth(raw, shownDeflators, start).values;
-                comparison = { label: compare, values, difference: basket.values.map((v, i) => v - values[i]) };
+                comparison = { label: compareLabel(compare), values, difference: basket.values.map((v, i) => v - values[i]) };
             }
         }
         const rates = [base, ...months].map((m) => (full.rates.has(m) ? full.rates.get(m) : null));
@@ -344,6 +360,42 @@
             .filter((p) => p.end >= start && p.start <= end)
             .map((p) => ({ ...p, from: p.start < start ? base : addMonths(p.start, -1), to: p.end > end ? end : p.end }));
         return { start, end, base, months, lines, inflation, comparison, rates, bands, real: Boolean(shownDeflators) };
+    }
+
+    /**
+     * The name of a "Compare with" choice.
+     * @param {string} compare - A ticker, or "basket".
+     * @returns {string} The ticker, or "Your basket".
+     */
+    function compareLabel (compare) {
+        return compare === BASKET_COMPARE ? PFI18n.t('Research.Js.Common.YourBasket') : compare;
+    }
+
+    /**
+     * The basket's monthly returns over the full model's months, for comparing a fund with it on the Fund page: each
+     * month the weighted average of its funds' returns, the weights of a fund without one spread over the rest.
+     * @param {Object} full - The full model, of the fund.
+     * @param {Object[]} basket - The basket's funds (ticker, share).
+     * @returns {(number|null)[]|null} The returns (null for a month none of its funds has), or null when none of its
+     *     funds has returns.
+     */
+    function basketReturnsOver (full, basket) {
+        const funds = basket.filter((f) => full.series.has(f.ticker))
+            .map((f) => ({ share: f.share, returns: full.returnsOf(f.ticker) }));
+        if (funds.length === 0) {
+            return null;
+        }
+        return full.months.map((_, i) => {
+            let weight = 0;
+            let sum = 0;
+            funds.forEach(({ share, returns }) => {
+                if (returns[i] !== null) {
+                    weight += share;
+                    sum += share * returns[i];
+                }
+            });
+            return weight > 0 ? sum / weight : null;
+        });
     }
 
     /**
@@ -384,6 +436,7 @@
         const readout = document.getElementById(READOUT_ID);
         const viewButtons = Array.from(card.querySelectorAll('[data-performance-view]'));
         const rangeButtons = Array.from(card.querySelectorAll('[data-performance-range]'));
+        const fundTicker = card.getAttribute(FUND_ATTRIBUTE) || null;
         const tooltip = page.createTooltip(document.getElementById(TOOLTIP_ID), (line, rows) => rows.map((r, i) =>
             line(r, i === 0 ? 'research-tooltip__name' : 'research-tooltip__muted')));
         let real = false;
@@ -400,18 +453,37 @@
         let settingBrush = false;
 
         /**
-         * Fill the "Compare with" list with the Tracked Funds that have returns and aren't in the basket.
+         * A text of the chart, naming the fund on the Fund page where it would name the basket.
+         * @param {string} key - The key under Research.Js.Performance, e.g. "DiffTitle".
+         * @param {Object} [args] - The text's values.
+         * @returns {string} The text.
+         */
+        function say (key, args) {
+            return fundTicker && FUND_KEYS.has(key)
+                ? PFI18n.t(`Research.Js.Performance.Fund.${key}`, { ...args, fund: fundTicker })
+                : PFI18n.t(`Research.Js.Performance.${key}`, args);
+        }
+
+        /**
+         * Fill the "Compare with" list with the Tracked Funds that have returns and aren't in the basket; on the Fund
+         * page, with the basket (when it holds a fund with returns) and every other Tracked Fund.
          * @param {Object[]} basket - The basket's funds.
          * @returns {void}
          */
         function fillCompare (basket) {
-            const inBasket = new Set(basket.map((f) => f.ticker));
-            const choices = data.funds.map((f) => f.ticker).filter((t) => !inBasket.has(t));
+            const left = fundTicker ? new Set([fundTicker]) : new Set(basket.map((f) => f.ticker));
+            const choices = data.funds.map((f) => f.ticker).filter((t) => !left.has(t));
+            const withBasket = Boolean(fundTicker && full.compareBasket);
+            if (withBasket) {
+                choices.unshift(BASKET_COMPARE);
+            }
             if (!choices.includes(compare)) {
-                compare = choices.includes(DEFAULT_COMPARE) ? DEFAULT_COMPARE : (choices[0] || null);
+                compare = withBasket ? BASKET_COMPARE : (choices.includes(DEFAULT_COMPARE) ? DEFAULT_COMPARE : (choices[0] || null));
             }
             compareSelect.replaceChildren(...choices.map((ticker) => {
-                const option = element('option', null, names.has(ticker) ? `${ticker}, ${names.get(ticker)}` : ticker);
+                const option = element('option', null, ticker === BASKET_COMPARE
+                    ? compareLabel(ticker)
+                    : (names.has(ticker) ? `${ticker}, ${names.get(ticker)}` : ticker));
                 option.value = ticker;
                 option.selected = ticker === compare;
                 return option;
@@ -436,7 +508,7 @@
             });
             if (current.comparison) {
                 rows.push(valueRow(current.comparison.label, current.comparison.values[index]));
-                rows.push(PFI18n.t('Research.Js.Performance.BasketMinus',
+                rows.push(say('BasketMinus',
                     { ticker: current.comparison.label, value: formatPoints(current.comparison.difference[index]) }));
             }
             const rate = current.rates[index];
@@ -552,7 +624,7 @@
                 .attr('class', (d) => (d.line.isBasket ? 'research-performance__end research-performance__end--basket' : 'research-performance__end'))
                 .attr('x', width - MARGIN.right + 6).attr('y', (d) => d.labelY).attr('dy', '0.32em')
                 .text((d) => PFI18n.t('Research.Js.Performance.EndLabel', {
-                    label: d.line.isBasket ? PFI18n.t('Research.Js.Performance.Basket') : d.line.label,
+                    label: d.line.isBasket && !fundTicker ? PFI18n.t('Research.Js.Performance.Basket') : d.line.label,
                     value: PFI18n.formatNumber(Math.round(d.line.values[d.line.values.length - 1]))
                 }));
 
@@ -582,8 +654,8 @@
 
             // Difference panel: the basket minus the chosen fund, blue above zero and orange below.
             title(current.comparison
-                ? PFI18n.t('Research.Js.Performance.DiffTitle', { ticker: current.comparison.label })
-                : PFI18n.t('Research.Js.Performance.DiffTitleNone'), DIFF.top);
+                ? say('DiffTitle', { ticker: current.comparison.label })
+                : say('DiffTitleNone'), DIFF.top);
             if (current.comparison) {
                 grid(svg, yDiff, 3, (t) => (t > 0 ? `+${PFI18n.formatNumber(t)}` : PFI18n.formatNumber(t)), width);
                 const area = d3.area().x((_, i) => at(i)).y0(yDiff(0)).y1((d) => yDiff(d));
@@ -604,8 +676,8 @@
                 svg.append('text').attr('class', 'research-performance__empty').attr('x', MARGIN.left)
                     .attr('y', DIFF.top + DIFF.height / 2)
                     .text(compare
-                        ? PFI18n.t('Research.Js.Performance.NoReturns', { ticker: compare })
-                        : PFI18n.t('Research.Js.Performance.AllInBasket'));
+                        ? PFI18n.t('Research.Js.Performance.NoReturns', { ticker: compareLabel(compare) })
+                        : say('AllInBasket'));
             }
 
             svg.append('g').attr('class', 'research-performance__axis')
@@ -645,14 +717,14 @@
                 PFI18n.t(current.real ? 'Research.Js.Performance.ChartLabelReal' : 'Research.Js.Performance.ChartLabel',
                     { from: formatMonth(current.start), to: formatMonth(current.end), lines: words }),
                 current.comparison
-                    ? PFI18n.t('Research.Js.Performance.ChartBelowCompare', { ticker: current.comparison.label })
+                    ? say('ChartBelowCompare', { ticker: current.comparison.label })
                     : PFI18n.t('Research.Js.Performance.ChartBelow')
             ];
             if (shaded) {
                 sentences.push(PFI18n.t('Research.Js.Performance.ChartShaded', { shaded }));
             }
             if (basket.bottom) {
-                sentences.push(PFI18n.t('Research.Js.Performance.ChartWorst',
+                sentences.push(say('ChartWorst',
                     { value: formatPercent(basket.worstFall), month: formatMonth(basket.bottom) }));
             }
             chartHost.setAttribute('aria-label', sentences.join(' '));
@@ -754,7 +826,7 @@
                 const item = element('li', 'research-performance__legend-item');
                 const swatch = element('span', 'research-performance__worst-swatch');
                 swatch.setAttribute('aria-hidden', 'true');
-                item.append(swatch, PFI18n.t('Research.Js.Performance.LegendWorst'));
+                item.append(swatch, say('LegendWorst'));
                 legend.append(item);
             }
         }
@@ -768,7 +840,7 @@
             const period = formatSpan(current.start, current.end);
             const items = [
                 {
-                    label: PFI18n.t(current.real ? 'Research.Js.Performance.GrowthReal' : 'Research.Js.Performance.TotalReturnLabel'),
+                    label: say(current.real ? 'GrowthReal' : 'TotalReturnLabel'),
                     value: formatPercent(basket.total),
                     note: PFI18n.t('Research.Js.Performance.PerYear', { value: formatPercent(basket.annualized), period })
                 },
@@ -886,13 +958,20 @@
         }
 
         /**
-         * Rebuild for the basket: its months, the comparison list and the whole period.
+         * Rebuild for the basket (on the Fund page, for the fund, compared with the basket): its months, the comparison
+         * list and the whole period.
          * @returns {void}
          */
         function draw () {
             viewButtons.forEach((button) => button.setAttribute('aria-pressed', String((button.dataset.performanceView === 'real') === real)));
             const basket = window.ResearchBasket ? window.ResearchBasket.get() : [];
-            full = fullModel(data, macro, basket);
+            full = fundTicker
+                ? fullModel(data, macro, [{ ticker: fundTicker, share: 1, slot: 0 }])
+                : fullModel(data, macro, basket);
+            if (full && fundTicker) {
+                full.subjectLabel = fundTicker;
+                full.compareBasket = basketReturnsOver(full, basket);
+            }
             prompt.hidden = Boolean(full);
             view.hidden = !full;
             crosshair = null;

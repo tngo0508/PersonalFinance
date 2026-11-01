@@ -1,0 +1,311 @@
+@model ResearchFundPageViewModel
+@using System.Globalization
+@using PersonalFinance.Shared.DTOs.Research
+@using PersonalFinance.Shared.Helpers
+
+@{
+    TrackedFundDto fund = Model.Fund;
+    ViewData["Title"] = fund.Ticker + " · " + L["Research.Title"].Value;
+    CultureInfo culture = CultureInfo.CurrentCulture;
+    FundReturnsSnapshotDto? returns = Model.FundReturns;
+    MacroSnapshotDto? macro = Model.Macro;
+    FundFactsSnapshotDto? facts = Model.FundFacts;
+    bool showReturns = returns is not null;
+    string Percent(decimal? value, int digits) => value is { } v
+        ? (v / 100m).ToString("P" + digits.ToString(CultureInfo.InvariantCulture), culture)
+        : "—";
+    string Signed(decimal? value) => value is { } v
+        ? (v < 0 ? "−" : "+") + (Math.Abs(v) / 100m).ToString("P1", culture)
+        : "—";
+    (int Years, string LabelKey)[] windows =
+    [
+        (1, "Research.Common.OneYear"), (3, "Research.Common.ThreeYears"), (5, "Research.Common.FiveYears"),
+    ];
+    const int defaultWindow = 3;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/research.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/research-funds.css" asp-append-version="true"/>
+}
+
+@* Research Fund: one Tracked Fund at /Research/Fund/{ticker}. A header with its figures and the basket toggle, then
+   growth (this fund, compared with the basket or any tracked fund), risk (every fund, this one highlighted), similar
+   funds, what it holds and where its money goes. It reads the funds, fund returns, macro, fund facts, fund overlap and
+   fund exposure data; each section shows its own Unavailable State when its data has never loaded. *@
+<div class="research research-fund-page" data-research-fund="@fund.Ticker">
+    <partial name="_ResearchNav" model="@("funds")"/>
+
+    <header class="research-header research-fund-header">
+        <div class="research-fund-header__main">
+            <p class="research-fund-header__ticker">@fund.Ticker</p>
+            <h1 class="research-header__title">@fund.Name</h1>
+            @if (fund.Role is not null)
+            {
+                <p class="research-header__subtitle">@fund.Role</p>
+            }
+            <div class="research-fund-header__actions">
+                <button type="button" class="research-chip research-basket-toggle" data-research-basket-toggle="@fund.Ticker" aria-pressed="false">
+                    <span class="research-basket-toggle__add">@L["Research.Fund.AddToBasket"]</span>
+                    <span class="research-basket-toggle__remove">@L["Research.Fund.InBasket"]</span>
+                </button>
+                <a class="research-chip" href="@Url.Action("Funds", "Research")" data-research-link>@L["Research.Fund.CompareAll"]</a>
+            </div>
+        </div>
+        <dl class="research-basket-overview__figures research-fund-header__figures">
+            <div class="research-basket-overview__figure">
+                <dt><research-term key="netAssets">@L["Research.Fund.NetAssets"]</research-term></dt>
+                <dd id="research-fund-net-assets">@(Model.NetAssets is { } assets ? MoneyFormatter.FormatWhole(assets, "USD", culture) : "—")</dd>
+            </div>
+            <div class="research-basket-overview__figure">
+                <dt><research-term key="fee">@L["Research.Fund.Fee"]</research-term></dt>
+                <dd id="research-fund-fee">@(Model.ExpenseRatio is { } fee ? Percent(fee, 2) : Model.FactsLoaded ? L["Research.Funds.Page.NotFiled"].Value : "—")</dd>
+            </div>
+            @foreach ((int years, string labelKey) in windows)
+            {
+                <div class="research-basket-overview__figure">
+                    <dt><research-term key="annualized">@L.Named("Research.Fund.ReturnOver", ("span", L[labelKey].Value))</research-term></dt>
+                    <dd data-fund-return="@years">@Signed(Model.AnnualizedReturns[years])</dd>
+                </div>
+            }
+        </dl>
+        <p class="research-header__pill">@L["Research.Header.Disclaimer"]</p>
+    </header>
+
+    @if (!showReturns)
+    {
+        <p class="research-overlap__note" id="research-fund-no-returns" role="status">@L["Research.Fund.NoReturns"]</p>
+    }
+
+    <div class="research-fund-sections">
+        <section class="research-basket-section" id="fund-growth" aria-label="@L["Research.Basket.Section.Growth"]">
+            <div class="research-card research-performance" id="research-performance" data-performance-fund="@fund.Ticker">
+                <h2 class="research-card__title">@L["Research.Fund.Growth.Title"]</h2>
+                @if (!showReturns)
+                {
+                    <partial name="_UnavailableState" model="Model.ReturnsUnavailableState"/>
+                }
+                else
+                {
+                    <p class="research-card__subtitle">@L.Named("Research.Fund.Growth.Subtitle", ("ticker", fund.Ticker))</p>
+                    <div class="research-correlation__controls">
+                        <div class="research-view-toggle" role="group" aria-label="@L["Research.Performance.ValuesLabel"]">
+                            <button type="button" class="research-view-toggle__button" data-performance-view="nominal" aria-pressed="true">@L["Research.Performance.Nominal"]</button>
+                            <button type="button" class="research-view-toggle__button" data-performance-view="real" aria-pressed="false"
+                                    disabled="@(macro is null)" aria-describedby="@(macro is null ? "research-performance-real-note" : null)">@L["Research.Performance.Real"]</button>
+                        </div>
+                    </div>
+                    @if (macro is null)
+                    {
+                        <p class="research-overlap__note" id="research-performance-real-note">@L["Research.Performance.RealMissing"]</p>
+                    }
+                    <p class="research-overlap__prompt" id="research-performance-prompt">@L["Research.Fund.Growth.NoReturns"]</p>
+                    <div class="research-overlap__view" id="research-performance-view" hidden>
+                        <ul class="research-overlap__callouts" id="research-performance-callouts" aria-label="@L["Research.Performance.CalloutsLabel"]"></ul>
+                        <div class="research-performance__compare">
+                            <label for="research-performance-compare">@L["Research.Performance.Compare"]</label>
+                            <select class="research-performance__select" id="research-performance-compare"></select>
+                        </div>
+                        <figure class="research-performance__figure">
+                            <div class="research-performance__chart" id="research-performance-chart" tabindex="0" role="group"
+                                 aria-describedby="research-performance-keys"></div>
+                            <p class="visually-hidden" id="research-performance-keys">@L["Research.Performance.Keys"]</p>
+                            <p class="visually-hidden" id="research-performance-readout" aria-live="polite"></p>
+                            <ul class="research-performance__legend" id="research-performance-legend" aria-label="@L["Research.Performance.LegendLabel"]"></ul>
+                            <div class="research-performance__range">
+                                <div class="research-view-toggle" role="group" aria-label="@L["Research.Performance.PeriodLabel"]">
+                                    <button type="button" class="research-view-toggle__button" data-performance-range="12" aria-pressed="false">@L["Research.Common.OneYear"]</button>
+                                    <button type="button" class="research-view-toggle__button" data-performance-range="36" aria-pressed="false">@L["Research.Common.ThreeYears"]</button>
+                                    <button type="button" class="research-view-toggle__button" data-performance-range="60" aria-pressed="false">@L["Research.Common.FiveYears"]</button>
+                                    <button type="button" class="research-view-toggle__button" data-performance-range="max" aria-pressed="true">@L["Research.Performance.Max"]</button>
+                                </div>
+                                <div class="research-performance__brush" id="research-performance-brush"
+                                     aria-label="@L["Research.Performance.BrushLabel"]"></div>
+                            </div>
+                        </figure>
+                        <div class="research-tooltip" id="research-performance-tooltip" aria-hidden="true" hidden></div>
+                        <div class="research-overlap__table" id="research-performance-table"></div>
+                    </div>
+                }
+                <p class="research-card__source">@L["Research.Source.Performance"]</p>
+            </div>
+        </section>
+
+        <section class="research-basket-section" id="fund-risk" aria-label="@L["Research.Basket.Section.Risk"]">
+            <div class="research-card research-risk" id="research-risk" data-risk-highlight="@fund.Ticker">
+                <h2 class="research-card__title">@L["Research.Tab.Risk"]</h2>
+                @if (!showReturns)
+                {
+                    <partial name="_UnavailableState" model="Model.ReturnsUnavailableState"/>
+                }
+                else
+                {
+                    <p class="research-card__subtitle">@L.Named("Research.Fund.Risk.Subtitle", ("ticker", fund.Ticker))</p>
+                    <div class="research-correlation__controls">
+                        <div class="research-view-toggle" role="group" aria-label="@L["Research.Common.Window"]">
+                            @foreach ((int years, string labelKey) in windows)
+                            {
+                                <button type="button" class="research-view-toggle__button" data-risk-years="@years"
+                                        aria-pressed="@(years == defaultWindow ? "true" : "false")">@L[labelKey]</button>
+                            }
+                        </div>
+                        <button type="button" class="research-chip" id="research-risk-table-toggle" aria-pressed="false"
+                                aria-controls="research-risk-table">@L["Research.Js.Common.ShowTable"]</button>
+                    </div>
+                    <div class="research-risk__roles" id="research-risk-roles" role="group" aria-label="@L["Research.Risk.RolesLabel"]"></div>
+                    @if (facts is null)
+                    {
+                        <p class="research-overlap__note">@L["Research.Risk.FactsMissing"]</p>
+                    }
+                    <figure class="research-risk__figure">
+                        <div class="research-risk__chart" id="research-risk-chart" role="group"></div>
+                        <ul class="research-performance__legend" id="research-risk-legend" aria-label="@L["Research.Risk.LegendLabel"]"></ul>
+                    </figure>
+                    <p class="research-overlap__note" id="research-risk-note"></p>
+                    <div class="research-overlap__table" id="research-risk-table" hidden></div>
+                    <div class="research-tooltip research-risk__card" id="research-risk-card" aria-hidden="true" hidden></div>
+                }
+                <p class="research-card__source">@L["Research.Source.Risk"]</p>
+            </div>
+        </section>
+
+        <section class="research-basket-section" id="fund-similar" aria-label="@L["Research.Fund.Similar.Title"]">
+            <div class="research-card research-similar" id="research-similar" data-research-fund="@fund.Ticker">
+                <h2 class="research-card__title">@L["Research.Fund.Similar.Title"]</h2>
+                <p class="research-card__subtitle">@L["Research.Fund.Similar.Subtitle"]</p>
+                <div class="research-similar__columns">
+                    <div class="research-similar__column">
+                        <h3 class="research-similar__title" id="research-similar-overlap-title"><research-term key="overlap">@L["Research.Fund.Similar.ByOverlap"]</research-term></h3>
+                        @if (Model.FundOverlap is null)
+                        {
+                            <partial name="_UnavailableState" model="Model.OverlapUnavailableState"/>
+                        }
+                        else
+                        {
+                            <ol class="research-similar__list" id="research-similar-overlap" aria-labelledby="research-similar-overlap-title"
+                                data-research-fund-href="@Url.Content("~/Research/Fund/{ticker}")"></ol>
+                        }
+                    </div>
+                    <div class="research-similar__column">
+                        <h3 class="research-similar__title" id="research-similar-correlation-title"><research-term key="correlation">@L["Research.Fund.Similar.ByCorrelation"]</research-term></h3>
+                        @if (!showReturns)
+                        {
+                            <partial name="_UnavailableState" model="Model.ReturnsUnavailableState"/>
+                        }
+                        else
+                        {
+                            <ol class="research-similar__list" id="research-similar-correlation" aria-labelledby="research-similar-correlation-title"
+                                data-research-years="@defaultWindow" data-research-fund-href="@Url.Content("~/Research/Fund/{ticker}")"></ol>
+                        }
+                    </div>
+                </div>
+                <p class="research-overlap__note">@L["Research.Fund.Similar.Note"]</p>
+                <p class="research-card__source">@L["Research.Source.NportReturns"]</p>
+            </div>
+        </section>
+
+        <section class="research-basket-section" id="fund-holdings" aria-label="@L["Research.Fund.Holdings.Title"]">
+            <div class="research-card" id="research-fund-holdings">
+                <h2 class="research-card__title">@L["Research.Fund.Holdings.Title"]</h2>
+                @if (Model.TopHoldings.Count == 0)
+                {
+                    <p class="research-overlap__note">@L["Research.Fund.Holdings.None"]</p>
+                }
+                else
+                {
+                    <p class="research-card__subtitle">@L.Named("Research.Fund.Holdings.Subtitle", ("period", Model.HoldingsPeriod), ("count", (Model.LatestReport?.HoldingCount ?? 0).ToString("N0", culture)))</p>
+                    @* Each holding links to the company search by its name (ADR 0010: never by an identifier), with the basket. *@
+                    <ol class="research-fund-holdings" id="research-fund-holdings-list">
+                        @foreach (FundTopHolding holding in Model.TopHoldings)
+                        {
+                            <li class="research-fund-holdings__item">
+                                <a href="@(Url.Content("~/Research/Company") + FundHoldingsListViewModel.CompanySearchQuery(holding.Name))" data-research-link>@holding.Name</a>
+                                <span class="research-fund-holdings__category">@holding.Category</span>
+                                <span class="research-fund-holdings__percent">@Percent(holding.Percent, 1)</span>
+                            </li>
+                        }
+                    </ol>
+                }
+                <p class="research-card__source">@L["Research.Source.Nport"]</p>
+            </div>
+        </section>
+
+        <section class="research-basket-section" id="fund-money" aria-label="@L["Research.Fund.Money.Title"]">
+            <div class="research-card research-fund-money" id="research-fund-money"
+                 data-industries-url="@Url.Action("FundIndustries", "Research")">
+                <h2 class="research-card__title">@L["Research.Fund.Money.Title"]</h2>
+                <div class="research-view-toggle" role="group" aria-label="@L["Research.Fund.Money.ViewLabel"]">
+                    <button type="button" class="research-view-toggle__button" data-fund-money-view="countries" aria-pressed="true">@L["Research.Fund.Money.ByCountry"]</button>
+                    <button type="button" class="research-view-toggle__button" data-fund-money-view="offices" aria-pressed="false">@L["Research.Fund.Money.ByOffice"]</button>
+                </div>
+                <div class="research-fund-money__part" data-fund-money-part="countries">
+                    @if (Model.Exposure is null)
+                    {
+                        <partial name="_UnavailableState" model="Model.ExposureUnavailableState"/>
+                    }
+                    else
+                    {
+                        <p class="research-card__subtitle"><research-term key="issuer">@L["Research.Fund.Money.CountriesSubtitle"]</research-term></p>
+                        <ol class="research-fund-money__list" id="research-fund-countries">
+                            @foreach (CountryShareDto country in Model.TopCountries)
+                            {
+                                <li class="research-fund-money__item">
+                                    <span class="research-fund-money__name" data-country-code="@country.Code">@country.Code</span>
+                                    <span class="research-fund-money__bar" style="--research-share: @((Math.Min(country.Percent, 100m) / 100m).ToString("0.####", CultureInfo.InvariantCulture))" aria-hidden="true"></span>
+                                    <span class="research-fund-money__percent">@Percent(country.Percent, 1)</span>
+                                </li>
+                            }
+                        </ol>
+                    }
+                </div>
+                <div class="research-fund-money__part" data-fund-money-part="offices" hidden>
+                    <p class="research-card__subtitle"><research-term key="office">@L["Research.Fund.Money.OfficesSubtitle"]</research-term></p>
+                    <p class="research-overlap__note" id="research-fund-offices-status" role="status"></p>
+                    <ol class="research-fund-money__list" id="research-fund-offices"></ol>
+                </div>
+                <p class="research-card__source">@L["Research.Source.WorldBasket"]</p>
+            </div>
+        </section>
+    </div>
+
+    @* Summarises each change of window, comparison or view for screen readers. *@
+    <p class="visually-hidden" id="research-live" aria-live="polite"></p>
+</div>
+
+@* The Tracked Funds (ticker, name, role), read by research-basket.js, research-performance.js ("Compare with") and
+   research-risk.js (names and roles). *@
+<script type="application/json" id="research-funds-data">@Json.Serialize(new { funds = Model.Funds.Funds })</script>
+@if (showReturns)
+{
+    <script type="application/json" id="research-fund-returns-data">@Json.Serialize(returns)</script>
+}
+@if (macro is not null)
+{
+    <script type="application/json" id="research-macro-data">@Json.Serialize(macro)</script>
+}
+@if (facts is not null)
+{
+    <script type="application/json" id="research-fund-facts-data">@Json.Serialize(facts)</script>
+}
+@if (Model.FundOverlap is not null)
+{
+    @* Only the funds and pair figures "Similar funds" ranks: not the shared holdings. *@
+    <script type="application/json" id="research-fund-overlap-data">@Json.Serialize(new { funds = Model.FundOverlap.Funds.Select(f => new { f.Ticker }), pairs = Model.FundOverlap.Pairs.Select(p => new { p.A, p.B, p.Overlap }) })</script>
+}
+
+@section Scripts {
+    <js-strings prefix="Research.Js." />
+    <script src="~/js/research/research-page.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-basket.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-search.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-glossary.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-similar.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-fund.js" asp-append-version="true"></script>
+    @if (showReturns)
+    {
+        <script src="~/lib/d3/d3.min.js"></script>
+        <script src="~/js/research/research-basket-math.js" asp-append-version="true"></script>
+        <script src="~/js/research/research-performance.js" asp-append-version="true"></script>
+        <script src="~/js/research/research-risk.js" asp-append-version="true"></script>
+    }
+}

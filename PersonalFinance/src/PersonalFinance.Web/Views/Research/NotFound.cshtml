@@ -1,0 +1,40 @@
+@model ResearchNotFoundViewModel
+
+@{
+    ViewData["Title"] = L["Research.NotFound.Title"].Value + " · " + L["Research.Title"].Value;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/research.css" asp-append-version="true"/>
+}
+
+@* Research "not found" (status 404): the address names no Tracked Fund, or its ticker was rejected. The large search
+   box and the list of every fund lead on; when the funds data could not be read, its Unavailable State says so. *@
+<div class="research research-not-found">
+    <partial name="_ResearchNav" model="@("funds")"/>
+
+    @if (Model.FundsUnavailableState is not null)
+    {
+        <partial name="_UnavailableState" model="Model.FundsUnavailableState"/>
+    }
+    else
+    {
+        <header class="research-header">
+            <h1 class="research-header__title">@L["Research.NotFound.Title"]</h1>
+            <p class="research-header__subtitle">
+                @(Model.Ticker is null ? L["Research.NotFound.Rejected"] : L.Named("Research.NotFound.Fund", ("ticker", Model.Ticker)))
+            </p>
+        </header>
+        <partial name="_ResearchSearch" model="@(new ResearchSearchViewModel("research-not-found-search", Large: true, CssClass: "research-not-found__search"))"/>
+        <p class="research-not-found__more">
+            <a href="@Url.Action("Funds", "Research")" data-research-link>@L["Research.NotFound.AllFunds"]</a>
+        </p>
+    }
+</div>
+
+@section Scripts {
+    <js-strings prefix="Research.Js." />
+    <script src="~/js/research/research-page.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-basket.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-search.js" asp-append-version="true"></script>
+}
