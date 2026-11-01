@@ -1,28 +1,29 @@
 /* global PFI18n */
 /**
- * Research page, the Fund Basket bar: one to five Tracked Funds the user picks on screen, each with a weight, viewed
- * together by the tabs that use a basket. It is never saved: it lives only in the page's address as
- * `?basket=VTI:60,BND:40` (or `?basket=VTI,BND` for equal weights), replaced on every edit without adding history.
+ * Research pages, the Fund Basket and the Basket page's editor bar: one to five Tracked Funds the user picks on
+ * screen, each with a weight, viewed together by the sections that use a basket. It is never saved: it lives only in
+ * the page's address as `?basket=VTI:60,BND:40` (or `?basket=VTI,BND` for equal weights), replaced on every edit
+ * without adding history.
  *
- * The bar sits between the tab bar and the panels and shows only on a tab whose panel carries `data-research-basket`.
- * Funds are picked from a searchable combobox (ticker or name) grouped by role; each fund is a chip with an optional
+ * In the bar, funds are picked from a searchable combobox (ticker or name) grouped by role; each fund is a chip with an
+ * optional
  * whole-percent weight. Weights that do not add up to 100% are scaled to 100%, with a note saying so; a fund set to
  * 0% is removed; "Use equal weights" goes back to equal shares. A link with untracked funds, repeats, bad weights or
  * more than five funds keeps what it can and says what it left out. The basket starts empty with the picker shown.
  *
- * Reads the Tracked Funds (ticker, name, role) from the Funds tab's JSON data island. Other scripts read the basket
+ * Reads the Tracked Funds (ticker, name, role) from the page's funds JSON data island. Other scripts read the basket
  * through `window.ResearchBasket.get()` and hear changes on the `research:basketchange` document event; the link
  * parser and formatter are exposed as `parse` and `format`. Each Tracked Fund has a fixed colour slot (1 to 8, by its
  * place in the list), `slotOf(ticker)`, so a fund keeps its colour in every view; the ticker always goes with it.
  *
- * A page without the bar (the redesigned Research pages) still has the basket: it is read from the address as it is,
+ * A page without the bar (every Research page but Basket) still has the basket: it is read from the address as it is,
  * and edited only by the "Add to basket" buttons. On every page the basket follows the user between Research pages:
  * `withBasket(href, funds)` puts it on a link, `linkify(root)` rewrites each `a[data-research-link]` on load and on
  * every change, a `[data-research-basket-toggle="TICKER"]` button adds or removes its fund (pressed while in the
  * basket, disabled while the basket is full), and `[data-research-basket-count]` shows how many funds it holds.
  * `ResearchBasket.remove(ticker)` and `ResearchBasket.set(value)` also edit it.
  *
- * On a page without tabs (the Basket page) the bar always shows. There, a `[data-research-basket-preset="VTI:60,…"]`
+ * On the Basket page, a `[data-research-basket-preset="VTI:60,…"]`
  * button replaces the basket with a starting mix, a `[data-research-basket-copy="status-id"]` button copies the page's
  * address and says so in that status element, and each `[data-research-basket-when="empty|filled"]` part shows only
  * while the basket is empty or holds a fund.
@@ -39,7 +40,6 @@
     const NOTE_ID = 'research-basket-note';
     const EQUAL_ID = 'research-basket-equal';
     const NOTICE_ID = 'research-basket-notice';
-    const PANEL_ATTRIBUTE = 'data-research-basket';
     const PARAM = 'basket';
     const MAX_FUNDS = 5;
     const SLOT_COUNT = 8;
@@ -720,17 +720,6 @@
     }
 
     /**
-     * Show the bar only on a tab whose panel uses the basket.
-     * @param {HTMLElement} bar - The bar element.
-     * @param {string|null} tabId - The selected tab's id.
-     * @returns {void}
-     */
-    function showFor (bar, tabId) {
-        const panel = tabId ? document.getElementById(`research-panel-${tabId}`) : null;
-        bar.hidden = !(panel && panel.hasAttribute(PANEL_ATTRIBUTE));
-    }
-
-    /**
      * Wire the bar when it and the Tracked Funds are on the page, or the address basket on a page without the bar;
      * then the links, buttons and count that follow it.
      * @returns {void}
@@ -742,16 +731,9 @@
             const tracked = data.funds.map((f) => ({ ticker: f.ticker, name: f.name, role: f.role || null }));
             trackedTickers = tracked.map((f) => f.ticker);
             store = createBasket(bar, tracked);
-            if (document.querySelector('.research [role="tablist"]')) {
-                const selected = document.querySelector('.research [role="tab"][aria-selected="true"]');
-                showFor(bar, selected ? selected.dataset.researchTab : null);
-                document.addEventListener('research:tabchange', (event) => showFor(bar, event.detail.tabId));
-            } else {
-                // A page without tabs (the Basket page) carries the bar only where it is used.
-                bar.hidden = false;
-            }
+            bar.hidden = false;
         } else if (bar) {
-            // The old Research page without its Tracked Funds: the bar's tabs show their own Unavailable State.
+            // The Basket page without its Tracked Funds shows its own Unavailable State.
             return;
         } else {
             store = createAddressBasket();

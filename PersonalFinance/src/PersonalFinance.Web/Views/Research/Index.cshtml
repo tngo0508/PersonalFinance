@@ -1,126 +1,159 @@
-@model ResearchViewModel
+@model ResearchHomeViewModel
 @using System.Globalization
-@using PersonalFinance.Shared.DTOs.Research
 
 @{
     ViewData["Title"] = L["Research.Title"].Value;
-    bool showSectors = !Model.Sectors.Unavailable && Model.Sectors.LatestPeriod is not null;
-    bool showFunds = !Model.Funds.Unavailable;
-    bool showWorld = !Model.World.Unavailable;
-    bool showReturns = showFunds && Model.FundReturns is not null;
-    // The Sectors basket view needs the market chart (it draws in it) and the funds data (for the basket).
-    bool showSectorsBasket = showSectors && showFunds;
+    // Research links use their final paths: the pages that do not exist yet arrive in later releases.
+    // The Semiconductors starter opens the plain Sectors page until research-home.js finds the industry (and its SEC
+    // office) in the search index; Home reads no snapshot, so the office is never written here.
+    (string Label, string Href, string? Industry)[] starters =
+    [
+        ("VTI", Url.Content("~/Research/Fund/VTI"), null),
+        (L["Research.Home.Starter.Microsoft"].Value, Url.Content("~/Research/Company/MSFT"), null),
+        (L["Research.Home.Starter.Semiconductors"].Value, Url.Content("~/Research/Sectors"), "Semiconductors & Related Devices"),
+        (L["Research.Home.Starter.Japan"].Value, Url.Content("~/Research/World?country=Japan"), null),
+        (L["Research.Home.Starter.CompareFunds"].Value, Url.Content("~/Research/Funds"), null),
+    ];
+    (string TitleKey, string TextKey, string Href)[] explore =
+    [
+        ("Research.Home.Explore.Sectors", "Research.Home.Explore.SectorsText", Url.Content("~/Research/Sectors")),
+        ("Research.Home.Explore.World", "Research.Home.Explore.WorldText", Url.Content("~/Research/World")),
+        ("Research.Home.Explore.Funds", "Research.Home.Explore.FundsText", Url.Content("~/Research/Funds")),
+        ("Research.Home.Explore.Risk", "Research.Home.Explore.RiskText", Url.Content("~/Research/Funds?view=risk")),
+    ];
+    // The basket step's sentence keeps its glossary term as a {basket} placeholder, so it translates whole.
+    string[] addStep = L["Research.Home.Steps.Add"].Value.Split("{basket}", 2);
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/research.css" asp-append-version="true"/>
-    <link rel="stylesheet" href="~/css/research-funds.css" asp-append-version="true"/>
-    <link rel="stylesheet" href="~/css/research-companies.css" asp-append-version="true"/>
 }
 
-@* Research page, Control-deck layout: header, tab bar, then a chart card beside a side panel. The side panel stacks
-   under the chart at narrow widths. Public market data only: no prices, no recommendations, nothing about the user. *@
-<div class="research">
-    <header class="research-header">
-        <div>
-            <h1 class="research-header__title">@L["Research.Title"]</h1>
-            <p class="research-header__subtitle">@L["Research.Header.Subtitle"]</p>
-        </div>
-        <p class="research-header__pill">@L["Research.Header.Disclaimer"]</p>
-    </header>
+@* Research Home: search first. It reads only the datasets' status (the freshness list), never a dataset; the basket
+   card is drawn from the address by js/research/research-home.js, which also shows only the starting mixes whose funds
+   are tracked and points the Semiconductors starter at its industry (both from the search index the search box loads),
+   and keeps the first-visit strip dismissed. *@
+<div class="research research-home">
+    <partial name="_ResearchNav" model="@("home")"/>
 
-    <div class="research-tabs" role="tablist" aria-label="@L["Research.Tabs.Label"]">
-        @foreach ((string id, string label) in new[] { (ResearchViewModel.SectorsTab, L["Research.Tab.Sectors"].Value), (ResearchViewModel.FundsTab, L["Research.Tab.Funds"].Value), (ResearchViewModel.PerformanceTab, L["Research.Tab.Performance"].Value), (ResearchViewModel.RiskTab, L["Research.Tab.Risk"].Value), (ResearchViewModel.WorldTab, L["Research.Tab.World"].Value), (ResearchViewModel.CompaniesTab, L["Research.Tab.Companies"].Value) })
-        {
-            bool selected = Model.IsSelected(id);
-            <button type="button" class="research-tabs__tab" id="research-tab-@id" role="tab" data-research-tab="@id"
-                    aria-selected="@(selected ? "true" : "false")" aria-controls="research-panel-@id"
-                    tabindex="@(selected ? "0" : "-1")">@label</button>
-        }
-    </div>
-
-    @* The Fund Basket bar: one to five Tracked Funds viewed together by the tabs whose panel carries
-       data-research-basket. It is never saved; it lives in the address (?basket=VTI:60,BND:40). Wired by
-       js/research/research-basket.js, which keeps it hidden on other tabs and when the funds data is missing. *@
-    <section class="research-basket research-basket--empty" id="research-basket" aria-labelledby="research-basket-title" hidden>
-        <div class="research-basket__head">
-            <h2 class="research-basket__title" id="research-basket-title">@L["Research.Basket.Title"]</h2>
-            <p class="research-basket__hint">@L["Research.Basket.Hint"]</p>
+    <section class="research-home__hero" aria-labelledby="research-home-title">
+        <h1 class="research-home__title" id="research-home-title">@L["Research.Title"]</h1>
+        <p class="research-home__lead">@L["Research.Home.Lead"]</p>
+        <partial name="_ResearchSearch" model="@(new ResearchSearchViewModel("research-home-search", Large: true, CssClass: "research-home__search"))"/>
+        <div class="research-home__starters">
+            <span class="research-home__starters-label" id="research-home-try">@L["Research.Home.Try"]</span>
+            <ul class="research-home__starter-list" aria-labelledby="research-home-try">
+                @foreach ((string label, string href, string? industry) in starters)
+                {
+                    <li>
+                        @if (industry is null)
+                        {
+                            <a class="research-home__starter" href="@href" data-research-link>@label</a>
+                        }
+                        else
+                        {
+                            <a class="research-home__starter" href="@href" data-research-link
+                               data-research-home-industry="@industry">@label</a>
+                        }
+                    </li>
+                }
+            </ul>
         </div>
-        <ul class="research-basket__chips" id="research-basket-chips" aria-label="@L["Research.Basket.ChipsLabel"]"></ul>
-        <div class="research-basket__picker">
-            <label class="visually-hidden" for="research-basket-search">@L["Research.Basket.SearchLabel"]</label>
-            <input type="text" class="research-basket__search" id="research-basket-search" role="combobox"
-                   aria-autocomplete="list" aria-expanded="false" aria-controls="research-basket-options" autocomplete="off"
-                   placeholder="@L["Research.Js.Basket.PlaceholderEmpty"]"/>
-            <div class="research-basket__options" id="research-basket-options" role="listbox" aria-label="@L["Research.Basket.OptionsLabel"]" hidden></div>
-        </div>
-        <p class="research-basket__note" id="research-basket-note" hidden></p>
-        <button type="button" class="research-chip research-basket__equal" id="research-basket-equal" hidden>@L["Research.Basket.EqualWeights"]</button>
-        <p class="research-basket__notice" id="research-basket-notice" role="status" hidden></p>
     </section>
 
-    @* Each tab panel holds its own scrubber, so each tab keeps its own position. js/research/research-page.js wires
-       the tabs, the scrubber, the live region and the table view. The Sectors tab is the Sectors page's panel. *@
-    <partial name="_SectorsPanel" model="@(new ResearchSectorsPanelViewModel { Sectors = Model.Sectors, BasketView = showFunds, InTab = true, Hidden = !Model.IsSelected(ResearchViewModel.SectorsTab) })"/>
+    @* Shown by research-home.js unless dismissed before (localStorage pf.research.homeSteps); also shown when the
+       browser's storage cannot be read. *@
+    <section class="research-home__steps" aria-labelledby="research-home-steps-title" data-research-home-steps hidden>
+        <h2 class="research-home__steps-title" id="research-home-steps-title">@L["Research.Home.Steps.Title"]</h2>
+        <ol class="research-home__steps-list">
+            <li>@L["Research.Home.Steps.Search"]</li>
+            <li>
+                @if (addStep.Length == 2)
+                {
+                    @addStep[0]<research-term key="basket">@L["Research.Home.Steps.BasketTerm"]</research-term>@addStep[1]
+                }
+                else
+                {
+                    @addStep[0]
+                }
+            </li>
+            <li>@L["Research.Home.Steps.Open"]</li>
+        </ol>
+        <button type="button" class="research-chip research-home__steps-close" data-research-home-steps-close>@L["Research.Home.Steps.Close"]</button>
+    </section>
 
-    <partial name="_FundsTab" model="Model"/>
-    <partial name="_PerformanceTab" model="Model"/>
-    <partial name="_RiskTab" model="Model"/>
-    @* The World tab is the World page's panel. *@
-    <partial name="_WorldPanel" model="@(new ResearchWorldPanelViewModel { World = Model.World, Exposure = Model.FundExposure, BasketView = showFunds && Model.FundExposure is { Funds.Count: > 0 }, InTab = true, Hidden = !Model.IsSelected(ResearchViewModel.WorldTab) })"/>
-    <partial name="_CompanyPanel" model="@(new ResearchCompanyPanelViewModel(Model.CompanyTicker, null, InTab: true, Hidden: !Model.IsSelected(ResearchViewModel.CompaniesTab)))"/>
+    <div class="research-home__grid">
+        <section class="research-card research-home__basket" id="research-home-basket"
+                 aria-labelledby="research-home-basket-title" data-research-home-basket
+                 data-fund-href="@Url.Content("~/Research/Fund/")">
+            <h2 class="research-card__title" id="research-home-basket-title" tabindex="-1">@L["Research.Nav.Basket"]</h2>
+            <p class="research-home__basket-empty" data-research-home-basket-empty>@L["Research.Home.Basket.Empty"]</p>
+            <div class="research-home__basket-filled" data-research-home-basket-filled hidden>
+                <ul class="research-home__chips" aria-label="@L["Research.Basket.ChipsLabel"]" data-research-home-basket-chips></ul>
+                <a class="btn btn-primary research-home__open" href="@Url.Content("~/Research/Basket")" data-research-link>@L["Research.Home.Basket.Open"]</a>
+            </div>
+            @* Hidden until research-home.js has checked the mixes against the Tracked Funds (all shown if it cannot). *@
+            <div class="research-home__mixes" data-research-home-mixes hidden>
+                <p class="research-home__mixes-label" id="research-home-mixes-label">@L["Research.Home.Basket.Mixes"]</p>
+                <ul class="research-home__mix-list" aria-labelledby="research-home-mixes-label">
+                    @foreach (ResearchBasketPreset preset in Model.Presets)
+                    {
+                        <li data-research-home-mix>
+                            <button type="button" class="research-chip" data-research-preset="@preset.Basket"
+                                    data-research-preset-name="@L[preset.LabelKey]">@L[preset.LabelKey]</button>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </section>
 
-    @* Summarises each change of period for screen readers. *@
+        <section class="research-home__explore" aria-labelledby="research-home-explore-title">
+            <h2 class="visually-hidden" id="research-home-explore-title">@L["Research.Home.Explore.Title"]</h2>
+            <ul class="research-home__explore-list">
+                @foreach ((string titleKey, string textKey, string href) in explore)
+                {
+                    <li>
+                        <a class="research-home__explore-link" href="@href" data-research-link>
+                            <span class="research-home__explore-title">@L[titleKey]</span>
+                            <span class="research-home__explore-text">@L[textKey]</span>
+                        </a>
+                    </li>
+                }
+            </ul>
+        </section>
+    </div>
+
+    <section class="research-card research-home__freshness" aria-labelledby="research-home-freshness-title">
+        <h2 class="research-card__title" id="research-home-freshness-title">@L["Research.Home.Freshness.Title"]</h2>
+        <p class="research-card__subtitle">@L["Research.Home.Freshness.Note"]</p>
+        <ul class="research-home__fresh-list">
+            @foreach (ResearchDatasetFreshness dataset in Model.Datasets)
+            {
+                <li class="research-home__fresh-item">
+                    <span>@L[dataset.LabelKey]</span>
+                    @if (dataset.AsOf is { } asOf)
+                    {
+                        <span class="research-home__fresh-date">@asOf.ToString(ResearchFormats.LongDate, CultureInfo.CurrentCulture)</span>
+                    }
+                    else
+                    {
+                        <span class="research-home__fresh-missing">@L["Research.Common.NotLoadedYet"]</span>
+                    }
+                </li>
+            }
+        </ul>
+        <p class="research-home__advice">@L["Research.Home.Advice"]</p>
+    </section>
+
     <p class="visually-hidden" id="research-live" aria-live="polite"></p>
 </div>
 
-@if (showReturns)
-{
-    @* The fund returns snapshot (monthly returns with every per-window figure precomputed), read by
-       research-correlation.js and research-performance.js. *@
-    <script type="application/json" id="research-fund-returns-data">@Json.Serialize(Model.FundReturns)</script>
-}
-
 @section Scripts {
     <js-strings prefix="Research.Js." />
-    @* The tab shell runs whatever loaded, so the tabs work even when a tab shows its Unavailable State. *@
+    @* research-page.js first: the basket announces through its live region and formats shares with it. *@
     <script src="~/js/research/research-page.js" asp-append-version="true"></script>
     <script src="~/js/research/research-basket.js" asp-append-version="true"></script>
-    @* D3 always loads: the Companies tab draws its charts whenever a profile loads. *@
-    <script src="~/lib/d3/d3.min.js"></script>
-    <script src="~/js/research/research-companies.js" asp-append-version="true"></script>
-    @if (showSectors)
-    {
-        <script src="~/js/research/research-sectors.js" asp-append-version="true"></script>
-    }
-    @if (showSectorsBasket)
-    {
-        <script src="~/js/research/research-sectors-basket.js" asp-append-version="true"></script>
-    }
-    @if (showFunds)
-    {
-        <script src="~/js/research/research-overlap.js" asp-append-version="true"></script>
-        <script src="~/js/research/research-correlation.js" asp-append-version="true"></script>
-    }
-    @if (showReturns)
-    {
-        <script src="~/js/research/research-performance.js" asp-append-version="true"></script>
-        <script src="~/js/research/research-basket-math.js" asp-append-version="true"></script>
-        <script src="~/js/research/research-risk.js" asp-append-version="true"></script>
-    }
-    @if (showWorld)
-    {
-        <script src="~/lib/topojson-client/dist/topojson-client.min.js"></script>
-        <script src="~/js/research/research-world.js" asp-append-version="true"></script>
-    }
-    @if (Model.FundExposure is not null && showFunds)
-    {
-        @* topojson also loads here when the market data is missing, so the basket map can still draw. *@
-        @if (!showWorld)
-        {
-            <script src="~/lib/topojson-client/dist/topojson-client.min.js"></script>
-        }
-        <script src="~/js/research/research-world-basket.js" asp-append-version="true"></script>
-    }
+    <script src="~/js/research/research-search.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-glossary.js" asp-append-version="true"></script>
+    <script src="~/js/research/research-home.js" asp-append-version="true"></script>
 }

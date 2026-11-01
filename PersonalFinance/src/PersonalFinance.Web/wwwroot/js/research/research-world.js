@@ -1,6 +1,6 @@
 /* global d3, topojson, PFI18n, ChartPalette */
 /**
- * Research World page and World tab: a D3 choropleth of stock-market capitalisation by country, one year at a time, in
+ * Research World page: a D3 choropleth of stock-market capitalisation by country, one year at a time, in
  * an Equal Earth projection without Antarctica. Reads the World snapshot from the JSON data island rendered by
  * Views/Research/_WorldPanel.cshtml and the vendored world-atlas countries-110m borders (keyed by ISO numeric code).
  * An 8-step single-hue scale colours each country by market cap or by market cap as % of GDP (the metric switch in
@@ -601,14 +601,14 @@
     }
 
     /**
-     * On the World page (not the tabbed page's World tab), keep the address's ?country= in step with the selection,
+     * Keep the address's ?country= in step with the selection,
      * replacing the current history entry, so a reload or a shared link opens the same country.
      * @param {HTMLElement|null} panel - The World panel.
      * @param {string|null} name - The selected country, or null for none.
      * @returns {void}
      */
     function rememberCountry (panel, name) {
-        if (!panel || panel.getAttribute('role') === 'tabpanel' || !window.history ||
+        if (!panel || !window.history ||
             typeof window.history.replaceState !== 'function') {
             return;
         }

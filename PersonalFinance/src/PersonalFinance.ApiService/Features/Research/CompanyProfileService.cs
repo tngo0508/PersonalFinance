@@ -70,7 +70,7 @@ internal sealed class CompanyProfileService : ICompanyProfileService
             : Task.FromResult(new CompanyLookupOutcome<CompanyPressReleasesResultDto>(null, SwitchedOff: true));
 
     /// <summary>
-    /// The steps a Companies tab request by ticker shares, whatever it reads: count it toward the Account's lookup
+    /// The steps a company lookup request by ticker shares, whatever it reads: count it toward the Account's lookup
     /// limit; answer a fund or a ticker SEC does not list from the ticker list; serve a fresh value from
     /// <paramref name="cache"/>; else read the company's submissions and <paramref name="read"/> from them, keeping
     /// the result. When SEC cannot be read, the kept value is served, else the outcome is unavailable.

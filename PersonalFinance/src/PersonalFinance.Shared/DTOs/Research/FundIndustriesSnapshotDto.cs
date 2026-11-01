@@ -1,7 +1,7 @@
 namespace PersonalFinance.Shared.DTOs.Research;
 
 /// <summary>
-/// The Research page's fund industries dataset, for the Sectors tab's basket view: for each Tracked Fund's latest Form
+/// The Research fund industries dataset, for the Sectors page's basket view: for each Tracked Fund's latest Form
 /// N-PORT report, its share of net assets by SEC industry office and SIC industry (over every holding, before any
 /// trim) with the largest companies of each industry; then the stocks SEC does not classify, by issuer country; then
 /// bonds by issuer type; then cash and other. Holdings are matched to SEC filers by name only, and no security

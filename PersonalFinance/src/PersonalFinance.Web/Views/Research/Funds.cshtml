@@ -153,7 +153,7 @@
         else if (Model.View == ResearchFundsPageViewModel.RiskView)
         {
             <div class="research-card research-risk" id="research-risk">
-                <h2 class="research-card__title">@L["Research.Tab.Risk"]</h2>
+                <h2 class="research-card__title">@L["Research.Common.RiskVsReturn"]</h2>
                 @if (!showRisk)
                 {
                     <partial name="_UnavailableState" model="@(showFunds ? Model.ReturnsUnavailableState : Model.Funds.UnavailableState)"/>
@@ -199,7 +199,7 @@
                 else
                 {
                     <p class="research-card__subtitle">
-                        @L.Named("Research.Funds.Correlation.Subtitle", ("month", returns!.AsOf.ToString(ResearchViewModel.MonthYear, culture)))
+                        @L.Named("Research.Funds.Correlation.Subtitle", ("month", returns!.AsOf.ToString(ResearchFormats.MonthYear, culture)))
                     </p>
                     <div class="research-correlation__controls">
                         <div class="research-view-toggle" role="group" aria-label="@L["Research.Common.Window"]">
@@ -271,10 +271,10 @@
             <p>@L["Research.Risk.About"]</p>
             <h2 class="research-panel__title">@L["Research.Common.DataAsOf"]</h2>
             <p class="research-panel__as-of">
-                @(Model.Funds.AsOf is { } asOf ? asOf.ToString(ResearchViewModel.LongDate, culture) : L["Research.Common.NotLoadedYet"].Value)
+                @(Model.Funds.AsOf is { } asOf ? asOf.ToString(ResearchFormats.LongDate, culture) : L["Research.Common.NotLoadedYet"].Value)
             </p>
             <p class="research-panel__as-of">
-                @(returns is null ? L["Research.Common.NotLoadedYet"].Value : L.Named("Research.Common.ReturnsTo", ("month", returns.AsOf.ToString(ResearchViewModel.MonthYear, culture))))
+                @(returns is null ? L["Research.Common.NotLoadedYet"].Value : L.Named("Research.Common.ReturnsTo", ("month", returns.AsOf.ToString(ResearchFormats.MonthYear, culture))))
             </p>
         </aside>
     </section>

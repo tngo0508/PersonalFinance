@@ -5,8 +5,7 @@ namespace PersonalFinance.Web.Models.Research;
 
 /// <summary>
 /// The Sectors panel (<c>_SectorsPanel</c>): the scrubber, the treemap with its breadcrumb, ranked list and table, the
-/// basket view and the side panel. The Sectors page draws it on its own; the tabbed Research page draws it as its
-/// Sectors tab. Its element ids are the same on both, so the scripts serve both.
+/// basket view and the side panel, on the Sectors page and (basket view only) the Basket page.
 /// </summary>
 public sealed class ResearchSectorsPanelViewModel
 {
@@ -19,18 +18,11 @@ public sealed class ResearchSectorsPanelViewModel
     /// </summary>
     public bool BasketView { get; init; }
 
-    /// <summary>True on the tabbed page: the panel is a tab panel, labelled by its tab.</summary>
-    public bool InTab { get; init; }
-
-    /// <summary>True when the tabbed page opens on another tab.</summary>
-    public bool Hidden { get; init; }
-
     /// <summary>The group the chart opens zoomed into (<c>Office</c> or <c>Office/Industry</c>), or null.</summary>
     public string? Focus { get; init; }
 
     /// <summary>
-    /// The view the panel opens on, <c>market</c> or <c>basket</c>; null on the tabbed page, which opens on the basket
-    /// view whenever a Fund Basket is set.
+    /// The view the panel opens on, <c>market</c> or <c>basket</c>; null opens on the market.
     /// </summary>
     public string? View { get; init; }
 
@@ -39,6 +31,12 @@ public sealed class ResearchSectorsPanelViewModel
     /// the market chart still shows.
     /// </summary>
     public UnavailableStateViewModel? BasketUnavailableState { get; init; }
+
+    /// <summary>
+    /// True when the market view is shown but the funds data could not be read: the panel says in a short note that the
+    /// basket view is unavailable, where the switch would be, rather than leaving the switch out silently.
+    /// </summary>
+    public bool BasketViewUnavailableNote { get; init; }
 
     /// <summary>
     /// True on the Basket page: the "Market | Your basket" switch leaves the address alone, since the address is the

@@ -239,6 +239,18 @@ public sealed partial class ResearchNewsRenderingTests : IAsyncLifetime
         Assert.Contains(TestLocalization.Vietnamese("Research.Title"), html);
     }
 
+    [Fact]
+    public async Task SectorsPage_WhenOnlyTheFundsDataFails_SaysTheBasketViewIsUnavailable()
+    {
+        _research.Returns(nameof(IResearchApi.GetSectorsAsync), Sectors);
+
+        string html = await GetAsync("/Research/Sectors", vietnamese: false);
+
+        Assert.Contains("id=\"research-sectors-basket-unavailable\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-sectors-view=\"basket\"", html, StringComparison.Ordinal);
+        Assert.Contains("research-treemap", html, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("/Research/Funds", "Compare the tracked funds")]
     [InlineData("/Research/Funds?view=risk", "research-risk-chart")]

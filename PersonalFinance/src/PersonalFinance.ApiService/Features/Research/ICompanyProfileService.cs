@@ -3,7 +3,7 @@ using PersonalFinance.Shared.DTOs.Research;
 namespace PersonalFinance.ApiService.Features.Research;
 
 /// <summary>
-/// The Companies tab of Research: search suggestions and Company Profiles (GLOSSARY.md), read from SEC EDGAR, for
+/// The Research company lookup: search suggestions and Company Profiles (GLOSSARY.md), read from SEC EDGAR, for
 /// information only. Nothing about the Account is stored.
 /// </summary>
 public interface ICompanyProfileService

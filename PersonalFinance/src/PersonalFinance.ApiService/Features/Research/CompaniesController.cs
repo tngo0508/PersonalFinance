@@ -8,7 +8,7 @@ using PersonalFinance.Shared.Helpers;
 namespace PersonalFinance.ApiService.Features.Research;
 
 /// <summary>
-/// API controller for the Companies tab of Research: search suggestions, Company Profiles and their press releases from
+/// API controller for the Research company lookup: search suggestions, Company Profiles and their press releases from
 /// SEC EDGAR, for information only. Read-only; nothing about the Account is stored.
 /// </summary>
 [Authorize]

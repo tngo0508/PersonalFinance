@@ -1,6 +1,7 @@
 /* global d3, topojson, PFI18n, ChartPalette */
 /**
- * Research page, World tab: the "World market | Your basket" switch and the basket view.
+ * Research World page (and the Basket page's countries section): the "World market | Your basket" switch and the
+ * basket view.
  *
  * The basket view is a choropleth of the Fund Basket's weight by issuer country: each fund's country shares (from the
  * fund exposure snapshot, every holding of its latest N-PORT report) weighted by the fund's share of the basket. It
@@ -13,8 +14,8 @@
  * map light their countries while pointed at or focused (choosing one keeps them lit), and currency bars list what the
  * holdings are priced in.
  *
- * On the tabbed page the switch opens on Your basket whenever a basket is set at load. On the World page the panel's
- * data-research-world-view says which view it opens on (Your basket only when it is "basket" and a basket is set), and
+ * On the World page the panel's data-research-world-view says which view it opens on (Your basket only when it is
+ * "basket" and a basket is set), and
  * the address's ?view= follows the switch. On the Basket page the panel carries data-research-world-basket-only: the
  * basket view shows alone, without the switch or the market map. The market view (research-world.js) is left exactly as it was. Reads the
  * `research-fund-exposure-data` island and the basket from `window.ResearchBasket`. It works without the World data:
@@ -139,7 +140,7 @@
     }
 
     /**
-     * The step colours and the empty colour, from the World tab's CSS tokens.
+     * The step colours and the empty colour, from the World panel's CSS tokens.
      * @param {Element} host - An element inside the Research page.
      * @returns {{steps: string[], empty: string}} The colours.
      */
@@ -180,7 +181,8 @@
             line(entry.region, 'research-tooltip__muted')
         ]);
         let mode = 'market';
-        // The view the World page asked for ('market' or 'basket'); undefined on the tabbed page.
+        // The view the World page asked for ('market' or 'basket'); undefined on the Basket page, which shows only the
+        // basket.
         const requested = panel.dataset.researchWorldView;
         // The Basket page draws the basket view alone, without the switch or the market map.
         const basketOnly = panel.hasAttribute('data-research-world-basket-only');
@@ -549,7 +551,7 @@
          * @returns {void}
          */
         function rememberView () {
-            if (requested === undefined || !window.history || typeof window.history.replaceState !== 'function') {
+            if (basketOnly || !window.history || typeof window.history.replaceState !== 'function') {
                 return;
             }
             const url = new URL(window.location.href);
@@ -586,11 +588,6 @@
             }
             drawBasket();
         });
-        document.addEventListener('research:tabchange', () => {
-            if (mode === 'basket' && exposure && exposure.count > 0 && host.clientWidth > 0) {
-                layout();
-            }
-        });
         window.addEventListener('scroll', () => tooltip.hide(), { passive: true });
         if (typeof ResizeObserver === 'function') {
             new ResizeObserver(() => {
@@ -607,8 +604,8 @@
         });
         const basket = window.ResearchBasket ? window.ResearchBasket.get() : [];
         drawBasket();
-        // The tabbed page opens on the basket whenever one is set; the World page only when ?view=basket asks for it.
-        const wantsBasket = requested === undefined || requested === 'basket';
+        // The World page opens on the basket only when ?view=basket asks for it.
+        const wantsBasket = requested === 'basket';
         setMode(basketOnly || (wantsBasket && basket.length > 0 && exposure.count > 0) ? 'basket' : 'market');
     }
 

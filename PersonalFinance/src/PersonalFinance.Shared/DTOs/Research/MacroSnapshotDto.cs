@@ -2,7 +2,7 @@ namespace PersonalFinance.Shared.DTOs.Research;
 
 /// <summary>
 /// The Research page's macro dataset, monthly: consumer prices from the US Bureau of Labor Statistics (CPI-U) and two
-/// interest rates from the Federal Reserve Board's H.15 release. The Performance tab deflates fund returns by the CPI
+/// interest rates from the Federal Reserve Board's H.15 release. The growth charts deflate fund returns by the CPI
 /// and shows the rates beside them.
 /// </summary>
 public sealed class MacroSnapshotDto

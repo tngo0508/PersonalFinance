@@ -1,6 +1,7 @@
 /* global d3, PFI18n */
 /**
- * Research page, Performance tab: how 100 put into the Fund Basket and into each of its funds grew, month by month.
+ * Research Basket and Fund pages, growth: how 100 put into the Fund Basket and into each of its funds grew, month by
+ * month.
  *
  * Three panels share one time axis. The main panel draws growth-of-100 lines for each basket fund and "Your basket"
  * (rebalanced to its weights every month: its return for a month is the weighted average of its funds' returns). The
@@ -1040,12 +1041,6 @@
         chartHost.addEventListener('blur', () => showCrosshair(null, false));
         window.addEventListener('scroll', () => tooltip.hide(), { passive: true });
         document.addEventListener('research:basketchange', draw);
-        document.addEventListener('research:tabchange', () => {
-            if (full && chartHost.clientWidth > 0) {
-                drawChart();
-                drawBrush();
-            }
-        });
         if (typeof ResizeObserver === 'function') {
             new ResizeObserver(() => {
                 if (full && chartHost.clientWidth > 0 && Math.abs(chartHost.clientWidth - lastWidth) > 4) {

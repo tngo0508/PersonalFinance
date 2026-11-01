@@ -217,7 +217,7 @@ JavaScript paths are under `Web/wwwroot/js/`.
 | Learning | `LearningController` (`api/learning`, `[AllowAnonymous]`), `JourneyController` (`api/learning/journey`) | `ILearningContent`, `ILearningLibraryService`, `IJourneyService` | `LessonCompletion`, `ReviewCardState` (writes `UserPreference.ShowJourneyOnDashboard`; reads its JSON content folder, `Features/Learning/Content/`, at startup) | `ILearningApi` | `Learning` (public; also serves `/sitemap.xml` and `/robots.txt`) | `learning/` | Content is code (ADR 0019): Term Entries and Lessons are files loaded into memory, Vietnamese falling back to English per field; xUnit content checks (`tests/.../Learning/`) guard the files. The owner drafts new content with the `/atelier-draft` skill, whose gate `Web/tools/atelier-excerpts.js` passes it only allowlisted draft + cite excerpts. Anonymous reads; the nav's "Learning" entry asks `ILearningLibraryStatus` (cached) and stays hidden while the Library is empty. The Journey's open Lesson is computed on read from the finishes and their time zones (`Domain/JourneyClock`, on Infrastructure's `BrowserTimeZone`), never stored; the Lesson page opens with today's Review from Day 2 on (Web `MarkCard` posts each card's mark); in Development, `E2E_SEED_LEARNING` seeds a learner past Lesson 1 for the E2E smoke. The Dashboard reads the Journey for its quiet card, and Web `ShowOnDashboard` (the card's Hide, the Atelier page's switch) writes the preference |
 | NetWorth | `NetWorthController` (`api/NetWorth`) | `INetWorthParametersService` | `NetWorthParameters` | `INetWorthApi` | `Networth` | `networth/` | `calculate` is pure: a static Validator and the static `NetWorthProjectionService`, no Service, no database |
 | InvestmentScenarios | `InvestmentScenariosController` (`api/InvestmentScenarios`) | `IInvestmentScenarioService` | `InvestmentScenario` | `IInvestmentScenariosApi` | `InvestmentScenarios` (JSON only); `InvestmentCalculator` lists them | `investment-calculator/investment-scenarios.js` | Saved Investment Scenarios (inputs plus the what-if timing, DelayYears and StopAfterYear): list, save, update, rename, duplicate, soft delete; at most 20 per user (409 past that); the projection stays client-side |
-| Research | `ResearchController` (`api/Research`, including `status` and `search-index`), `CompaniesController` (`api/Research/companies`) | `IResearchService`, `ICompanyProfileService`, ten `IResearchDatasetRefresher` (one fills the exchange rates), `ResearchSnapshotStore` | `ResearchSnapshot`, `ExchangeRate` (not user-owned) | `IResearchApi` | `Research` | `research/` (12 files) | The largest Feature: five external adapters, `Domain/` with 56 pure types, a refresh job; see [10](#10-research-pipeline) |
+| Research | `ResearchController` (`api/Research`, including `status` and `search-index`), `CompaniesController` (`api/Research/companies`) | `IResearchService`, `ICompanyProfileService`, ten `IResearchDatasetRefresher` (one fills the exchange rates), `ResearchSnapshotStore` | `ResearchSnapshot`, `ExchangeRate` (not user-owned) | `IResearchApi` | `Research`: Home at `/Research`, then Sectors, World, Funds, Basket, `Fund/{ticker}` and `Company/{ticker}`; the old `?tab=` addresses redirect to them | `research/` (18 files) | The largest Feature: five external adapters, `Domain/` with 56 pure types, a refresh job; the Fund Basket lives in the address and every Research link carries it; see [10](#10-research-pipeline) |
 | SavingsGoals | `SavingsGoalsController` (`api/SavingsGoals`, Contributions under `{goalId}/contributions`) | `ISavingsGoalService` | `SavingsGoal`, `Contribution` | `ISavingsGoalsApi` | `SavingsGoals` | `savingsgoals/` | Validators for a new goal, a Contribution and a balance correction; the saved amount is the Contribution total, cached on the goal in the same save; each goal's Pace is worked out on read (`SavingsGoalPace`); raises each milestone Notification once |
 | Search | `SearchController` (`api/Search`) | `ISearchService` | none (reads `BudgetTransaction`, `BudgetCategory`, `SpreadsheetTransactionRecord`, `SavingsGoal`) | `ISearchApi` | `Search` (JSON only) | `core/search.js` | Read-only; picks the source through `IBudgetDataSourceService`; a Learning group of Term Entries comes last, read through Learning's `ILearningLibraryService` (#522) |
 | Watchlist | `WatchlistController` (`api/Watchlist`), `NewsController` (`api/News`) | `IWatchlistService`, `INewsService`, `INewsFeedClient` (internal) | `SavedArticle` | `IWatchlistApi`, `INewsApi` | `Watchlist` (JSON only), `News` | `news/` | RSS adapter with `IMemoryCache` (5 minutes); `NewsService` has no database |
@@ -1011,10 +1011,11 @@ flowchart LR
     store --> snap[("ResearchSnapshot<br/>Dataset, Payload JSON, SourceAsOf, BuiltAt")]
 ```
 
-The read path. Each tab fails on its own, and `IResearchApi` is the one Refit client registered without retries on 503,
-because a 503 here means "never loaded", not "try again". Web reads each dataset through `IResearchSnapshotCache`
-(`ResearchSnapshotCache` over `IMemoryCache`, 10 minutes): a hit is served from memory, a miss goes to ApiService. A
-failed read is never kept, and neither is a search index with an empty part (a dataset not loaded yet).
+The read path. Each Research page reads only the datasets it shows (Home reads none, only their status), each section
+fails on its own, and `IResearchApi` is the one Refit client registered without retries on 503, because a 503 here
+means "never loaded", not "try again". Web reads each dataset through `IResearchSnapshotCache` (`ResearchSnapshotCache`
+over `IMemoryCache`, 10 minutes): a hit is served from memory, a miss goes to ApiService. A failed read is never kept,
+and neither is a search index with an empty part (a dataset not loaded yet).
 
 ```mermaid
 sequenceDiagram
@@ -1028,8 +1029,8 @@ sequenceDiagram
     participant ST as ResearchSnapshotStore
     participant DB as ResearchSnapshots
 
-    B->>WC: GET /Research?tab=
-    par eight datasets in parallel, Task.WhenAll
+    B->>WC: GET /Research/{page} (Home: only GET api/Research/status)
+    par the page's datasets in parallel, Task.WhenAll
         WC->>SC: GetOrReadAsync(key, read)
         alt cached
             SC-->>WC: snapshot served from memory
@@ -1049,8 +1050,8 @@ sequenceDiagram
             end
         end
     end
-    WC-->>B: ResearchViewModel, a failed dataset shows _UnavailableState in its tab only
-    B->>WC: later, on demand: SearchIndex, FundIndustries (~600 KB), Suggest, Company, Releases
+    WC-->>B: the page's view model; a failed dataset shows _UnavailableState in its sections only
+    B->>WC: later, on demand: SearchIndex, FundIndustries (~600 KB), Suggest, CompanyProfile, Releases
     WC->>SC: SearchIndex: GetOrReadAsync("search-index"), kept only when no part is empty
     SC->>RA: on a miss: GET api/Research/search-index (200, a never-loaded dataset leaves its part empty)
     WC->>RA: CompaniesController: live SEC lookups, 30 per minute per Account, cached 24 h
@@ -1061,7 +1062,7 @@ The ApiService `ResearchController` also serves `GET api/Research/status` (which
 
 Drawn from `ApiService/Features/Research/ResearchFeature.cs`, `ResearchService.cs`, `ResearchSnapshotStore.cs`,
 `ResearchRefreshJob.cs`, `Adapters/`, `Web/Controllers/ResearchController.cs` and
-`infra/modules/research-refresh-job.bicep`. The Companies tab is the exception that calls SEC EDGAR at request time,
+`infra/modules/research-refresh-job.bicep`. The Company page is the exception that calls SEC EDGAR at request time,
 through `CompanyProfileService` with in-memory caches (`CompanyTickerIndexCache`, `KeptWhileUnreachableCache`).
 
 ## 11. Unavailable State and keeping the ApiService awake
@@ -1080,7 +1081,7 @@ flowchart TB
 
     kind -- "view action" --> uv["this.UnavailableView(title, heading, retryController)<br/>Views/Shared/Unavailable.cshtml + _UnavailableState<br/>Retry is a plain GET"]
     kind -- "JSON action with JsonApiErrors" --> jf["JsonApiErrorsFilter<br/>ApiException: same status, user-safe message<br/>unreachable: 502 UnavailableMessage<br/>anything else: 500 UnexpectedMessage"]
-    kind -- "Research tab" --> rt["that tab's _UnavailableState only;<br/>the other tabs render"]
+    kind -- "Research page" --> rt["that section's _UnavailableState only;<br/>the rest of the page renders"]
 
     subgraph warm["Keeping the ApiService awake"]
         keda["KEDA cron rule cron-business-hours<br/>1 replica 08:00 to 22:00 America/Los_Angeles<br/>minReplicas 0 otherwise (about 25 s cold start)"]

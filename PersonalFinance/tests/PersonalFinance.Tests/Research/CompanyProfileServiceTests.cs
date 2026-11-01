@@ -12,7 +12,7 @@ using PersonalFinance.Tests.TestSupport;
 namespace PersonalFinance.Tests.Research;
 
 /// <summary>
-/// The Companies tab's service, through the real SEC EDGAR client over a stub SEC that serves the made-up samples in
+/// The company lookup's service, through the real SEC EDGAR client over a stub SEC that serves the made-up samples in
 /// <c>CompanySamples/</c>: Sample Widgets Inc (SWI), a company with a September fiscal year and 10-Ks for fiscal
 /// 2014 to 2025, each reporting the prior year too.
 /// </summary>

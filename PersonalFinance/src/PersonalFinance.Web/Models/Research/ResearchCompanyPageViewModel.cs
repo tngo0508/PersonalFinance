@@ -8,6 +8,6 @@ namespace PersonalFinance.Web.Models.Research;
 /// <param name="Query">The search text to pre-fill with its suggestions open (checked); null for none.</param>
 public sealed record ResearchCompanyPageViewModel(string? Ticker, string? Query)
 {
-    /// <summary>The lookup panel, shared with the tabbed page's Companies tab.</summary>
-    public ResearchCompanyPanelViewModel Panel => new(Ticker, Query, InTab: false, Hidden: false);
+    /// <summary>The lookup panel the page draws.</summary>
+    public ResearchCompanyPanelViewModel Panel => new(Ticker, Query);
 }

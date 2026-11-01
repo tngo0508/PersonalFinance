@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Research Companies tab (research-companies__*): the search combobox, the
+   Research company lookup (research-companies__*): the search combobox, the
    Company Profile's identity, four small bar charts over a table of annual
    figures, press releases and recent filings. Tokens come from site.css. The charts hide
    below 600px, where the table (which scrolls inside its card) is enough.

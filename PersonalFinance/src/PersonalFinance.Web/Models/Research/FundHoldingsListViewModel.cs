@@ -5,8 +5,7 @@ namespace PersonalFinance.Web.Models.Research;
 /// <summary>
 /// The holdings list (<c>_FundHoldingsList</c>): what the Tracked Funds hold in one quarter, fund by fund, then by N-PORT
 /// asset category, then each category's largest holdings and "Other (n)". Each holding links to the company search by
-/// its name, never by a security identifier (ADR 0010). The Funds page draws it with a quarter picker; the tabbed
-/// Research page's Funds tab draws it at the latest quarter.
+/// its name, never by a security identifier (ADR 0010). The Funds page draws it with a quarter picker.
 /// </summary>
 public sealed class FundHoldingsListViewModel
 {

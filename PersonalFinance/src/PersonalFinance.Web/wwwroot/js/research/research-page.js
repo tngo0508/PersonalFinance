@@ -1,9 +1,10 @@
 /* global PFI18n */
 /**
- * Research page shell: the WAI-ARIA tabs, and in each tab panel a time scrubber (play/pause, a range slider and the
- * period label), a polite live region and the "Show as table" view. Each tab keeps its own scrubber position.
+ * Research page shell: in each chart panel a time scrubber (play/pause, a range slider and the period label), a
+ * polite live region and the "Show as table" view. Each panel keeps its own scrubber position. (registerTab and its
+ * tabId keep the names of the tabbed page these panels came from.)
  *
- * A tab's chart registers itself once it is drawn:
+ * A panel's chart registers itself once it is drawn:
  *
  *     window.ResearchPage.registerTab('sectors', {
  *         periods: ['2011', ..., '2025'],   // period labels, oldest first
@@ -13,17 +14,14 @@
  *         table (index) {}                  // { caption, columns: [{ label, numeric }], rows: [[cell, ...]] }
  *     });
  *
- * The tab panel `research-panel-<tabId>` holds the markup this module wires: `[data-research-scrubber]` (with
+ * The panel `research-panel-<tabId>` holds the markup this module wires: `[data-research-scrubber]` (with
  * `[data-research-play]`, `[data-research-range]` and `[data-research-period]`), `[data-research-table-toggle]` and
- * `[data-research-table]`. The page opens each tab on its latest period. Under prefers-reduced-motion every change
+ * `[data-research-table]`. The page opens each panel on its latest period. Under prefers-reduced-motion every change
  * applies at once.
  *
  * It also holds the helpers every chart shares (prefersReducedMotion, formatMoney, formatPercent, formatFixed,
  * readData, createTooltip, announce), so it must load before the chart scripts. Numbers follow the page culture
  * (PFI18n); the text is the page's Research.Js. strings.
- *
- * The selected tab is kept in the address as `?tab=<tabId>` (replacing the history entry, so Back does not step
- * through tabs), and each selection fires a `research:tabchange` event on the document with `detail.tabId`.
  */
 (function () {
     'use strict';
@@ -334,104 +332,6 @@
     }
 
     /**
-     * Keep the selected tab in the address, replacing the current history entry. A ticker belongs to the Companies
-     * tab only, so it is dropped on any other tab.
-     * @param {string} tabId - The selected tab's id.
-     * @returns {void}
-     */
-    function rememberTab (tabId) {
-        if (!window.history || typeof window.history.replaceState !== 'function') {
-            return;
-        }
-        const url = new URL(window.location.href);
-        url.searchParams.set('tab', tabId);
-        if (tabId !== 'companies') {
-            url.searchParams.delete('ticker');
-        }
-        window.history.replaceState(window.history.state, '', url);
-    }
-
-    /**
-     * Select a tab: show its panel, hide the others, and stop any play.
-     * @param {HTMLElement} button - The tab button to select.
-     * @param {boolean} focus - Whether to move focus to it.
-     * @param {boolean} [byUser] - True when the user chose it: the address and listeners follow.
-     * @returns {void}
-     */
-    function selectTab (button, focus, byUser) {
-        const list = button.closest('[role="tablist"]');
-        if (!list) {
-            return;
-        }
-        stopPlay();
-        list.querySelectorAll('[role="tab"]').forEach((tab) => {
-            const selected = tab === button;
-            tab.setAttribute('aria-selected', String(selected));
-            tab.tabIndex = selected ? 0 : -1;
-            const panel = document.getElementById(tab.getAttribute('aria-controls'));
-            if (panel) {
-                panel.hidden = !selected;
-            }
-        });
-        if (focus) {
-            button.focus();
-        }
-        const tabId = button.dataset.researchTab;
-        if (byUser && tabId) {
-            rememberTab(tabId);
-            document.dispatchEvent(new CustomEvent('research:tabchange', { detail: { tabId } }));
-        }
-    }
-
-    /**
-     * Select a tab by its id, as if the user chose it.
-     * @param {string} tabId - The tab's id, e.g. 'funds'.
-     * @returns {void}
-     */
-    function selectTabById (tabId) {
-        const button = document.querySelector(`.research [role="tab"][data-research-tab="${tabId}"]`);
-        if (button && button.getAttribute('aria-selected') !== 'true') {
-            selectTab(button, false, true);
-        }
-    }
-
-    /**
-     * Wire a tablist: click selects, arrow keys, Home and End move between tabs and select them.
-     * @param {HTMLElement} list - The tablist element.
-     * @returns {void}
-     */
-    function initTablist (list) {
-        const buttons = () => Array.from(list.querySelectorAll('[role="tab"]'));
-        list.addEventListener('click', (event) => {
-            const button = event.target.closest('[role="tab"]');
-            if (button) {
-                selectTab(button, false, true);
-            }
-        });
-        list.addEventListener('keydown', (event) => {
-            const all = buttons();
-            const index = all.indexOf(document.activeElement);
-            if (index < 0) {
-                return;
-            }
-            const moves = {
-                ArrowRight: (index + 1) % all.length,
-                ArrowLeft: (index - 1 + all.length) % all.length,
-                Home: 0,
-                End: all.length - 1
-            };
-            if (event.key in moves) {
-                event.preventDefault();
-                selectTab(all[moves[event.key]], true, true);
-            }
-        });
-        const selected = buttons().find((b) => b.getAttribute('aria-selected') === 'true') || buttons()[0];
-        if (selected) {
-            selectTab(selected, false);
-        }
-    }
-
-    /**
      * Register a tab's chart and wire its scrubber and table. The tab opens on its latest period.
      * @param {string} tabId - The tab's id, e.g. 'sectors'; its panel is `research-panel-<tabId>`.
      * @param {Object} chart - The chart: periods, transitionMs, update(index, options) and table(index).
@@ -513,7 +413,6 @@
         registerTab,
         positionOf,
         refreshTable,
-        selectTabById,
         prefersReducedMotion,
         formatMoney,
         formatPercent,
@@ -526,18 +425,4 @@
         createTooltip,
         announce
     };
-
-    /**
-     * Wire the page's tablists.
-     * @returns {void}
-     */
-    function init () {
-        document.querySelectorAll('.research [role="tablist"]').forEach(initTablist);
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
 })();

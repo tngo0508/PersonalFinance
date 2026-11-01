@@ -3,18 +3,15 @@
 @* The company lookup: look up a company registered with the SEC and see its Company Profile (GLOSSARY.md), for
    information only. js/research/research-companies.js fetches suggestions, the profile and its press releases from
    this controller's Suggest, CompanyProfile and Releases actions and fills the profile region below; nothing is
-   stored. Without JavaScript the form still submits as a plain GET. On the Company page the ticker is kept in the path
-   (data-company-page); in the tabbed page's Companies tab, in the query, and the panel is hidden until its tab is
-   chosen. A tracked fund's ticker opens that fund's page (data-fund-url). *@
+   stored. Without JavaScript the form still submits as a plain GET. Each lookup keeps its ticker in the path
+   (data-company-page). A tracked fund's ticker opens that fund's page (data-fund-url). *@
 <section class="research-deck" id="research-panel-companies"
-         role="@(Model.InTab ? "tabpanel" : null)" aria-labelledby="@(Model.InTab ? "research-tab-companies" : null)"
-         hidden="@Model.Hidden"
          data-research-companies
          data-suggest-url="@Url.Action("Suggest", "Research")"
          data-company-url="@Url.Action("CompanyProfile", "Research")"
          data-d3-src="@Url.Content("~/lib/d3/d3.min.js")"
          data-releases-url="@Url.Action("Releases", "Research")"
-         data-company-page="@(Model.InTab ? null : Url.Content("~/Research/Company"))"
+         data-company-page="@Url.Content("~/Research/Company")"
          data-fund-url="@Url.Content("~/Research/Fund/")"
          data-funds-url="@Url.Action("Funds", "Research")"
          data-research-ticker="@Model.Ticker"
@@ -24,12 +21,8 @@
         <p class="research-card__subtitle">@L["Research.Companies.Subtitle"]</p>
 
         <form class="research-companies__search" method="get"
-              action="@(Model.InTab ? Url.Action("Index", "Research") : Url.Content("~/Research/Company"))"
+              action="@Url.Content("~/Research/Company")"
               role="search" data-research-company-form>
-            @if (Model.InTab)
-            {
-                <input type="hidden" name="tab" value="companies"/>
-            }
             <label class="research-companies__label" for="research-company-input">@L["Research.Companies.InputLabel"]</label>
             <div class="research-companies__row">
                 <div class="research-companies__combo">

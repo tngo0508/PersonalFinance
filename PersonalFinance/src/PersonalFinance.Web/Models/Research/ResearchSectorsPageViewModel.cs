@@ -81,11 +81,13 @@ public sealed class ResearchSectorsPageViewModel
         BasketUnavailableState = View == BasketView && !Sectors.Unavailable && Funds.Unavailable
             ? Funds.UnavailableState
             : null,
+        BasketViewUnavailableNote = View == MarketView && !Sectors.Unavailable && Funds.Unavailable,
     };
 
     /// <summary>
-    /// The focus with each part trimmed, or null unless it has one or two <c>/</c>-separated parts of 1 to
-    /// <see cref="MaxFocusPartLength"/> characters each.
+    /// The focus with each part trimmed, or null unless each part has 1 to <see cref="MaxFocusPartLength"/>
+    /// characters. Only the first <c>/</c> separates the office from the industry: an SEC office name never holds one,
+    /// but a SIC industry name can (SIC 2670, "... (No Contaners/Boxes)").
     /// </summary>
     private static string? NormalizeFocus(string? focus)
     {
@@ -93,8 +95,8 @@ public sealed class ResearchSectorsPageViewModel
         {
             return null;
         }
-        string[] parts = focus.Split('/').Select(part => part.Trim()).ToArray();
-        return parts.Length <= 2 && parts.All(part => part.Length is > 0 and <= MaxFocusPartLength)
+        string[] parts = focus.Split('/', 2).Select(part => part.Trim()).ToArray();
+        return parts.All(part => part.Length is > 0 and <= MaxFocusPartLength)
             ? string.Join('/', parts)
             : null;
     }

@@ -10,7 +10,7 @@ using PersonalFinance.Web.Controllers;
 namespace PersonalFinance.Tests.Research;
 
 /// <summary>
-/// The Companies tab's AJAX endpoints answer a rejected ticker or query in the request's Language: the error is chrome
+/// The company lookup's AJAX endpoints answer a rejected ticker or query in the request's Language: the error is chrome
 /// the tab shows in place of a profile, so it comes from the localizer, never hardcoded English.
 /// </summary>
 public class ResearchControllerLocalizationTests

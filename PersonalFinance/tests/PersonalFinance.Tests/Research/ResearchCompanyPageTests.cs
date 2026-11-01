@@ -63,7 +63,6 @@ public class ResearchCompanyPageTests
 
         Assert.Null(model.Ticker);
         Assert.Null(model.Query);
-        Assert.False(model.Panel.InTab);
     }
 
     [Theory]

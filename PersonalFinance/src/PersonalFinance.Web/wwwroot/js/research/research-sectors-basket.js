@@ -1,6 +1,6 @@
 /* global PFI18n */
 /**
- * Research Sectors (the Sectors page, and the tabbed Research page's Sectors tab): the "Market | Your basket" switch
+ * Research Sectors (the Sectors page, and the Basket page's sectors section): the "Market | Your basket" switch
  * and the basket view's data.
  *
  * The basket view draws the Fund Basket in the Sectors treemap (js/research/research-sectors.js), with the same
@@ -17,10 +17,9 @@
  * "−" where it leans less. It describes the basket; it is not a target. A row whose office the basket holds zooms the
  * chart into it.
  *
- * On the Sectors page the panel's data-research-sectors-view says which view it opens on: Your basket only when it is
- * "basket" (the address's ?view=basket) and a basket is set; a press on the switch keeps the address's view in step.
- * On the tabbed page, which has no such attribute, the switch opens on Your basket whenever a basket is set at load.
- * The market view is left as it was. Reads the
+ * The panel's data-research-sectors-view says which view it opens on: Your basket only when it is "basket" (the
+ * address's ?view=basket, or the Basket page) and a basket is set; on the Sectors page a press on the switch keeps
+ * the address's view in step. The market view is left as it was. Reads the
  * `research-sectors-data` island, the basket from `window.ResearchBasket`, and fetches the fund industries snapshot from
  * the URL on the switch (`data-industries-url`) the first time the basket view is needed.
  */
@@ -627,7 +626,7 @@
         const buttons = Array.from(views.querySelectorAll('[data-sectors-view]'));
         const basketButton = buttons.find((b) => b.dataset.sectorsView === 'basket');
         let mode = 'market';
-        // The view the Sectors page asked for ('market' or 'basket'); undefined on the tabbed page.
+        // The view the page asked for: 'market' or 'basket'.
         const requested = panel.dataset.researchSectorsView;
         // The snapshot once fetched, and the fetch while it runs (so it is made once).
         let data = null;
@@ -766,7 +765,7 @@
          * @returns {void}
          */
         function rememberView () {
-            if (requested === undefined || panel.hasAttribute(FIXED_ADDRESS_ATTRIBUTE) || !window.history || typeof window.history.replaceState !== 'function') {
+            if (panel.hasAttribute(FIXED_ADDRESS_ATTRIBUTE) || !window.history || typeof window.history.replaceState !== 'function') {
                 return;
             }
             const url = new URL(window.location.href);
@@ -806,7 +805,7 @@
         });
 
         readBasket();
-        if (currentBasket().length > 0 && (requested === undefined || requested === 'basket')) {
+        if (currentBasket().length > 0 && requested === 'basket') {
             openBasket(false);
         }
     }

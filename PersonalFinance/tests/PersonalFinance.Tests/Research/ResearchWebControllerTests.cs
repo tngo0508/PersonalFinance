@@ -118,7 +118,6 @@ public class ResearchWebControllerTests
                 nameof(ResearchController.Company), nameof(ResearchController.CompanyProfile), nameof(ResearchController.Fund),
                 nameof(ResearchController.FundIndustries),
                 nameof(ResearchController.Funds),
-                nameof(ResearchController.Home),
                 nameof(ResearchController.Index),
                 nameof(ResearchController.Releases), nameof(ResearchController.SearchIndex), nameof(ResearchController.Sectors),
                 nameof(ResearchController.Suggest), nameof(ResearchController.World),
@@ -201,22 +200,8 @@ public class ResearchWebControllerTests
 
         ViewResult view = Assert.IsType<ViewResult>(await CreateController(api).Index(tab));
 
-        Assert.Equal("Home", view.ViewName);
+        Assert.Null(view.ViewName);
         Assert.IsType<ResearchHomeViewModel>(view.Model);
-    }
-
-    [Theory]
-    [InlineData("VTI:100", "VTI:100")]
-    [InlineData("SPY 60", null)]
-    [InlineData(null, null)]
-    public void Home_RedirectsToTheResearchAddress_KeepingAWellFormedBasket(string? basket, string? expected)
-    {
-        (IResearchApi api, ApiProxy<IResearchApi> _) = ApiProxy.Create<IResearchApi>();
-
-        RedirectToActionResult redirect = Assert.IsType<RedirectToActionResult>(CreateController(api).Home(basket));
-
-        Assert.Equal(nameof(ResearchController.Index), redirect.ActionName);
-        Assert.Equal(expected, redirect.RouteValues!["basket"]);
     }
 
     private static readonly WorldSnapshotDto World = new()
@@ -412,10 +397,44 @@ public class ResearchWebControllerTests
         Assert.Equal(ResearchSectorsPageViewModel.BasketView, model.Funds.UnavailableState.RetryRouteValues["view"]);
     }
 
+    // On the market view the switch is not drawn without the funds data, so the panel says why instead of hiding it
+    // silently; on the basket view the full Unavailable State says it.
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData("basket", false)]
+    public async Task Sectors_WhenOnlyTheFundsDataFails_SaysTheBasketViewIsUnavailable(string? view, bool note)
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot)
+            .Throws(nameof(IResearchApi.GetFundsAsync), await ApiFailure(HttpStatusCode.ServiceUnavailable, "{}"));
+
+        ResearchSectorsPanelViewModel panel = SectorsModelOf(await CreateController(api).Sectors(view: view)).Panel;
+
+        Assert.False(panel.BasketView);
+        Assert.Equal(note, panel.BasketViewUnavailableNote);
+        Assert.Equal(!note, panel.BasketUnavailableState is not null);
+    }
+
+    [Fact]
+    public async Task Sectors_WhenEverythingLoads_ShowsTheSwitch_WithoutTheNote()
+    {
+        (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
+        proxy.Returns(nameof(IResearchApi.GetSectorsAsync), Snapshot)
+            .Returns(nameof(IResearchApi.GetFundsAsync), Funds);
+
+        ResearchSectorsPanelViewModel panel = SectorsModelOf(await CreateController(api).Sectors()).Panel;
+
+        Assert.True(panel.BasketView);
+        Assert.False(panel.BasketViewUnavailableNote);
+    }
+
     [Theory]
     [InlineData("Technology", "Technology")]
     [InlineData(" Finance / National Commercial Banks ", "Finance/National Commercial Banks")]
-    [InlineData("A/B/C", null)]
+    // Offices never hold a "/", but SIC industries can (SIC 2670), so only the first "/" separates the parts.
+    [InlineData("Manufacturing/Converted Paper & Paperboard Prods (No Contaners/Boxes)",
+        "Manufacturing/Converted Paper & Paperboard Prods (No Contaners/Boxes)")]
+    [InlineData(" Finance / Banks/Thrifts ", "Finance/Banks/Thrifts")]
     [InlineData("Finance/", null)]
     [InlineData("/Banks", null)]
     [InlineData("   ", null)]

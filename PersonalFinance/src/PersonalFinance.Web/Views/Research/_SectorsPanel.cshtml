@@ -12,20 +12,16 @@
     // they apply: an empty data-research-focus or data-research-sectors-view would read as "asked for nothing".
     System.Text.Encodings.Web.HtmlEncoder encoder = System.Text.Encodings.Web.HtmlEncoder.Default;
     string optionalAttributes = string.Concat(
-        Model.InTab && showBasket ? " data-research-basket" : string.Empty,
         showSectors && Model.Focus is not null ? $" data-research-focus=\"{encoder.Encode(Model.Focus)}\"" : string.Empty,
         showBasket && Model.View is not null ? $" data-research-sectors-view=\"{encoder.Encode(Model.View)}\"" : string.Empty,
         Model.FixedAddress ? " data-research-fixed-address" : string.Empty);
 }
 
-@* The Sectors panel: on the Sectors page on its own, on the tabbed Research page as its Sectors tab. It keeps the id
-   research-panel-sectors either way, so research-page.js wires its scrubber and table, and research-sectors.js and
-   research-sectors-basket.js find their parts. data-research-focus is the group the chart opens zoomed into;
-   data-research-sectors-view the view it opens on (on the tabbed page there is none, and the basket view opens
-   whenever a Fund Basket is set). *@
+@* The Sectors panel, on the Sectors page and (basket view only) the Basket page. research-page.js wires its scrubber
+   and table by the id research-panel-sectors, and research-sectors.js and research-sectors-basket.js find their parts.
+   data-research-focus is the group the chart opens zoomed into; data-research-sectors-view the view it opens on. *@
 <section class="research-deck" id="research-panel-sectors"
-         role="@(Model.InTab ? "tabpanel" : null)" aria-labelledby="@(Model.InTab ? "research-tab-sectors" : null)"
-         hidden="@Model.Hidden" @Html.Raw(optionalAttributes)>
+         @Html.Raw(optionalAttributes)>
     @if (showBasket)
     {
         @* Market (the largest filers by Public float) or Your basket (its funds' holdings by SEC industry, weighted).
@@ -37,6 +33,11 @@
                 <button type="button" class="research-view-toggle__button" data-sectors-view="basket" aria-pressed="false">@L["Research.Js.Common.YourBasket"]</button>
             </div>
         </div>
+    }
+    else if (showSectors && Model.BasketViewUnavailableNote)
+    {
+        @* The funds data could not be read: say so where the switch would be. *@
+        <p class="research-sectors__views research-sectors__note" id="research-sectors-basket-unavailable">@L["Research.Sectors.BasketViewUnavailable"]</p>
     }
     @if (showSectors)
     {
@@ -144,7 +145,7 @@
         <p data-sectors-view-part="@(showBasket ? "market" : null)">@L["Research.Sectors.MarketAbout2"]</p>
         <h2 class="research-panel__title">@L["Research.Common.DataAsOf"]</h2>
         <p class="research-panel__as-of" data-sectors-view-part="@(showBasket ? "market" : null)">
-            @(Model.Sectors.AsOf is { } asOf ? asOf.ToString(ResearchViewModel.LongDate, CultureInfo.CurrentCulture) : L["Research.Common.NotLoadedYet"].Value)
+            @(Model.Sectors.AsOf is { } asOf ? asOf.ToString(ResearchFormats.LongDate, CultureInfo.CurrentCulture) : L["Research.Common.NotLoadedYet"].Value)
         </p>
         @if (showBasket)
         {

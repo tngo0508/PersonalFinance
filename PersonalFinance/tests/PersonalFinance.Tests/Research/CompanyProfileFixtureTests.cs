@@ -10,7 +10,7 @@ using PersonalFinance.Tests.TestSupport;
 namespace PersonalFinance.Tests.Research;
 
 /// <summary>
-/// How the Companies tab is registered: against SEC EDGAR normally, and against the made-up
+/// How the company lookup is registered: against SEC EDGAR normally, and against the made-up
 /// <see cref="FixtureSecCompanyClient"/> only in Development with <c>E2E_SEED_RESEARCH=true</c>, where the E2E
 /// walkthrough looks up its three tickers.
 /// </summary>

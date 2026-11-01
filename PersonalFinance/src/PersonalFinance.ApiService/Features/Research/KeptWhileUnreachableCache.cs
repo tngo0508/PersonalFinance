@@ -3,7 +3,7 @@ using Microsoft.Extensions.Caching.Memory;
 namespace PersonalFinance.ApiService.Features.Research;
 
 /// <summary>
-/// What the Companies tab built recently from SEC, by ticker, shared by every request (a singleton per
+/// What the company lookup built recently from SEC, by ticker, shared by every request (a singleton per
 /// <typeparamref name="TValue"/>: Company Profiles, and press release lists). A value is <see cref="FreshFor"/> a day;
 /// after that it is read again from SEC, but kept for <see cref="KeptFor"/> so it can still be served while SEC cannot
 /// be reached. At most <see cref="MaxEntries"/> are kept, so memory stays bounded. Only trimmed DTOs are kept, never
