@@ -3,7 +3,7 @@ using PersonalFinance.ApiService.Features.Research.Domain;
 namespace PersonalFinance.ApiService.Features.Research.Adapters;
 
 /// <summary>
-/// Reads what SEC EDGAR publishes about one company, for the Companies tab. Implemented by
+/// Reads what SEC EDGAR publishes about one company, for the Research company lookup. Implemented by
 /// <see cref="SecEdgarClient"/> over HTTP, and by <see cref="FixtureSecCompanyClient"/> for E2E runs that cannot
 /// reach SEC.
 /// </summary>

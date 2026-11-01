@@ -1,6 +1,6 @@
 /* global PFI18n */
 /**
- * Research company lookup, on the Company page and the tabbed page's Companies tab: look up a company registered with
+ * Research company lookup, on the Company page: look up a company registered with
  * the SEC by ticker or name and show its Company Profile (identity, annual figures as four D3 bar charts and a table,
  * press releases, recent filings), for information only. The press releases load from `data-releases-url` after the
  * profile shows, so a slow or failed read never delays it.
@@ -375,8 +375,8 @@
     }
 
     /**
-     * Wire the Companies tab panel.
-     * @param {HTMLElement} panel - The tab panel.
+     * Wire the company lookup panel.
+     * @param {HTMLElement} panel - The panel.
      * @returns {void}
      */
     function initCompanies (panel) {

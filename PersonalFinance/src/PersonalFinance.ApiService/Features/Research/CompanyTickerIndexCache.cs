@@ -4,7 +4,7 @@ using PersonalFinance.ApiService.Features.Research.Domain;
 namespace PersonalFinance.ApiService.Features.Research;
 
 /// <summary>
-/// The Companies tab's <see cref="CompanyTickerIndex"/>, shared by every request (a singleton). It is read from SEC at
+/// The company lookup's <see cref="CompanyTickerIndex"/>, shared by every request (a singleton). It is read from SEC at
 /// most once per <see cref="FreshFor"/>; when a re-read fails, the previous index keeps being served, so suggestions
 /// survive an SEC outage. The Tracked Funds' tickers are counted as funds, as SEC's fund list leaves some out.
 /// </summary>

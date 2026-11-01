@@ -357,29 +357,30 @@ _Avoid_: forecast, plan, recommendation
 Item tracking and article watchlist for financial news and interests.
 
 ### Research
-A signed-in page of interactive visualisations of market data, for information only. It never gives buy or sell
-recommendations and stores nothing.
+Signed-in pages of interactive visualisations of market data, for information only, opening on a search-first Home
+(Sectors, World, Funds, the Fund Basket, each Tracked Fund and the Company Profile each have a page). It never gives
+buy or sell recommendations and stores nothing.
 _Avoid_: Explore, Markets, stock picker (distinct from News, which is headlines, and the Watchlist)
 
 ### Public Float
 The market value of a company's shares held by outside investors, as the company reports it to the SEC once a year. The
-Research page uses it to size companies because no displayable price data is available.
+Research Sectors page uses it to size companies because no displayable price data is available.
 _Avoid_: market cap (that includes insider holdings and needs live prices), valuation
 
 ### Company Profile
 The identity, reported annual financial statements and recent SEC filings of one SEC-registered company, as the
-Companies tab of Research shows them, for information only. Figures are read as the company reported them under US
+Research Company page shows them, for information only. Figures are read as the company reported them under US
 GAAP in US dollars; nothing is converted, priced or scored. Its press releases are the announcements the company
 attached to its SEC filings, never third-party coverage.
 _Avoid_: stock page, ticker lookup, quote
 
 ### Tracked Fund
-A fund, ETF or mutual fund, whose holdings the Research page reads, from a list the site owner keeps.
+A fund, ETF or mutual fund, whose holdings Research reads, from a list the site owner keeps.
 _Avoid_: watchlist (that is the Watchlist feature), portfolio
 
 ### Fund Basket
-A set of one to five Tracked Funds, each with a weight, that a user picks on the Research page to view together. It is
-never saved.
+A set of one to five Tracked Funds, each with a weight, that a user picks in Research to view together. It is never
+saved: it lives in the page's address (`?basket=VTI:60,BND:40`), and every Research link and search result carries it.
 _Avoid_: portfolio (that implies holdings the user owns), watchlist (the Watchlist feature), allocation (a Budget term)
 
 ### Spreadsheet Analysis

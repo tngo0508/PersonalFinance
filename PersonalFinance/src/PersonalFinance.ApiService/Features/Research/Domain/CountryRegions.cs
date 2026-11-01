@@ -3,7 +3,7 @@ using System.Collections.Frozen;
 namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>
-/// The five regions the World tab groups issuer countries into, by ISO alpha-2 code, following geography (UN M49
+/// The five regions the World page groups issuer countries into, by ISO alpha-2 code, following geography (UN M49
 /// subregions): North America is the US, Canada, Bermuda, Greenland and Saint Pierre and Miquelon; Mexico, Central
 /// America, the Caribbean and South America are Latin America; the Middle East and Africa are one region; Asia and
 /// Oceania are Asia Pacific. A code not listed (N-PORT's historical codes, Antarctica) has no region.

@@ -534,7 +534,9 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
 
         // Sectors 7: ?focus= opens the chart zoomed, matched by name whatever its case: Finance › National Commercial
         // Banks shows the breadcrumb All sectors › Finance › National Commercial Banks. A name the data does not have
-        // (Finance/Banks) leaves the chart at the top, and a malformed focus (three parts) is dropped by the server.
+        // (Finance/Banks, or Finance/National Commercial Banks/Extra: only the first "/" splits, so its industry is
+        // "National Commercial Banks/Extra") leaves the chart at the top, and a malformed focus (an empty part) is dropped
+        // by the server.
         await step('Sectors 7', fail, async () => {
             const crumbsOf = async (focus) => {
                 await page.goto(`${base}/Research/Sectors?focus=${encodeURIComponent(focus)}`, {waitUntil: 'networkidle', timeout: TIMEOUT});
@@ -547,18 +549,20 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             const ranked = (await page.locator('#research-sectors-ranked-title').textContent()).trim();
             const lower = await crumbsOf('finance');
             const unknown = await crumbsOf('Finance/Banks');
-            const malformed = await crumbsOf('Finance/National Commercial Banks/Extra');
+            const slashInName = await crumbsOf('Finance/National Commercial Banks/Extra');
+            const malformed = await crumbsOf('Finance/');
             const dropped = await page.locator('#research-panel-sectors[data-research-focus]').count() === 0;
             const ok = JSON.stringify(banks) === JSON.stringify(['All sectors', 'Finance', 'National Commercial Banks']) &&
                 legendPressed === 'Finance' && ranked.startsWith('Largest parts of National Commercial Banks') &&
                 JSON.stringify(lower) === JSON.stringify(['All sectors', 'Finance']) &&
                 JSON.stringify(unknown) === JSON.stringify(['All sectors']) &&
+                JSON.stringify(slashInName) === JSON.stringify(['All sectors']) &&
                 JSON.stringify(malformed) === JSON.stringify(['All sectors']) && dropped;
             if (ok) {
                 pass('Sectors 7: ?focus=Finance/National Commercial Banks opens zoomed (All sectors › Finance › National Commercial Banks); case is ignored; an unknown or malformed focus stays at the top');
             } else {
                 fail(`Sectors 7: banks ${JSON.stringify(banks)} legend "${legendPressed}" ranked "${ranked}", lower ${JSON.stringify(lower)}, ` +
-                    `unknown ${JSON.stringify(unknown)}, malformed ${JSON.stringify(malformed)} dropped ${dropped}`);
+                    `unknown ${JSON.stringify(unknown)}, slash in name ${JSON.stringify(slashInName)}, malformed ${JSON.stringify(malformed)} dropped ${dropped}`);
             }
         });
 
@@ -1525,7 +1529,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
 }
 
 /**
- * The bar heights of the Companies tab's charts, in chart order.
+ * The bar heights of the Company page's charts, in chart order.
  * @param {import('playwright').Page} page - A page showing a Company Profile.
  * @returns {Promise<string>} The heights, joined.
  */

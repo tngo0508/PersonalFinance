@@ -1,7 +1,7 @@
 namespace PersonalFinance.ApiService.Features.Research;
 
 /// <summary>
-/// What a Companies tab request by ticker came to, for a Company Profile lookup
+/// What a company lookup request by ticker came to, for a Company Profile lookup
 /// (<see cref="PersonalFinance.Shared.DTOs.Research.CompanyLookupResultDto"/>) or its press releases
 /// (<see cref="PersonalFinance.Shared.DTOs.Research.CompanyPressReleasesResultDto"/>): an answer (a company's, a fund,
 /// or a ticker SEC does not list), too many lookups by the Account, press releases switched off, or SEC EDGAR

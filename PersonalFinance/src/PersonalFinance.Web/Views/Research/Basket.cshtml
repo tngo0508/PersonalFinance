@@ -19,9 +19,9 @@
     string overlapDates = overlap is null || overlap.Funds.Count == 0
         ? string.Empty
         : overlap.Funds.Min(f => f.ReportDate) == overlap.Funds.Max(f => f.ReportDate)
-            ? L.Named("Research.Common.AsOf", ("date", overlap.AsOf.ToString(ResearchViewModel.LongDate, culture)))
-            : L.Named("Research.Common.AsOfRange", ("from", overlap.Funds.Min(f => f.ReportDate).ToString(ResearchViewModel.LongDate, culture)),
-                ("to", overlap.AsOf.ToString(ResearchViewModel.LongDate, culture)));
+            ? L.Named("Research.Common.AsOf", ("date", overlap.AsOf.ToString(ResearchFormats.LongDate, culture)))
+            : L.Named("Research.Common.AsOfRange", ("from", overlap.Funds.Min(f => f.ReportDate).ToString(ResearchFormats.LongDate, culture)),
+                ("to", overlap.AsOf.ToString(ResearchFormats.LongDate, culture)));
     (int Years, string LabelKey)[] windows =
     [
         (1, "Research.Common.OneYear"), (3, "Research.Common.ThreeYears"), (5, "Research.Common.FiveYears"),
@@ -223,7 +223,7 @@
 
                 <section class="research-basket-section" id="@ResearchBasketPageViewModel.RiskSection" aria-label="@L["Research.Basket.Section.Risk"]">
                     <div class="research-card research-risk" id="research-risk">
-                        <h2 class="research-card__title">@L["Research.Tab.Risk"]</h2>
+                        <h2 class="research-card__title">@L["Research.Common.RiskVsReturn"]</h2>
                         @if (!showReturns)
                         {
                             <partial name="_UnavailableState" model="Model.ReturnsUnavailableState"/>
@@ -300,7 +300,7 @@
                         else
                         {
                             <p class="research-card__subtitle">
-                                @L.Named("Research.Funds.Correlation.Subtitle", ("month", returns!.AsOf.ToString(ResearchViewModel.MonthYear, culture)))
+                                @L.Named("Research.Funds.Correlation.Subtitle", ("month", returns!.AsOf.ToString(ResearchFormats.MonthYear, culture)))
                             </p>
                             <div class="research-correlation__controls">
                                 <div class="research-view-toggle" role="group" aria-label="@L["Research.Common.Window"]">
@@ -351,11 +351,11 @@
                     <p>@L["Research.Risk.About"]</p>
                     <h2 class="research-panel__title">@L["Research.Common.DataAsOf"]</h2>
                     <p class="research-panel__as-of">
-                        @(returns is null ? L["Research.Common.NotLoadedYet"].Value : L.Named("Research.Common.ReturnsTo", ("month", returns.AsOf.ToString(ResearchViewModel.MonthYear, culture))))
+                        @(returns is null ? L["Research.Common.NotLoadedYet"].Value : L.Named("Research.Common.ReturnsTo", ("month", returns.AsOf.ToString(ResearchFormats.MonthYear, culture))))
                         @if (macro?.Months.LastOrDefault(m => m.ConsumerPrices is not null) is { } lastPrices)
                         {
                             <br/>
-                            @L.Named("Research.Performance.InflationTo", ("month", lastPrices.Month.ToString(ResearchViewModel.MonthYear, culture)))
+                            @L.Named("Research.Performance.InflationTo", ("month", lastPrices.Month.ToString(ResearchFormats.MonthYear, culture)))
                         }
                     </p>
                 </aside>

@@ -9,8 +9,8 @@
     <link rel="stylesheet" href="~/css/research-companies.css" asp-append-version="true"/>
 }
 
-@* Research Company: the company lookup at /Research/Company/{ticker?}, in the panel the tabbed page's Companies tab
-   shares (_CompanyPanel). It reads no snapshot: the panel fetches the profile, press releases and suggestions, and loads D3 only
+@* Research Company: the company lookup at /Research/Company/{ticker?}, in its panel (_CompanyPanel). It reads no
+   snapshot: the panel fetches the profile, press releases and suggestions, and loads D3 only
    when a profile has figures to chart. *@
 <div class="research research-company-page">
     <partial name="_ResearchNav" model="@("company")"/>

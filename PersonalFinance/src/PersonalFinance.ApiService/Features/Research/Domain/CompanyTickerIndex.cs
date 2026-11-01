@@ -3,7 +3,8 @@ using PersonalFinance.Shared.DTOs.Research;
 namespace PersonalFinance.ApiService.Features.Research.Domain;
 
 /// <summary>
-/// SEC's company ticker list, searchable for the Companies tab: suggestions by ticker or name, and the company behind a
+/// SEC's company ticker list, searchable for the Research company lookup: suggestions by ticker or name, and the
+/// company behind a
 /// ticker. Fund tickers (mutual fund and ETF share classes) are known so a lookup can say a ticker is a fund.
 /// </summary>
 internal sealed class CompanyTickerIndex

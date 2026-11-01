@@ -6,7 +6,7 @@
  * Account settings and the Net Worth help modal (slice #482), the Net Worth page (slice #485), the Google Drive
  * sample-data notice and its Budget report and Transactions modals (slice #484), Budget, Budget Tracker and Savings
  * Goals (slice #487), the Dashboard and Money Priorities (slice #489), Community, News and the AI chat widget
- * (slice #488), and Research's Sectors and World tabs (slice #486), and that the Investment Calculator's, the Google
+ * (slice #488), and Research's Sectors and World pages (slice #486), and that the Investment Calculator's, the Google
  * Drive Transactions timeline's, the Budget planner's Month Strip, the Net Worth runway, the Research Sectors treemap and the
  * World map restyle on a theme switch without a reload (slices #483, #484, #487, #485 and #486).
  * Run from ui-test.js as Test 9j.

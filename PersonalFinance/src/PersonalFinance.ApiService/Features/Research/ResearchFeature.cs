@@ -32,7 +32,7 @@ internal static class ResearchFeature
 
     /// <summary>
     /// The Research datasets, their stored snapshots and the SEC EDGAR and World Bank clients that build them, and the
-    /// Companies tab's Company Profiles. With <paramref name="environment"/> in E2E fixture mode
+    /// company lookup's Company Profiles. With <paramref name="environment"/> in E2E fixture mode
     /// (<see cref="ResearchFixtureSeeder.IsEnabled"/>), Company Profiles come from <see cref="FixtureSecCompanyClient"/>
     /// instead of SEC.
     /// </summary>
@@ -92,7 +92,7 @@ internal static class ResearchFeature
         services.AddScoped<IResearchDatasetRefresher, FxRatesRefresher>();
         services.AddScoped<IResearchService, ResearchService>();
 
-        // Companies tab: the ticker list and built profiles are cached in memory, shared by every request.
+        // The company lookup: the ticker list and built profiles are cached in memory, shared by every request.
         services.TryAddSingleton(TimeProvider.System);
         if (environment is not null && ResearchFixtureSeeder.IsEnabled(environment, configuration))
         {

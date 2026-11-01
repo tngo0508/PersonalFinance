@@ -6,11 +6,6 @@
    card on narrow screens, so the page itself never scrolls sideways.
    ========================================================================== */
 
-/* The Funds tab stacks its cards: the panel goes under them at every width. */
-.research-deck--stacked {
-    grid-template-columns: minmax(0, 1fr);
-}
-
 .research-holdings,
 .research-holdings__categories,
 .research-holdings__top {
@@ -863,8 +858,8 @@ a.research-view-toggle__button[aria-current] {
 }
 
 /* --------------------------------------------------------------------------
-   World tab: the "World market | Your basket" switch and the basket map,
-   on the World tab's single-hue scale (the dataviz reference blue steps).
+   World panel: the "World market | Your basket" switch and the basket map,
+   on the World panel's single-hue scale (the dataviz reference blue steps).
    Dots for small places keep their size under zoom.
    -------------------------------------------------------------------------- */
 

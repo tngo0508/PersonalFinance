@@ -1,6 +1,6 @@
 /* global PFI18n */
 /**
- * Research page, Funds tab: how closely the funds' monthly returns moved together.
+ * Research Funds and Basket pages: how closely the funds' monthly returns moved together.
  *
  * A matrix with one row and one column per fund shows the Pearson correlation of each pair's monthly returns over a
  * 1-, 3- or 5-year window (3 years by default), on a diverging scale (blue for moving together, red for moving
@@ -128,7 +128,7 @@
             line(PFI18n.t('Research.Js.Correlation.Months',
                 { count: PFI18n.formatNumber(cell.years * 12), month: formatMonth(cell.end) }), 'research-tooltip__muted')
         ]);
-        // The Funds page opens on its window and on every tracked fund (data-correlation-all); the tabbed page on
+        // The Funds page opens on its window and on every tracked fund (data-correlation-all); the Basket page on
         // 3 years and the basket's funds.
         const pressed = yearButtons.find((button) => button.getAttribute('aria-pressed') === 'true');
         let years = pressed ? Number(pressed.dataset.correlationYears) : DEFAULT_YEARS;

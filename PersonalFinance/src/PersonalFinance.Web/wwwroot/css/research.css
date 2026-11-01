@@ -1,7 +1,7 @@
 /* ==========================================================================
-   Research page (research-*): Control-deck layout. Header with the
-   information-only pill, tab bar, then a chart card beside a side panel that
-   stacks under the chart at narrow widths.
+   Research pages (research-*): Control-deck layout. Header with the
+   information-only pill and the Research nav, then a chart card beside a side
+   panel that stacks under the chart at narrow widths.
    ========================================================================== */
 
 .research {
@@ -40,38 +40,7 @@
     font-weight: var(--app-font-weight-medium);
 }
 
-.research-tabs {
-    display: flex;
-    gap: var(--app-spacing-s);
-    border-bottom: 1px solid var(--app-border);
-    /* Four tabs fit a 390px phone; anything narrower scrolls the tab bar, never the page. */
-    overflow-x: auto;
-}
-
-.research-tabs__tab {
-    flex: none;
-}
-
-.research-tabs__tab {
-    padding: var(--app-spacing-s) var(--app-spacing-m);
-    border: 0;
-    border-bottom: 2px solid transparent;
-    background: none;
-    color: var(--app-text-muted);
-    font-weight: var(--app-font-weight-medium);
-}
-
-.research-tabs__tab[aria-selected="true"] {
-    border-bottom-color: var(--app-brand);
-    color: var(--app-brand-text);
-}
-
-.research-tabs__tab:focus-visible {
-    outline: 2px solid var(--app-brand);
-    outline-offset: -2px;
-}
-
-/* The Fund Basket bar, between the tab bar and the panels: a title and hint,
+/* The Fund Basket bar, in the Basket page's rail: a title and hint,
    the chosen funds as chips with weights, and the fund picker. Chips wrap at
    narrow widths. */
 
@@ -286,7 +255,7 @@
 
 /* --------------------------------------------------------------------------
    Time scrubber: play/pause, the year slider with its first and last year,
-   and the year in large type. It spans the tab panel above the card and the
+   and the year in large type. It spans the panel above the card and the
    side panel. The slider is the native range input, so keyboard (arrows,
    Home, End, Page Up/Down) and touch dragging work as the platform does.
    -------------------------------------------------------------------------- */
@@ -530,7 +499,7 @@
     --research-hatch-line: var(--app-research-hatch-line);
 }
 
-/* The Sectors tab's "Market | Your basket" switch, and the parts that belong to one view only. */
+/* The Sectors panel's "Market | Your basket" switch, and the parts that belong to one view only. */
 .research-sectors__views {
     grid-column: 1 / -1;
 }
@@ -785,7 +754,7 @@ button.research-ranked__row:focus-visible {
 }
 
 /* Above the Sectors chart: the breadcrumb. The view toggle below is the Market | Your basket switch's (and other
-   tabs'). */
+   panels'). */
 
 .research-chartbar {
     display: flex;

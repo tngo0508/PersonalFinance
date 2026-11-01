@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.9.0] - 2026-11-01
+
+### Changed
+
+- **Research Sectors page**: when the funds data could not be loaded, the page now says that Your basket view is unavailable, where its switch would be, instead of leaving the switch out without a word.
+
+### Fixed
+
+- **Research Sectors focus**: an address that zooms the chart into a SIC industry whose name holds a "/" (such as "Converted Paper & Paperboard Prods (No Contaners/Boxes)") now opens on that industry. Only the first "/" separates the SEC office from the industry.
+
+### Removed
+
+- **Research tabbed page**: the code the old tabbed Research page left behind is gone: its views, view model, tab bar, tab-change events and styles, and 16 text strings nothing used. Old `?tab=` links still redirect to the new pages, and `/Research/Home` is no longer an address of its own.
+
 ## [17.8.0] - 2026-11-01
 
 ### Changed

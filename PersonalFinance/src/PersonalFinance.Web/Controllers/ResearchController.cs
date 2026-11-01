@@ -64,7 +64,7 @@ public sealed class ResearchController : Controller
 
         ResearchStatusDto? status = await ReadAsync(_researchApi.GetStatusAsync, ResearchCacheKeys.Status, "status",
             cancellationToken);
-        return View("Home", new ResearchHomeViewModel(status));
+        return View(new ResearchHomeViewModel(status));
     }
 
     /// <summary>
@@ -88,15 +88,6 @@ public sealed class ResearchController : Controller
             "companies" => RedirectToAction(nameof(Company), new { ticker = companyTicker, basket = keptBasket }),
             _ => null,
         };
-    }
-
-    /// <summary>The address Home had before it moved to <c>/Research</c>: redirects there (302), keeping the basket.</summary>
-    [HttpGet]
-    public IActionResult Home([FromQuery] string? basket = null)
-    {
-        string? trimmedBasket = basket?.Trim();
-        return RedirectToAction(nameof(Index),
-            new { basket = ResearchAddress.IsWellFormedBasket(trimmedBasket) ? trimmedBasket : null });
     }
 
     /// <summary>
@@ -270,7 +261,8 @@ public sealed class ResearchController : Controller
         index.Funds.Count > 0 && index.Offices.Count > 0 && index.Industries.Count > 0 && index.Countries.Count > 0;
 
     /// <summary>
-    /// Suggestions for the Companies tab's search box, as JSON, from ApiService. A rejected query is 400; an ApiService
+    /// Suggestions for the Research company lookup's search box, as JSON, from ApiService. A rejected query is 400; an
+    /// ApiService
     /// failure (such as 503 when the company list cannot be read) keeps its status code with a safe message.
     /// </summary>
     [HttpGet]

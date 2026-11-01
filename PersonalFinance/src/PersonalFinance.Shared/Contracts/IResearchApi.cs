@@ -87,7 +87,8 @@ public interface IResearchApi
     Task<ResearchStatusDto> GetStatusAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets up to eight suggestions for the Companies tab's search box matching <paramref name="query"/> by ticker or
+    /// Gets up to eight suggestions for the Research company lookup's search box matching <paramref name="query"/> by
+    /// ticker or
     /// company name. A rejected query answers 400, and a ticker list that has never loaded answers 503 with a
     /// <see cref="ResearchUnavailableDto"/>; Refit raises both as an <see cref="ApiException"/>.
     /// </summary>

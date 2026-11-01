@@ -502,11 +502,6 @@
         });
         window.addEventListener('scroll', () => tooltip.hide(), { passive: true });
         document.addEventListener('research:basketchange', draw);
-        document.addEventListener('research:tabchange', () => {
-            if (chartHost.clientWidth > 0) {
-                drawChart();
-            }
-        });
         if (typeof ResizeObserver === 'function') {
             new ResizeObserver(() => {
                 if (chartHost.clientWidth > 0 && Math.abs(chartHost.clientWidth - lastWidth) > 4) {

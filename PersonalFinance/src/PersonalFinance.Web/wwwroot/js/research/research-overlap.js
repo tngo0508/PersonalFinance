@@ -1,6 +1,6 @@
 /* global PFI18n */
 /**
- * Research page, Funds tab: how much the Fund Basket's funds overlap, from each fund's latest reported holdings.
+ * Research Basket page: how much the Fund Basket's funds overlap, from each fund's latest reported holdings.
  *
  * Overlap is by weight: for each security two funds both hold, the smaller of its two weights, added up. The view is
  * a matrix with one row and one column per basket fund (the value printed in each cell, on a single-hue blue scale,

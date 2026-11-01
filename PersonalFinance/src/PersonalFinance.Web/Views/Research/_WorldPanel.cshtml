@@ -11,14 +11,13 @@
     string exposureDates = exposure is null
         ? string.Empty
         : exposure.Funds.Min(f => f.ReportDate) == exposure.AsOf
-            ? L.Named("Research.Common.AsOf", ("date", exposure.AsOf.ToString(ResearchViewModel.LongDate, culture)))
-            : L.Named("Research.Common.AsOfRange", ("from", exposure.Funds.Min(f => f.ReportDate).ToString(ResearchViewModel.LongDate, culture)),
-                ("to", exposure.AsOf.ToString(ResearchViewModel.LongDate, culture)));
+            ? L.Named("Research.Common.AsOf", ("date", exposure.AsOf.ToString(ResearchFormats.LongDate, culture)))
+            : L.Named("Research.Common.AsOfRange", ("from", exposure.Funds.Min(f => f.ReportDate).ToString(ResearchFormats.LongDate, culture)),
+                ("to", exposure.AsOf.ToString(ResearchFormats.LongDate, culture)));
     // Razor keeps a data-* attribute whose value is null (as an empty one), so the optional ones are written only when
     // they apply: an empty data-research-country or data-research-world-view would read as "asked for nothing".
     System.Text.Encodings.Web.HtmlEncoder encoder = System.Text.Encodings.Web.HtmlEncoder.Default;
     string optionalAttributes = string.Concat(
-        Model.InTab ? " data-research-basket" : string.Empty,
         world is not null && Model.Country is not null ? $" data-research-country=\"{encoder.Encode(Model.Country)}\"" : string.Empty,
         showBasketView && Model.View is not null ? $" data-research-world-view=\"{encoder.Encode(Model.View)}\"" : string.Empty,
         showBasketView && Model.BasketOnly ? " data-research-world-basket-only" : string.Empty);
@@ -30,15 +29,14 @@
     }
 }
 
-@* The World panel: on the World page on its own, on the tabbed Research page as its World tab. It keeps the id
-   research-panel-world either way, so research-page.js wires its scrubber and table, and research-world.js and
+@* The World panel, on the World page and (basket view only) the Basket page. research-page.js wires its scrubber and
+   table by the id research-panel-world, and research-world.js and
    research-world-basket.js find their parts. The market map is stock-market capitalisation by country (World Bank WDI),
    drawn by js/research/research-world.js as a choropleth from the data island below and the vendored world-atlas
-   borders. data-research-country is the country it opens with selected; data-research-world-view the view it opens on
-   (on the tabbed page there is none, and the basket view opens whenever a Fund Basket is set). *@
+   borders. data-research-country is the country it opens with selected; data-research-world-view the view it opens on.
+   *@
 <section class="research-deck" id="research-panel-world"
-         role="@(Model.InTab ? "tabpanel" : null)" aria-labelledby="@(Model.InTab ? "research-tab-world" : null)"
-         hidden="@Model.Hidden" @Html.Raw(optionalAttributes)>
+         @Html.Raw(optionalAttributes)>
     @if (showBasketView)
     {
         @* World market (the existing choropleth) or Your basket (its funds' issuer countries, weighted). It opens on Your
@@ -133,7 +131,7 @@
             <p>@L["Research.World.About2"]</p>
             <h2 class="research-panel__title">@L["Research.Common.DataAsOf"]</h2>
             <p class="research-panel__as-of">
-                @(Model.World.AsOf is { } asOf && world is not null ? asOf.ToString(ResearchViewModel.LongDate, culture) : L["Research.Common.NotLoadedYet"].Value)
+                @(Model.World.AsOf is { } asOf && world is not null ? asOf.ToString(ResearchFormats.LongDate, culture) : L["Research.Common.NotLoadedYet"].Value)
             </p>
         </aside>
     }

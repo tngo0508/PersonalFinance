@@ -5,8 +5,8 @@ namespace PersonalFinance.Web.Models.Research;
 
 /// <summary>
 /// The World panel (<c>_WorldPanel</c>): the "World market | Your basket" switch, the country map with its scrubber,
-/// colour scale, country detail and table, and the basket view. The World page draws it on its own; the tabbed Research
-/// page draws it as its World tab. Its element ids are the same on both, so the scripts serve both.
+/// colour scale, country detail and table, and the basket view, on the World page and (basket view only) the Basket
+/// page.
 /// </summary>
 public sealed class ResearchWorldPanelViewModel
 {
@@ -22,18 +22,11 @@ public sealed class ResearchWorldPanelViewModel
     /// </summary>
     public bool BasketView { get; init; }
 
-    /// <summary>True on the tabbed page: the panel is a tab panel, labelled by its tab, with the Fund Basket bar.</summary>
-    public bool InTab { get; init; }
-
-    /// <summary>True when the tabbed page opens on another tab.</summary>
-    public bool Hidden { get; init; }
-
     /// <summary>The country the map opens with selected (matched by name in the page), or null.</summary>
     public string? Country { get; init; }
 
     /// <summary>
-    /// The view the panel opens on, <c>market</c> or <c>basket</c>; null on the tabbed page, which opens on the basket
-    /// view whenever a Fund Basket is set.
+    /// The view the panel opens on, <c>market</c> or <c>basket</c>; null opens on the market.
     /// </summary>
     public string? View { get; init; }
 

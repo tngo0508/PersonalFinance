@@ -1,7 +1,7 @@
 /* global d3, PFI18n, ChartPalette */
 /**
  * Research Sectors: a D3 treemap of the largest SEC filers by Public float, one year at a time, on the Sectors page and
- * the tabbed Research page's Sectors tab. The hierarchy is SEC industry office, SIC industry, then company (plus one
+ * the Basket page's sectors section. The hierarchy is SEC industry office, SIC industry, then company (plus one
  * "Other" tile per industry for the smaller filers); the treemap draws the focused group's parts as tiles, in office
  * colours (siblings of one office stepped in lightness). Reads the Sectors snapshot from the JSON data island the
  * Sectors panel renders (Views/Research/_SectorsPanel.cshtml), so it makes no request of its own. Hover or tap a tile
@@ -15,7 +15,8 @@
  * row fades the other tiles). The "Technology (incl. chip makers)" toggle dims every tile outside the industries the
  * server flags as Technology. The zoom and the highlight survive a change of year.
  *
- * The panel's data-research-focus ("Office" or "Office/Industry") opens the chart zoomed into that group, matched by
+ * The panel's data-research-focus ("Office" or "Office/Industry", split at the first "/") opens the chart zoomed into
+ * that group, matched by
  * name; window.ResearchSectors.focusPath(parts) does the same later.
  *
  * The chart draws one of two sources. The market (above) is the default; js/research/research-sectors-basket.js can
@@ -1214,7 +1215,10 @@
         const panel = document.getElementById(PANEL_ID);
         const focus = panel ? panel.dataset.researchFocus : '';
         if (focus) {
-            chart.focusPath(focus.split('/'));
+            // Only the first "/" separates the office from the industry: an office name never holds one, but a SIC
+            // industry name can (SIC 2670, "... (No Contaners/Boxes)").
+            const slash = focus.indexOf('/');
+            chart.focusPath(slash < 0 ? [focus] : [focus.slice(0, slash), focus.slice(slash + 1)]);
         }
         // A theme switch redraws the tiles, legend and ranked bars in the new office colours (#486).
         ChartPalette.subscribe(() => {
