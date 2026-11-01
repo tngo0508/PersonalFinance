@@ -15,7 +15,8 @@
  * shown, keeping the basket and every fund's colour; dashed lines cross at the basket, with descriptive corner labels
  * (never a "better" zone); a label that would overlap another moves aside on a short leader line. Reads the
  * `research-fund-returns-data`, `research-fund-facts-data`, `research-macro-data` and `research-funds-data` islands,
- * and the basket from `window.ResearchBasket`, redrawing on `research:basketchange`.
+ * and the basket from `window.ResearchBasket`, redrawing on `research:basketchange`. On the Fund page the card's
+ * `data-risk-highlight="TICKER"` rings that fund's bubble and bolds its label, and the role chips never hide it.
  */
 (function () {
     'use strict';
@@ -179,6 +180,7 @@
         const rolesHost = document.getElementById(ROLES_ID);
         const roleNames = [...new Set(data.funds.map((f) => roles.get(f.ticker)).filter(Boolean))];
         const activeRoles = new Set();
+        const highlight = (card.getAttribute('data-risk-highlight') || '').toUpperCase();
         const factsOf = new Map((facts ? facts.funds : []).map((f) => [f.ticker, f]));
         const slotOf = (ticker) => (window.ResearchBasket && window.ResearchBasket.slotOf ? window.ResearchBasket.slotOf(ticker) : 0);
         const tooltip = page.createTooltip(document.getElementById(TOOLTIP_ID), (line, point) => cardRows(point)
@@ -234,7 +236,7 @@
                 ? PFI18n.t('Research.Js.Risk.NoteEmpty')
                 : basketFigures ? '' : PFI18n.t('Research.Js.Risk.NoteShort', { span: span(years) });
             allPoints = basketFigures ? [...funds, basketFigures] : funds;
-            const shown = funds.filter((f) => activeRoles.size === 0 || activeRoles.has(roles.get(f.ticker)));
+            const shown = funds.filter((f) => activeRoles.size === 0 || activeRoles.has(roles.get(f.ticker)) || f.ticker === highlight);
             return basketFigures ? [...shown, basketFigures] : shown;
         }
 
@@ -338,7 +340,9 @@
             const funds = points.filter((p) => !p.isBasket).sort((a, b) => radiusOf(b) - radiusOf(a));
             const marks = svg.append('g');
             funds.forEach((p) => {
-                const g = marks.append('g').attr('class', 'research-risk__point').attr('tabindex', 0)
+                const g = marks.append('g')
+                    .attr('class', p.ticker === highlight ? 'research-risk__point research-risk__point--highlight' : 'research-risk__point')
+                    .attr('tabindex', 0)
                     .attr('data-ticker', p.ticker)
                     .attr('transform', `translate(${x(p.volatility)},${y(p.annualizedReturn)})`)
                     .attr('aria-label', cardRows(p).join('. '));
@@ -359,7 +363,8 @@
                 ...(basket ? [{ point: basket, r: DIAMOND, text: basketLabel() }] : [])];
             const labelLayer = svg.append('g').attr('class', 'research-risk__labels');
             const texts = labelled.map((l) => labelLayer.append('text')
-                .attr('class', l.point.isBasket ? 'research-risk__label research-risk__label--basket' : 'research-risk__label')
+                .attr('class', l.point.isBasket ? 'research-risk__label research-risk__label--basket'
+                    : (l.point.ticker === highlight ? 'research-risk__label research-risk__label--highlight' : 'research-risk__label'))
                 .attr('data-label', l.text).text(l.text));
             const spots = placeLabels(labelled.map((l, i) => ({
                 cx: x(l.point.volatility),

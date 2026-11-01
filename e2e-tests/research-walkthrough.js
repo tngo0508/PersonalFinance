@@ -1094,6 +1094,115 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
+        // Fund 1: the nav search opens a fund's page, keeping the basket; the header has its ticker, name and fee, the
+        // address works in any case, and an unknown fund gets the "not found" page with status 404 and a search box.
+        await step('Fund 1', fail, async () => {
+            await page.goto(`${base}/Research/Funds?basket=SPY`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.fill('#research-nav-search', 'qqq');
+            const option = page.locator('.research-search__option', {hasText: 'QQQ'}).first();
+            await option.waitFor({timeout: 10000});
+            await Promise.all([page.waitForURL(/\/Research\/Fund\/QQQ/, {timeout: TIMEOUT}), option.click()]);
+            await page.waitForLoadState('networkidle');
+            const opened = new URL(page.url());
+            const ticker = (await page.locator('.research-fund-header__ticker').textContent()).trim();
+            const fee = (await page.locator('#research-fund-fee').textContent()).trim();
+            const lower = await page.goto(`${base}/Research/Fund/qqq`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const lowerTicker = (await page.locator('.research-fund-header__ticker').textContent()).trim();
+            const unknown = await page.goto(`${base}/Research/Fund/XYZ`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const notFoundSearch = await page.locator('#research-not-found-search').count();
+            const rejected = await page.goto(`${base}/Research/Fund/%3Cscript%3E`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const ok = opened.pathname.endsWith('/Research/Fund/QQQ') && opened.searchParams.get('basket') === 'SPY' &&
+                ticker === 'QQQ' && fee === '0.19%' && lower.status() === 200 && lowerTicker === 'QQQ' &&
+                unknown.status() === 404 && notFoundSearch === 1 && rejected.status() === 404;
+            if (ok) {
+                pass(`Fund 1: the search opens ${opened.pathname}${opened.search} (fee ${fee}); /Research/Fund/qqq works; XYZ and <script> get the 404 page with a search box`);
+            } else {
+                fail(`Fund 1: opened ${opened.pathname}${opened.search}, ticker ${ticker}, fee ${fee}, lower ${lower.status()} ${lowerTicker}, ` +
+                    `unknown ${unknown.status()} search ${notFoundSearch}, rejected ${rejected.status()}`);
+            }
+        });
+
+        // Fund 2: growth compares the fund with the basket by default, or with any other fund; the risk chart rings the
+        // fund and keeps the basket's diamond; similar funds rank SPY by overlap and by correlation.
+        await step('Fund 2', fail, async () => {
+            await page.goto(`${base}/Research/Fund/QQQ?basket=SPY`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const compare = page.locator('#research-performance-compare');
+            const chosen = await compare.inputValue();
+            const choices = await compare.locator('option').allTextContents();
+            const diffTitle = async () => page.evaluate(() => Array.from(document.querySelectorAll('#research-performance-chart .research-performance__panel-title'))
+                .map((t) => t.textContent).find((t) => t.includes('minus')) || '');
+            const withBasket = await diffTitle();
+            const lines = await page.locator('#research-performance-chart .research-performance__line').count();
+            await compare.selectOption('SPY');
+            const withSpy = await diffTitle();
+            const highlighted = await page.locator('#research-risk-chart .research-risk__point--highlight').getAttribute('data-ticker');
+            const diamond = await page.locator('#research-risk-chart .research-risk__point--basket').count();
+            const byOverlap = (await page.locator('#research-similar-overlap li').allTextContents()).map((t) => t.replace(/\s+/g, ' ').trim());
+            const byCorrelation = (await page.locator('#research-similar-correlation li').allTextContents()).map((t) => t.replace(/\s+/g, ' ').trim());
+            const ok = chosen === 'basket' && choices[0] === 'Your basket' && choices.some((c) => c.startsWith('SPY')) &&
+                !choices.some((c) => c.startsWith('QQQ')) && withBasket === 'QQQ minus Your basket, points' && lines === 1 &&
+                withSpy === 'QQQ minus SPY, points' && highlighted === 'QQQ' && diamond === 1 &&
+                byOverlap.length === 1 && byOverlap[0].includes('SPY') && byCorrelation.length === 1 && byCorrelation[0].includes('SPY');
+            if (ok) {
+                pass(`Fund 2: "${withBasket}" by default, then "${withSpy}"; QQQ ringed beside the basket's diamond; similar: ${byOverlap[0]} / ${byCorrelation[0]}`);
+            } else {
+                fail(`Fund 2: chosen ${chosen}, choices ${JSON.stringify(choices)}, titles "${withBasket}" / "${withSpy}", lines ${lines}, ` +
+                    `highlight ${highlighted}, diamond ${diamond}, similar ${JSON.stringify(byOverlap)} ${JSON.stringify(byCorrelation)}`);
+            }
+        });
+
+        // Fund 3: "Add to basket" adds the fund: the button reads as pressed, the nav's count goes up, and every Research
+        // link (here "Compare all funds") carries the new basket; pressing again takes it out.
+        await step('Fund 3', fail, async () => {
+            await page.goto(`${base}/Research/Fund/QQQ?basket=SPY`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const toggle = page.locator('[data-research-basket-toggle="QQQ"]');
+            const count = async () => (await page.locator('[data-research-basket-count]').first().textContent()).trim();
+            const before = { pressed: await toggle.getAttribute('aria-pressed'), count: await count() };
+            await toggle.click();
+            const after = {
+                pressed: await toggle.getAttribute('aria-pressed'),
+                count: await count(),
+                label: (await toggle.innerText()).trim(),
+                address: new URL(page.url()).searchParams.get('basket'),
+                link: new URL(await page.locator('.research-fund-header__actions a').getAttribute('href'), base).searchParams.get('basket')
+            };
+            await toggle.click();
+            const removed = { pressed: await toggle.getAttribute('aria-pressed'), count: await count() };
+            const ok = before.pressed === 'false' && before.count === '1' && after.pressed === 'true' && after.count === '2' &&
+                after.label === 'In your basket (remove)' && after.address === 'SPY,QQQ' && after.link === 'SPY,QQQ' &&
+                removed.pressed === 'false' && removed.count === '1';
+            if (ok) {
+                pass(`Fund 3: "Add to basket" makes it ${after.address} (nav count ${after.count}, links follow), and takes QQQ out again`);
+            } else {
+                fail(`Fund 3: before ${JSON.stringify(before)}, after ${JSON.stringify(after)}, removed ${JSON.stringify(removed)}`);
+            }
+        });
+
+        // Fund 4: "What it holds" lists the largest holdings, each linked to the company search by its name (never by an
+        // identifier), with the basket; "Where the money goes" names the countries and fetches the SEC offices on demand.
+        await step('Fund 4', fail, async () => {
+            await page.goto(`${base}/Research/Fund/SPY?basket=SPY`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            const links = page.locator('#research-fund-holdings-list a');
+            const holdings = await links.count();
+            const name = (await links.first().textContent()).trim();
+            const href = await links.first().getAttribute('href');
+            const url = new URL(href, base);
+            const identifierFree = !/\b[0-9A-Z]{8}[0-9]\b/.test(href) && !/\b[A-Z]{2}[0-9A-Z]{9}[0-9]\b/.test(href);
+            const country = (await page.locator('#research-fund-countries .research-fund-money__name').first().textContent()).trim();
+            await page.locator('[data-fund-money-view="offices"]').click();
+            await page.waitForFunction(() => document.querySelectorAll('#research-fund-offices li').length > 0 ||
+                (document.getElementById('research-fund-offices-status')?.textContent || '').includes('couldn'), null, { timeout: 15000 }).catch(() => {});
+            const offices = await page.locator('#research-fund-offices li').count();
+            const countriesHidden = await page.locator('[data-fund-money-part="countries"]').isHidden();
+            const ok = holdings > 0 && holdings <= 10 && url.pathname.endsWith('/Research/Company') && url.searchParams.get('q') === name &&
+                url.searchParams.get('basket') === 'SPY' && identifierFree && country === 'United States' && offices > 0 && countriesHidden;
+            if (ok) {
+                pass(`Fund 4: ${holdings} holdings, "${name}" links to the company search by name with the basket; ${country} first; ${offices} SEC office rows on demand`);
+            } else {
+                fail(`Fund 4: holdings ${holdings}, link "${href}" ("${name}"), identifier-free ${identifierFree}, country ${country}, offices ${offices}, countries hidden ${countriesHidden}`);
+            }
+        });
+
         // The World steps run on the World page (/Research/World), which shares its panel and scripts with the tabbed
         // page's World tab; steps 8b, 8c, 9 and 11 below still cover that tab.
 

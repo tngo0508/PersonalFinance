@@ -163,6 +163,66 @@ public sealed class ResearchController : Controller
     }
 
     /// <summary>
+    /// The Research Fund page for one Tracked Fund at <c>/Research/Fund/{ticker}</c>, whatever the ticker's case: its
+    /// header, growth, risk, similar funds, holdings and where its money goes. It reads the funds, fund returns, macro,
+    /// fund facts, fund overlap and fund exposure data through the snapshot cache; each that cannot be read leaves only
+    /// the sections that need it unavailable. A ticker <see cref="CompanyLookupRules.TryNormalizeTicker"/> rejects, or
+    /// one that is not a Tracked Fund, gets the "not found" page with status 404; so does any ticker when the funds data
+    /// cannot be read, with its Unavailable State.
+    /// </summary>
+    [HttpGet("Research/Fund/{ticker?}")]
+    public async Task<IActionResult> Fund(string? ticker, [FromQuery] string? basket = null, CancellationToken cancellationToken = default)
+    {
+        if (!CompanyLookupRules.TryNormalizeTicker(ticker, out string? normalized))
+        {
+            return FundNotFound(new ResearchNotFoundViewModel());
+        }
+
+        Task<FundsSnapshotDto?> funds = ReadAsync(_researchApi.GetFundsAsync, ResearchCacheKeys.Funds, "funds", cancellationToken);
+        Task<FundReturnsSnapshotDto?> returns = ReadAsync(_researchApi.GetFundReturnsAsync, ResearchCacheKeys.FundReturns, "fund returns", cancellationToken);
+        Task<MacroSnapshotDto?> macro = ReadAsync(_researchApi.GetMacroAsync, ResearchCacheKeys.Macro, "macro", cancellationToken);
+        Task<FundFactsSnapshotDto?> facts = ReadAsync(_researchApi.GetFundFactsAsync, ResearchCacheKeys.FundFacts, "fund facts", cancellationToken);
+        Task<FundOverlapSnapshotDto?> overlap = ReadAsync(_researchApi.GetFundOverlapAsync, ResearchCacheKeys.FundOverlap, "fund overlap", cancellationToken);
+        Task<FundExposureSnapshotDto?> exposure = ReadAsync(_researchApi.GetFundExposureAsync, ResearchCacheKeys.FundExposure, "fund exposure", cancellationToken);
+        await Task.WhenAll(funds, returns, macro, facts, overlap, exposure);
+
+        FundsSnapshotDto? fundsSnapshot = await funds;
+        if (fundsSnapshot is null)
+        {
+            Dictionary<string, string> retryRoute = new(StringComparer.Ordinal) { ["ticker"] = normalized };
+            return FundNotFound(new ResearchNotFoundViewModel
+            {
+                Ticker = normalized,
+                FundsUnavailableState = new UnavailableStateViewModel
+                {
+                    PageTitle = _localizer["Research.Title"],
+                    Heading = _localizer["Research.Unavailable.Funds"],
+                    RetryController = "Research",
+                    RetryAction = nameof(Fund),
+                    RetryRouteValues = retryRoute,
+                },
+            });
+        }
+
+        TrackedFundDto? fund = fundsSnapshot.Funds.FirstOrDefault(f => string.Equals(f.Ticker, normalized, StringComparison.OrdinalIgnoreCase));
+        if (fund is null)
+        {
+            return FundNotFound(new ResearchNotFoundViewModel { Ticker = normalized });
+        }
+
+        return View(new ResearchFundPageViewModel(_localizer, fund, fundsSnapshot, await returns, await macro, await facts,
+            await overlap, await exposure, basket));
+    }
+
+    /// <summary>The Research "not found" page, with status 404.</summary>
+    private ViewResult FundNotFound(ResearchNotFoundViewModel model)
+    {
+        ViewResult view = View("NotFound", model);
+        view.StatusCode = StatusCodes.Status404NotFound;
+        return view;
+    }
+
+    /// <summary>
     /// The fund industries snapshot, as JSON, from ApiService: the Sectors basket view fetches it the first time
     /// it is shown, so the page itself does not carry it (some 600 KB). An ApiService failure (503 when it has never
     /// loaded) keeps its status code with a safe message.

@@ -145,12 +145,13 @@ public class ResearchWebControllerTests
                 nameof(IResearchApi.GetFundFactsAsync), nameof(IResearchApi.GetFundExposureAsync)],
             proxy.Calls);
         Assert.Same(Snapshot, model.Sectors.Snapshot);
-        // The only other actions are the Companies tab's search, lookup and press releases, and the Sectors basket view's
+        // The only other actions are the Companies tab's search, lookup and press releases, the pages, and the Sectors basket view's
         // data, which it fetches when first shown so the page does not carry it.
         Assert.Equal(
             [
                 nameof(ResearchController.Basket),
-                nameof(ResearchController.Company), nameof(ResearchController.FundIndustries), nameof(ResearchController.Funds),
+                nameof(ResearchController.Company), nameof(ResearchController.Fund), nameof(ResearchController.FundIndustries),
+                nameof(ResearchController.Funds),
                 nameof(ResearchController.Home),
                 nameof(ResearchController.Index),
                 nameof(ResearchController.Releases), nameof(ResearchController.SearchIndex), nameof(ResearchController.Sectors),
