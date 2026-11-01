@@ -1712,3 +1712,149 @@ button.research-ranked__row:focus-visible {
         transition: border-color 0.15s ease, color 0.15s ease;
     }
 }
+
+/* ---------------------------------------------------------------------------------------------------------------------
+   Research Basket page: a rail (section list and the basket editor) beside the sections; the rail stacks above them
+   at narrow widths and sticks beside them on wide screens. With an empty basket only the prompt shows.
+   ------------------------------------------------------------------------------------------------------------------ */
+.research-basket-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--app-spacing-l);
+}
+
+.research-basket-layout[hidden],
+.research-basket-empty[hidden],
+.research-basket__copy-status[hidden] {
+    display: none;
+}
+
+.research-basket-layout__rail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-m);
+    min-width: 0;
+}
+
+.research-basket-layout__sections {
+    display: flex;
+    flex-direction: column;
+    gap: var(--app-spacing-l);
+    min-width: 0;
+}
+
+@media (min-width: 1100px) {
+    .research-basket-layout {
+        grid-template-columns: 18rem minmax(0, 1fr);
+        align-items: start;
+    }
+
+    .research-basket-layout__rail {
+        position: sticky;
+        top: var(--app-spacing-m);
+        max-height: calc(100vh - 2 * var(--app-spacing-m));
+        overflow-y: auto;
+    }
+}
+
+.research-basket-section {
+    scroll-margin-top: var(--app-spacing-m);
+}
+
+.research-basket-sections__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--app-spacing-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+@media (min-width: 1100px) {
+    .research-basket-sections__list {
+        flex-direction: column;
+    }
+}
+
+.research-basket-sections__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: var(--app-spacing-xs) var(--app-spacing-s);
+    border-radius: var(--app-radius-s);
+    color: var(--app-text);
+    text-decoration: none;
+}
+
+.research-basket-sections__link:hover,
+.research-basket-sections__link:focus-visible {
+    background: var(--app-surface-secondary);
+    color: var(--app-brand-text);
+}
+
+.research-basket--rail {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+}
+
+.research-basket--rail .research-basket__head {
+    flex: none;
+}
+
+.research-basket__subtitle {
+    margin: 0;
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-semibold);
+}
+
+.research-basket__presets,
+.research-basket-empty__presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--app-spacing-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.research-basket-empty__presets {
+    margin-bottom: var(--app-spacing-s);
+}
+
+.research-basket-empty__presets .research-chip {
+    text-decoration: none;
+}
+
+.research-basket__share {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--app-spacing-s);
+}
+
+.research-basket__copy-status {
+    margin: 0;
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+}
+
+.research-basket-overview__figures {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    gap: var(--app-spacing-m);
+    margin: var(--app-spacing-m) 0;
+}
+
+.research-basket-overview__figure dt {
+    color: var(--app-text-muted);
+    font-size: var(--app-font-size-small);
+    font-weight: var(--app-font-weight-medium);
+}
+
+.research-basket-overview__figure dd {
+    margin: 0;
+    font-size: var(--app-font-size-xxl);
+    font-weight: var(--app-font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+}

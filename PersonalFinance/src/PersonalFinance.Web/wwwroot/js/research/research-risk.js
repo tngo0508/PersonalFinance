@@ -5,9 +5,10 @@
  *
  * Fund points use the figures the refresh precomputed (the fund returns snapshot's windows: annualized return,
  * volatility, Sharpe ratio and the Treasury bill rate it used). Bubble area follows each fund's net assets, from the
- * fund facts snapshot. "Your basket" is a dark diamond the browser computes from its funds' monthly returns over the
- * same months: rebalanced monthly to its weights, annualized return, volatility (sample standard deviation of the
- * monthly returns times √12) and a Sharpe ratio against the average 3-month Treasury bill (from the macro snapshot).
+ * fund facts snapshot. "Your basket" is a dark diamond the browser computes (research-basket-math.js) from its funds'
+ * monthly returns over the same months: rebalanced monthly to its weights, annualized return, volatility (sample
+ * standard deviation of the monthly returns times √12) and a Sharpe ratio against the average 3-month Treasury bill
+ * (from the macro snapshot).
  *
  * Every point is focusable and opens a card with its return, volatility, Sharpe ratio, expense ratio and net assets;
  * "Show as table" lists the funds and the basket sorted by Sharpe ratio, with inline bars. Role chips narrow the funds
@@ -47,39 +48,6 @@
     const RADIUS = [6, 26];
     const DEFAULT_RADIUS = 8;
     const DIAMOND = 9;
-
-    /**
-     * A month's key.
-     * @param {string} isoDate - The month's first day, e.g. "2026-06-01".
-     * @returns {string} The key, e.g. "2026-06".
-     */
-    function monthKey (isoDate) {
-        return isoDate.slice(0, 7);
-    }
-
-    /**
-     * The month a number of months after another.
-     * @param {string} key - The month.
-     * @param {number} count - How many months later (negative for earlier).
-     * @returns {string} The month's key.
-     */
-    function addMonths (key, count) {
-        const [year, month] = key.split('-').map(Number);
-        const index = year * 12 + (month - 1) + count;
-        return `${Math.floor(index / 12)}-${String(index % 12 + 1).padStart(2, '0')}`;
-    }
-
-    /**
-     * How many months from one month to another.
-     * @param {string} from - The first month.
-     * @param {string} to - The second month.
-     * @returns {number} The months between them.
-     */
-    function monthsBetween (from, to) {
-        const [y1, m1] = from.split('-').map(Number);
-        const [y2, m2] = to.split('-').map(Number);
-        return (y2 - y1) * 12 + (m2 - m1);
-    }
 
     /**
      * A number with a true minus sign and fixed decimals.
@@ -129,8 +97,7 @@
     }
 
     /**
-     * The basket's point for a window: its funds' monthly returns over the window's months, weighted, then the same
-     * figures the refresh computes for a fund.
+     * The basket's point for a window, from the shared basket figures (research-basket-math.js).
      * @param {Object} data - The fund returns snapshot.
      * @param {Object|null} macro - The macro snapshot.
      * @param {Object[]} basket - The basket's funds (ticker, share).
@@ -138,50 +105,8 @@
      * @returns {Object|null} The point, or null when a basket fund lacks a month of the window.
      */
     function basketPoint (data, macro, basket, years) {
-        const series = new Map(data.funds.map((f) => [f.ticker, f]));
-        const funds = basket.filter((f) => series.has(f.ticker));
-        if (funds.length === 0) {
-            return null;
-        }
-        const months = years * 12;
-        const end = funds.map((f) => monthKey(series.get(f.ticker).lastMonth)).sort()[0];
-        const start = addMonths(end, 1 - months);
-        const returns = [];
-        for (let i = 0; i < months; i++) {
-            const month = addMonths(start, i);
-            let sum = 0;
-            let weight = 0;
-            for (const fund of funds) {
-                const s = series.get(fund.ticker);
-                const value = s.returns[monthsBetween(monthKey(s.firstMonth), month)];
-                if (value === undefined || value === null) {
-                    return null;
-                }
-                sum += fund.share * value;
-                weight += fund.share;
-            }
-            returns.push(sum / weight);
-        }
-        const growth = returns.reduce((g, r) => g * (1 + r / 100), 1);
-        const annualized = (Math.pow(growth, 12 / months) - 1) * 100;
-        const mean = returns.reduce((a, r) => a + r, 0) / months;
-        const volatility = Math.sqrt(returns.reduce((a, r) => a + (r - mean) * (r - mean), 0) / (months - 1)) * Math.sqrt(12);
-        const bills = new Map((macro ? macro.months : [])
-            .filter((m) => m.treasuryBill !== null && m.treasuryBill !== undefined)
-            .map((m) => [monthKey(m.month), m.treasuryBill]));
-        const windowBills = Array.from({ length: months }, (_, i) => bills.get(addMonths(start, i))).filter((b) => b !== undefined);
-        const treasuryBill = windowBills.length ? windowBills.reduce((a, b) => a + b, 0) / windowBills.length : null;
-        return {
-            ticker: BASKET_ID,
-            label: basketLabel(),
-            isBasket: true,
-            annualizedReturn: annualized,
-            volatility,
-            sharpe: treasuryBill === null || volatility <= 0 ? null : (annualized - treasuryBill) / volatility,
-            treasuryBill,
-            start,
-            end
-        };
+        const figures = window.ResearchBasketMath.point(data, macro, basket, years);
+        return figures ? { ...figures, ticker: BASKET_ID, label: basketLabel(), isBasket: true } : null;
     }
 
     /**
@@ -592,7 +517,7 @@
      * @returns {void}
      */
     function init () {
-        if (!page || typeof d3 === 'undefined' || !document.getElementById(CHART_ID)) {
+        if (!page || typeof d3 === 'undefined' || !window.ResearchBasketMath || !document.getElementById(CHART_ID)) {
             return;
         }
         const data = page.readData(RETURNS_ID, 'Research fund returns data');

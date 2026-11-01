@@ -20,7 +20,14 @@
     string optionalAttributes = string.Concat(
         Model.InTab ? " data-research-basket" : string.Empty,
         world is not null && Model.Country is not null ? $" data-research-country=\"{encoder.Encode(Model.Country)}\"" : string.Empty,
-        showBasketView && Model.View is not null ? $" data-research-world-view=\"{encoder.Encode(Model.View)}\"" : string.Empty);
+        showBasketView && Model.View is not null ? $" data-research-world-view=\"{encoder.Encode(Model.View)}\"" : string.Empty,
+        showBasketView && Model.BasketOnly ? " data-research-world-basket-only" : string.Empty);
+    // On the Basket page only the basket view is drawn: no switch, scrubber or market map.
+    bool showMarket = !Model.BasketOnly;
+    if (!showMarket)
+    {
+        world = null;
+    }
 }
 
 @* The World panel: on the World page on its own, on the tabbed Research page as its World tab. It keeps the id
@@ -36,7 +43,7 @@
     {
         @* World market (the existing choropleth) or Your basket (its funds' issuer countries, weighted). It opens on Your
            basket only when a Fund Basket is set; js/research/research-world-basket.js wires it. *@
-        <div class="research-world__views" id="research-world-views">
+        <div class="research-world__views" id="research-world-views" hidden="@(!showMarket)">
             <div class="research-view-toggle" role="group" aria-label="@L["Research.World.ViewLabel"]">
                 <button type="button" class="research-view-toggle__button" data-world-view="market" aria-pressed="true">@L["Research.World.Market"]</button>
                 <button type="button" class="research-view-toggle__button" data-world-view="basket" aria-pressed="false">@L["Research.Js.Common.YourBasket"]</button>
@@ -64,73 +71,76 @@
             <p class="research-scrubber__period" data-research-period aria-hidden="true">@world.Periods[^1]</p>
         </div>
     }
-    <div class="research-card" data-world-view-part="market">
-        <h2 class="research-card__title">@L["Research.World.Title"]</h2>
-        @if (Model.BasketUnavailableState is not null)
-        {
-            @* The basket view was asked for, but the funds or fund exposure data could not be read: only that view is
-               unavailable, and the map still shows below. *@
-            <partial name="_UnavailableState" model="Model.BasketUnavailableState"/>
-        }
-        @if (world is null)
-        {
-            <partial name="_UnavailableState" model="Model.World.UnavailableState"/>
-        }
-        else
-        {
-            <p class="research-card__subtitle" id="research-world-subtitle">
-                @L.Named("Research.World.Subtitle", ("period", world.Periods[^1]))
-            </p>
-            <div class="research-world" id="research-world-map"
-                 data-atlas-url="@Url.Content("~/lib/world-atlas/countries-110m.json")"></div>
-            <div class="research-tooltip" id="research-world-tooltip" aria-hidden="true" hidden></div>
-            <div class="research-card__actions">
-                <button type="button" class="research-chip" data-research-table-toggle aria-pressed="false"
-                        aria-controls="research-world-table">@L["Research.Js.Common.ShowTable"]</button>
-            </div>
-            <div class="research-table-host" id="research-world-table" data-research-table hidden></div>
-        }
-        <p class="research-card__source">@L["Research.Source.World"]</p>
-    </div>
+    @if (showMarket)
+    {
+        <div class="research-card" data-world-view-part="market">
+            <h2 class="research-card__title">@L["Research.World.Title"]</h2>
+            @if (Model.BasketUnavailableState is not null)
+            {
+                @* The basket view was asked for, but the funds or fund exposure data could not be read: only that view is
+                   unavailable, and the map still shows below. *@
+                <partial name="_UnavailableState" model="Model.BasketUnavailableState"/>
+            }
+            @if (world is null)
+            {
+                <partial name="_UnavailableState" model="Model.World.UnavailableState"/>
+            }
+            else
+            {
+                <p class="research-card__subtitle" id="research-world-subtitle">
+                    @L.Named("Research.World.Subtitle", ("period", world.Periods[^1]))
+                </p>
+                <div class="research-world" id="research-world-map"
+                     data-atlas-url="@Url.Content("~/lib/world-atlas/countries-110m.json")"></div>
+                <div class="research-tooltip" id="research-world-tooltip" aria-hidden="true" hidden></div>
+                <div class="research-card__actions">
+                    <button type="button" class="research-chip" data-research-table-toggle aria-pressed="false"
+                            aria-controls="research-world-table">@L["Research.Js.Common.ShowTable"]</button>
+                </div>
+                <div class="research-table-host" id="research-world-table" data-research-table hidden></div>
+            }
+            <p class="research-card__source">@L["Research.Source.World"]</p>
+        </div>
 
-    <aside class="research-panel" aria-label="@L["Research.World.PanelLabel"]" data-world-view-part="market">
-        @if (world is not null)
-        {
-            @* The country detail: the chosen country's figures for the scrubber's year. A country is chosen here (the
-               keyboard path) or by clicking it on the map; research-world.js fills the detail. *@
-            <h2 class="research-panel__title">@L["Research.World.CountryTitle"]</h2>
-            <label class="visually-hidden" for="research-world-country">@L["Research.World.CountryLabel"]</label>
-            <select class="form-select form-select-sm research-world__country-select" id="research-world-country">
-                <option value="">@L["Research.World.CountryNone"]</option>
-                @foreach (string name in world.Countries.Select(c => c.Name).Distinct(StringComparer.Ordinal).Order(StringComparer.Create(culture, ignoreCase: true)))
-                {
-                    <option value="@name">@name</option>
-                }
-            </select>
-            <p class="research-panel__note" id="research-world-detail-hint">@L["Research.World.CountryHint"]</p>
-            <div class="research-world__detail" id="research-world-detail" hidden></div>
-            <h2 class="research-panel__title">@L["Research.World.ColourBy"]</h2>
-            <div class="research-world__metrics" role="group" aria-label="@L["Research.World.MetricLabel"]">
-                <button type="button" class="research-chip" data-research-world-metric="marketCap"
-                        aria-pressed="true">@L["Research.Js.World.MarketCap"]</button>
-                <button type="button" class="research-chip" data-research-world-metric="percentOfGdp"
-                        aria-pressed="false">@L["Research.Js.World.PercentOfGdp"]</button>
-            </div>
-            <h2 class="research-panel__title">@L["Research.World.Legend"]</h2>
-            <ol class="research-legend" id="research-world-legend"></ol>
-        }
-        <h2 class="research-panel__title">@L["Research.Common.AboutThisData"]</h2>
-        <p>@L["Research.World.About1"]</p>
-        <p>@L["Research.World.About2"]</p>
-        <h2 class="research-panel__title">@L["Research.Common.DataAsOf"]</h2>
-        <p class="research-panel__as-of">
-            @(Model.World.AsOf is { } asOf && world is not null ? asOf.ToString(ResearchViewModel.LongDate, culture) : L["Research.Common.NotLoadedYet"].Value)
-        </p>
-    </aside>
+        <aside class="research-panel" aria-label="@L["Research.World.PanelLabel"]" data-world-view-part="market">
+            @if (world is not null)
+            {
+                @* The country detail: the chosen country's figures for the scrubber's year. A country is chosen here (the
+                   keyboard path) or by clicking it on the map; research-world.js fills the detail. *@
+                <h2 class="research-panel__title">@L["Research.World.CountryTitle"]</h2>
+                <label class="visually-hidden" for="research-world-country">@L["Research.World.CountryLabel"]</label>
+                <select class="form-select form-select-sm research-world__country-select" id="research-world-country">
+                    <option value="">@L["Research.World.CountryNone"]</option>
+                    @foreach (string name in world.Countries.Select(c => c.Name).Distinct(StringComparer.Ordinal).Order(StringComparer.Create(culture, ignoreCase: true)))
+                    {
+                        <option value="@name">@name</option>
+                    }
+                </select>
+                <p class="research-panel__note" id="research-world-detail-hint">@L["Research.World.CountryHint"]</p>
+                <div class="research-world__detail" id="research-world-detail" hidden></div>
+                <h2 class="research-panel__title">@L["Research.World.ColourBy"]</h2>
+                <div class="research-world__metrics" role="group" aria-label="@L["Research.World.MetricLabel"]">
+                    <button type="button" class="research-chip" data-research-world-metric="marketCap"
+                            aria-pressed="true">@L["Research.Js.World.MarketCap"]</button>
+                    <button type="button" class="research-chip" data-research-world-metric="percentOfGdp"
+                            aria-pressed="false">@L["Research.Js.World.PercentOfGdp"]</button>
+                </div>
+                <h2 class="research-panel__title">@L["Research.World.Legend"]</h2>
+                <ol class="research-legend" id="research-world-legend"></ol>
+            }
+            <h2 class="research-panel__title">@L["Research.Common.AboutThisData"]</h2>
+            <p>@L["Research.World.About1"]</p>
+            <p>@L["Research.World.About2"]</p>
+            <h2 class="research-panel__title">@L["Research.Common.DataAsOf"]</h2>
+            <p class="research-panel__as-of">
+                @(Model.World.AsOf is { } asOf && world is not null ? asOf.ToString(ResearchViewModel.LongDate, culture) : L["Research.Common.NotLoadedYet"].Value)
+            </p>
+        </aside>
+    }
 
     @if (showBasketView)
     {
-        <div class="research-card research-world-basket" id="research-world-basket" data-world-view-part="basket" hidden>
+        <div class="research-card research-world-basket" id="research-world-basket" data-world-view-part="basket" hidden="@showMarket">
             <h2 class="research-card__title">@L["Research.WorldBasket.Title"]</h2>
             <p class="research-card__subtitle">@L.Named("Research.WorldBasket.Subtitle", ("dates", exposureDates))</p>
             <p class="research-overlap__prompt" id="research-world-basket-prompt">@L["Research.WorldBasket.Prompt"]</p>
@@ -162,7 +172,7 @@
             <p class="research-card__source">@L["Research.Source.WorldBasket"]</p>
         </div>
 
-        <aside class="research-panel" data-world-view-part="basket" aria-label="@L["Research.WorldBasket.PanelLabel"]" hidden>
+        <aside class="research-panel" data-world-view-part="basket" aria-label="@L["Research.WorldBasket.PanelLabel"]" hidden="@showMarket">
             <h2 class="research-panel__title">@L["Research.Common.HowToRead"]</h2>
             <p>@L["Research.WorldBasket.HowToRead"]</p>
             <h2 class="research-panel__title">@L["Research.Common.AboutThisData"]</h2>

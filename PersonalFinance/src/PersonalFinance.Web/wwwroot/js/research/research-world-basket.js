@@ -15,7 +15,8 @@
  *
  * On the tabbed page the switch opens on Your basket whenever a basket is set at load. On the World page the panel's
  * data-research-world-view says which view it opens on (Your basket only when it is "basket" and a basket is set), and
- * the address's ?view= follows the switch. The market view (research-world.js) is left exactly as it was. Reads the
+ * the address's ?view= follows the switch. On the Basket page the panel carries data-research-world-basket-only: the
+ * basket view shows alone, without the switch or the market map. The market view (research-world.js) is left exactly as it was. Reads the
  * `research-fund-exposure-data` island and the basket from `window.ResearchBasket`. It works without the World data:
  * the market view then shows only its Unavailable State.
  */
@@ -181,6 +182,8 @@
         let mode = 'market';
         // The view the World page asked for ('market' or 'basket'); undefined on the tabbed page.
         const requested = panel.dataset.researchWorldView;
+        // The Basket page draws the basket view alone, without the switch or the market map.
+        const basketOnly = panel.hasAttribute('data-research-world-basket-only');
         let exposure = null;
         let scaleMax = 1;
         let zoom = null;
@@ -577,7 +580,7 @@
         });
         document.addEventListener('research:basketchange', () => {
             const basket = window.ResearchBasket ? window.ResearchBasket.get() : [];
-            if (basket.length === 0 && mode === 'basket') {
+            if (basket.length === 0 && mode === 'basket' && !basketOnly) {
                 setMode('market');
                 rememberView();
             }
@@ -606,7 +609,7 @@
         drawBasket();
         // The tabbed page opens on the basket whenever one is set; the World page only when ?view=basket asks for it.
         const wantsBasket = requested === undefined || requested === 'basket';
-        setMode(wantsBasket && basket.length > 0 && exposure.count > 0 ? 'basket' : 'market');
+        setMode(basketOnly || (wantsBasket && basket.length > 0 && exposure.count > 0) ? 'basket' : 'market');
     }
 
     /**

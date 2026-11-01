@@ -141,6 +141,28 @@ public sealed class ResearchController : Controller
     }
 
     /// <summary>
+    /// The Research Basket page: the Fund Basket's overview, then its growth, risk, overlap, correlation, sectors and
+    /// countries, with the basket editor, starting mixes and "Copy link". It reads the funds, fund overlap, fund returns,
+    /// macro, fund facts, fund exposure and Sectors data through the snapshot cache; each that cannot be read shows
+    /// only the Unavailable State of the sections that need it. With no Tracked Fund in <paramref name="basket"/> the
+    /// page opens on a prompt with starting mixes; a well-formed <paramref name="basket"/> is kept on every Retry.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Basket([FromQuery] string? basket = null, CancellationToken cancellationToken = default)
+    {
+        Task<FundsSnapshotDto?> funds = ReadAsync(_researchApi.GetFundsAsync, ResearchCacheKeys.Funds, "funds", cancellationToken);
+        Task<FundOverlapSnapshotDto?> overlap = ReadAsync(_researchApi.GetFundOverlapAsync, ResearchCacheKeys.FundOverlap, "fund overlap", cancellationToken);
+        Task<FundReturnsSnapshotDto?> returns = ReadAsync(_researchApi.GetFundReturnsAsync, ResearchCacheKeys.FundReturns, "fund returns", cancellationToken);
+        Task<MacroSnapshotDto?> macro = ReadAsync(_researchApi.GetMacroAsync, ResearchCacheKeys.Macro, "macro", cancellationToken);
+        Task<FundFactsSnapshotDto?> facts = ReadAsync(_researchApi.GetFundFactsAsync, ResearchCacheKeys.FundFacts, "fund facts", cancellationToken);
+        Task<FundExposureSnapshotDto?> exposure = ReadAsync(_researchApi.GetFundExposureAsync, ResearchCacheKeys.FundExposure, "fund exposure", cancellationToken);
+        Task<SectorsSnapshotDto?> sectors = ReadAsync(_researchApi.GetSectorsAsync, ResearchCacheKeys.Sectors, "Sectors", cancellationToken);
+        await Task.WhenAll(funds, overlap, returns, macro, facts, exposure, sectors);
+        return View(new ResearchBasketPageViewModel(_localizer, await funds, await overlap, await returns, await macro,
+            await facts, await exposure, await sectors, basket));
+    }
+
+    /// <summary>
     /// The fund industries snapshot, as JSON, from ApiService: the Sectors basket view fetches it the first time
     /// it is shown, so the page itself does not carry it (some 600 KB). An ApiService failure (503 when it has never
     /// loaded) keeps its status code with a safe message.

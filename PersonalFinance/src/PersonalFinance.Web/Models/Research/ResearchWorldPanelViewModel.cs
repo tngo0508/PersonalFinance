@@ -42,4 +42,10 @@ public sealed class ResearchWorldPanelViewModel
     /// could not be read; the map still shows.
     /// </summary>
     public UnavailableStateViewModel? BasketUnavailableState { get; init; }
+
+    /// <summary>
+    /// True on the Basket page: only the basket view is drawn, without the switch, the scrubber or the market map, so
+    /// the page does not need the World data.
+    /// </summary>
+    public bool BasketOnly { get; init; }
 }

@@ -39,4 +39,10 @@ public sealed class ResearchSectorsPanelViewModel
     /// the market chart still shows.
     /// </summary>
     public UnavailableStateViewModel? BasketUnavailableState { get; init; }
+
+    /// <summary>
+    /// True on the Basket page: the "Market | Your basket" switch leaves the address alone, since the address is the
+    /// Basket page's.
+    /// </summary>
+    public bool FixedAddress { get; init; }
 }

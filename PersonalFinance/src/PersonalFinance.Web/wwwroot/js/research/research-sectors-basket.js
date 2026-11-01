@@ -41,6 +41,8 @@
     const NOTE_ID = 'research-sectors-basket-note';
     const TITLE_ID = 'research-sectors-title';
     const TAB_ID = 'sectors';
+    // On the Basket page the switch does not write ?view= to the address, which is the Basket page's.
+    const FIXED_ADDRESS_ATTRIBUTE = 'data-research-fixed-address';
     const TOP_COMPANIES = 10;
     const TOP_ISSUERS = 10;
     const TOP_COUNTRIES = 3;
@@ -764,7 +766,7 @@
          * @returns {void}
          */
         function rememberView () {
-            if (requested === undefined || !window.history || typeof window.history.replaceState !== 'function') {
+            if (requested === undefined || panel.hasAttribute(FIXED_ADDRESS_ATTRIBUTE) || !window.history || typeof window.history.replaceState !== 'function') {
                 return;
             }
             const url = new URL(window.location.href);
