@@ -80,9 +80,6 @@ public class NewsWebControllerTests
     private static NewsViewModel ViewModelOf(IActionResult result) =>
         Assert.IsType<NewsViewModel>(Assert.IsType<ViewResult>(result).Model);
 
-    private static NewsRefreshResponse RefreshResponseOf(IActionResult result) =>
-        Assert.IsType<NewsRefreshResponse>(Assert.IsType<JsonResult>(result).Value);
-
     [Fact]
     public async Task Index_BuildsTheViewModelFromTheFeed_AndForwardsTheFilters()
     {
@@ -130,63 +127,5 @@ public class NewsWebControllerTests
         Assert.False(model.IsLoading);
         Assert.NotNull(model.ErrorMessage);
         Assert.DoesNotContain("secret", model.ErrorMessage);
-    }
-
-    [Fact]
-    public async Task Refresh_ReturnsTheArticlesAsJson()
-    {
-        NewsRefreshResponse response =
-            RefreshResponseOf(await CreateController(new FakeNewsApi()).Refresh(new NewsQueryDto { Search = "rates" }));
-
-        Assert.True(response.Success);
-        Assert.Equal("Rates fall", Assert.Single(response.Articles!).Title);
-        Assert.Equal(Now.UtcDateTime, response.LastRefreshed);
-    }
-
-    [Fact]
-    public async Task Refresh_WhenApiServiceRejectsTheFilters_ReturnsNoArticles()
-    {
-        var api = new FakeNewsApi { RejectFilters = true };
-
-        NewsRefreshResponse response =
-            RefreshResponseOf(await CreateController(api).Refresh(new NewsQueryDto { Search = "too long" }));
-
-        Assert.True(response.Success);
-        Assert.Empty(response.Articles!);
-        Assert.Single(api.Queries);
-    }
-
-    [Fact]
-    public async Task Refresh_WhenApiServiceFails_ReturnsItsStatusWithoutExceptionDetails()
-    {
-        var response = new HttpResponseMessage(HttpStatusCode.InternalServerError)
-        {
-            Content = new StringContent("System.InvalidOperationException: secret stack trace", Encoding.UTF8, "text/plain")
-        };
-        ApiException failure = await ApiException.Create(
-            new HttpRequestMessage(HttpMethod.Get, "https://api.local/api/News"), HttpMethod.Get, response,
-            new RefitSettings());
-        NewsController controller = CreateController(new FakeNewsApi { Failure = failure });
-
-        IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.Refresh(new NewsQueryDto()));
-
-        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(StatusCodes.Status500InternalServerError, objectResult.StatusCode);
-        string body = JsonSerializer.Serialize(objectResult.Value);
-        Assert.Contains("error", body);
-        Assert.DoesNotContain("secret", body);
-    }
-
-    [Fact]
-    public async Task Refresh_WhenTheFailureIsUnexpected_Returns500WithAGenericMessage()
-    {
-        NewsController controller =
-            CreateController(new FakeNewsApi { Failure = new InvalidOperationException("secret stack trace") });
-
-        IActionResult result = await FilteredAction.InvokeAsync(controller, () => controller.Refresh(new NewsQueryDto()));
-
-        ObjectResult objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(StatusCodes.Status500InternalServerError, objectResult.StatusCode);
-        Assert.DoesNotContain("secret", JsonSerializer.Serialize(objectResult.Value));
     }
 }

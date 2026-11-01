@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.10.0] - 2026-11-01
+
+### Changed
+
+- **Finance News redesign**: the News page is now one reading river with your watchlist beside it, in place of a card grid and a separate Watchlist tab.
+  - Articles are grouped into Last 24 hours, Earlier this week and Older, and the newest story leads with a larger headline and image.
+  - Topic chips and the search box sit in a toolbar that stays in view; sources are links in the side rail. Filters are plain links, so a filtered page can be bookmarked or shared.
+  - The watchlist shows in the side rail, where each saved article can be opened or removed. Save now toggles: pressing it again removes the article.
+  - Summarize opens and closes the AI summary under its article.
+  - On a phone the watchlist and sources collapse above the articles, and the topic chips scroll sideways.
+
+### Removed
+
+- **News background refresh**: the page no longer reloads its articles every five minutes, nor through the `/News/Refresh` JSON action; the refresh button reloads the page. Thirteen text strings only the old page used are gone.
+
 ## [17.9.0] - 2026-11-01
 
 ### Changed
