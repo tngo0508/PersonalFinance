@@ -343,6 +343,37 @@
         return item;
     }
 
+    let d3Loading = null;
+
+    /**
+     * Load D3 once, the first time a profile needs its charts, so the lookup page loads none before a lookup.
+     * @param {string|undefined} src - D3's address, from the panel; without one, D3 must already be on the page.
+     * @returns {Promise<boolean>} Whether D3 is ready.
+     */
+    function loadD3 (src) {
+        if (window.d3) {
+            return Promise.resolve(true);
+        }
+        if (!src) {
+            return Promise.resolve(false);
+        }
+        if (!d3Loading) {
+            d3Loading = new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => resolve(Boolean(window.d3));
+                script.onerror = () => {
+                    // A later lookup tries again.
+                    script.remove();
+                    d3Loading = null;
+                    resolve(false);
+                };
+                document.head.append(script);
+            });
+        }
+        return d3Loading;
+    }
+
     /**
      * Wire the Companies tab panel.
      * @param {HTMLElement} panel - The tab panel.
@@ -370,6 +401,7 @@
         const pageBase = panel.dataset.companyPage || null;
         const fundUrl = panel.dataset.fundUrl || null;
         const fundsUrl = panel.dataset.fundsUrl || null;
+        const d3Src = panel.dataset.d3Src;
         const releases = {
             section: panel.querySelector('[data-research-company-releases]'),
             loading: panel.querySelector('[data-research-releases-loading]'),
@@ -579,12 +611,14 @@
             set('years-note', years.length > 0
                 ? PFI18n.plural('Research.Js.Companies.YearsNote', years.length)
                 : PFI18n.t('Research.Js.Companies.NoYears'));
-            chartsHost.hidden = years.length === 0;
+            // Without D3 (it could not load), the table still shows the figures.
+            const charted = years.length > 0 && Boolean(window.d3);
+            chartsHost.hidden = !charted;
             tableHost.hidden = years.length === 0;
             if (years.length > 0) {
                 // Bars grow in, and move between companies, unless the user asked for less motion.
                 const animate = !page.prefersReducedMotion();
-                if (!chartsHost.children.length) {
+                if (charted && !chartsHost.children.length) {
                     CHARTS.forEach((chart) => {
                         const figure = element('figure', 'research-companies__chart');
                         figure.dataset.chart = chart.key;
@@ -597,9 +631,11 @@
                         chartsHost.append(figure);
                     });
                 }
-                CHARTS.forEach((chart) => {
-                    drawChart(chartsHost.querySelector(`[data-chart="${chart.key}"]`), years, chart, animate, tooltip);
-                });
+                if (charted) {
+                    CHARTS.forEach((chart) => {
+                        drawChart(chartsHost.querySelector(`[data-chart="${chart.key}"]`), years, chart, animate, tooltip);
+                    });
+                }
                 tableHost.replaceChildren(buildTable(years));
             } else {
                 tableHost.replaceChildren();
@@ -835,6 +871,12 @@
                 }
                 const result = await response.json();
                 if (result.kind === 'profile' && result.profile) {
+                    if ((result.profile.fiscalYears || []).length > 0) {
+                        await loadD3(d3Src);
+                        if (request !== lookupRequest) {
+                            return;
+                        }
+                    }
                     renderProfile(result.profile);
                     page.announce(result.profile.dataAsOf
                         ? PFI18n.t('Research.Js.Companies.LoadedAsOf',
@@ -946,7 +988,7 @@
      */
     function init () {
         const panel = document.querySelector('[data-research-companies]');
-        if (panel && window.d3) {
+        if (panel) {
             initCompanies(panel);
         }
     }

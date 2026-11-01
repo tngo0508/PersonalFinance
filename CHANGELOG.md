@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.8.0] - 2026-11-01
+
+### Changed
+
+- **Research redesign**: Research now opens on Research Home, a search-first page, and its pages replace the tabbed Research page.
+  - The sidebar's Research link opens Home: search funds, companies, sectors and countries, try a starter, start a basket from a mix, and see when each dataset was last updated.
+  - Sectors, World, Funds, Basket, each fund's page and the Company page are reached from the Research nav and search.
+  - Old links keep working: `/Research?tab=sectors` opens the Sectors page, `funds` the Basket page, `performance` its Growth section, `risk` the Funds page's risk view, `world` the World page and `companies` the Company page, each keeping a basket and a company's ticker.
+  - The Company page loads its charting library only when a company has figures to chart.
+
 ## [17.7.0] - 2026-11-01
 
 ### Added

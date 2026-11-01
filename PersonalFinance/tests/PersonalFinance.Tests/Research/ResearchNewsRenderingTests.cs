@@ -36,25 +36,52 @@ public sealed partial class ResearchNewsRenderingTests : IAsyncLifetime
 
     // Visible English chrome of the Research page with every dataset loaded. Each must render in English, and none
     // may render in Vietnamese.
-    private static readonly string[] ResearchEnglish =
-    [
-        "Explore public market data from official sources.", "For information only. Not investment advice.",
-        ">Sectors<", ">Funds<", ">Performance<", ">Risk vs return<", ">World<", ">Companies<", "Research datasets",
-        "Fund Basket", "Use equal weights", "Add a fund: type a ticker or name", "Largest SEC filers by Public float",
-        "largest of", "Show as table", "Key takeaways", "View options", "SEC industry offices", "About this data",
-        "Data as of", "Play through the years", "Overlap: same holdings", "Correlation: move together",
-        "All tracked funds", "What the tracked funds hold", "How to read the list", "Play through the quarters",
-        "Growth of 100", "Adjusted for inflation", "Compare your basket with", "Returns to", "Inflation to",
-        "Stock-market value by country", "Colour the map by", "Market cap", "World market", "Your basket by issuer country",
-        "Look up a company", "Ticker or company name", "e.g. MSFT or Microsoft", ">Look up<", "Press releases",
-        "Recent filings", "All filings on EDGAR", "(opens in a new tab)", "Source:", "31 December 2025"
-    ];
+    // Each Research page's own English, checked on that page; the shared nav and disclaimer are checked on Home.
+    public static TheoryData<string, string[]> ResearchPages => new()
+    {
+        {
+            "/Research",
+            [
+                ">Sectors<", ">World<", ">Your basket<", "Explore the market", "Data freshness", "New here?",
+                "Start from a mix:", "Open basket report", "For information only. Not investment advice.", "Try:",
+            ]
+        },
+        {
+            "/Research/Sectors",
+            [
+                "Largest SEC filers by Public float", "largest of", "Show as table", "Key takeaways", "View options",
+                "SEC industry offices", "About this data", "Data as of", "Play through the years", "31 December 2025",
+            ]
+        },
+        {
+            "/Research/World",
+            ["Stock-market value by country", "Colour the map by", "Market cap", "World market", "Your basket by issuer country"]
+        },
+        {
+            "/Research/Company",
+            [
+                "Company lookup", "Look up a company", "Ticker or company name", "e.g. MSFT or Microsoft", ">Look up<",
+                "Press releases", "Recent filings", "All filings on EDGAR", "(opens in a new tab)", "Source:",
+            ]
+        },
+        {
+            "/Research/Basket?basket=VTI",
+            ["Fund Basket", "Use equal weights", "Your basket at a glance", "Compare your basket with", "Adjusted for inflation"]
+        },
+        {
+            "/Research/Fund/VTI",
+            ["Add to basket", "Compare all funds", "What it holds", "Where the money goes", "Similar funds", "Growth of 100"]
+        },
+    };
 
-    private static readonly string[] ResearchUnavailableEnglish =
-    [
-        "We couldn't load the Sectors data", "We couldn't load the funds data", "We couldn't load the World data",
-        "We couldn't load the fund returns data", "Not loaded yet"
-    ];
+    // Each page's Unavailable State when no dataset has loaded.
+    public static TheoryData<string, string[]> ResearchUnavailablePages => new()
+    {
+        { "/Research", ["Not loaded yet"] },
+        { "/Research/Sectors", ["We couldn't load the Sectors data"] },
+        { "/Research/World", ["We couldn't load the World data"] },
+        { "/Research/Basket?basket=VTI", ["We couldn't load the funds data"] },
+    };
 
     private static readonly string[] NewsEnglish =
     [
@@ -198,16 +225,17 @@ public sealed partial class ResearchNewsRenderingTests : IAsyncLifetime
         await _app.DisposeAsync();
     }
 
-    [Fact]
-    public async Task ResearchPage_InVietnamese_ShowsNoEnglishChrome()
+    [Theory]
+    [MemberData(nameof(ResearchPages))]
+    public async Task ResearchPage_InVietnamese_ShowsNoEnglishChrome(string url, string[] english)
     {
         LoadEveryDataset();
 
-        string english = await GetAsync("/Research", vietnamese: false);
-        string html = await GetAsync("/Research", vietnamese: true);
+        string inEnglish = await GetAsync(url, vietnamese: false);
+        string html = await GetAsync(url, vietnamese: true);
 
-        AssertShows(english, ResearchEnglish);
-        AssertHides(html, ResearchEnglish);
+        AssertShows(inEnglish, english);
+        AssertHides(html, english);
         Assert.Contains(TestLocalization.Vietnamese("Research.Title"), html);
     }
 
@@ -295,20 +323,21 @@ public sealed partial class ResearchNewsRenderingTests : IAsyncLifetime
     {
         LoadEveryDataset();
 
-        string html = await GetAsync("/Research", vietnamese: true);
+        string html = await GetAsync("/Research/Sectors", vietnamese: true);
 
         Assert.Contains("1.235", html);
         Assert.Contains("31 tháng 12 2025", html);
     }
 
-    [Fact]
-    public async Task ResearchPage_WithNoData_InVietnamese_ShowsNoEnglishUnavailableState()
+    [Theory]
+    [MemberData(nameof(ResearchUnavailablePages))]
+    public async Task ResearchPage_WithNoData_InVietnamese_ShowsNoEnglishUnavailableState(string url, string[] english)
     {
-        string english = await GetAsync("/Research", vietnamese: false);
-        string html = await GetAsync("/Research", vietnamese: true);
+        string inEnglish = await GetAsync(url, vietnamese: false);
+        string html = await GetAsync(url, vietnamese: true);
 
-        AssertShows(english, ResearchUnavailableEnglish);
-        AssertHides(html, ResearchUnavailableEnglish);
+        AssertShows(inEnglish, english);
+        AssertHides(html, english);
     }
 
     [Fact]
@@ -316,7 +345,7 @@ public sealed partial class ResearchNewsRenderingTests : IAsyncLifetime
     {
         LoadEveryDataset();
 
-        string html = await GetAsync("/Research", vietnamese: true);
+        string html = await GetAsync("/Research/Sectors", vietnamese: true);
 
         Dictionary<string, string> strings = PageIsland(html, "Research.Js.");
         Assert.Equal(TestLocalization.Vietnamese("Research.Js.Page.Pause"), strings["Research.Js.Page.Pause"]);

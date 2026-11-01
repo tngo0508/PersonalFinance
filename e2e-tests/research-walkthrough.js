@@ -1,10 +1,10 @@
 /**
- * Research first-session walkthrough (spec #217, Testing Decisions): the steps a new Account takes through the
- * Sectors page (Sectors 1 to 7, which were Research 2 to 6e on the Sectors tab before the Sectors page shared its panel)
- * the Funds page (Funds 1 to 4: table sort, risk roles, correlation, holdings list), the tabbed page's Funds tab, the
- * Basket page (Research 7b to 7j on its editor, overlap, correlation, growth and risk sections, and Basket 1: the
- * overview against the risk chart), the World page and the tabbed page's World tab, then the Company page's 9 steps (spec #242, Company 1 to 9). Run from ui-test.js as
- * Test 9c.
+ * Research first-session walkthrough (spec #217, Testing Decisions): the steps a new Account takes from Research Home
+ * through the Sectors page (Sectors 1 to 7), the Funds page (Funds 1 to 4: table sort, risk roles, correlation, holdings
+ * list), the Basket page (Research 7b to 7j on its editor, overlap, correlation, growth and risk sections, and Basket 1:
+ * the overview against the risk chart), the Fund page (Fund 1 to 4), the World page (World 1 to 4, Research 8b and 8c on
+ * its basket view), tables, reduced motion and the shell (Shell 1 to 3: the basket across pages, a phone, and where D3
+ * loads), then the Company page's 9 steps (spec #242, Company 1 to 9). Run from ui-test.js as Test 9c.
  *
  * Needs the ApiService started in Development with E2E_SEED_RESEARCH=true, which stores small fixture snapshots
  * (PersonalFinance.ApiService/Features/Research/ResearchFixtureSeeder.cs) and answers company lookups from a made-up
@@ -45,8 +45,8 @@ async function registerFreshAccount(page, base) {
 }
 
 /**
- * The period labels a tab's data island holds, oldest first.
- * @param {import('playwright').Page} page - A page showing /Research.
+ * The period labels a page's data island holds, oldest first.
+ * @param {import('playwright').Page} page - A page showing the Sectors, Funds or World page.
  * @param {string} tabId - sectors, funds or world.
  * @returns {Promise<string[]>} The period labels, or [] when the island is missing.
  */
@@ -58,8 +58,8 @@ async function periodsOf(page, tabId) {
 }
 
 /**
- * The text of a tab's scrubber period label.
- * @param {import('playwright').Page} page - A page showing /Research.
+ * The text of a panel's scrubber period label.
+ * @param {import('playwright').Page} page - A page showing the Sectors, Funds or World page.
  * @param {string} tabId - sectors, funds or world.
  * @returns {Promise<string>} The label, trimmed.
  */
@@ -121,7 +121,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
     };
     const page = watch(await context.newPage());
     try {
-        // Step 1: register a fresh Account and open Research from the sidebar.
+        // Step 1: register a fresh Account and open Research Home from the sidebar.
         if (!await registerFreshAccount(page, base)) {
             fail('Research 1: could not register and sign in a fresh Account');
             return;
@@ -130,14 +130,17 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             await page.goto(`${base}/Dashboard`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             await page.locator('#sidebar a.sidebar-link', {hasText: 'Research'}).click();
             await page.waitForURL(/\/Research/, {timeout: TIMEOUT});
-            await page.waitForSelector('#research-treemap svg', {timeout: TIMEOUT});
+            await page.waitForSelector('#research-home-search', {timeout: TIMEOUT});
             const active = await page.locator('#sidebar a.sidebar-link.active', {hasText: 'Research'}).count();
-            if (active === 1) {
-                pass('Research 1: opened from the sidebar, which marks Research active');
+            const home = new URL(page.url()).pathname.replace(/\/$/, '').endsWith('/Research');
+            if (active === 1 && home) {
+                pass('Research 1: the sidebar opens Research Home and marks Research active');
             } else {
-                fail('Research 1: the sidebar does not mark Research active');
+                fail(`Research 1: active ${active}, address ${page.url()}`);
             }
         });
+
+        await page.goto(`${base}/Research/Sectors`, {waitUntil: 'networkidle', timeout: TIMEOUT});
 
         const sectorsPeriods = await periodsOf(page, 'sectors');
         if (sectorsPeriods.length < 2) {
@@ -147,8 +150,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
         const latest = sectorsPeriods[sectorsPeriods.length - 1];
         const earliest = sectorsPeriods[0];
 
-        // The Sectors steps run on the Sectors page (/Research/Sectors), which shares its panel and scripts with the
-        // tabbed page's Sectors tab; steps 7b, 9, 10 and 11 below still cover that tab.
+        // The Sectors steps run on the Sectors page (/Research/Sectors).
         const crumbCurrent = page.locator('#research-sectors-breadcrumb [aria-current="location"]');
         const allSectors = page.locator('#research-sectors-breadcrumb .research-breadcrumb__link', {hasText: 'All sectors'});
 
@@ -655,21 +657,6 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             } else {
                 fail(`Funds 4: latest ${latest}, open ${fundOpen}/${categoryOpen}, link ${linkVisible} "${href}" ("${name}"), ` +
                     `identifier-free ${identifierFree}, earlier ${earlier}, basket ${keptBasket}`);
-            }
-        });
-
-        // Step 7: back on the tabbed page, the Funds tab shows the same holdings list at the latest quarter.
-        await step('Research 7', fail, async () => {
-            await page.goto(`${base}/Research`, {waitUntil: 'networkidle', timeout: TIMEOUT});
-            await page.click('#research-tab-funds');
-            const list = page.locator('#research-panel-funds #research-holdings-list');
-            const shown = await list.isVisible();
-            const quarter = await list.getAttribute('data-period');
-            const funds = await list.locator(':scope > li').evaluateAll((items) => items.map((i) => i.dataset.ticker));
-            if (shown && /^\d{4} Q[1-4]$/.test(quarter) && funds.join(',') === 'SPY,QQQ') {
-                pass(`Research 7: the Funds tab lists what SPY and QQQ hold in ${quarter}`);
-            } else {
-                fail(`Research 7: shown ${shown}, quarter "${quarter}", funds ${JSON.stringify(funds)}`);
             }
         });
 
@@ -1203,8 +1190,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
-        // The World steps run on the World page (/Research/World), which shares its panel and scripts with the tabbed
-        // page's World tab; steps 8b, 8c, 9 and 11 below still cover that tab.
+        // The World steps run on the World page (/Research/World).
 
         // World 1 (was Research 8): the World page opens on the market map, the Research nav marks World as the current
         // page, and switching to % of GDP changes the legend.
@@ -1301,14 +1287,11 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
-        // Step 8b: without a basket the World tab opens on the market map with "Your basket" off; with SPY and QQQ it opens
-        // on the basket map, whose callouts and Hong Kong and Singapore dots match figures computed here from the fixture
-        // (Singapore under 0.05% reads "<0.1%"); the map zooms with dots kept their size; emptying the basket goes back.
+        // Step 8b: the World page's basket view of SPY and QQQ shows callouts and Hong Kong and Singapore dots that match
+        // figures computed here from the fixture (Singapore under 0.05% reads "<0.1%"), and the map zooms with dots kept
+        // their size.
         await step('Research 8b', fail, async () => {
-            await page.goto(`${base}/Research?tab=world`, {waitUntil: 'networkidle', timeout: TIMEOUT});
-            const marketFirst = await page.locator('#research-world-map svg').isVisible();
-            const basketOff = await page.locator('[data-world-view="basket"]').isDisabled();
-            await page.goto(`${base}/Research?tab=world&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.goto(`${base}/Research/World?view=basket&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             await page.waitForSelector('#research-world-basket-map svg path', {timeout: TIMEOUT});
             const expected = await page.evaluate(() => {
                 const data = JSON.parse(document.getElementById('research-fund-exposure-data').textContent);
@@ -1333,18 +1316,15 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             const transform = await page.locator('#research-world-basket-map svg > g').getAttribute('transform');
             const rAfter = Number(await page.locator('.research-world-basket__dot[data-code="HK"]').getAttribute('r'));
             await page.click('#research-world-basket-reset');
-            await page.locator('#research-basket-chips [data-ticker="QQQ"] .research-basket__remove').click();
-            await page.locator('#research-basket-chips [data-ticker="SPY"] .research-basket__remove').click();
-            const backToMarket = await page.locator('[data-world-view="market"]').getAttribute('aria-pressed');
-            const ok = marketFirst && basketOff && basketOn === 'true' && marketHidden &&
+            const ok = basketOn === 'true' && marketHidden &&
                 values[0] === expected.outside && notes[0].includes(`Ireland, ${expected.ie}`) && notes[1].includes('HKD') &&
                 notes[2] === 'North America' && hk.endsWith(`${expected.hk} of your basket`) && sg.endsWith('<0.1% of your basket') &&
-                expected.sg === '<0.1%' && /scale\(/.test(transform || '') && rAfter < rBefore && backToMarket === 'true';
+                expected.sg === '<0.1%' && /scale\(/.test(transform || '') && rAfter < rBefore;
             if (ok) {
-                pass(`Research 8b: market map without a basket; with SPY and QQQ the basket map shows ${expected.outside} outside the US (Ireland ${expected.ie}), Hong Kong ${expected.hk} and Singapore <0.1% as dots, zooms with dots kept their size, and an empty basket returns to the market`);
+                pass(`Research 8b: the basket map of SPY and QQQ shows ${expected.outside} outside the US (Ireland ${expected.ie}), Hong Kong ${expected.hk} and Singapore <0.1% as dots, and zooms with dots kept their size`);
             } else {
-                fail(`Research 8b: market ${marketFirst}/${basketOff}, basket ${basketOn}/${marketHidden}, callouts ${JSON.stringify(values)} ${JSON.stringify(notes)} vs ${JSON.stringify(expected)}, ` +
-                    `HK "${hk}", SG "${sg}", zoom ${transform} r ${rBefore}->${rAfter}, back ${backToMarket}`);
+                fail(`Research 8b: basket ${basketOn}/${marketHidden}, callouts ${JSON.stringify(values)} ${JSON.stringify(notes)} vs ${JSON.stringify(expected)}, ` +
+                    `HK "${hk}", SG "${sg}", zoom ${transform} r ${rBefore}->${rAfter}`);
             }
         });
 
@@ -1352,7 +1332,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
         // countries (choosing it keeps them lit), the currency bars list what holdings are priced in, and the required
         // wording is there.
         await step('Research 8c', fail, async () => {
-            await page.goto(`${base}/Research?tab=world&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.goto(`${base}/Research/World?view=basket&basket=SPY:60,QQQ:40`, {waitUntil: 'networkidle', timeout: TIMEOUT});
             await page.waitForSelector('#research-world-basket-map svg path', {timeout: TIMEOUT});
             const expected = await page.evaluate(() => {
                 const data = JSON.parse(document.getElementById('research-fund-exposure-data').textContent);
@@ -1389,22 +1369,18 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
-        // Step 9: "Show as table" lists rows on each chart tab (the Funds tab's holdings are a list already).
+        // Step 9: "Show as table" lists rows on the Sectors and World pages' maps.
         await step('Research 9', fail, async () => {
             const counts = {};
             for (const tabId of ['sectors', 'world']) {
-                await page.click(`#research-tab-${tabId}`);
-                // With a basket set, World opens on the basket map: the table belongs to the market view.
-                if (tabId === 'world' && await page.locator('[data-world-view="market"][aria-pressed="false"]').count()) {
-                    await page.click('[data-world-view="market"]');
-                }
+                await page.goto(`${base}/Research/${tabId === 'sectors' ? 'Sectors' : 'World'}`, {waitUntil: 'networkidle', timeout: TIMEOUT});
                 await page.locator(`#research-panel-${tabId} [data-research-table-toggle]`).click();
                 counts[tabId] = await page.locator(`#research-panel-${tabId} [data-research-table] tbody tr`).count();
             }
             if (Object.values(counts).every((n) => n > 0)) {
-                pass(`Research 9: "Show as table" lists rows on each tab (${JSON.stringify(counts)})`);
+                pass(`Research 9: "Show as table" lists rows on each page (${JSON.stringify(counts)})`);
             } else {
-                fail(`Research 9: table rows per tab ${JSON.stringify(counts)}`);
+                fail(`Research 9: table rows per page ${JSON.stringify(counts)}`);
             }
         });
 
@@ -1413,7 +1389,7 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             const reduced = watch(await context.newPage());
             try {
                 await reduced.emulateMedia({reducedMotion: 'reduce'});
-                await reduced.goto(`${base}/Research`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+                await reduced.goto(`${base}/Research/Sectors`, {waitUntil: 'networkidle', timeout: TIMEOUT});
                 await reduced.waitForSelector('#research-treemap g.research-treemap__tile', {timeout: TIMEOUT});
                 const shape = () => reduced.evaluate(() => [...document.querySelectorAll('#research-treemap g.research-treemap__tile')]
                     .map((tile) => {
@@ -1435,8 +1411,39 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             }
         });
 
-        // Step 11: at 390 px there is no horizontal page scroll and the slider answers touch.
-        await step('Research 11', fail, async () => {
+        // Shell 1: a fund found from Home goes into the basket, and the basket follows through the Research nav, Back and a
+        // reload, because it lives in the address.
+        await step('Shell 1', fail, async () => {
+            await page.goto(`${base}/Research`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+            await page.fill('#research-home-search', 'qqq');
+            const option = page.locator('.research-search__option', {hasText: 'QQQ'}).first();
+            await option.waitFor({timeout: 10000});
+            await Promise.all([page.waitForURL(/\/Research\/Fund\/QQQ/, {timeout: TIMEOUT}), option.click()]);
+            await page.waitForLoadState('networkidle');
+            await page.locator('[data-research-basket-toggle="QQQ"]').click();
+            const added = (await addressOf(page)).searchParams.get('basket');
+            const navBasket = page.locator('.research-nav a', {hasText: 'Your basket'}).first();
+            await Promise.all([page.waitForURL(/\/Research\/Basket/, {timeout: TIMEOUT}), navBasket.click()]);
+            await page.waitForLoadState('networkidle');
+            const onBasket = (await addressOf(page)).searchParams.get('basket');
+            const chips = await page.locator('#research-basket-chips [data-ticker]').evaluateAll((items) => items.map((i) => i.dataset.ticker));
+            await page.goBack({waitUntil: 'networkidle', timeout: TIMEOUT});
+            const back = await addressOf(page);
+            const pressedBack = await page.locator('[data-research-basket-toggle="QQQ"]').getAttribute('aria-pressed');
+            await page.reload({waitUntil: 'networkidle', timeout: TIMEOUT});
+            const pressedReload = await page.locator('[data-research-basket-toggle="QQQ"]').getAttribute('aria-pressed');
+            const ok = added === 'QQQ' && onBasket === 'QQQ' && chips.join() === 'QQQ' && back.pathname.endsWith('/Research/Fund/QQQ') &&
+                back.searchParams.get('basket') === 'QQQ' && pressedBack === 'true' && pressedReload === 'true';
+            if (ok) {
+                pass('Shell 1: Home search opens QQQ, "Add to basket" puts it in the address, and the nav, Back and a reload keep it');
+            } else {
+                fail(`Shell 1: added ${added}, basket page ${onBasket} chips ${JSON.stringify(chips)}, back ${back.pathname}${back.search} ` +
+                    `pressed ${pressedBack}, after reload ${pressedReload}`);
+            }
+        });
+
+        // Shell 2: at 390 px no Research page scrolls sideways, and the Sectors slider answers touch.
+        await step('Shell 2', fail, async () => {
             const phone = await browser.newContext({
                 ignoreHTTPSErrors: true,
                 storageState: await context.storageState(),
@@ -1446,23 +1453,24 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
             });
             try {
                 const mobile = watch(await phone.newPage());
-                // With a weighted basket, so the Funds tab's check covers the Fund Basket bar's chips too.
-                await mobile.goto(`${base}/Research?basket=SPY:70,QQQ:50`, {waitUntil: 'networkidle', timeout: TIMEOUT});
-                await mobile.waitForSelector('#research-treemap svg', {timeout: TIMEOUT});
+                // With a weighted basket, so the checks cover the basket's chips and the nav's count too.
+                const pages = ['', '/Sectors', '/World', '/Funds', '/Basket', '/Fund/SPY', '/Company'];
                 const wide = [];
-                for (const tabId of ['sectors', 'funds', 'performance', 'risk', 'world']) {
-                    await mobile.tap(`#research-tab-${tabId}`);
+                for (const path of pages) {
+                    await mobile.goto(`${base}/Research${path}?basket=SPY:70,QQQ:50`, {waitUntil: 'networkidle', timeout: TIMEOUT});
                     await mobile.waitForTimeout(300);
                     if (await scrollsSideways(mobile)) {
-                        wide.push(tabId);
+                        wide.push(path || '/');
                     }
                 }
-                await mobile.tap('#research-tab-sectors');
-                // With a basket set, the tab opens on Your basket (the Sectors page only does so with ?view=basket),
-                // which has no years: the slider is the market's.
-                await mobile.waitForSelector('[data-sectors-view="basket"][aria-pressed="true"]', {timeout: TIMEOUT});
-                pass('Research 11: with a basket set, the Sectors tab opens on Your basket');
-                await mobile.tap('[data-sectors-view="market"]');
+                if (wide.length === 0) {
+                    pass(`Shell 2: no horizontal page scroll at 390 px on ${pages.length} Research pages`);
+                } else {
+                    fail(`Shell 2: horizontal page scroll at 390 px on ${wide.join(', ')}`);
+                }
+
+                await mobile.goto(`${base}/Research/Sectors`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+                await mobile.waitForSelector('#research-treemap svg', {timeout: TIMEOUT});
                 // The cookie banner is fixed to the bottom of the screen and, depending on how its text wraps, can
                 // cover the slider; answer it first, as someone on a phone would.
                 const essentialOnly = mobile.locator('#cookieAcceptEssential');
@@ -1479,20 +1487,34 @@ async function runResearchWalkthrough({browser, base, pass, fail, consoleErrors,
                 }, tapAt);
                 await mobile.touchscreen.tap(tapAt.x, tapAt.y);
                 const label = await periodLabel(mobile, 'sectors');
-                if (wide.length === 0) {
-                    pass('Research 11: no horizontal page scroll at 390 px on any tab');
-                } else {
-                    fail(`Research 11: horizontal page scroll at 390 px on ${wide.join(', ')}`);
-                }
                 if (label === earliest) {
-                    pass(`Research 11: a touch on the slider moves Sectors to ${earliest}`);
+                    pass(`Shell 2: a touch on the slider moves Sectors to ${earliest}`);
                 } else {
                     const viewportHeight = await mobile.evaluate(() => window.innerHeight);
-                    fail(`Research 11: after a touch at the start of the slider the label is "${label}" ` +
+                    fail(`Shell 2: after a touch at the start of the slider the label is "${label}" ` +
                         `(touch at ${Math.round(tapAt.x)},${Math.round(tapAt.y)} of a ${viewportHeight} px viewport hit ${target})`);
                 }
             } finally {
                 await phone.close();
+            }
+        });
+
+        // Shell 3: Home and the Company page load no D3 until it is needed; the chart pages and views load it.
+        await step('Shell 3', fail, async () => {
+            const loadsD3 = async (path) => {
+                await page.goto(`${base}/Research${path}`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+                return page.evaluate(() => Boolean(window.d3) ||
+                    [...document.scripts].some((script) => /\/d3(\.min)?\.js/.test(script.src)));
+            };
+            const without = {home: await loadsD3(''), company: await loadsD3('/Company')};
+            const charts = {};
+            for (const path of ['/Sectors', '/World', '/Funds?view=risk', '/Basket?basket=SPY', '/Fund/SPY']) {
+                charts[path] = await loadsD3(path);
+            }
+            if (!without.home && !without.company && Object.values(charts).every(Boolean)) {
+                pass('Shell 3: Home and the Company page load no D3; Sectors, World, the Funds risk view, Basket and Fund do');
+            } else {
+                fail(`Shell 3: D3 on Home ${without.home}, Company ${without.company}, chart pages ${JSON.stringify(charts)}`);
             }
         });
 

@@ -60,10 +60,10 @@ const CONTRAST_PAGES = {
     chatWidget: ['.ai-chat-header h2', '.ai-chat-header p', '.ai-chat-eyebrow', '.ai-chat-welcome-text', '.ai-chat-chip',
         '.ai-chat-disclaimer'],
     // Research (#486): the Sectors treemap (a chart view) and the World map (a map view), on the seeded snapshots
-    researchSectors: ['.research-header__title', '.research-tabs__tab[aria-selected="true"]',
-        '.research-tabs__tab[aria-selected="false"]', '#research-sectors-title', '.research-panel__title',
+    researchSectors: ['.research-header__title', '.research-nav__link[aria-current="page"]',
+        '.research-nav__link:not([aria-current])', '#research-sectors-title', '.research-panel__title',
         '#research-sectors-legend .research-legend__button', '.research-view-toggle__button[aria-pressed="true"]'],
-    researchWorld: ['.research-header__title', '.research-tabs__tab[aria-selected="true"]', '#research-world-subtitle',
+    researchWorld: ['.research-header__title', '.research-nav__link[aria-current="page"]', '#research-world-subtitle',
         '#research-panel-world .research-panel__title', '#research-panel-world .research-legend__item'],
     // Google Drive on sample data (#484): the sample-data notice, then the Budget report and Transactions modals. The
     // sample spreadsheet holds one month, so the report shows its month view: one period chip, the active one.
@@ -732,10 +732,10 @@ async function runThemeSmoke({browser, base, pass, fail}) {
         const offices = Array.from({length: 8}, (_, i) => `--app-research-office-${i + 1}`).concat('--app-text-faint');
         const worldSteps = Array.from({length: 8}, (_, i) => `--app-research-world-step-${i + 1}`)
             .concat('--app-research-world-nodata');
-        await page.goto(`${base}/Research?tab=sectors`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await page.goto(`${base}/Research/Sectors`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Research Sectors', CONTRAST_PAGES.researchSectors, report);
         await checkResearchRestyles(page, 'Research Sectors treemap', '#research-treemap .research-treemap__rect', offices, report);
-        await page.goto(`${base}/Research?tab=world`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await page.goto(`${base}/Research/World`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Research World', CONTRAST_PAGES.researchWorld, report);
         await checkResearchRestyles(page, 'Research World map', '#research-world-map path.research-world__country', worldSteps,
             report);

@@ -13,8 +13,8 @@ using ResearchController = PersonalFinance.Web.Controllers.ResearchController;
 namespace PersonalFinance.Tests.Research;
 
 /// <summary>
-/// The Web side of the Companies tab: the page can open on any tab, and on the Companies tab on a ticker, from the
-/// address; the Suggest and Company actions check input before calling ApiService and answer JavaScript with JSON.
+/// The Web side of the company lookup: the Suggest and CompanyProfile actions check input before calling ApiService and
+/// answer JavaScript with JSON.
 /// </summary>
 public class ResearchCompaniesWebControllerTests
 {
@@ -23,57 +23,6 @@ public class ResearchCompaniesWebControllerTests
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
-
-    private static ResearchViewModel ViewModelOf(IActionResult result) =>
-        Assert.IsType<ResearchViewModel>(Assert.IsType<ViewResult>(result).Model);
-
-    [Fact]
-    public async Task Index_WithNoTab_OpensOnSectors()
-    {
-        (IResearchApi api, _) = ApiProxy.Create<IResearchApi>();
-
-        ResearchViewModel model = ViewModelOf(await CreateController(api).Index());
-
-        Assert.Equal(ResearchViewModel.SectorsTab, model.SelectedTab);
-        Assert.Null(model.CompanyTicker);
-    }
-
-    [Theory]
-    [InlineData("funds", ResearchViewModel.FundsTab)]
-    [InlineData("etfs", ResearchViewModel.FundsTab)] // The Funds tab's first id: old links still open it.
-    [InlineData(" ETFS ", ResearchViewModel.FundsTab)]
-    [InlineData("WORLD", ResearchViewModel.WorldTab)]
-    [InlineData("companies", ResearchViewModel.CompaniesTab)]
-    [InlineData("unknown", ResearchViewModel.SectorsTab)]
-    public async Task Index_OpensOnTheNamedTab(string tab, string expected)
-    {
-        (IResearchApi api, _) = ApiProxy.Create<IResearchApi>();
-
-        ResearchViewModel model = ViewModelOf(await CreateController(api).Index(tab));
-
-        Assert.Equal(expected, model.SelectedTab);
-    }
-
-    [Fact]
-    public async Task Index_OnTheCompaniesTab_OpensOnTheTicker_AsSecListsIt()
-    {
-        (IResearchApi api, _) = ApiProxy.Create<IResearchApi>();
-
-        ResearchViewModel model = ViewModelOf(await CreateController(api).Index("companies", "brk.b"));
-
-        Assert.Equal("BRK-B", model.CompanyTicker);
-    }
-
-    [Theory]
-    [InlineData("sectors", "MSFT")] // A ticker belongs to the Companies tab only.
-    [InlineData("companies", "<script>")]
-    [InlineData("companies", "TOOLONGTICKER")]
-    public async Task Index_IgnoresATickerItCannotUse(string tab, string ticker)
-    {
-        (IResearchApi api, _) = ApiProxy.Create<IResearchApi>();
-
-        Assert.Null(ViewModelOf(await CreateController(api).Index(tab, ticker)).CompanyTicker);
-    }
 
     [Fact]
     public async Task Suggest_ReturnsApiServicesSuggestions_AsJson()
