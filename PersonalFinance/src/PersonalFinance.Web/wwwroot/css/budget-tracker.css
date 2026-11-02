@@ -112,7 +112,6 @@
 .bt-month-jump__select {
     width: auto;
     font-weight: var(--app-font-weight-medium);
-    padding-right: 2rem;
 }
 
 .bt-page-header__subtitle {

@@ -674,6 +674,11 @@ table .text-end,
   padding: 5px 12px;
   transition: border-color 0.1s ease;
 }
+/* Keep Bootstrap's room for the chevron: this sheet loads after every page's own
+   stylesheet, so the shorthand above would otherwise run the text under the icon. */
+.form-select {
+  padding-right: 2.25rem;
+}
 .form-control:focus,
 .form-select:focus {
   border-color: var(--app-brand);
