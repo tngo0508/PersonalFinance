@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.10.1] - 2026-11-01
+
+### Fixed
+
+- **Budget Tracker categories**: Add Category, and the rename, edit and reorder actions on a category, work again. Each had answered "The request was invalid." because the Web app sent the category kind to the ApiService as a word ("Expense") it could not read; it is a number again, and a test now drives the real ApiService through the Web app's own client.
+
 ## [17.10.0] - 2026-11-01
 
 ### Changed
