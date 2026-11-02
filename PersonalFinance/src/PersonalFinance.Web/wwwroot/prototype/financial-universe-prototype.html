@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Financial Universe prototype (throwaway)</title>
+<style>
+  :root { --bg:#f7f8fa; --fg:#1f2430; --muted:#6b7280; --income:#2f855a; --expense:#c05621; --savings:#2b6cb0; --goal:#6b46c1; --networth:#b7791f; --scenario:#2c7a7b; --other:#718096; --edge:#a0aec0; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14171c; --fg:#e5e7eb; --muted:#9ca3af; --edge:#4b5563; } }
+  html,body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.4 system-ui, Segoe UI, sans-serif; }
+  header { padding:12px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:1.1rem; margin:0 auto 0 0; }
+  button { font:inherit; padding:6px 12px; border-radius:8px; border:1px solid var(--edge); background:transparent; color:var(--fg); }
+  #cy { height: calc(100vh - 64px); width:100%; }
+  .legend { font-size:.85rem; color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Financial Universe (prototype, Cytoscape.js + dagre)</h1>
+  <span class="legend">solid = weighted this month, dashed = relationship only</span>
+  <button id="zin" type="button">Zoom in</button>
+  <button id="zout" type="button">Zoom out</button>
+  <button id="fit" type="button">Fit</button>
+</header>
+<div id="cy" role="img" aria-label="Financial Universe graph"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.34.4/cytoscape.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@4.0.1/dist/cytoscape-dagre.js"></script>
+<script>
+(function () {
+  'use strict';
+  if (typeof cytoscapeDagre === "function") { cytoscape.use(cytoscapeDagre); }
+  var NL = String.fromCharCode(10);
+  var fmt = function (n) { return '$' + n.toLocaleString('en-US'); };
+  var css = getComputedStyle(document.documentElement);
+  var tok = function (name) { return css.getPropertyValue(name).trim(); };
+
+  var nodes = [];
+  var edges = [];
+  var add = function (id, kind, name, sub) {
+    nodes.push({ data: { id: id, kind: kind, label: name + (sub ? NL + sub : '') } });
+  };
+  var link = function (a, b, w) {
+    edges.push({ data: { id: a + '->' + b, source: a, target: b, weight: w || 0, weighted: w ? 'yes' : 'no' } });
+  };
+
+  // Income sources pool into one Income hub (allocation per source is not known).
+  var income = [['salary','Salary',6200],['freelance','Freelance',900],['dividends','Dividends',150]];
+  var totalIncome = 0;
+  income.forEach(function (s) { add(s[0], 'income', s[1], fmt(s[2])); link(s[0], 'income', s[2]); totalIncome += s[2]; });
+  add('income', 'income', 'Income', fmt(totalIncome));
+
+  // Expense categories; under 3% of total flow fold into Other (MoneyFlowBuilder rule).
+  var expenses = [['housing','Housing',1800],['groceries','Groceries',650],['transport','Transportation',320],['utilities','Utilities',240],
+    ['insurance','Insurance',230],['healthcare','Healthcare',225],['dining','Dining out',260],['entertainment','Entertainment',220],
+    ['subs','Subscriptions',60],['gifts','Gifts',45],['pets','Pets',90],['clothing','Clothing',110]];
+  var other = 0, spent = 0, folded = 0;
+  expenses.forEach(function (e) {
+    spent += e[2];
+    if (e[2] < totalIncome * 0.03) { other += e[2]; folded += 1; return; }
+    add(e[0], 'expense', e[1], fmt(e[2])); link('income', e[0], e[2]);
+  });
+  if (other > 0) { add('other', 'other', 'Other (' + folded + ' categories)', fmt(other)); link('income', 'other', other); }
+
+  var savings = totalIncome - spent;
+  add('savings', 'savings', 'Savings', fmt(savings) + ' this month'); link('income', 'savings', savings);
+
+  var goals = [['g1','Emergency fund',1000,'$7,400 of $15,000'],['g2','House deposit',1200,'$21,500 of $60,000'],['g3','Vacation',300,'$900 of $3,000'],
+    ['g4','New car',500,'$4,200 of $18,000'],['g5','Laptop',0,'$0 of $2,000']];
+  goals.forEach(function (g) { add(g[0], 'goal', g[1], g[3]); link('savings', g[0], g[2]); });
+
+  add('networth', 'networth', 'Net Worth', 'Starting $42,000' + NL + 'Annual savings $36,000'); link('savings', 'networth');
+  var scenarios = [['s1','Index fund, 20 years'],['s2','Aggressive, 30 years'],['s3','Conservative, 10 years'],['s4','Side income, 15 years']];
+  scenarios.forEach(function (s) { add(s[0], 'scenario', s[1], 'Investment scenario'); link('networth', s[0]); });
+
+  var colorFor = { income: '--income', expense: '--expense', other: '--other', savings: '--savings', goal: '--goal', networth: '--networth', scenario: '--scenario' };
+  var maxW = Math.max.apply(null, edges.map(function (e) { return e.data.weight; }));
+
+  var cy = cytoscape({
+    container: document.getElementById('cy'),
+    elements: { nodes: nodes, edges: edges },
+    userZoomingEnabled: false,
+    style: [
+      { selector: 'node', style: {
+        'shape': 'round-rectangle', 'width': 'label', 'height': 'label', 'padding': '10px',
+        'background-color': tok('--bg'), 'border-width': 2,
+        'border-color': function (n) { return tok(colorFor[n.data('kind')]); },
+        'label': 'data(label)', 'text-wrap': 'wrap', 'text-max-width': '180px', 'text-valign': 'center', 'text-halign': 'center',
+        'font-size': 13, 'font-family': 'system-ui, Segoe UI, sans-serif', 'color': tok('--fg'), 'text-margin-y': 0 } },
+      { selector: 'node[kind = "income"], node[kind = "savings"], node[kind = "networth"]', style: { 'font-weight': 'bold' } },
+      { selector: 'edge', style: {
+        'curve-style': 'bezier', 'target-arrow-shape': 'triangle', 'arrow-scale': 0.8,
+        'line-color': tok('--edge'), 'target-arrow-color': tok('--edge'),
+        'width': function (e) { var w = e.data('weight'); return w ? 1 + 7 * (w / maxW) : 1.5; } } },
+      { selector: 'edge[weighted = "no"]', style: { 'line-style': 'dashed', 'line-dash-pattern': [6, 4] } }
+    ],
+    layout: { name: 'dagre', rankDir: 'LR', nodeSep: 14, rankSep: 70, edgeSep: 10, ranker: 'network-simplex', fit: true, padding: 16 }
+  });
+
+  // ctrl+wheel zoom only, so the page keeps scrolling over the canvas.
+  cy.container().addEventListener('wheel', function (ev) {
+    if (!ev.ctrlKey) { return; }
+    ev.preventDefault();
+    var f = ev.deltaY < 0 ? 1.1 : 0.9;
+    cy.zoom({ level: cy.zoom() * f, renderedPosition: { x: ev.offsetX, y: ev.offsetY } });
+  }, { passive: false });
+  document.getElementById('zin').onclick = function () { cy.zoom({ level: cy.zoom() * 1.2, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } }); };
+  document.getElementById('zout').onclick = function () { cy.zoom({ level: cy.zoom() / 1.2, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } }); };
+  document.getElementById('fit').onclick = function () { cy.fit(undefined, 16); };
+
+  // Hover: highlight neighbourhood (slice 3 behaviour, cheap to try here).
+  cy.on('mouseover', 'node', function (ev) {
+    var hood = ev.target.closedNeighborhood();
+    cy.elements().not(hood).style('opacity', 0.25);
+  });
+  cy.on('mouseout', 'node', function () { cy.elements().style('opacity', 1); });
+
+  window.__proto = { cy: cy, nodeCount: nodes.length, edgeCount: edges.length };
+})();
+</script>
+</body>
+</html>
