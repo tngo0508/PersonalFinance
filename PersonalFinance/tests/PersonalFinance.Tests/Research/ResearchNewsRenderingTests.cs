@@ -42,8 +42,9 @@ public sealed partial class ResearchNewsRenderingTests : IAsyncLifetime
         {
             "/Research",
             [
-                ">Sectors<", ">World<", ">Your basket<", "Explore the market", "Data freshness", "New here?",
-                "Start from a mix:", "Open basket report", "For information only. Not investment advice.", "Try:",
+                ">Sectors<", ">World<", ">Your basket<", "Explore the market", "Tracked funds", "Market backdrop",
+                "About this data", "More on the Funds page:", "New here?", "Start from a mix:", "Open basket report",
+                "For information only. Not investment advice.", "Try:",
             ]
         },
         {

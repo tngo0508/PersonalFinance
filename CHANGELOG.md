@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.11.0] - 2026-11-01
+
+### Changed
+
+- **Research Home redesign**: the page is now a workbench for building a Fund Basket, in place of a menu of links.
+  - The tracked funds are listed on the page, grouped by role, with each fund's three-year return a year, volatility and expense ratio, and an Add button that puts it in your basket; the basket card beside the list updates as you go, and its starting mixes are checked against the tracked funds on the server, so they no longer appear late.
+  - A Market backdrop card shows the latest Fed funds rate, 3-month Treasury bill rate and 12-month inflation, with their months, and says that the growth charts and the Sharpe ratio rest on them.
+  - Explore now names Sectors, World and the Company lookup, which had no link from Home; the All tracked funds and Risk vs return cards became links under the funds list, with Correlation and Holdings.
+  - Data freshness folds into a collapsed About this data, whose summary says how many datasets have not loaded; the disclaimer stays in view.
+  - Home reads the funds, fund returns, fund facts and macro data through the snapshot cache; a dataset that has not loaded leaves only its part unavailable, as on the other Research pages.
+
 ## [17.10.0] - 2026-11-01
 
 ### Changed

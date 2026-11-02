@@ -6,9 +6,10 @@
  *   (`pf.research.homeSteps`). When the storage cannot be read or written the strip simply shows.
  * - The basket card is drawn from the Fund Basket in the address (`ResearchBasket.get()`): a chip per fund with its
  *   share and a remove button, and "Open basket report"; it redraws on every `research:basketchange`.
- * - A starting mix sets the whole basket. The mixes start hidden and show once checked against the search index the
- *   search box loads (`ResearchSearch.searchIndex`, so the page reads it only once): a mix whose funds are not all
- *   Tracked Funds stays hidden. When the index cannot be read every mix shows.
+ * - A starting mix sets the whole basket. The page checks the mixes against the Tracked Funds itself when the funds
+ *   data loaded (`data-research-home-mixes-checked="true"`). Otherwise they start hidden and show once checked against
+ *   the search index the search box loads (`ResearchSearch.searchIndex`, so the page reads it only once): a mix whose
+ *   funds are not all Tracked Funds stays hidden. When the index cannot be read either, every mix shows.
  * - A starter link with `data-research-home-industry` opens the plain Sectors page until the index names that
  *   industry's SEC office; then it opens the industry itself.
  */
@@ -179,7 +180,7 @@
      */
     function showMixes (index) {
         const mixes = document.querySelector('[data-research-home-mixes]');
-        if (!mixes) {
+        if (!mixes || mixes.dataset.researchHomeMixesChecked === 'true') {
             return;
         }
         const tracked = index ? new Set((index.funds || []).map((f) => String(f.ticker).toUpperCase())) : null;

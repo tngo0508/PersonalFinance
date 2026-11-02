@@ -1011,8 +1011,8 @@ flowchart LR
     store --> snap[("ResearchSnapshot<br/>Dataset, Payload JSON, SourceAsOf, BuiltAt")]
 ```
 
-The read path. Each Research page reads only the datasets it shows (Home reads none, only their status), each section
-fails on its own, and `IResearchApi` is the one Refit client registered without retries on 503, because a 503 here
+The read path. Each Research page reads only the datasets it shows (Home: their status, then the funds, fund returns,
+fund facts and macro data for its tracked-funds list and market backdrop), each section fails on its own, and `IResearchApi` is the one Refit client registered without retries on 503, because a 503 here
 means "never loaded", not "try again". Web reads each dataset through `IResearchSnapshotCache` (`ResearchSnapshotCache`
 over `IMemoryCache`, 10 minutes): a hit is served from memory, a miss goes to ApiService. A failed read is never kept,
 and neither is a search index with an empty part (a dataset not loaded yet).
@@ -1029,7 +1029,7 @@ sequenceDiagram
     participant ST as ResearchSnapshotStore
     participant DB as ResearchSnapshots
 
-    B->>WC: GET /Research/{page} (Home: only GET api/Research/status)
+    B->>WC: GET /Research/{page} (Home also GET api/Research/status)
     par the page's datasets in parallel, Task.WhenAll
         WC->>SC: GetOrReadAsync(key, read)
         alt cached
