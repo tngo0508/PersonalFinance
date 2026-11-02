@@ -233,7 +233,7 @@ public class ResearchWebControllerTests
     };
 
     [Fact]
-    public async Task Home_ReadsOnlyTheDatasetStatus()
+    public async Task Home_ReadsTheStatus_AndOnlyTheFundsReturnsFactsAndMacroData()
     {
         (IResearchApi api, ApiProxy<IResearchApi> proxy) = ApiProxy.Create<IResearchApi>();
         proxy.Returns(nameof(IResearchApi.GetStatusAsync), Status);
@@ -241,7 +241,12 @@ public class ResearchWebControllerTests
         IActionResult result = await CreateController(api).Index();
 
         Assert.IsType<ViewResult>(result);
-        Assert.Equal([nameof(IResearchApi.GetStatusAsync)], proxy.Calls);
+        Assert.Equal(
+            [
+                nameof(IResearchApi.GetFundFactsAsync), nameof(IResearchApi.GetFundReturnsAsync), nameof(IResearchApi.GetFundsAsync),
+                nameof(IResearchApi.GetMacroAsync), nameof(IResearchApi.GetStatusAsync),
+            ],
+            proxy.Calls.Order(StringComparer.Ordinal));
     }
 
     [Fact]
@@ -274,7 +279,13 @@ public class ResearchWebControllerTests
 
         Assert.Equal(8, model.Datasets.Count);
         Assert.All(model.Datasets, d => Assert.Null(d.AsOf));
+        Assert.Equal(8, model.NotLoadedCount);
+        // Without the funds data the mixes cannot be checked here: every mix goes to the page for its script to check.
         Assert.Equal(4, model.Presets.Count);
+        Assert.False(model.PresetsChecked);
+        Assert.True(model.Funds.Unavailable);
+        Assert.Empty(model.FundGroups);
+        Assert.Null(model.Backdrop);
     }
 
     [Fact]
@@ -291,8 +302,8 @@ public class ResearchWebControllerTests
         Assert.All(failed.Datasets, d => Assert.Null(d.AsOf));
         Assert.Equal(new DateOnly(2026, 10, 30), first.Datasets[0].AsOf);
         Assert.Equal(new DateOnly(2026, 10, 30), second.Datasets[0].AsOf);
-        // The failure is not kept, and the status read after it is: two reads for three views.
-        Assert.Equal(2, proxy.Calls.Count);
+        // The failure is not kept, and the status read after it is: two status reads for three views.
+        Assert.Equal(2, proxy.Calls.Count(c => c == nameof(IResearchApi.GetStatusAsync)));
     }
 
     private static ResearchSectorsPageViewModel SectorsModelOf(IActionResult result) =>
