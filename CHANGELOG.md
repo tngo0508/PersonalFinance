@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.11.2] - 2026-11-01
+
+### Fixed
+
+- **Select chevron overlap**: the selected text in a dropdown no longer runs under the chevron, first seen on the Budget Tracker month and year selectors. The global select styling had replaced Bootstrap's right padding, the room reserved for the icon, on every select in the app; a test now guards that room.
+
 ## [17.11.1] - 2026-11-01
 
 ### Fixed
