@@ -1,11 +1,12 @@
 @model ResearchHomeViewModel
 @using System.Globalization
+@using PersonalFinance.Shared.DTOs.Research
 
 @{
     ViewData["Title"] = L["Research.Title"].Value;
-    // Research links use their final paths: the pages that do not exist yet arrive in later releases.
+    CultureInfo culture = CultureInfo.CurrentCulture;
     // The Semiconductors starter opens the plain Sectors page until research-home.js finds the industry (and its SEC
-    // office) in the search index; Home reads no snapshot, so the office is never written here.
+    // office) in the search index; Home reads no Sectors data, so the office is never written here.
     (string Label, string Href, string? Industry)[] starters =
     [
         ("VTI", Url.Content("~/Research/Fund/VTI"), null),
@@ -18,21 +19,54 @@
     [
         ("Research.Home.Explore.Sectors", "Research.Home.Explore.SectorsText", Url.Content("~/Research/Sectors")),
         ("Research.Home.Explore.World", "Research.Home.Explore.WorldText", Url.Content("~/Research/World")),
-        ("Research.Home.Explore.Funds", "Research.Home.Explore.FundsText", Url.Content("~/Research/Funds")),
-        ("Research.Home.Explore.Risk", "Research.Home.Explore.RiskText", Url.Content("~/Research/Funds?view=risk")),
+        ("Research.Home.Explore.Company", "Research.Home.Explore.CompanyText", Url.Content("~/Research/Company")),
+    ];
+    // The Funds page's other views, linked under the tracked-funds list.
+    (string LabelKey, string Href)[] fundViews =
+    [
+        ("Research.Fund.CompareAll", Url.Content("~/Research/Funds")),
+        ("Research.Common.RiskVsReturn", Url.Content("~/Research/Funds?view=risk")),
+        ("Research.Funds.Page.View.Correlation", Url.Content("~/Research/Funds?view=correlation")),
+        ("Research.Funds.Page.View.Holdings", Url.Content("~/Research/Funds?view=holdings")),
     ];
     // The basket step's sentence keeps its glossary term as a {basket} placeholder, so it translates whole.
     string[] addStep = L["Research.Home.Steps.Add"].Value.Split("{basket}", 2);
+    bool showFunds = !Model.Funds.Unavailable;
+    FundReturnsSnapshotDto? returns = Model.FundReturns;
+    string threeYears = L["Research.Common.ThreeYears"].Value;
+    // The column headings, repeated on each figure as data-label: at narrow widths a row stacks and shows them.
+    string returnLabel = L.Named("Research.Fund.ReturnOver", ("span", threeYears));
+    string volatilityLabel = L["Research.Funds.Page.Column.Volatility"].Value;
+    string feeLabel = L["Research.Fund.Fee"].Value;
+    string fundHref = Url.Content("~/Research/Fund/");
+    string Percent(decimal? value, int digits) => value is { } v
+        ? (v / 100m).ToString("P" + digits.ToString(CultureInfo.InvariantCulture), culture)
+        : "—";
+    string Signed(decimal? value) => value is { } v
+        ? (v < 0 ? "−" : "+") + (Math.Abs(v) / 100m).ToString("P1", culture)
+        : "—";
+    string Month(DateOnly month) => month.ToString(ResearchFormats.MonthYear, culture);
+    (string LabelKey, ResearchMarketFigure? Figure)[] backdrop = Model.Backdrop is null
+        ? []
+        :
+        [
+            ("Research.Home.Backdrop.FedFunds", Model.Backdrop.FedFunds),
+            ("Research.Home.Backdrop.TreasuryBill", Model.Backdrop.TreasuryBill),
+            ("Research.Home.Backdrop.Inflation", Model.Backdrop.Inflation),
+        ];
 }
 
 @section Styles {
     <link rel="stylesheet" href="~/css/research.css" asp-append-version="true"/>
 }
 
-@* Research Home: search first. It reads only the datasets' status (the freshness list), never a dataset; the basket
-   card is drawn from the address by js/research/research-home.js, which also shows only the starting mixes whose funds
-   are tracked and points the Semiconductors starter at its industry (both from the search index the search box loads),
-   and keeps the first-visit strip dismissed. *@
+@* Research Home: search first, then the workbench. The Tracked Funds are listed with their three-year figures and an
+   "Add to basket" button each (research-basket.js keeps the buttons, the nav count and every Research link in step
+   with the Fund Basket in the address); beside them the basket card (drawn from the address by research-home.js), the
+   market backdrop from the macro data, and the other pages. The datasets' freshness folds into "About this data".
+   research-home.js also points the Semiconductors starter at its industry (from the search index the search box
+   loads), checks the starting mixes against the index only when the funds data could not be read here, and keeps the
+   first-visit strip dismissed. *@
 <div class="research research-home">
     <partial name="_ResearchNav" model="@("home")"/>
 
@@ -82,49 +116,160 @@
         <button type="button" class="research-chip research-home__steps-close" data-research-home-steps-close>@L["Research.Home.Steps.Close"]</button>
     </section>
 
-    <div class="research-home__grid">
-        <section class="research-card research-home__basket" id="research-home-basket"
-                 aria-labelledby="research-home-basket-title" data-research-home-basket
-                 data-fund-href="@Url.Content("~/Research/Fund/")">
-            <h2 class="research-card__title" id="research-home-basket-title" tabindex="-1">@L["Research.Nav.Basket"]</h2>
-            <p class="research-home__basket-empty" data-research-home-basket-empty>@L["Research.Home.Basket.Empty"]</p>
-            <div class="research-home__basket-filled" data-research-home-basket-filled hidden>
-                <ul class="research-home__chips" aria-label="@L["Research.Basket.ChipsLabel"]" data-research-home-basket-chips></ul>
-                <a class="btn btn-primary research-home__open" href="@Url.Content("~/Research/Basket")" data-research-link>@L["Research.Home.Basket.Open"]</a>
-            </div>
-            @* Hidden until research-home.js has checked the mixes against the Tracked Funds (all shown if it cannot). *@
-            <div class="research-home__mixes" data-research-home-mixes hidden>
-                <p class="research-home__mixes-label" id="research-home-mixes-label">@L["Research.Home.Basket.Mixes"]</p>
-                <ul class="research-home__mix-list" aria-labelledby="research-home-mixes-label">
-                    @foreach (ResearchBasketPreset preset in Model.Presets)
+    <div class="research-home__workbench">
+        <section class="research-card research-home__funds" id="research-home-funds" aria-labelledby="research-home-funds-title">
+            <h2 class="research-card__title" id="research-home-funds-title">@L["Research.Home.Funds.Title"]</h2>
+            @if (!showFunds)
+            {
+                <partial name="_UnavailableState" model="Model.Funds.UnavailableState"/>
+            }
+            else
+            {
+                <p class="research-card__subtitle">@L["Research.Home.Funds.Subtitle"]</p>
+                @if (returns is null)
+                {
+                    @* The returns have never loaded: the list still names the funds, with their fees. *@
+                    <p class="research-home__note" id="research-home-funds-no-returns" role="status">@L["Research.Home.Funds.NoReturns"]</p>
+                }
+                else
+                {
+                    <p class="research-home__note" id="research-home-funds-asof">@L.Named("Research.Common.ReturnsTo", ("month", Month(returns.AsOf)))</p>
+                }
+                <div class="research-home__funds-scroll">
+                    <table class="research-home__funds-table" id="research-home-funds-table">
+                        <caption class="visually-hidden">@L.Named("Research.Home.Funds.Caption", ("span", threeYears))</caption>
+                        <thead>
+                        <tr>
+                            <th scope="col">@L["Research.Funds.Page.Column.Ticker"]</th>
+                            <th scope="col" class="research-home__num">@returnLabel</th>
+                            <th scope="col" class="research-home__num research-home__col-volatility">@volatilityLabel</th>
+                            <th scope="col" class="research-home__num">@feeLabel</th>
+                            <th scope="col" class="research-home__col-basket"><span class="visually-hidden">@L["Research.Nav.Basket"]</span></th>
+                        </tr>
+                        </thead>
+                        @foreach (ResearchHomeFundGroup group in Model.FundGroups)
+                        {
+                            <tbody class="research-home__fund-group">
+                            <tr class="research-home__fund-role">
+                                <th scope="rowgroup" colspan="5">@(group.Role ?? L["Research.Home.Funds.NoRole"].Value)</th>
+                            </tr>
+                            @foreach (FundCompareRow row in group.Rows)
+                            {
+                                <tr data-ticker="@row.Ticker">
+                                    <th scope="row" class="research-home__fund">
+                                        <a class="research-home__fund-ticker" href="@(fundHref + Uri.EscapeDataString(row.Ticker))" data-research-link>@row.Ticker</a>
+                                        <span class="research-home__fund-name">@row.Name</span>
+                                    </th>
+                                    <td class="research-home__num" data-label="@returnLabel">@Signed(row.AnnualReturn)</td>
+                                    <td class="research-home__num research-home__col-volatility" data-label="@volatilityLabel">@Percent(row.Volatility, 1)</td>
+                                    <td class="research-home__num" data-label="@feeLabel">@(row.ExpenseRatio is { } fee ? Percent(fee, 2) : Model.FundFacts is null ? "—" : L["Research.Funds.Page.NotFiled"].Value)</td>
+                                    <td class="research-home__col-basket">
+                                        <button type="button" class="research-chip research-basket-toggle research-home__toggle"
+                                                data-research-basket-toggle="@row.Ticker" aria-pressed="false">
+                                            <span class="research-basket-toggle__add">@L["Research.Home.Funds.Add"] <span class="visually-hidden">@row.Ticker</span></span>
+                                            <span class="research-basket-toggle__remove">@L["Research.Home.Funds.Added"] <span class="visually-hidden">@row.Ticker</span></span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        }
+                    </table>
+                </div>
+                <nav class="research-home__funds-more" aria-label="@L["Research.Home.Funds.More"]">
+                    <span class="research-home__funds-more-label">@L["Research.Home.Funds.More"]</span>
+                    <ul class="research-home__funds-more-list">
+                        @foreach ((string labelKey, string href) in fundViews)
+                        {
+                            <li><a href="@href" data-research-link>@L[labelKey]</a></li>
+                        }
+                    </ul>
+                </nav>
+            }
+            <p class="research-card__source">@L["Research.Source.Risk"]</p>
+        </section>
+
+        <div class="research-home__rail">
+            <section class="research-card research-home__basket" id="research-home-basket"
+                     aria-labelledby="research-home-basket-title" data-research-home-basket
+                     data-fund-href="@fundHref">
+                <h2 class="research-card__title" id="research-home-basket-title" tabindex="-1">@L["Research.Nav.Basket"]</h2>
+                <p class="research-home__basket-empty" data-research-home-basket-empty>@L["Research.Home.Basket.Empty"]</p>
+                <div class="research-home__basket-filled" data-research-home-basket-filled hidden>
+                    <ul class="research-home__chips" aria-label="@L["Research.Basket.ChipsLabel"]" data-research-home-basket-chips></ul>
+                    <a class="btn btn-primary research-home__open" href="@Url.Content("~/Research/Basket")" data-research-link>@L["Research.Home.Basket.Open"]</a>
+                </div>
+                @* The mixes whose funds are all Tracked Funds. Checked here when the funds data loaded; otherwise every
+                   mix is rendered hidden and research-home.js checks them against the search index. *@
+                <div class="research-home__mixes" data-research-home-mixes
+                     data-research-home-mixes-checked="@(Model.PresetsChecked ? "true" : "false")"
+                     hidden="@(!Model.PresetsChecked || Model.Presets.Count == 0)">
+                    <p class="research-home__mixes-label" id="research-home-mixes-label">@L["Research.Home.Basket.Mixes"]</p>
+                    <ul class="research-home__mix-list" aria-labelledby="research-home-mixes-label">
+                        @foreach (ResearchBasketPreset preset in Model.Presets)
+                        {
+                            <li data-research-home-mix>
+                                <button type="button" class="research-chip" data-research-preset="@preset.Basket"
+                                        data-research-preset-name="@L[preset.LabelKey]">@L[preset.LabelKey]</button>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </section>
+
+            <section class="research-card research-home__backdrop" id="research-home-backdrop" aria-labelledby="research-home-backdrop-title">
+                <h2 class="research-card__title" id="research-home-backdrop-title">@L["Research.Home.Backdrop.Title"]</h2>
+                @if (Model.Backdrop is null || Model.Backdrop.IsEmpty)
+                {
+                    <p class="research-home__note"><span class="research-home__fresh-missing">@L["Research.Common.NotLoadedYet"]</span></p>
+                }
+                else
+                {
+                    <dl class="research-home__figures">
+                        @foreach ((string labelKey, ResearchMarketFigure? figure) in backdrop)
+                        {
+                            <div class="research-home__figure">
+                                <dt>@L[labelKey]</dt>
+                                <dd>
+                                    <span class="research-home__figure-value">@(figure is null ? "—" : Percent(figure.Percent, 2))</span>
+                                    @if (figure is not null)
+                                    {
+                                        <span class="research-home__figure-month">@Month(figure.Month)</span>
+                                    }
+                                </dd>
+                            </div>
+                        }
+                    </dl>
+                    <p class="research-home__note">@L["Research.Home.Backdrop.Note"]</p>
+                }
+                <p class="research-card__source">@L["Research.Home.Backdrop.Source"]</p>
+            </section>
+
+            <section class="research-card research-home__explore" aria-labelledby="research-home-explore-title">
+                <h2 class="research-card__title" id="research-home-explore-title">@L["Research.Home.Explore.Title"]</h2>
+                <ul class="research-home__explore-list">
+                    @foreach ((string titleKey, string textKey, string href) in explore)
                     {
-                        <li data-research-home-mix>
-                            <button type="button" class="research-chip" data-research-preset="@preset.Basket"
-                                    data-research-preset-name="@L[preset.LabelKey]">@L[preset.LabelKey]</button>
+                        <li>
+                            <a class="research-home__explore-link" href="@href" data-research-link>
+                                <span class="research-home__explore-title">@L[titleKey]</span>
+                                <span class="research-home__explore-text">@L[textKey]</span>
+                            </a>
                         </li>
                     }
                 </ul>
-            </div>
-        </section>
-
-        <section class="research-home__explore" aria-labelledby="research-home-explore-title">
-            <h2 class="visually-hidden" id="research-home-explore-title">@L["Research.Home.Explore.Title"]</h2>
-            <ul class="research-home__explore-list">
-                @foreach ((string titleKey, string textKey, string href) in explore)
-                {
-                    <li>
-                        <a class="research-home__explore-link" href="@href" data-research-link>
-                            <span class="research-home__explore-title">@L[titleKey]</span>
-                            <span class="research-home__explore-text">@L[textKey]</span>
-                        </a>
-                    </li>
-                }
-            </ul>
-        </section>
+            </section>
+        </div>
     </div>
 
-    <section class="research-card research-home__freshness" aria-labelledby="research-home-freshness-title">
-        <h2 class="research-card__title" id="research-home-freshness-title">@L["Research.Home.Freshness.Title"]</h2>
+    <details class="research-card research-home__about" id="research-home-about">
+        <summary class="research-home__about-summary">
+            <h2 class="research-home__about-title">@L["Research.Common.AboutThisData"]</h2>
+            @if (Model.NotLoadedCount > 0)
+            {
+                <span class="research-home__fresh-missing">@L.Plural("Research.Home.About.NotLoaded", Model.NotLoadedCount)</span>
+            }
+        </summary>
         <p class="research-card__subtitle">@L["Research.Home.Freshness.Note"]</p>
         <ul class="research-home__fresh-list">
             @foreach (ResearchDatasetFreshness dataset in Model.Datasets)
@@ -133,7 +278,7 @@
                     <span>@L[dataset.LabelKey]</span>
                     @if (dataset.AsOf is { } asOf)
                     {
-                        <span class="research-home__fresh-date">@asOf.ToString(ResearchFormats.LongDate, CultureInfo.CurrentCulture)</span>
+                        <span class="research-home__fresh-date">@asOf.ToString(ResearchFormats.LongDate, culture)</span>
                     }
                     else
                     {
@@ -142,8 +287,8 @@
                 </li>
             }
         </ul>
-        <p class="research-home__advice">@L["Research.Home.Advice"]</p>
-    </section>
+    </details>
+    <p class="research-home__advice">@L["Research.Home.Advice"]</p>
 
     <p class="visually-hidden" id="research-live" aria-live="polite"></p>
 </div>

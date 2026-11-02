@@ -46,11 +46,13 @@ public sealed class ResearchController : Controller
         BadRequest(new { error = _localizer["Research.Message.InvalidCompanyInput"].Value });
 
     /// <summary>
-    /// The Research Home page at <c>/Research</c>: the search box, starting points, the Fund Basket and when each dataset
-    /// is as of. It reads only the datasets' status, through the snapshot cache, never a dataset itself; when the status
-    /// cannot be read the page still renders, with every dataset not loaded. An old tab address
-    /// (<c>?tab=sectors</c>, ...) redirects (302) to the page that replaced the tab, keeping a well-formed
-    /// <paramref name="basket"/> (see <see cref="OldTabRedirect"/>); an unknown <paramref name="tab"/> shows Home.
+    /// The Research Home page at <c>/Research</c>: the search box, starting points, the Tracked Funds with their
+    /// three-year figures, the Fund Basket, the market backdrop and when each dataset is as of. It reads the datasets'
+    /// status and the funds, fund returns, fund facts and macro data through the snapshot cache; each that cannot be
+    /// read leaves only its part unavailable, and when the status cannot be read the page still renders, with every
+    /// dataset not loaded. An old tab address (<c>?tab=sectors</c>, ...) redirects (302) to the page that replaced the
+    /// tab, keeping a well-formed <paramref name="basket"/> (see <see cref="OldTabRedirect"/>); an unknown
+    /// <paramref name="tab"/> shows Home.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] string? tab = null, [FromQuery] string? ticker = null,
@@ -62,9 +64,13 @@ public sealed class ResearchController : Controller
             return redirect;
         }
 
-        ResearchStatusDto? status = await ReadAsync(_researchApi.GetStatusAsync, ResearchCacheKeys.Status, "status",
-            cancellationToken);
-        return View(new ResearchHomeViewModel(status));
+        Task<ResearchStatusDto?> status = ReadAsync(_researchApi.GetStatusAsync, ResearchCacheKeys.Status, "status", cancellationToken);
+        Task<FundsSnapshotDto?> funds = ReadAsync(_researchApi.GetFundsAsync, ResearchCacheKeys.Funds, "funds", cancellationToken);
+        Task<FundReturnsSnapshotDto?> returns = ReadAsync(_researchApi.GetFundReturnsAsync, ResearchCacheKeys.FundReturns, "fund returns", cancellationToken);
+        Task<FundFactsSnapshotDto?> facts = ReadAsync(_researchApi.GetFundFactsAsync, ResearchCacheKeys.FundFacts, "fund facts", cancellationToken);
+        Task<MacroSnapshotDto?> macro = ReadAsync(_researchApi.GetMacroAsync, ResearchCacheKeys.Macro, "macro", cancellationToken);
+        await Task.WhenAll(status, funds, returns, facts, macro);
+        return View(new ResearchHomeViewModel(_localizer, await status, await funds, await returns, await facts, await macro));
     }
 
     /// <summary>

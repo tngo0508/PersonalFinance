@@ -109,7 +109,7 @@ public sealed class ResearchFundsPageViewModel
             RetryAction = "Funds",
             RetryRouteValues = new Dictionary<string, string>(retryRoute, StringComparer.Ordinal),
         };
-        Rows = Funds.Unavailable ? [] : SortRows(BuildRows(Funds.Snapshot!, returns, facts, Window), Sort);
+        Rows = Funds.Unavailable ? [] : SortRows(FundCompareRows.Build(Funds.Snapshot!, returns, facts, Window), Sort);
     }
 
     /// <summary>The funds dataset; without it the table and the holdings list show its Unavailable State.</summary>
@@ -151,45 +151,6 @@ public sealed class ResearchFundsPageViewModel
     /// Whether <paramref name="key"/> sorts highest first (the numbers) rather than A to Z (ticker and role).
     /// </summary>
     public static bool SortsDescending(string key) => key is not (SortTicker or SortRole);
-
-    /// <summary>
-    /// One row per Tracked Fund, with the window's precomputed figures, the fund's expense ratio and its net assets in
-    /// the latest quarter it reported. Nothing is computed here beyond picking the window.
-    /// </summary>
-    private static List<FundCompareRow> BuildRows(FundsSnapshotDto funds, FundReturnsSnapshotDto? returns,
-        FundFactsSnapshotDto? facts, int window)
-    {
-        Dictionary<string, FundWindowMetricsDto> metrics = (returns?.Windows.FirstOrDefault(w => w.Years == window)?.Funds ?? [])
-            .GroupBy(f => f.Ticker, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
-        Dictionary<string, decimal?> fees = (facts?.Funds ?? [])
-            .GroupBy(f => f.Ticker, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().ExpenseRatio, StringComparer.OrdinalIgnoreCase);
-        Dictionary<string, decimal> netAssets = new(StringComparer.OrdinalIgnoreCase);
-        foreach (FundsPeriodDto period in funds.Values)
-        {
-            foreach (FundHoldingsDto report in period.Funds)
-            {
-                // Later quarters overwrite earlier ones: each fund keeps its latest report.
-                netAssets[report.Ticker] = report.NetAssets;
-            }
-        }
-        return funds.Funds.Select(fund =>
-        {
-            FundWindowMetricsDto? figures = metrics.GetValueOrDefault(fund.Ticker);
-            return new FundCompareRow
-            {
-                Ticker = fund.Ticker,
-                Name = fund.Name,
-                Role = fund.Role,
-                AnnualReturn = figures?.AnnualizedReturn,
-                Volatility = figures?.Volatility,
-                Sharpe = figures?.Sharpe,
-                ExpenseRatio = fees.GetValueOrDefault(fund.Ticker),
-                NetAssets = netAssets.GetValueOrDefault(fund.Ticker),
-            };
-        }).ToList();
-    }
 
     /// <summary>
     /// The rows by <paramref name="key"/>: numbers highest first and text A to Z, a missing value last, ties by ticker.
