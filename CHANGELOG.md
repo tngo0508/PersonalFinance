@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.13.0] - 2026-11-02
+
+### Added
+
+- **Financial Universe graph**: the Financial Universe page now draws the month as a graph, with the list view kept as its accessible equivalent (spec #617, slice 2 of 3; ADR 0020).
+  - Income sources flow into Income, then into your expense categories, Other and your Savings or Shortfall; Savings Goals hang off Savings, with thicker arrows for larger amounts; Net Worth and your Investment Scenarios follow as dashed relationships. Tap a node to open the feature that owns it.
+  - Hold Ctrl and scroll to zoom, drag to pan, pinch on touch; buttons zoom in, zoom out and fit. The wheel on its own keeps scrolling the page.
+  - The page opens on whichever view reads: it measures the fitted labels against the body font and opens on the list when they would be too small, as on a phone; a Graph / List toggle switches either way. The drawing follows the theme without a reload and colours categories as Money Flow does.
+  - Cytoscape.js 3.34.4 and cytoscape-dagre 4.0.1 (both MIT) are vendored and loaded by this page only.
+
 ## [17.12.0] - 2026-11-02
 
 ### Added

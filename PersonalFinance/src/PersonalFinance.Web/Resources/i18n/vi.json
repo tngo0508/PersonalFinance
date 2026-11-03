@@ -3129,5 +3129,15 @@
   "FinancialUniverse.Link.SavingsGoals": "Mở Mục tiêu tiết kiệm",
   "FinancialUniverse.Link.NetWorth": "Mở Giá trị tài sản ròng",
   "FinancialUniverse.Link.InvestmentCalculator": "Mở Máy tính đầu tư",
-  "FinancialUniverse.Validation.MonthRange": "Chọn một tháng trong năm từ {minYear} đến {maxYear}."
+  "FinancialUniverse.Validation.MonthRange": "Chọn một tháng trong năm từ {minYear} đến {maxYear}.",
+  "FinancialUniverse.View.Label": "Xem",
+  "FinancialUniverse.View.Graph": "Biểu đồ",
+  "FinancialUniverse.View.List": "Danh sách",
+  "FinancialUniverse.Graph.Tools": "Các công cụ đồ thị",
+  "FinancialUniverse.Graph.ZoomIn": "Phóng to",
+  "FinancialUniverse.Graph.ZoomOut": "Thu nhỏ",
+  "FinancialUniverse.Graph.Fit": "Vừa khung nhìn",
+  "FinancialUniverse.Graph.Label": "Biểu đồ về cách tài chính của bạn kết nối trong {month}. Danh sách dưới đây cũng chứa cùng thông tin.",
+  "FinancialUniverse.Graph.Legend": "Một mũi tên liền nét mang tiền từ tháng này: càng nhiều tiền, mũi tên càng dày. Một mũi tên đứt nét thể hiện mối quan hệ. Giữ Ctrl và cuộn để phóng to, kéo để di chuyển chế độ xem, và chạm vào nút để mở tính năng mà nó thuộc về.",
+  "FinancialUniverse.Graph.Unavailable": "Biểu đồ không thể vẽ được. Danh sách dưới đây chứa cùng thông tin."
 }

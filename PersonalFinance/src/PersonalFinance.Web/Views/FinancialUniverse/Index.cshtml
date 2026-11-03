@@ -11,9 +11,15 @@
     var pageData = FinancialUniversePageData.From(Model, Href);
 }
 
-@* The Financial Universe (spec #617), slice 1: the accessible list view. One section per node kind in rank order; each
+@section Styles {
+    <link rel="stylesheet" href="~/css/financial-universe.css" asp-append-version="true"/>
+}
+
+@* The Financial Universe (spec #617). Slice 1: the accessible list view, one section per node kind in rank order; each
    row is the node's label, its amount in the Reporting Currency and a link into the feature that owns it. A Placeholder
-   row stands in for a kind the Account has nothing of yet. Slice 2 adds the graph renderer over the JSON island. *@
+   row stands in for a kind the Account has nothing of yet. Slice 2 (ADR 0020): the graph drawn by Cytoscape.js from the
+   JSON island at the end, with a toolbar of real buttons; js/financial-universe/graph.js picks the default view by
+   legibility and shows one panel at a time. Without JavaScript the list shows and the graph panel stays hidden. *@
 <div class="financial-universe" data-test-id="financial-universe">
     <header class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
         <div>
@@ -26,39 +32,76 @@
     <p class="text-body-secondary small">@L["FinancialUniverse.Derived"]</p>
     <partial name="_ConversionCaption" model="Model.Conversion"/>
 
-    @foreach (FinancialUniverseSectionViewModel group in Model.Sections)
-    {
-        <section class="card mb-3" aria-labelledby="fu-section-@group.Key" data-test-id="fu-section-@group.Key">
-            <h2 class="card-header h6 mb-0" id="fu-section-@group.Key">@group.Title</h2>
-            <ul class="list-group list-group-flush">
-                @foreach (FinancialUniverseNodeViewModel row in group.Rows)
-                {
-                    <li class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-2"
-                        data-node-id="@row.Id" data-node-kind="@row.Kind">
-                        @if (row.IsPlaceholder)
-                        {
-                            <span class="text-body-secondary">@row.Label</span>
-                            <a class="btn btn-sm btn-outline-primary" href="@Href(row.LinkTarget)">@row.LinkText</a>
-                        }
-                        else
-                        {
-                            <span class="fw-semibold">@row.Label</span>
-                            <span class="d-flex flex-wrap align-items-baseline gap-3 ms-auto">
-                                <span class="text-end">
-                                    <span class="fw-semibold">@row.AmountText</span>
-                                    @if (!string.IsNullOrEmpty(row.DetailText))
-                                    {
-                                        <br/><small class="text-body-secondary">@row.DetailText</small>
-                                    }
+    <div class="fu-toolbar d-flex flex-wrap align-items-center gap-2 mb-3" data-test-id="fu-toolbar">
+        <div class="btn-group btn-group-sm" role="group" aria-label="@L["FinancialUniverse.View.Label"]">
+            <button type="button" class="btn btn-outline-primary" data-fu-view="graph" aria-pressed="false" data-test-id="fu-view-graph">@L["FinancialUniverse.View.Graph"]</button>
+            <button type="button" class="btn btn-outline-primary" data-fu-view="list" aria-pressed="true" data-test-id="fu-view-list">@L["FinancialUniverse.View.List"]</button>
+        </div>
+        <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="@L["FinancialUniverse.Graph.Tools"]" data-fu-zoom-tools hidden>
+            <button type="button" class="btn btn-outline-secondary" data-fu-action="zoom-in" data-test-id="fu-zoom-in">
+                <i data-lucide="zoom-in" aria-hidden="true"></i><span>@L["FinancialUniverse.Graph.ZoomIn"]</span>
+            </button>
+            <button type="button" class="btn btn-outline-secondary" data-fu-action="zoom-out" data-test-id="fu-zoom-out">
+                <i data-lucide="zoom-out" aria-hidden="true"></i><span>@L["FinancialUniverse.Graph.ZoomOut"]</span>
+            </button>
+            <button type="button" class="btn btn-outline-secondary" data-fu-action="fit" data-test-id="fu-fit">
+                <i data-lucide="maximize" aria-hidden="true"></i><span>@L["FinancialUniverse.Graph.Fit"]</span>
+            </button>
+        </div>
+    </div>
+
+    <p class="fu-graph__failure alert alert-secondary" id="fuGraphFailure" role="status" hidden>@L["FinancialUniverse.Graph.Unavailable"]</p>
+
+    <section class="fu-panel card mb-3" id="fuGraphPanel" aria-labelledby="fu-graph-heading" data-test-id="fu-graph-panel" hidden>
+        <h2 class="visually-hidden" id="fu-graph-heading">@L["FinancialUniverse.View.Graph"]</h2>
+        <div class="card-body">
+            <div class="fu-graph__canvas" id="fuGraph" role="img"
+                 aria-label="@L.Named("FinancialUniverse.Graph.Label", ("month", Model.MonthLabel))" data-test-id="fu-graph-canvas"></div>
+            <p class="small text-body-secondary mt-2 mb-0" data-test-id="fu-graph-legend">@L["FinancialUniverse.Graph.Legend"]</p>
+        </div>
+    </section>
+
+    <div class="fu-panel" id="fuListPanel" data-test-id="fu-list-panel">
+        @foreach (FinancialUniverseSectionViewModel group in Model.Sections)
+        {
+            <section class="card mb-3" aria-labelledby="fu-section-@group.Key" data-test-id="fu-section-@group.Key">
+                <h2 class="card-header h6 mb-0" id="fu-section-@group.Key">@group.Title</h2>
+                <ul class="list-group list-group-flush">
+                    @foreach (FinancialUniverseNodeViewModel row in group.Rows)
+                    {
+                        <li class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-2"
+                            data-node-id="@row.Id" data-node-kind="@row.Kind">
+                            @if (row.IsPlaceholder)
+                            {
+                                <span class="text-body-secondary">@row.Label</span>
+                                <a class="btn btn-sm btn-outline-primary" href="@Href(row.LinkTarget)">@row.LinkText</a>
+                            }
+                            else
+                            {
+                                <span class="fw-semibold">@row.Label</span>
+                                <span class="d-flex flex-wrap align-items-baseline gap-3 ms-auto">
+                                    <span class="text-end">
+                                        <span class="fw-semibold">@row.AmountText</span>
+                                        @if (!string.IsNullOrEmpty(row.DetailText))
+                                        {
+                                            <br/><small class="text-body-secondary">@row.DetailText</small>
+                                        }
+                                    </span>
+                                    <a class="link-primary small text-nowrap" href="@Href(row.LinkTarget)">@row.LinkText</a>
                                 </span>
-                                <a class="link-primary small text-nowrap" href="@Href(row.LinkTarget)">@row.LinkText</a>
-                            </span>
-                        }
-                    </li>
-                }
-            </ul>
-        </section>
-    }
+                            }
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+    </div>
 </div>
 
 <script type="application/json" id="fuPageData">@Json.Serialize(pageData)</script>
+
+@section Scripts {
+    <script src="~/lib/cytoscape/dist/cytoscape.min.js"></script>
+    <script src="~/lib/cytoscape-dagre/dist/cytoscape-dagre.min.js"></script>
+    <script src="~/js/financial-universe/graph.js" asp-append-version="true"></script>
+}

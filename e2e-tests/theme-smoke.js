@@ -8,7 +8,8 @@
  * Goals (slice #487), the Dashboard and Money Priorities (slice #489), Community, News and the AI chat widget
  * (slice #488), and Research's Sectors and World pages (slice #486), and that the Investment Calculator's, the Google
  * Drive Transactions timeline's, the Budget planner's Month Strip, the Net Worth runway, the Research Sectors treemap and the
- * World map restyle on a theme switch without a reload (slices #483, #484, #487, #485 and #486).
+ * World map restyle on a theme switch without a reload (slices #483, #484, #487, #485 and #486), and the Financial
+ * Universe's graph (#617) reads in dark mode and repaints on a switch.
  * Run from ui-test.js as Test 9j.
  *
  * Expected labels are read from Resources/i18n/en.json, so a rewording does not break the test.
@@ -52,6 +53,10 @@ const CONTRAST_PAGES = {
     dashboard: ['.dash-header__eyebrow', '.dash-header__title', '.dash-header__lede', '.dash-today__day.is-past',
         '.data-source-btn.btn-outline-secondary'],
     moneyPriorities: ['.mp-title', '.mp-intro', '.mp-card__title'],
+    // The Financial Universe (#617 slice 2): the header, the Graph / List toggle, the canvas legend and a list row
+    financialUniverse: ['.financial-universe h1', '.financial-universe .text-body-secondary',
+        '.fu-toolbar [data-fu-view][aria-pressed="true"]', '.fu-toolbar [data-fu-view][aria-pressed="false"]',
+        '[data-test-id="fu-graph-legend"]'],
     // Community (the Guild Hall, seeded in E2E), News, and the AI chat widget open on the Dashboard (#488)
     community: ['.community-title', '.community-subtitle', '.community-section-title', '.community-rail-title',
         '.community-pin-guidance', '.community-btn', '.community-eyebrow', '.community-pseudonym-name'],
@@ -356,6 +361,50 @@ async function checkChartRestyles(page, base, report) {
     const back = await chartState(page);
     check(back.theme === 'dark' && back.marker && chartMatchesTokens(back),
         'Chart: switching back to Dark restyles it again', JSON.stringify(back), report);
+}
+
+/**
+ * The Financial Universe graph (#617 slice 2) takes its colours from the chart palette: a node's border is its kind's
+ * token of the theme in effect, and switching the theme repaints the canvas without a reload. Leaves
+ * the page in dark mode, as it found it.
+ * @param {import('playwright').Page} page - A signed-in page in dark mode, on the Financial Universe.
+ * @param {{pass: Function, fail: Function}} report - The suite's pass and fail.
+ */
+async function checkUniverseRestyles(page, report) {
+    await page.waitForFunction(() => window.FinancialUniverseGraph && window.FinancialUniverseGraph.mode() !== null,
+        null, {timeout: TIMEOUT});
+    // The first node's border, next to the token its kind should wear (a fresh Account's first node is a Placeholder).
+    const universeState = () => page.evaluate(() => {
+        const tokenByKind = {IncomeSource: '--app-money-flow-income', Income: '--app-money-flow-income',
+            SavingsGoal: '--app-chart-5', Placeholder: '--app-chart-grid'};
+        const node = window.FinancialUniverseGraph.instance().nodes().first();
+        const kind = node.data('kind');
+        const probe = document.createElement('span');
+        probe.style.color = getComputedStyle(document.documentElement)
+            .getPropertyValue(tokenByKind[kind] || '--app-chart-grid').trim();
+        document.body.appendChild(probe);
+        const token = getComputedStyle(probe).color;
+        probe.remove();
+        // Cytoscape writes "rgb(42,58,71)", the computed style "rgb(42, 58, 71)"
+        const compact = (colour) => String(colour).replace(/ +/g, '');
+        return {
+            theme: document.documentElement.getAttribute('data-theme'),
+            kind,
+            border: compact(node.style('border-color')),
+            token: compact(token)
+        };
+    });
+    const dark = await universeState();
+    check(dark.theme === 'dark' && dark.border === dark.token, 'Universe: the first node wears its dark token',
+        JSON.stringify(dark), report);
+    await chooseTheme(page, 'light');
+    const light = await universeState();
+    check(light.theme === 'light' && light.border === light.token && light.border !== dark.border,
+        'Universe: switching to Light repaints the graph without a reload', JSON.stringify(light), report);
+    await chooseTheme(page, 'dark');
+    const back = await universeState();
+    check(back.theme === 'dark' && back.border === dark.border, 'Universe: switching back to Dark repaints it again',
+        JSON.stringify(back), report);
 }
 
 /**
@@ -727,6 +776,11 @@ async function runThemeSmoke({browser, base, pass, fail}) {
             CONTRAST_PAGES.dashboard.filter((selector) => hasPastDays || selector !== '.dash-today__day.is-past'), report);
         await page.goto(`${base}/MoneyPriorities`, {waitUntil: 'networkidle', timeout: TIMEOUT});
         await checkDarkContrast(page, 'Money Priorities', CONTRAST_PAGES.moneyPriorities, report);
+
+        // The Financial Universe (#617 slice 2): dark contrast, and the Cytoscape canvas repaints on a switch.
+        await page.goto(`${base}/FinancialUniverse`, {waitUntil: 'networkidle', timeout: TIMEOUT});
+        await checkDarkContrast(page, 'Financial Universe', CONTRAST_PAGES.financialUniverse, report);
+        await checkUniverseRestyles(page, report);
 
         // Research (#486): dark contrast, and the Sectors treemap and the World map repaint on a switch.
         const offices = Array.from({length: 8}, (_, i) => `--app-research-office-${i + 1}`).concat('--app-text-faint');
