@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Localization;
 using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
+using PersonalFinance.Shared.Helpers;
 using PersonalFinance.Web.Models.Analysis;
 
 namespace PersonalFinance.Web.Services;
@@ -7,18 +8,16 @@ namespace PersonalFinance.Web.Services;
 /// <summary>
 ///     Builds the Money Flow Sankey model for one month from the Analysis page's category insights.
 ///     Normal months flow Income into each category, Uncategorized, Other and Saved. In a Shortfall month, Income and
-///     the Shortfall each flow as one band into a middle Spending node, which fans out to the categories.
+///     the Shortfall each flow as one band into a middle Spending node, which fans out to the categories. Which
+///     categories fold into Other is <see cref="OtherFolding"/>, the rule Financial Universe shares.
 /// </summary>
 public static class MoneyFlowBuilder
 {
-    /// <summary>Categories below this share of the month's total flow are grouped into Other in the chart.</summary>
-    private const decimal OtherThreshold = 0.03m;
-
     /// <summary>
     ///     How many categories get their own colour. Colours are assigned in display order from a palette validated
     ///     for neighbouring bands (see money-flow.js); they are never cycled, so further categories join Other.
     /// </summary>
-    public const int MaxColoredCategories = 5;
+    public const int MaxColoredCategories = OtherFolding.MaxColoredCategories;
 
     private const string IncomeKey = "income";
     private const string ShortfallKey = "shortfall";
@@ -40,11 +39,12 @@ public static class MoneyFlowBuilder
             return null;
         }
 
-        List<(string Name, decimal Amount)> categories = insights.Categories
+        // Display order: largest first. The index is the node key, so a category named like a special node stays distinct.
+        List<(string Name, decimal Amount, int Index)> categories = insights.Categories
             .Where(c => c.ActualAmount > 0m)
-            .Select(c => (c.CategoryName, c.ActualAmount))
             .OrderByDescending(c => c.ActualAmount)
             .ThenBy(c => c.CategoryName, StringComparer.OrdinalIgnoreCase)
+            .Select((c, i) => (c.CategoryName, c.ActualAmount, i))
             .ToList();
 
         decimal income = Math.Max(0m, insights.ActualIncome);
@@ -84,21 +84,14 @@ public static class MoneyFlowBuilder
             model.Nodes.Add(Node(SpendingKey, localizer["Analysis.MoneyFlow.Spending"], expenses, MoneyFlowNodeKind.Spending, 1, null));
         }
 
+        OtherFoldingResult<(string Name, decimal Amount, int Index)> folding = OtherFolding.Fold(categories, c => c.Amount, totalFlow);
+        decimal other = folding.OtherTotal;
         var rightHand = new List<MoneyFlowNodeViewModel>();
-        decimal other = 0m;
-        for (int i = 0; i < categories.Count; i++)
+        foreach (ColoredCategory<(string Name, decimal Amount, int Index)> kept in folding.Kept)
         {
-            (string name, decimal amount) = categories[i];
-            int colored = rightHand.Count;
-            if (amount < totalFlow * OtherThreshold || colored >= MaxColoredCategories)
-            {
-                other += amount;
-                continue;
-            }
-
-            MoneyFlowNodeViewModel node = Node($"category-{i}", name, amount, MoneyFlowNodeKind.Category, rightColumn,
-                Share(amount, shareBase));
-            node.ColorSlot = colored;
+            MoneyFlowNodeViewModel node = Node(CategoryKey(kept.Category.Index), kept.Category.Name, kept.Category.Amount,
+                MoneyFlowNodeKind.Category, rightColumn, Share(kept.Category.Amount, shareBase));
+            node.ColorSlot = kept.ColorSlot;
             rightHand.Add(node);
         }
 
@@ -138,10 +131,10 @@ public static class MoneyFlowBuilder
         Dictionary<string, int?> slotsByKey = rightHand
             .Where(n => n.Kind == MoneyFlowNodeKind.Category)
             .ToDictionary(n => n.Key, n => n.ColorSlot);
-        model.TableRows.AddRange(categories.Select((c, i) =>
+        model.TableRows.AddRange(categories.Select(c =>
         {
             MoneyFlowRowViewModel row = Row(c.Name, c.Amount, MoneyFlowNodeKind.Category, shareBase);
-            row.ColorSlot = slotsByKey.GetValueOrDefault($"category-{i}");
+            row.ColorSlot = slotsByKey.GetValueOrDefault(CategoryKey(c.Index));
             row.InOther = row.ColorSlot is null;
             return row;
         }));
@@ -163,6 +156,11 @@ public static class MoneyFlowBuilder
         return insights.MonthNumber is >= 1 and <= 12 && insights.Year > 0
             ? AnalysisText.MonthYear(insights.Year, insights.MonthNumber)
             : insights.MonthName;
+    }
+
+    private static string CategoryKey(int index)
+    {
+        return $"category-{index}";
     }
 
     private static decimal Share(decimal amount, decimal shareBase)

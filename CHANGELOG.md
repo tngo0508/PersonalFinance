@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.14.1] - 2026-11-02
+
+### Changed
+- **Money Flow folds categories into Other through the shared rule**: `MoneyFlowBuilder` now calls Shared's `OtherFolding`, the helper the Financial Universe already uses, instead of its own copy of the 3% threshold and five-colour limit (#621).
+  - No change to the chart: the same categories keep their colours and the same ones join Other; a test feeds one month to both Features and checks they agree.
+
 ## [17.14.0] - 2026-11-02
 
 ### Added

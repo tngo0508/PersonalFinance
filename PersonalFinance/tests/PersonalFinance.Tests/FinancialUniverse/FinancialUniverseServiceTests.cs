@@ -10,8 +10,11 @@ using PersonalFinance.Shared.DTOs.FinancialUniverse;
 using PersonalFinance.Shared.DTOs.InvestmentScenarios;
 using PersonalFinance.Shared.DTOs.NetWorth;
 using PersonalFinance.Shared.DTOs.SavingsGoals;
+using PersonalFinance.Shared.DTOs.SpreadsheetAnalysis;
 using PersonalFinance.Shared.Enums;
 using PersonalFinance.Tests.TestSupport;
+using PersonalFinance.Web.Models.Analysis;
+using PersonalFinance.Web.Services;
 
 namespace PersonalFinance.Tests.FinancialUniverse;
 
@@ -105,6 +108,53 @@ public class FinancialUniverseServiceTests
         Assert.Equal(1_000m, Assert.Single(graph.Edges, e => e.TargetId == "savings").Weight);
         Assert.All(graph.Edges.Where(e => e.SourceId == "income"), e => Assert.Equal("income", e.SourceId));
         Assert.DoesNotContain(graph.Nodes, n => n.PlaceholderFor == FinancialUniverseNodeKind.ExpenseCategory);
+    }
+
+    [Fact]
+    public async Task ExpenseCategories_FoldIntoOtherExactlyAsMoneyFlowDoes()
+    {
+        // The same month through both Features (#621): Money Flow's chart and the Financial Universe graph must keep
+        // the same categories, in the same colour slots, and fold the same ones into Other. Spending is fully
+        // categorized, so neither has an Uncategorized remainder to account for.
+        (string Name, decimal Actual)[] spending =
+        [
+            ("Tea", 200m), ("Books", 350m), ("Gym", 400m), ("Fun", 500m), ("Car", 1_000m), ("Food", 2_000m), ("Rent", 4_000m)
+        ];
+        await using AppDbContext db = CreateContext();
+        var world = new World
+        {
+            Month = BudgetMonth(actualIncome: 10_000m, actualExpenses: 8_450m, spending.Select(c => Expense(c.Name, c.Actual)).ToArray())
+        };
+        var insights = new CategoryInsightsDto
+        {
+            Year = Year,
+            MonthNumber = Month,
+            ActualIncome = 10_000m,
+            ActualExpenses = 8_450m,
+            Categories = spending.Select(c => new CategoryBreakdownDto { CategoryName = c.Name, ActualAmount = c.Actual }).ToList()
+        };
+
+        FinancialUniverseGraphDto graph = await world.GraphAsync(db);
+        MoneyFlowViewModel? flow;
+        using (new RequestCultureScope("en-US"))
+        {
+            flow = MoneyFlowBuilder.Build(insights, TestLocalization.Localizer);
+        }
+
+        Assert.NotNull(flow);
+        List<(string? Name, int? Slot)> universeKept = graph.Nodes
+            .Where(n => n.Kind == FinancialUniverseNodeKind.ExpenseCategory)
+            .Select(n => (n.Name, n.ColorSlot))
+            .ToList();
+        List<(string? Name, int? Slot)> flowKept = flow.Nodes
+            .Where(n => n.Kind == MoneyFlowNodeKind.Category)
+            .Select(n => ((string?)n.Label, n.ColorSlot))
+            .ToList();
+        Assert.Equal(flowKept, universeKept);
+        Assert.Equal(["Rent", "Food", "Car", "Fun", "Gym"], universeKept.Select(k => k.Name));
+        Assert.Equal(flow.Nodes.Single(n => n.Kind == MoneyFlowNodeKind.Other).Amount,
+            Assert.Single(graph.Nodes, n => n.Kind == FinancialUniverseNodeKind.Other).Amount);
+        Assert.Equal(["Books", "Tea"], flow.TableRows.Where(r => r.InOther).Select(r => r.Name));
     }
 
     [Fact]
