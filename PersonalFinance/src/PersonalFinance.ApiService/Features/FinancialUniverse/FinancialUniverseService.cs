@@ -30,7 +30,8 @@ namespace PersonalFinance.ApiService.Features.FinancialUniverse;
 /// A kind the Account has nothing of becomes one Placeholder node linking to the feature that fills it, joined to its
 /// neighbours by relationship edges so the graph stays in one piece. Every amount is in the Reporting Currency
 /// (ADR 0016): the budget month arrives converted, goals bring their latest-rate figures, Contributions convert at
-/// their own day, balances at the latest rate; a missing rate leaves the amount null, never zero.
+/// their own day, balances at the latest rate; a missing rate leaves the amount null, never zero. The graph also
+/// lists the months the page can switch to (slice 3): the budget source's months, the current and the requested one.
 /// </summary>
 internal sealed class FinancialUniverseService : IFinancialUniverseService
 {
@@ -45,16 +46,18 @@ internal sealed class FinancialUniverseService : IFinancialUniverseService
     private readonly INetWorthParametersService _netWorthParameters;
     private readonly IInvestmentScenarioService _investmentScenarios;
     private readonly ICurrencyConverter _currencyConverter;
+    private readonly TimeProvider _timeProvider;
 
     public FinancialUniverseService(IBudgetDataProvider budgetDataProvider, ISavingsGoalService savingsGoals,
         INetWorthParametersService netWorthParameters, IInvestmentScenarioService investmentScenarios,
-        ICurrencyConverter currencyConverter)
+        ICurrencyConverter currencyConverter, TimeProvider timeProvider)
     {
         _budgetDataProvider = budgetDataProvider;
         _savingsGoals = savingsGoals;
         _netWorthParameters = netWorthParameters;
         _investmentScenarios = investmentScenarios;
         _currencyConverter = currencyConverter;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc />
@@ -97,7 +100,34 @@ internal sealed class FinancialUniverseService : IFinancialUniverseService
 
         graph.Conversion = ConversionDto.Combine(
             goals.Select(g => g.Conversion).Append(budgetMonth?.Conversion).Append(conversion.ToDto()));
+        graph.AvailableMonths = await AvailableMonthsAsync(userId, year, month, cancellationToken);
         return graph;
+    }
+
+    /// <summary>
+    /// The months the page can switch to, newest first: each month the budget source holds (one trend record per
+    /// month with data, Sheet snapshots in one month counted once), the current month and the requested month, so the
+    /// reader can always come back to today and the selected month is always in the list.
+    /// </summary>
+    private async Task<List<FinancialUniverseMonthDto>> AvailableMonthsAsync(string userId, int year, int month,
+        CancellationToken cancellationToken)
+    {
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        var months = new HashSet<(int Year, int Month)> { (year, month), (now.Year, now.Month) };
+        foreach (int dataYear in await _budgetDataProvider.GetAvailableYearsAsync(userId, cancellationToken))
+        {
+            List<BudgetTrendRecordData> records = await _budgetDataProvider.GetTrendRecordsAsync(userId, dataYear, cancellationToken);
+            foreach (BudgetTrendRecordData record in records.Where(r => r.MonthNumber is >= 1 and <= 12))
+            {
+                months.Add((dataYear, record.MonthNumber));
+            }
+        }
+
+        return months
+            .OrderByDescending(m => m.Year)
+            .ThenByDescending(m => m.Month)
+            .Select(m => new FinancialUniverseMonthDto { Year = m.Year, Month = m.Month })
+            .ToList();
     }
 
     /// <summary>

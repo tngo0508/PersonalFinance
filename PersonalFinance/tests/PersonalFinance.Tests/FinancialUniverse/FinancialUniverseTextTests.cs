@@ -22,8 +22,13 @@ public class FinancialUniverseTextTests
         [
             .. FinancialUniverseText.Keys,
             "FinancialUniverse.Title", "FinancialUniverse.Lead", "FinancialUniverse.Derived",
-            "FinancialUniverse.Message.Unavailable", "Shell.Nav.FinancialUniverse"
+            "FinancialUniverse.Message.Unavailable", "Shell.Nav.FinancialUniverse",
+            "FinancialUniverse.Month.Label", "FinancialUniverse.Month.Show", "FinancialUniverse.Row.Details",
+            "FinancialUniverse.Panel.Title", "FinancialUniverse.Panel.Amount", "FinancialUniverse.Panel.Native",
+            "FinancialUniverse.Panel.Period", "FinancialUniverse.Panel.Feature"
         ];
+        Assert.Contains("FinancialUniverse.Kind.Shortfall", FinancialUniverseText.Keys);
+        Assert.Contains("Shell.Nav.InvestmentCalculator", FinancialUniverseText.Keys);
         List<string> missing = keys.Where(key => !TestLocalization.Catalog.TryGet("en", key, out string _)).ToList();
 
         Assert.True(missing.Count == 0, "en.json has no " + string.Join(", ", missing));
@@ -102,6 +107,85 @@ public class FinancialUniverseTextTests
 
         Assert.Equal("₫26,000,000", model.Nodes[0].AmountText);
         Assert.Null(model.Nodes[0].Amount);
+        // The panel's own-currency line would repeat the amount, so it stays empty.
+        Assert.Equal("", model.Nodes[0].NativeAmountText);
+    }
+
+    [Fact]
+    public void Build_WritesThePanelsLines_KindPeriodNativeAmountAndFeature()
+    {
+        FinancialUniverseGraphDto graph = SampleGraph();
+        FinancialUniverseNodeDto goal = graph.Nodes.Single(n => n.Id == "goal-2");
+        goal.NativeAmount = 3_900_000m;
+        goal.NativeCurrencyCode = "VND";
+        FinancialUniverseNodeDto netWorth = graph.Nodes.Single(n => n.Id == "net-worth");
+        netWorth.NativeAmount = 50_000m;
+        netWorth.NativeCurrencyCode = "USD";
+
+        FinancialUniverseViewModel model;
+        using (new RequestCultureScope("en-US"))
+        {
+            model = FinancialUniverseText.Build(graph, TestLocalization.Localizer, EnUs);
+        }
+
+        FinancialUniverseNodeViewModel rent = model.Nodes.Single(n => n.Id == "expense-0");
+        Assert.Equal(("Expense category", "The figure for October 2026.", "Budget Tracker", ""),
+            (rent.KindText, rent.PeriodText, rent.FeatureText, rent.NativeAmountText));
+        FinancialUniverseNodeViewModel savings = model.Nodes.Single(n => n.Id == "savings");
+        Assert.Equal(("Savings", "The figure for October 2026.", "Analysis"), (savings.KindText, savings.PeriodText, savings.FeatureText));
+        // A goal's balance, Net Worth and a scenario are not month-bound; a stored amount in another currency is shown.
+        FinancialUniverseNodeViewModel tet = model.Nodes.Single(n => n.Id == "goal-2");
+        Assert.Equal(("Savings Goal", "Not tied to a month: the latest saved figure.", "Savings Goals", "₫3,900,000"),
+            (tet.KindText, tet.PeriodText, tet.FeatureText, tet.NativeAmountText));
+        FinancialUniverseNodeViewModel worth = model.Nodes.Single(n => n.Id == "net-worth");
+        Assert.Equal(("Net Worth", "Not tied to a month: the latest saved figure.", "Net Worth", ""),
+            (worth.KindText, worth.PeriodText, worth.FeatureText, worth.NativeAmountText));
+        FinancialUniverseNodeViewModel placeholder = model.Nodes.Single(n => n.IsPlaceholder);
+        Assert.Equal(("Nothing here yet", "", "Investment Calculator", "Open Investment Calculator"),
+            (placeholder.KindText, placeholder.PeriodText, placeholder.FeatureText, placeholder.LinkText));
+    }
+
+    [Fact]
+    public void Build_ListsTheMonthOptions_NewestFirst_WithTheGraphsMonthSelected()
+    {
+        FinancialUniverseGraphDto graph = SampleGraph();
+        graph.AvailableMonths =
+        [
+            new FinancialUniverseMonthDto { Year = 2026, Month = 11 },
+            new FinancialUniverseMonthDto { Year = 2026, Month = 10 },
+            new FinancialUniverseMonthDto { Year = 2025, Month = 12 }
+        ];
+
+        FinancialUniverseViewModel model = FinancialUniverseText.Build(graph, TestLocalization.Localizer, EnUs);
+
+        Assert.Equal(["2026-11", "2026-10", "2025-12"], model.AvailableMonths.Select(m => m.Value));
+        Assert.Equal(["November 2026", "October 2026", "December 2025"], model.AvailableMonths.Select(m => m.Label));
+        Assert.Equal("2026-10", Assert.Single(model.AvailableMonths, m => m.IsSelected).Value);
+    }
+
+    [Fact]
+    public void Build_WhenTheListLacksTheGraphsMonth_AddsItSelected()
+    {
+        FinancialUniverseGraphDto graph = SampleGraph();
+        graph.AvailableMonths = [new FinancialUniverseMonthDto { Year = 2026, Month = 11 }, new FinancialUniverseMonthDto { Year = 2026, Month = 9 }];
+
+        FinancialUniverseViewModel model = FinancialUniverseText.Build(graph, TestLocalization.Localizer, EnUs);
+
+        Assert.Equal(["2026-11", "2026-10", "2026-09"], model.AvailableMonths.Select(m => m.Value));
+        Assert.Equal("2026-10", Assert.Single(model.AvailableMonths, m => m.IsSelected).Value);
+    }
+
+    [Theory]
+    [InlineData("2026-10", true, 2026, 10)]
+    [InlineData("2000-01", true, 2000, 1)]
+    [InlineData("2026-13", false, 0, 0)]
+    [InlineData("2026-1", false, 0, 0)]
+    [InlineData("October 2026", false, 0, 0)]
+    [InlineData(null, false, 0, 0)]
+    public void TryParsePeriod_ReadsThePickersValueOnly(string? period, bool expected, int year, int month)
+    {
+        Assert.Equal(expected, FinancialUniverseText.TryParsePeriod(period, out int parsedYear, out int parsedMonth));
+        Assert.Equal((year, month), (parsedYear, parsedMonth));
     }
 
     [Fact]
@@ -118,6 +202,9 @@ public class FinancialUniverseTextTests
         Assert.Equal(model.Nodes.Count, data.Nodes.Count);
         FinancialUniversePageNode goal = Assert.Single(data.Nodes, n => n.Id == "goal-2");
         Assert.Equal(("SavingsGoal", "Tết", "$150", "of $1,000", "/SavingsGoals", 150m), (goal.Kind, goal.Label, goal.AmountText, goal.DetailText, goal.Href, goal.Amount));
+        // The detail panel's lines travel in the island too, so the script composes none of them.
+        Assert.Equal(("Savings Goal", "Not tied to a month: the latest saved figure.", "Savings Goals", "Open Savings Goals"),
+            (goal.KindText, goal.PeriodText, goal.FeatureText, goal.LinkText));
         Assert.Equal("/InvestmentCalculator", Assert.Single(data.Nodes, n => n.IsPlaceholder).Href);
         Assert.Same(model.Edges, data.Edges);
     }

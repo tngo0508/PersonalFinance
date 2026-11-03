@@ -34,6 +34,25 @@ public sealed class FinancialUniverseViewModel
 
     /// <summary>Every edge, with its weight written out where it has one.</summary>
     public List<FinancialUniverseEdgeViewModel> Edges { get; set; } = [];
+
+    /// <summary>The month picker's options, newest first; exactly one is selected.</summary>
+    public List<FinancialUniverseMonthOptionViewModel> AvailableMonths { get; set; } = [];
+}
+
+/// <summary>One month the picker offers.</summary>
+public sealed class FinancialUniverseMonthOptionViewModel
+{
+    public int Year { get; set; }
+
+    public int Month { get; set; }
+
+    /// <summary>The option's value as the query carries it: <c>yyyy-MM</c>.</summary>
+    public string Value { get; set; } = string.Empty;
+
+    /// <summary>The month as the reader writes it ("October 2026").</summary>
+    public string Label { get; set; } = string.Empty;
+
+    public bool IsSelected { get; set; }
 }
 
 /// <summary>One section of the list view.</summary>
@@ -74,6 +93,23 @@ public sealed class FinancialUniverseNodeViewModel
 
     /// <summary>"Open Budget Tracker" and the like, in the request's Language.</summary>
     public string LinkText { get; set; } = string.Empty;
+
+    /// <summary>The node's kind as the detail panel names it ("Expense category"), in the request's Language.</summary>
+    public string KindText { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The amount as stored, formatted in its own currency, when that differs from the Reporting Currency; else empty.
+    /// </summary>
+    public string NativeAmountText { get; set; } = string.Empty;
+
+    /// <summary>
+    /// What the amount covers: the month for the budget nodes, or that it is the latest saved figure (a goal's balance,
+    /// Net Worth, a scenario); empty for a Placeholder.
+    /// </summary>
+    public string PeriodText { get; set; } = string.Empty;
+
+    /// <summary>The name of the feature that owns the node ("Budget Tracker").</summary>
+    public string FeatureText { get; set; } = string.Empty;
 
     public bool IsPlaceholder { get; set; }
 

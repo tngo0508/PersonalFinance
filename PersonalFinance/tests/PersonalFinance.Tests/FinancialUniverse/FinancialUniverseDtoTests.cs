@@ -35,7 +35,8 @@ public class FinancialUniverseDtoTests
                     LinkTarget = FinancialUniverseLinkTarget.NetWorth, PlaceholderFor = FinancialUniverseNodeKind.NetWorth
                 }
             ],
-            Edges = [new FinancialUniverseEdgeDto { SourceId = "savings", TargetId = "goal-3", Weight = 0m }]
+            Edges = [new FinancialUniverseEdgeDto { SourceId = "savings", TargetId = "goal-3", Weight = 0m }],
+            AvailableMonths = [new FinancialUniverseMonthDto { Year = 2026, Month = 10 }, new FinancialUniverseMonthDto { Year = 2026, Month = 9 }]
         };
 
         string json = JsonSerializer.Serialize(graph, Web);
@@ -51,5 +52,6 @@ public class FinancialUniverseDtoTests
             (back.Nodes[0].Kind, back.Nodes[0].Name, back.Nodes[0].Amount, back.Nodes[0].SecondaryAmount, back.Nodes[0].NativeAmount,
                 back.Nodes[0].NativeCurrencyCode, back.Nodes[0].SourceId, back.Nodes[0].LinkTarget));
         Assert.Equal(0m, Assert.Single(back.Edges).Weight);
+        Assert.Equal([(2026, 10), (2026, 9)], back.AvailableMonths.Select(m => (m.Year, m.Month)));
     }
 }

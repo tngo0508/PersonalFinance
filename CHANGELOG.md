@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.14.0] - 2026-11-02
+
+### Added
+
+- **Financial Universe explorer**: the Financial Universe page now lets you pick the month, inspect any node without leaving the page, and move the graph around (spec #617, slice 3 of 3; closes #620).
+  - A month picker lists every month your budget has data for, plus the current one; the page reloads with the month in the address, so a month can be linked to. Income, spending, Savings or Shortfall and the goals' contribution arrows follow the month; Savings Goals, Net Worth and Investment Scenarios show their latest saved figures and say so.
+  - Tapping a node, or pressing Details on a list row, opens a side panel with the node's kind, its amount in your reporting currency, the stored amount in its own currency when that differs, the period it covers, the feature it belongs to and a link to open it. Escape or the close button dismisses it and focus returns to where you were. The link to the feature moved from the node itself into this panel.
+  - Pointing at a node fades everything it is not connected to; nodes can be dragged into a better spot (a reload lays the graph out afresh).
+  - The ApiService's graph gains the list of available months; a month outside the range comes back to the current month.
+
 ## [17.13.0] - 2026-11-02
 
 ### Added
