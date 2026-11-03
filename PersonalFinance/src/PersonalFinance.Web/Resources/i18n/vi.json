@@ -3136,8 +3136,8 @@
   "FinancialUniverse.Graph.Tools": "Các công cụ đồ thị",
   "FinancialUniverse.Graph.ZoomIn": "Phóng to",
   "FinancialUniverse.Graph.ZoomOut": "Thu nhỏ",
-  "FinancialUniverse.Graph.Fit": "Phù hợp để xem",
+  "FinancialUniverse.Graph.Fit": "Vừa khung nhìn",
   "FinancialUniverse.Graph.Label": "Biểu đồ về cách tài chính của bạn kết nối trong {month}. Danh sách dưới đây cũng chứa cùng thông tin.",
-  "FinancialUniverse.Graph.Legend": "Mũi tên đặc mang số lượng từ tháng này, dày hơn đối với mũi tên lớn hơn. Mũi tên đứt ngang thể hiện mối quan hệ. Giữ Ctrl và cuộn để phóng to, kéo để pan, và chạm vào một nút để mở đặc trưng của nó.",
+  "FinancialUniverse.Graph.Legend": "Một mũi tên liền nét mang tiền từ tháng này: càng nhiều tiền, mũi tên càng dày. Một mũi tên đứt nét thể hiện mối quan hệ. Giữ Ctrl và cuộn để phóng to, kéo để di chuyển chế độ xem, và chạm vào nút để mở tính năng mà nó thuộc về.",
   "FinancialUniverse.Graph.Unavailable": "Biểu đồ không thể vẽ được. Danh sách dưới đây chứa cùng thông tin."
 }
