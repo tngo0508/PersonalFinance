@@ -3102,7 +3102,7 @@
     "Learning.Js.Review.MarkFailed": "5e4c62978bd7357d",
     "Learning.Error.LessonLocked": "bcf29e45b548f4c2",
     "FinancialUniverse.Title": "6f09563e8a2d16ee",
-    "FinancialUniverse.Lead": "8b87e55ca9d9633d",
+    "FinancialUniverse.Lead": "6b9c0d1560ee0d48",
     "FinancialUniverse.Derived": "18dafd9c7b947b34",
     "FinancialUniverse.Message.Unavailable": "16c05aad5938abd6",
     "FinancialUniverse.Section.IncomeSources": "e085f3d731b88da3",
@@ -3130,6 +3130,6 @@
     "FinancialUniverse.Link.SavingsGoals": "0005f72854f55447",
     "FinancialUniverse.Link.NetWorth": "bf62bd085ad6b38e",
     "FinancialUniverse.Link.InvestmentCalculator": "2f0b824b357642fc",
-    "FinancialUniverse.Validation.MonthRange": "86aaccee77d97c50"
+    "FinancialUniverse.Validation.MonthRange": "28c01cf949501654"
   }
 }
