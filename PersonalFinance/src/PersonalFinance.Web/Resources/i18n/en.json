@@ -3156,7 +3156,7 @@
   "Learning.Js.Review.MarkFailed": "We couldn't save that. Please try again.",
   "Learning.Error.LessonLocked": "This Lesson is not open yet. Finish the one before it first, then come back after midnight.",
   "FinancialUniverse.Title": "Financial Universe",
-  "FinancialUniverse.Lead": "How your finances connect across the app, for {month}.",
+  "FinancialUniverse.Lead": "How your finances connect across the app in {month}.",
   "FinancialUniverse.Derived": "Everything here is drawn from what you already track: your budget, Savings Goals, Net Worth parameters and Investment Scenarios. Nothing is edited on this page.",
   "FinancialUniverse.Message.Unavailable": "Your Financial Universe could not be loaded.",
   "FinancialUniverse.Section.IncomeSources": "Income sources",
@@ -3184,5 +3184,5 @@
   "FinancialUniverse.Link.SavingsGoals": "Open Savings Goals",
   "FinancialUniverse.Link.NetWorth": "Open Net Worth",
   "FinancialUniverse.Link.InvestmentCalculator": "Open Investment Calculator",
-  "FinancialUniverse.Validation.MonthRange": "Choose a month between January {minYear} and December {maxYear}."
+  "FinancialUniverse.Validation.MonthRange": "Choose a month in a year from {minYear} to {maxYear}."
 }
