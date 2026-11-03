@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.12.0] - 2026-11-02
+
+### Added
+
+- **Financial Universe**: a new Overview page, right after Dashboard, that shows how your finances connect across the app for the current month (spec #617, slice 1 of 3).
+  - Your income sources pool into Income, which flows into your expense categories (the small ones folded into Other, as Money Flow does) and into your Savings, or a Shortfall when you spent more than you earned; your Savings Goals hang off Savings with the month's contributions; Net Worth and your Investment Scenarios follow as relationships.
+  - This slice ships the accessible list view: one section per kind, each row with its amount in your reporting currency and a link into the feature that owns it. A kind you have nothing of yet shows a row that leads to the feature that fills it.
+  - Everything is derived from what you already track; nothing is edited on the page. The graph itself arrives in slice 2.
+  - The ApiService gains a read-only `GET /api/financial-universe?year=&month=` endpoint, and the under-3% Other rule now lives in a shared helper that Money Flow can adopt (#621).
+
 ## [17.11.2] - 2026-11-01
 
 ### Fixed

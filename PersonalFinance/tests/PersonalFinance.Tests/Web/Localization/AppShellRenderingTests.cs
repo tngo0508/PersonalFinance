@@ -124,8 +124,8 @@ public sealed partial class AppShellRenderingTests : IAsyncLifetime
 
         Assert.All(
         [
-            "/Dashboard", "/Networth", "/BudgetTracker", "/Budget", "/SavingsGoals", "/MoneyPriorities", "/Analysis",
-            "/InvestmentCalculator", "/News", "/Community", "/GoogleDrive", "/Research"
+            "/Dashboard", "/FinancialUniverse", "/Networth", "/BudgetTracker", "/Budget", "/SavingsGoals", "/MoneyPriorities",
+            "/Analysis", "/InvestmentCalculator", "/News", "/Community", "/GoogleDrive", "/Research"
         ], page => Assert.Contains($"href=\"{page}\"", html, StringComparison.Ordinal));
     }
 

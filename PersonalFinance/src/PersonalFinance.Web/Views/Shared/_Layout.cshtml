@@ -87,6 +87,11 @@
                     <span class="sidebar-link-icon"><i data-lucide="layout-dashboard"></i></span>
                     <span class="sidebar-link-text">@L["Shell.Nav.Dashboard"]</span>
                 </a>
+                <a class="sidebar-link @(currentController == "FinancialUniverse" ? "active" : "")"
+                   asp-area="" asp-controller="FinancialUniverse" asp-action="Index" data-test-id="nav-financial-universe">
+                    <span class="sidebar-link-icon"><i data-lucide="orbit"></i></span>
+                    <span class="sidebar-link-text">@L["Shell.Nav.FinancialUniverse"]</span>
+                </a>
             </div>
 
             <!-- My Finances -->
@@ -271,7 +276,7 @@
 @if (isSignedIn)
 {
     <nav class="bottom-nav" aria-label="@L["Shell.BottomNav.Label"]">
-        <a class="bottom-nav-item @(currentController == "Dashboard" ? "active" : "")"
+        <a class="bottom-nav-item @(currentController == "Dashboard" || currentController == "FinancialUniverse" ? "active" : "")"
            asp-area="" asp-controller="Dashboard" asp-action="Index">
             <i data-lucide="layout-dashboard"></i>
             <span>@L["Shell.BottomNav.Home"]</span>
