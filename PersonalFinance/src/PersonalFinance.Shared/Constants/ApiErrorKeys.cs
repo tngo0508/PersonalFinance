@@ -536,6 +536,13 @@ public static class ApiErrorKeys
         public const string LessonLocked = "Learning.Error.LessonLocked";
     }
 
+    /// <summary>The keys of the Financial Universe Feature's rejections (#617).</summary>
+    public static class FinancialUniverse
+    {
+        /// <summary>The year or the month of the requested graph was outside the range the app keeps.</summary>
+        public const string MonthRange = "FinancialUniverse.Validation.MonthRange";
+    }
+
     /// <summary>The keys of the Investment Scenarios Feature's rejections (#592).</summary>
     public static class InvestmentScenarios
     {

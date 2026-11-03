@@ -60,6 +60,24 @@ public class NavigationLayoutTests
     }
 
     [Fact]
+    public void Sidebar_LinksToFinancialUniverse_InOverview_RightAfterDashboard()
+    {
+        string sidebar = Between(ReadView("Shared", "_Layout.cshtml"), "<aside", "</aside>");
+        string overview = Between(sidebar, "@L[\"Shell.Nav.Overview\"]</div>", "<!-- My Finances -->");
+
+        int dashboard = overview.IndexOf("asp-controller=\"Dashboard\"", StringComparison.Ordinal);
+        int universe = overview.IndexOf("asp-controller=\"FinancialUniverse\" asp-action=\"Index\"", StringComparison.Ordinal);
+        Assert.True(dashboard >= 0 && universe > dashboard, "Financial Universe should sit in Overview right after Dashboard.");
+        Assert.Contains("currentController == \"FinancialUniverse\" ? \"active\"", overview);
+        Assert.Contains("<i data-lucide=\"orbit\"></i>", overview);
+        Assert.Contains("<span class=\"sidebar-link-text\">@L[\"Shell.Nav.FinancialUniverse\"]</span>", overview);
+
+        // The mobile bottom nav keeps five items; Financial Universe lights the Home item, as the spec groups it under Overview.
+        string bottomNav = Between(ReadView("Shared", "_Layout.cshtml"), "<nav class=\"bottom-nav\"", "</nav>");
+        Assert.Contains("currentController == \"Dashboard\" || currentController == \"FinancialUniverse\" ? \"active\"", bottomNav);
+    }
+
+    [Fact]
     public void Sidebar_LinksToMoneyPriorities_InMyFinances_AfterSavingsGoals()
     {
         string sidebar = Between(ReadView("Shared", "_Layout.cshtml"), "<aside", "</aside>");

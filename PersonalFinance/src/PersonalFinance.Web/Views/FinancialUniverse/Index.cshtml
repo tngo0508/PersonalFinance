@@ -1,0 +1,64 @@
+@using PersonalFinance.Shared.Enums
+@using PersonalFinance.Web.Models.FinancialUniverse
+@model FinancialUniverseViewModel
+@{
+    ViewData["Title"] = L["FinancialUniverse.Title"].Value;
+    string? Href(FinancialUniverseLinkTarget target)
+    {
+        (string controller, string action) = FinancialUniverseLinks.Route(target);
+        return Url.Action(action, controller);
+    }
+    var pageData = FinancialUniversePageData.From(Model, Href);
+}
+
+@* The Financial Universe (spec #617), slice 1: the accessible list view. One section per node kind in rank order; each
+   row is the node's label, its amount in the Reporting Currency and a link into the feature that owns it. A Placeholder
+   row stands in for a kind the Account has nothing of yet. Slice 2 adds the graph renderer over the JSON island. *@
+<div class="financial-universe" data-test-id="financial-universe">
+    <header class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+        <div>
+            <p class="text-uppercase small fw-semibold text-body-secondary mb-1">@L["Shell.Nav.Overview"]</p>
+            <h1 class="h2 mb-1">@L["FinancialUniverse.Title"]</h1>
+            <p class="text-body-secondary mb-0">@L.Named("FinancialUniverse.Lead", ("month", Model.MonthLabel))</p>
+        </div>
+    </header>
+
+    <p class="text-body-secondary small">@L["FinancialUniverse.Derived"]</p>
+    <partial name="_ConversionCaption" model="Model.Conversion"/>
+
+    @foreach (FinancialUniverseSectionViewModel group in Model.Sections)
+    {
+        <section class="card mb-3" aria-labelledby="fu-section-@group.Key" data-test-id="fu-section-@group.Key">
+            <h2 class="card-header h6 mb-0" id="fu-section-@group.Key">@group.Title</h2>
+            <ul class="list-group list-group-flush">
+                @foreach (FinancialUniverseNodeViewModel row in group.Rows)
+                {
+                    <li class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-2"
+                        data-node-id="@row.Id" data-node-kind="@row.Kind">
+                        @if (row.IsPlaceholder)
+                        {
+                            <span class="text-body-secondary">@row.Label</span>
+                            <a class="btn btn-sm btn-outline-primary" href="@Href(row.LinkTarget)">@row.LinkText</a>
+                        }
+                        else
+                        {
+                            <span class="fw-semibold">@row.Label</span>
+                            <span class="d-flex flex-wrap align-items-baseline gap-3 ms-auto">
+                                <span class="text-end">
+                                    <span class="fw-semibold">@row.AmountText</span>
+                                    @if (!string.IsNullOrEmpty(row.DetailText))
+                                    {
+                                        <br/><small class="text-body-secondary">@row.DetailText</small>
+                                    }
+                                </span>
+                                <a class="link-primary small text-nowrap" href="@Href(row.LinkTarget)">@row.LinkText</a>
+                            </span>
+                        }
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+</div>
+
+<script type="application/json" id="fuPageData">@Json.Serialize(pageData)</script>

@@ -162,6 +162,7 @@ A Web controller is named after its route, so its name can differ from its Featu
 | Community | `Community` |
 | Dashboard | `Dashboard` |
 | Feedback | `Feedback` |
+| FinancialUniverse | `FinancialUniverse` |
 | GoogleDrive | `GoogleDrive` |
 | InvestmentCalculator | `InvestmentCalculator` |
 | InvestmentScenarios | `InvestmentScenarios` (JSON only) |

@@ -11,6 +11,7 @@ using PersonalFinance.ApiService.Features.Community;
 using PersonalFinance.ApiService.Features.CurrencyConverter;
 using PersonalFinance.ApiService.Features.Dashboard;
 using PersonalFinance.ApiService.Features.Feedback;
+using PersonalFinance.ApiService.Features.FinancialUniverse;
 using PersonalFinance.ApiService.Features.GoogleDrive;
 using PersonalFinance.ApiService.Features.InvestmentScenarios;
 using PersonalFinance.ApiService.Features.Learning;
@@ -83,6 +84,7 @@ try
         .AddAccountLifecycleFeature()
         .AddMoneyPrioritiesFeature()
         .AddCurrencyConverterFeature()
+        .AddFinancialUniverseFeature()
         .AddLearningFeature(builder.Configuration);
 
     // HTTP: controllers, FluentValidation validators, RFC 7807 ProblemDetails, OpenAPI document.

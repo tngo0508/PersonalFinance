@@ -10,6 +10,7 @@ const {runThemeSmoke} = require('./theme-smoke');
 const {runLearningSmoke} = require('./learning-smoke');
 const {runChallengeSmoke} = require('./challenge-smoke');
 const {runInvestmentCalculatorSmoke} = require('./investment-calculator-smoke');
+const {runFinancialUniverseSmoke} = require('./financial-universe-smoke');
 
 (async () => {
     const results = {passed: 0, failed: 0, errors: []};
@@ -1012,6 +1013,16 @@ const {runInvestmentCalculatorSmoke} = require('./investment-calculator-smoke');
             await runInvestmentCalculatorSmoke({browser, base, pass, fail});
         } catch (error) {
             fail(`Investment Calculator smoke failed: ${error.message}`);
+        }
+
+        // =========================================================
+        // Test 9n: Financial Universe smoke (#617): the list view from the nav, a goal row, Placeholders, the JSON island
+        // =========================================================
+        console.log('\n--- Test 9n: Financial Universe Smoke ---');
+        try {
+            await runFinancialUniverseSmoke({browser, base, pass, fail});
+        } catch (error) {
+            fail(`Financial Universe smoke failed: ${error.message}`);
         }
 
         // =========================================================

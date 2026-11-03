@@ -123,6 +123,13 @@ The amount by which a month's actual expenses exceed its actual income. A month 
 never both.
 _Avoid_: deficit, negative savings, overspend
 
+### Financial Universe
+The Overview page showing how the user's finances connect across features, derived from data the app already holds:
+one month's income sources and expense categories, its savings or Shortfall, the Savings Goals, the Net Worth
+parameters and the Investment Scenarios, each node linking into the feature that owns it. Nothing on it is authored;
+a kind the user has nothing of shows as a placeholder.
+_Avoid_: Money Map, graph page, overview map
+
 ### FI Breakdown
 The panel on the Net Worth page showing how the Savings Rate, the FI Target, Progress to FI and the age at which the
 user reaches FI are calculated from the values the user entered.
