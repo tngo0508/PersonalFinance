@@ -3193,6 +3193,6 @@
   "FinancialUniverse.Graph.ZoomOut": "Zoom out",
   "FinancialUniverse.Graph.Fit": "Fit to view",
   "FinancialUniverse.Graph.Label": "Graph of how your finances connect in {month}. The list below holds the same information.",
-  "FinancialUniverse.Graph.Legend": "Solid arrows carry amounts from this month, thicker for larger ones. Dashed arrows show a relationship. Hold Ctrl and scroll to zoom, drag to pan, and tap a node to open its feature.",
+  "FinancialUniverse.Graph.Legend": "A solid arrow carries money from this month: the more money, the thicker the arrow. A dashed arrow shows a relationship. Hold Ctrl and scroll to zoom, drag to move the view, and tap a node to open the feature it belongs to.",
   "FinancialUniverse.Graph.Unavailable": "The graph could not be drawn. The list below holds the same information."
 }
