@@ -1,0 +1,37 @@
+/* ==========================================================================
+   Financial Universe: the graph drawn by Cytoscape.js (js/financial-universe/graph.js, ADR 0020)
+   The page provides the toolbar, the graph panel and the list panel; graph.js only toggles them.
+   ========================================================================== */
+
+/* The two panels; graph.js shows one and hides the other with the hidden attribute. */
+.fu-panel[hidden] {
+    display: none;
+}
+
+/* While graph.js measures the fitted labels, the panel takes its space but is not painted. */
+.fu-panel--measuring {
+    visibility: hidden;
+}
+
+.fu-toolbar [hidden] {
+    display: none;
+}
+
+.fu-toolbar .btn:focus-visible {
+    outline: 2px solid var(--app-brand);
+    outline-offset: 2px;
+}
+
+/* The canvas: a viewport-relative height so a laptop window shows the whole month; the wheel still scrolls the page. */
+.fu-graph__canvas {
+    width: 100%;
+    height: clamp(20rem, 60vh, 40rem);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-m);
+    background: var(--app-bg);
+    overscroll-behavior: contain;
+}
+
+.fu-graph__failure[hidden] {
+    display: none;
+}

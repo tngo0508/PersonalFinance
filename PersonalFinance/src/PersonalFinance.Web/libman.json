@@ -153,6 +153,24 @@
         "dist/mermaid.min.js",
         "LICENSE"
       ]
+    },
+    {
+      "provider": "jsdelivr",
+      "library": "cytoscape@3.34.4",
+      "destination": "wwwroot/lib/cytoscape",
+      "files": [
+        "dist/cytoscape.min.js",
+        "LICENSE"
+      ]
+    },
+    {
+      "provider": "jsdelivr",
+      "library": "cytoscape-dagre@4.0.1",
+      "destination": "wwwroot/lib/cytoscape-dagre",
+      "files": [
+        "dist/cytoscape-dagre.min.js",
+        "LICENSE"
+      ]
     }
   ]
 }

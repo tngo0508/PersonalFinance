@@ -3184,5 +3184,15 @@
   "FinancialUniverse.Link.SavingsGoals": "Open Savings Goals",
   "FinancialUniverse.Link.NetWorth": "Open Net Worth",
   "FinancialUniverse.Link.InvestmentCalculator": "Open Investment Calculator",
-  "FinancialUniverse.Validation.MonthRange": "Choose a month in a year from {minYear} to {maxYear}."
+  "FinancialUniverse.Validation.MonthRange": "Choose a month in a year from {minYear} to {maxYear}.",
+  "FinancialUniverse.View.Label": "View",
+  "FinancialUniverse.View.Graph": "Graph",
+  "FinancialUniverse.View.List": "List",
+  "FinancialUniverse.Graph.Tools": "Graph tools",
+  "FinancialUniverse.Graph.ZoomIn": "Zoom in",
+  "FinancialUniverse.Graph.ZoomOut": "Zoom out",
+  "FinancialUniverse.Graph.Fit": "Fit to view",
+  "FinancialUniverse.Graph.Label": "Graph of how your finances connect in {month}. The list below holds the same information.",
+  "FinancialUniverse.Graph.Legend": "Solid arrows carry amounts from this month, thicker for larger ones. Dashed arrows show a relationship. Hold Ctrl and scroll to zoom, drag to pan, and tap a node to open its feature.",
+  "FinancialUniverse.Graph.Unavailable": "The graph could not be drawn. The list below holds the same information."
 }
