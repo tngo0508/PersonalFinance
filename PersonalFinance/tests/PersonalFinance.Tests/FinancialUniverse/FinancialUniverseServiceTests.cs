@@ -300,6 +300,35 @@ public class FinancialUniverseServiceTests
         Assert.Equal(FinancialUniverseLinkTarget.Analysis, Assert.Single(graph.Nodes, n => n.Kind == FinancialUniverseNodeKind.ExpenseCategory).LinkTarget);
     }
 
+    [Fact]
+    public async Task AvailableMonths_ListTheSourcesMonthsTheCurrentAndTheRequested_NewestFirst_EachOnce()
+    {
+        await using AppDbContext db = CreateContext();
+        var world = new World
+        {
+            Month = BudgetMonth(actualIncome: 3_000m, actualExpenses: 1_000m, Expense("Rent", 1_000m)),
+            // Two Sheet snapshots in August count once; a 2025 month shows the years are walked.
+            DataMonths = [(2026, 8, 2), (2025, 12, 1)]
+        };
+
+        // Asked for August 2026 while the clock says October 2026 (Now), with data in October, August and December 2025.
+        FinancialUniverseGraphDto graph = await world.GraphAsync(db, 2026, 8);
+
+        Assert.Equal([(2026, 10), (2026, 8), (2025, 12)], graph.AvailableMonths.Select(m => (m.Year, m.Month)));
+    }
+
+    [Fact]
+    public async Task AvailableMonths_WithNoBudgetData_StillOfferTheRequestedAndTheCurrentMonth()
+    {
+        await using AppDbContext db = CreateContext();
+        var world = new World();
+
+        FinancialUniverseGraphDto graph = await world.GraphAsync(db, 2024, 2);
+
+        Assert.Equal([(2026, 10), (2024, 2)], graph.AvailableMonths.Select(m => (m.Year, m.Month)));
+        Assert.Equal((2024, 2), (graph.Year, graph.Month));
+    }
+
     private static AppDbContext CreateContext(params ExchangeRate[] rates)
     {
         DbContextOptions<AppDbContext> options = new DbContextOptionsBuilder<AppDbContext>()
@@ -361,10 +390,13 @@ public class FinancialUniverseServiceTests
         public NetWorthParametersDto? NetWorth { get; init; }
         public List<InvestmentScenarioDto> Scenarios { get; init; } = [];
 
-        public Task<FinancialUniverseGraphDto> GraphAsync(AppDbContext db) =>
+        /// <summary>The months the budget source holds besides <see cref="Month"/>, as (year, month, snapshots in it).</summary>
+        public List<(int Year, int Month, int Records)> DataMonths { get; init; } = [];
+
+        public Task<FinancialUniverseGraphDto> GraphAsync(AppDbContext db, int year = Year, int month = FinancialUniverseServiceTests.Month) =>
             new FinancialUniverseService(new FakeBudgetProvider(this), new FakeGoals(this), new FakeNetWorth(this),
-                    new FakeScenarios(this), TestCurrencyConverter.Create(db, new FixedTimeProvider(Now)))
-                .GetGraphAsync(UserId, Year, FinancialUniverseServiceTests.Month);
+                    new FakeScenarios(this), TestCurrencyConverter.Create(db, new FixedTimeProvider(Now)), new FixedTimeProvider(Now))
+                .GetGraphAsync(UserId, year, month);
     }
 
     private sealed class FakeBudgetProvider(World world) : IBudgetDataProvider
@@ -375,9 +407,21 @@ public class FinancialUniverseServiceTests
             Task.FromResult(year == Year && month == Month ? world.Month : null);
 
         public Task<List<BudgetMonthData>> GetMonthsAsync(string userId, int year, CancellationToken ct = default) => throw new NotSupportedException();
-        public Task<List<BudgetTrendRecordData>> GetTrendRecordsAsync(string userId, int year, CancellationToken ct = default) => throw new NotSupportedException();
+
+        /// <summary>One record per snapshot, as the Sheet reader answers; the seeded month counts once.</summary>
+        public Task<List<BudgetTrendRecordData>> GetTrendRecordsAsync(string userId, int year, CancellationToken ct = default) =>
+            Task.FromResult(DataMonths()
+                .Where(m => m.Year == year)
+                .SelectMany(m => Enumerable.Repeat(new BudgetTrendRecordData { MonthNumber = m.Month }, m.Records))
+                .ToList());
+
         public Task<List<BudgetTransactionData>> GetTransactionsAsync(string userId, DateOnly from, DateOnly to, int? take = null, CancellationToken ct = default) => throw new NotSupportedException();
-        public Task<List<int>> GetAvailableYearsAsync(string userId, CancellationToken ct = default) => throw new NotSupportedException();
+
+        public Task<List<int>> GetAvailableYearsAsync(string userId, CancellationToken ct = default) =>
+            Task.FromResult(DataMonths().Select(m => m.Year).Distinct().OrderBy(y => y).ToList());
+
+        private IEnumerable<(int Year, int Month, int Records)> DataMonths() =>
+            world.DataMonths.Concat(world.Month is null ? [] : [(Year, Month, 1)]);
     }
 
     private sealed class FakeGoals(World world) : ISavingsGoalService

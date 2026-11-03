@@ -10,7 +10,8 @@ namespace PersonalFinance.Web.Models.FinancialUniverse;
 
 /// <summary>
 /// Turns the ApiService's graph into the page's view model: every label in the request's Language, every amount
-/// formatted in the Reporting Currency, the nodes grouped into the list view's sections in rank order. A category,
+/// formatted in the Reporting Currency, the nodes grouped into the list view's sections in rank order, the detail
+/// panel's lines per node (kind, period, native amount, owning feature) and the month picker's options. A category,
 /// goal or scenario keeps the user's own name; the app's nodes (Income, Other, Savings, Shortfall, Net Worth) and the
 /// Placeholders are localized here. The JavaScript composes no strings (spec #617).
 /// </summary>
@@ -44,8 +45,34 @@ public static class FinancialUniverseText
         "FinancialUniverse.Placeholder.InvestmentScenario",
         "FinancialUniverse.Row.GoalTarget", "FinancialUniverse.Row.AnnualSavings", "FinancialUniverse.Row.MonthlyContribution",
         "FinancialUniverse.Link.BudgetTracker", "FinancialUniverse.Link.Analysis", "FinancialUniverse.Link.SavingsGoals",
-        "FinancialUniverse.Link.NetWorth", "FinancialUniverse.Link.InvestmentCalculator"
+        "FinancialUniverse.Link.NetWorth", "FinancialUniverse.Link.InvestmentCalculator",
+        .. Enum.GetValues<FinancialUniverseNodeKind>().Select(kind => "FinancialUniverse.Kind." + kind),
+        .. Enum.GetValues<FinancialUniverseLinkTarget>().Select(target => "Shell.Nav." + target),
+        "FinancialUniverse.Panel.Period.Month", "FinancialUniverse.Panel.Period.Latest"
     ];
+
+    /// <summary>The kinds whose amount is the selected month's figure; the rest show their latest saved figure.</summary>
+    private static readonly HashSet<FinancialUniverseNodeKind> MonthBound =
+    [
+        FinancialUniverseNodeKind.IncomeSource, FinancialUniverseNodeKind.Income, FinancialUniverseNodeKind.ExpenseCategory,
+        FinancialUniverseNodeKind.Other, FinancialUniverseNodeKind.Savings, FinancialUniverseNodeKind.Shortfall
+    ];
+
+    /// <summary>The month picker's option value and the query parameter the page reads back: <c>yyyy-MM</c>.</summary>
+    public const string PeriodFormat = "yyyy-MM";
+
+    /// <summary>Parses a picker value (<c>2026-10</c>) into its year and month; false for anything else.</summary>
+    public static bool TryParsePeriod(string? period, out int year, out int month)
+    {
+        if (DateTime.TryParseExact(period, PeriodFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsed))
+        {
+            (year, month) = (parsed.Year, parsed.Month);
+            return true;
+        }
+
+        (year, month) = (0, 0);
+        return false;
+    }
 
     /// <summary>The page's view model for <paramref name="graph"/>, in <paramref name="culture"/> and the localizer's Language.</summary>
     public static FinancialUniverseViewModel Build(FinancialUniverseGraphDto graph, IStringLocalizer localizer, CultureInfo culture)
@@ -55,15 +82,17 @@ public static class FinancialUniverseText
         ArgumentNullException.ThrowIfNull(culture);
 
         string currency = SupportedCurrencies.CodeOrDefault(graph.CurrencyCode);
+        string monthLabel = MonthLabel(graph.Year, graph.Month, culture);
         var model = new FinancialUniverseViewModel
         {
             Year = graph.Year,
             Month = graph.Month,
-            MonthLabel = new DateTime(graph.Year, graph.Month, 1).ToString("Y", culture),
+            MonthLabel = monthLabel,
             CurrencyCode = currency,
             Conversion = graph.Conversion,
             BudgetSource = graph.BudgetSource,
-            Nodes = graph.Nodes.Select(n => Node(n, currency, localizer, culture)).ToList(),
+            Nodes = graph.Nodes.Select(n => Node(n, currency, monthLabel, localizer, culture)).ToList(),
+            AvailableMonths = MonthOptions(graph, culture),
             Edges = graph.Edges.Select(e => new FinancialUniverseEdgeViewModel
             {
                 Source = e.SourceId,
@@ -96,7 +125,35 @@ public static class FinancialUniverseText
         return model;
     }
 
-    private static FinancialUniverseNodeViewModel Node(FinancialUniverseNodeDto node, string currency,
+    private static string MonthLabel(int year, int month, CultureInfo culture) =>
+        new DateTime(year, month, 1).ToString("Y", culture);
+
+    /// <summary>
+    /// The picker's options as the ApiService listed them (newest first), with the graph's own month added when the
+    /// list somehow lacks it, so the picker always shows the month on the page as selected.
+    /// </summary>
+    private static List<FinancialUniverseMonthOptionViewModel> MonthOptions(FinancialUniverseGraphDto graph, CultureInfo culture)
+    {
+        IEnumerable<(int Year, int Month)> months = graph.AvailableMonths.Select(m => (m.Year, m.Month));
+        if (!months.Contains((graph.Year, graph.Month)))
+        {
+            months = months.Append((graph.Year, graph.Month)).OrderByDescending(m => m.Year).ThenByDescending(m => m.Month);
+        }
+
+        return months
+            .Where(m => m.Month is >= 1 and <= 12)
+            .Select(m => new FinancialUniverseMonthOptionViewModel
+            {
+                Year = m.Year,
+                Month = m.Month,
+                Value = new DateTime(m.Year, m.Month, 1).ToString(PeriodFormat, CultureInfo.InvariantCulture),
+                Label = MonthLabel(m.Year, m.Month, culture),
+                IsSelected = m == (graph.Year, graph.Month)
+            })
+            .ToList();
+    }
+
+    private static FinancialUniverseNodeViewModel Node(FinancialUniverseNodeDto node, string currency, string monthLabel,
         IStringLocalizer localizer, CultureInfo culture)
     {
         string Money(decimal amount) => MoneyFormatter.FormatWhole(amount, currency, culture);
@@ -117,6 +174,21 @@ public static class FinancialUniverseText
             _ => string.Empty
         };
 
+        // The stored figure beside the converted one, only when they are in different currencies and there is a
+        // converted one (with no rate, the amount line already shows the stored figure).
+        bool nativeDiffers = node.Amount is not null && node.NativeAmount is not null
+            && SupportedCurrencies.IsSupported(node.NativeCurrencyCode)
+            && !string.Equals(node.NativeCurrencyCode, currency, StringComparison.OrdinalIgnoreCase);
+        string nativeAmountText = nativeDiffers
+            ? MoneyFormatter.FormatWhole(node.NativeAmount!.Value, node.NativeCurrencyCode!, culture)
+            : string.Empty;
+
+        string periodText = node.Kind == FinancialUniverseNodeKind.Placeholder
+            ? string.Empty
+            : MonthBound.Contains(node.Kind)
+                ? localizer.Named("FinancialUniverse.Panel.Period.Month", ("month", monthLabel))
+                : localizer["FinancialUniverse.Panel.Period.Latest"];
+
         return new FinancialUniverseNodeViewModel
         {
             Id = node.Id,
@@ -127,6 +199,10 @@ public static class FinancialUniverseText
             Amount = node.Amount,
             LinkTarget = node.LinkTarget,
             LinkText = localizer["FinancialUniverse.Link." + node.LinkTarget],
+            KindText = localizer["FinancialUniverse.Kind." + node.Kind],
+            NativeAmountText = nativeAmountText,
+            PeriodText = periodText,
+            FeatureText = localizer["Shell.Nav." + node.LinkTarget],
             IsPlaceholder = node.Kind == FinancialUniverseNodeKind.Placeholder,
             ColorSlot = node.ColorSlot
         };

@@ -30,6 +30,20 @@ public sealed class FinancialUniverseGraphDto
 
     /// <summary>Edges in the order of their source nodes, then their target nodes.</summary>
     public List<FinancialUniverseEdgeDto> Edges { get; set; } = [];
+
+    /// <summary>
+    /// The months the page can switch to, newest first: every month the budget source has data for, the current
+    /// month and this graph's own month, each once (spec #617, slice 3).
+    /// </summary>
+    public List<FinancialUniverseMonthDto> AvailableMonths { get; set; } = [];
+}
+
+/// <summary>One month the Financial Universe can be asked for.</summary>
+public sealed class FinancialUniverseMonthDto
+{
+    public int Year { get; set; }
+
+    public int Month { get; set; }
 }
 
 /// <summary>One node of the Financial Universe.</summary>

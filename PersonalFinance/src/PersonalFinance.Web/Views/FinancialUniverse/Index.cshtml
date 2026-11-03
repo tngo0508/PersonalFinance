@@ -19,7 +19,10 @@
    row is the node's label, its amount in the Reporting Currency and a link into the feature that owns it. A Placeholder
    row stands in for a kind the Account has nothing of yet. Slice 2 (ADR 0020): the graph drawn by Cytoscape.js from the
    JSON island at the end, with a toolbar of real buttons; js/financial-universe/graph.js picks the default view by
-   legibility and shows one panel at a time. Without JavaScript the list shows and the graph panel stays hidden. *@
+   legibility and shows one panel at a time. Slice 3: the month picker (a GET form, so the URL carries the month), a
+   Details button per row and the node detail panel (a Bootstrap offcanvas) that a tap on a graph node opens too; every
+   line the panel shows is in the island, the script composes nothing. Without JavaScript the list shows, the graph
+   panel and the Details buttons stay hidden, and the picker submits with its button. *@
 <div class="financial-universe" data-test-id="financial-universe">
     <header class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
         <div>
@@ -27,6 +30,16 @@
             <h1 class="h2 mb-1">@L["FinancialUniverse.Title"]</h1>
             <p class="text-body-secondary mb-0">@L.Named("FinancialUniverse.Lead", ("month", Model.MonthLabel))</p>
         </div>
+        <form method="get" asp-action="Index" class="fu-month" id="fuMonthForm" data-test-id="fu-month-form">
+            <label for="fuMonth" class="form-label small fw-semibold mb-0">@L["FinancialUniverse.Month.Label"]</label>
+            <select name="period" id="fuMonth" class="form-select form-select-sm w-auto" data-test-id="fu-month">
+                @foreach (FinancialUniverseMonthOptionViewModel option in Model.AvailableMonths)
+                {
+                    <option value="@option.Value" selected="@(option.IsSelected ? "selected" : null)">@option.Label</option>
+                }
+            </select>
+            <button type="submit" class="btn btn-sm btn-outline-secondary" data-fu-month-submit>@L["FinancialUniverse.Month.Show"]</button>
+        </form>
     </header>
 
     <p class="text-body-secondary small">@L["FinancialUniverse.Derived"]</p>
@@ -88,6 +101,8 @@
                                         }
                                     </span>
                                     <a class="link-primary small text-nowrap" href="@Href(row.LinkTarget)">@row.LinkText</a>
+                                    <button type="button" class="fu-details btn btn-sm btn-outline-secondary" data-fu-details="@row.Id"
+                                            aria-haspopup="dialog" aria-controls="fuNodePanel" data-test-id="fu-details-@row.Id" hidden>@L["FinancialUniverse.Row.Details"]</button>
                                 </span>
                             }
                         </li>
@@ -95,6 +110,39 @@
                 </ul>
             </section>
         }
+    </div>
+</div>
+
+@* The node detail panel: graph.js fills each data-fu-field from the island's node and hides a fact whose line is empty. *@
+<div class="offcanvas offcanvas-end fu-node-panel" tabindex="-1" id="fuNodePanel" aria-labelledby="fuNodePanelTitle"
+     data-bs-backdrop="false" data-bs-scroll="true" data-test-id="fu-node-panel">
+    <div class="offcanvas-header align-items-start">
+        <div>
+            <p class="fu-node-panel__kind small text-uppercase text-body-secondary mb-1" data-fu-field="kind" data-test-id="fu-node-panel-kind"></p>
+            <h2 class="offcanvas-title h5" id="fuNodePanelTitle" data-fu-field="label" data-test-id="fu-node-panel-label">@L["FinancialUniverse.Panel.Title"]</h2>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="@L["Common.Close"]" data-test-id="fu-node-panel-close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <dl class="fu-node-panel__facts">
+            <div data-fu-row="amount">
+                <dt>@L["FinancialUniverse.Panel.Amount"]</dt>
+                <dd><span class="fw-semibold" data-fu-field="amount" data-test-id="fu-node-panel-amount"></span> <small class="text-body-secondary" data-fu-field="detail"></small></dd>
+            </div>
+            <div data-fu-row="native">
+                <dt>@L["FinancialUniverse.Panel.Native"]</dt>
+                <dd data-fu-field="native"></dd>
+            </div>
+            <div data-fu-row="period">
+                <dt>@L["FinancialUniverse.Panel.Period"]</dt>
+                <dd data-fu-field="period" data-test-id="fu-node-panel-period"></dd>
+            </div>
+            <div data-fu-row="feature">
+                <dt>@L["FinancialUniverse.Panel.Feature"]</dt>
+                <dd data-fu-field="feature"></dd>
+            </div>
+        </dl>
+        <a class="fu-node-panel__link btn btn-primary" href="#" data-fu-field="link" data-test-id="fu-node-panel-link" hidden></a>
     </div>
 </div>
 

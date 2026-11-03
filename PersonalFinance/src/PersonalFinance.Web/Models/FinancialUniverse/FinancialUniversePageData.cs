@@ -4,7 +4,8 @@ namespace PersonalFinance.Web.Models.FinancialUniverse;
 
 /// <summary>
 /// What the page's JavaScript reads from the <c>fuPageData</c> JSON island (spec #617): the labelled nodes with their
-/// URLs, and the edges. Built in the view, where the URL helper lives; slice 2's renderer only draws it.
+/// URLs and every line the detail panel shows, and the edges. Built in the view, where the URL helper lives; the
+/// renderer draws it and the panel displays it, neither composes text.
 /// </summary>
 public sealed class FinancialUniversePageData
 {
@@ -41,6 +42,11 @@ public sealed class FinancialUniversePageData
                 DetailText = n.DetailText,
                 Amount = n.Amount,
                 Href = hrefFor(n.LinkTarget) ?? string.Empty,
+                LinkText = n.LinkText,
+                KindText = n.KindText,
+                NativeAmountText = n.NativeAmountText,
+                PeriodText = n.PeriodText,
+                FeatureText = n.FeatureText,
                 IsPlaceholder = n.IsPlaceholder,
                 ColorSlot = n.ColorSlot
             }).ToList(),
@@ -65,6 +71,16 @@ public sealed class FinancialUniversePageNode
     public decimal? Amount { get; init; }
 
     public string Href { get; init; } = string.Empty;
+
+    public string LinkText { get; init; } = string.Empty;
+
+    public string KindText { get; init; } = string.Empty;
+
+    public string NativeAmountText { get; init; } = string.Empty;
+
+    public string PeriodText { get; init; } = string.Empty;
+
+    public string FeatureText { get; init; } = string.Empty;
 
     public bool IsPlaceholder { get; init; }
 
