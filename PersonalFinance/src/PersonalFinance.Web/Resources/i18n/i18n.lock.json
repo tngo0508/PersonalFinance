@@ -3130,6 +3130,16 @@
     "FinancialUniverse.Link.SavingsGoals": "0005f72854f55447",
     "FinancialUniverse.Link.NetWorth": "bf62bd085ad6b38e",
     "FinancialUniverse.Link.InvestmentCalculator": "2f0b824b357642fc",
-    "FinancialUniverse.Validation.MonthRange": "28c01cf949501654"
+    "FinancialUniverse.Validation.MonthRange": "28c01cf949501654",
+    "FinancialUniverse.View.Label": "dcc839a4015c4b7d",
+    "FinancialUniverse.View.Graph": "32ab018fd38a7b42",
+    "FinancialUniverse.View.List": "6f202f54a7b2d8fe",
+    "FinancialUniverse.Graph.Tools": "e68f3c67529f01cb",
+    "FinancialUniverse.Graph.ZoomIn": "0e47f09a748fa132",
+    "FinancialUniverse.Graph.ZoomOut": "bc7b631a689b45ca",
+    "FinancialUniverse.Graph.Fit": "a36cb149f9dab825",
+    "FinancialUniverse.Graph.Label": "c39d7d06bfc22580",
+    "FinancialUniverse.Graph.Legend": "e6cece4b3705f8ba",
+    "FinancialUniverse.Graph.Unavailable": "4bc1e323a1c48b79"
   }
 }
