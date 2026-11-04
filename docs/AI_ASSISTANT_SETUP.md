@@ -75,6 +75,7 @@ By default, the AI assistant uses `gpt-4o-mini`. The defaults live in `appsettin
   "OpenAI": {
     "Model": "gpt-4o-mini",
     "MaxTokens": 400,
+    "SummaryMaxTokens": 600,
     "DailyMessageLimit": 30,
     "MonthlyBudgetUsd": 10,
     "BudgetWarningThreshold": 0.9
@@ -85,7 +86,8 @@ By default, the AI assistant uses `gpt-4o-mini`. The defaults live in `appsettin
 | Setting | Default | Description |
 |---|---|---|
 | `OpenAI:Model` | `gpt-4o-mini` | The OpenAI model to use. Other options: `gpt-4o`, `gpt-3.5-turbo`. The cost estimate always uses gpt-4o-mini prices (see section 4). |
-| `OpenAI:MaxTokens` | `400` | Maximum output tokens per model call, for chat and news summaries. Purpose Notes use a fixed 220. |
+| `OpenAI:MaxTokens` | `400` | Maximum output tokens per chat reply. Purpose Notes use a fixed 220. |
+| `OpenAI:SummaryMaxTokens` | `600` | Maximum output tokens per news summary: a TL;DR, two to five key points and a why-it-matters line, returned as JSON. The summary is written from the article body when the feed carries it or the article page can be read (at most 6,000 characters), else from the feed's excerpt or the headline alone; the response says which. |
 | `OpenAI:DailyMessageLimit` | `30` | Requests per Account per day (chat, summaries and Purpose Notes together). Accounts with the Admin Role skip this limit. |
 | `OpenAI:MonthlyBudgetUsd` | `10` | Estimated spend, in USD, across all Accounts per calendar month. Above it every request is refused until the next month. |
 | `OpenAI:BudgetWarningThreshold` | `0.9` | Fraction of the monthly budget at which replies carry a budget warning. |
@@ -166,7 +168,7 @@ Each chat request includes:
 - **Conversation history**: the last 10 messages, each cut to 2,000 characters.
 - **User message**: your question or request.
 - **Tool results**: the model fetches budget, transaction (at most 50 rows), savings goal or net worth details on demand, in up to 3 tool rounds. Each round is another model call that resends the conversation so far.
-- **AI response**: at most 400 output tokens per model call (`OpenAI:MaxTokens`).
+- **AI response**: at most 400 output tokens per chat reply (`OpenAI:MaxTokens`) and 600 per news summary (`OpenAI:SummaryMaxTokens`).
 
 **Estimated cost per exchange:** about $0.001 for a short question with one tool call (two model calls, ~4,000 input and ~400 output tokens). The worst case, with full history and three tool rounds, is about $0.006.
 
@@ -177,7 +179,7 @@ Each chat request includes:
 The implementation includes the following cost controls:
 - **Daily limit per Account:** 30 requests a day (`OpenAI:DailyMessageLimit`). Admins skip it, but not the monthly budget.
 - **Monthly budget for all Accounts:** $10 of estimated spend (`OpenAI:MonthlyBudgetUsd`), with a warning on replies from 90%.
-- **Output cap:** 400 tokens per model call (`OpenAI:MaxTokens`).
+- **Output cap:** 400 tokens per chat reply (`OpenAI:MaxTokens`), 600 per news summary (`OpenAI:SummaryMaxTokens`).
 - **Conversation history is limited** to the last 10 messages, each cut to 2,000 characters.
 - **Data on demand:** detailed data is fetched through at most 3 tool rounds, not sent with every request.
 - **Cache-friendly prompt:** the stable system prompt comes first, so repeated requests pay the cached input price.

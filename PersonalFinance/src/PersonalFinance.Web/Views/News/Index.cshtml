@@ -130,6 +130,10 @@
                                     <div class="news-item-text">
                                         <p class="news-meta">
                                             <span class="news-source">@article.Source</span>
+                                            @if (!string.IsNullOrEmpty(article.Publisher))
+                                            {
+                                                <span class="news-publisher">@L.Named("News.ViaPublisher", ("publisher", article.Publisher))</span>
+                                            }
                                             <span class="news-topic" data-topic="@article.Category">@article.Category</span>
                                             <time datetime="@article.PublishedAt.ToString("o")" title="@DateAndTime(article.PublishedAt)"></time>
                                         </p>
@@ -155,9 +159,9 @@
                                                 <span class="news-summarize-label">@L["News.Js.Summary.Button"]</span>
                                             </button>
                                         </div>
+                                        @* news-summary.js fills the panel: TL;DR, key points, why it matters, then the coverage and model line. *@
                                         <div class="news-summary" id="@summaryId" aria-live="polite" hidden>
                                             <div class="news-summary-content"></div>
-                                            <p class="news-summary-disclosure">@L["News.Summary.Disclosure"]</p>
                                         </div>
                                     </div>
                                     @if (hasImage)

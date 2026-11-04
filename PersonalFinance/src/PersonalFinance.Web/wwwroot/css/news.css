@@ -189,6 +189,7 @@
 }
 
 .news-source { font-weight: var(--app-font-weight-semibold); color: var(--app-text-soft); }
+.news-publisher { color: var(--app-text-muted); }
 
 .news-topic {
   --news-topic: var(--news-general);
@@ -275,19 +276,112 @@
 
 .news-summary {
   margin-top: 0.75rem;
-  padding: 0.85rem 1rem;
+  padding: 0.9rem 1rem 0.85rem;
   border-left: 3px solid var(--app-brand-text);
   border-radius: 0 var(--app-radius-m) var(--app-radius-m) 0;
   background: var(--app-surface-secondary);
 }
 
-.news-summary-content { white-space: pre-line; line-height: 1.55; }
+/* The inline briefing: TL;DR, key points, why it matters, then the coverage and model line (news-summary.js) */
+.news-summary-content { display: grid; gap: 0.8rem; line-height: 1.55; }
 .news-summary-content:empty { display: none; }
+.news-summary-text { margin: 0; white-space: pre-line; }
 
-.news-summary-disclosure {
-  margin: 0.5rem 0 0;
+.news-summary-label {
+  display: block;
+  margin: 0 0 0.25rem;
+  font-family: var(--app-font-mono);
+  font-size: 0.7rem;
+  font-weight: var(--app-font-weight-medium);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--app-text-muted);
+}
+
+.news-summary-tldr {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: var(--app-font-weight-semibold);
+  line-height: 1.45;
+  color: var(--app-text);
+}
+
+.news-summary-points { display: grid; gap: 0.3rem; margin: 0; padding-left: 1.1rem; color: var(--app-text-soft); }
+.news-summary-points li::marker { color: var(--app-brand-text); }
+
+.news-summary-why {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.6rem;
+  align-items: start;
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--app-radius-m);
+  background: var(--app-accent-warning-soft);
+  color: var(--app-text);
+}
+
+.news-summary-why svg { margin-top: 0.2rem; color: var(--app-accent-target); }
+.news-summary-why b { display: block; font-size: var(--app-font-size-small); font-weight: var(--app-font-weight-semibold); color: var(--app-warning-text); }
+
+.news-summary-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  margin: 0;
   font-size: var(--app-font-size-small);
   color: var(--app-text-muted);
+}
+
+.news-summary-foot a { font-weight: var(--app-font-weight-semibold); }
+
+/* What the summary was written from: the article, the feed's excerpt or the headline alone */
+.news-summary-coverage {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: var(--app-font-weight-semibold);
+  letter-spacing: 0.02em;
+}
+
+.news-summary-coverage::before { content: ""; width: 0.45rem; height: 0.45rem; border-radius: 50%; background: currentColor; }
+.news-summary-coverage[data-coverage="FullArticle"] { background: var(--app-brand-soft); color: var(--app-brand-on-soft); }
+.news-summary-coverage[data-coverage="FeedExcerpt"] { background: var(--app-info-bg); color: var(--app-info-text); }
+.news-summary-coverage[data-coverage="HeadlineOnly"] { background: var(--app-accent-warning-soft); color: var(--app-warning-text); }
+
+.news-summary-note { margin: 0; font-size: var(--app-font-size-small); color: var(--app-warning-text); }
+
+.news-summary-disclosure {
+  margin: 0;
+  font-size: var(--app-font-size-small);
+  color: var(--app-text-muted);
+}
+
+/* While the summary is being written */
+.news-summary-skeleton { display: grid; gap: 0.5rem; }
+
+.news-summary-skeleton span {
+  display: block;
+  height: 0.85rem;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--app-border) 25%, var(--app-surface-raised) 50%, var(--app-border) 75%);
+  background-size: 200% 100%;
+  animation: news-summary-shimmer 1.2s linear infinite;
+}
+
+.news-summary-skeleton span:nth-child(1) { width: 85%; height: 1.1rem; }
+.news-summary-skeleton span:nth-child(2) { width: 70%; }
+.news-summary-skeleton span:nth-child(3) { width: 92%; }
+.news-summary-skeleton span:nth-child(4) { width: 60%; }
+
+@keyframes news-summary-shimmer { to { background-position: -200% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .news-summary-skeleton span { animation: none; }
 }
 
 /* --- Empty and error states --- */

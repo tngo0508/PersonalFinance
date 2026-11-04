@@ -8,8 +8,9 @@ namespace PersonalFinance.ApiService.Features.Watchlist.Adapters;
 internal interface INewsFeedClient
 {
     /// <summary>
-    /// Returns up to five articles from the source, or none when the feed fails, times out or cannot be parsed, so
-    /// that one failing source does not prevent the others from being read.
+    /// Returns the source's five newest items, each with the longest text the feed carried for it, or none when the
+    /// feed fails, times out or cannot be parsed, so that one failing source does not prevent the others from being
+    /// read.
     /// </summary>
-    Task<List<NewsArticleDto>> FetchAsync(NewsSourceDto source, CancellationToken cancellationToken);
+    Task<List<NewsFeedItem>> FetchAsync(NewsSourceDto source, CancellationToken cancellationToken);
 }

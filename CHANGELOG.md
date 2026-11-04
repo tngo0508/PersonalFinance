@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [17.15.0] - 2026-11-03
+
+### Added
+
+- **News TL;DR**: the AI summary on the Finance News page is now an inline briefing instead of two sentences.
+  - The model returns JSON with a one-sentence TL;DR, two to five key points and a one-sentence "why it matters for your money" line, which the panel renders as sections; the plain-text `Summary` field keeps a flattened copy.
+  - The summary is written from the article itself where possible: the feed reader keeps each item's full text (`content:encoded` when the feed carries it) server-side, and when that is only an excerpt ApiService reads the article page once (5-second timeout, 1 MB cap, HTML only, cached 30 minutes). Only articles of the feed are ever fetched; an unknown URL falls back to the text the page sent.
+  - The panel says what the summary was built from: a Full article, Feed excerpt or Headline only chip with a line explaining it, then the model and a link to the article.
+  - `OpenAI:SummaryMaxTokens` (default 600) caps a summary's output tokens; `OpenAI:MaxTokens` now applies to chat only.
+- **Three more free news sources**: Google News "Personal finance" (the last three days from Kiplinger, Bankrate, Money and Investopedia; Budgeting), Google News "Retirement" (retirement savings and planning, 401k, Roth IRA and Social Security stories; Retirement) and Yahoo Finance Markets (S&P 500, Dow and Nasdaq headlines; Investing), all plain RSS with no key.
+  - A Google News item shows its publisher after the source ("via Reuters"), loses the publisher suffix from its headline, and summarizes from the headline only, since Google ships no body text and its links redirect through a script page.
+  - A Google News item that has no headline of its own (a title that is only "- Publisher") is skipped.
+
+### Changed
+
+- **Newest five per source**: each source now contributes its five newest items, whatever order the feed lists them in, rather than its first five.
+
 ## [17.14.1] - 2026-11-02
 
 ### Changed

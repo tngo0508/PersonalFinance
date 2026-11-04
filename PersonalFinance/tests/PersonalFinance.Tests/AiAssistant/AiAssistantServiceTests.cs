@@ -4,12 +4,14 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using PersonalFinance.ApiService.Features.AiAssistant;
+using PersonalFinance.ApiService.Features.Watchlist;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
 using PersonalFinance.Shared.Constants;
 using PersonalFinance.Shared.DTOs.AiAssistant;
 using PersonalFinance.Shared.DTOs.News;
+using PersonalFinance.Shared.DTOs.Watchlist;
 using PersonalFinance.Shared.Enums;
 using PersonalFinance.Tests.TestSupport;
 using PersonalFinance.Web.Infrastructure.Localization;
@@ -34,7 +36,8 @@ public class AiAssistantServiceTests
     }
 
     private static AiAssistantService CreateService(AppDbContext db, IChatClient? chatClient,
-        IBudgetDataProvider? budgetData = null, Dictionary<string, string?>? settings = null)
+        IBudgetDataProvider? budgetData = null, Dictionary<string, string?>? settings = null,
+        INewsService? news = null)
     {
         IConfigurationRoot configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(settings ?? new Dictionary<string, string?>())
@@ -42,8 +45,34 @@ public class AiAssistantServiceTests
 
         return new AiAssistantService(db, new AllowAllRateLimiter(), new AiQuotaService(db),
             NullLogger<AiAssistantService>.Instance, configuration,
-            budgetData ?? TestBudgetDataProviderFactory.Create(db), chatClient);
+            budgetData ?? TestBudgetDataProviderFactory.Create(db), chatClient, newsService: news);
     }
+
+    /// <summary>The model's structured summary, as OpenAI returns it in JSON mode.</summary>
+    private const string SummaryJson = """
+        {"tldr": "Futures fell after the vote.", "keyPoints": ["S&P 500 futures lost 0.6%.", "Yields eased."],
+         "whyItMatters": "Index funds would open lower."}
+        """;
+
+    /// <summary>A news feed that knows one article, at <see cref="KnownUrl"/>.</summary>
+    private sealed class FakeNewsService(NewsArticleText? text) : INewsService
+    {
+        public List<string> AskedUrls { get; } = [];
+
+        public Task<NewsFeedDto> GetNewsAsync(NewsQueryDto query, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<NewsFeedDto> GetFilterOptionsAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<NewsArticleText?> GetArticleTextAsync(string url, CancellationToken cancellationToken = default)
+        {
+            AskedUrls.Add(url);
+            return Task.FromResult(url == KnownUrl ? text : null);
+        }
+    }
+
+    private const string KnownUrl = "https://example.test/futures";
 
     private static AiChatRequestDto Request(string message)
     {
@@ -385,7 +414,7 @@ public class AiAssistantServiceTests
             OutputTokenCount = 100,
             CachedInputTokenCount = 500
         }));
-        AiAssistantService service = CreateService(db, fake, settings: new() { ["OpenAI:MaxTokens"] = "123" });
+        AiAssistantService service = CreateService(db, fake, settings: new() { ["OpenAI:SummaryMaxTokens"] = "123" });
         NewsArticleSummaryResponseDto result = await service.SummarizeArticleAsync(UserId,
             new PersonalFinance.Shared.DTOs.News.NewsArticleSummaryRequestDto { Title = "Finance news" });
         Assert.Equal("Article summary", result.Summary);
@@ -396,6 +425,115 @@ public class AiAssistantServiceTests
         Assert.Equal("summarize", usage.Endpoint);
         Assert.Equal(500, usage.CachedPromptTokens);
         Assert.Equal(AiQuotaService.CalculateEstimatedCost(1000, 100, 500), usage.EstimatedCostUsd);
+    }
+
+    [Fact]
+    public async Task SummarizeArticleAsync_AllowsSixHundredOutputTokens_ByDefault_AndAsksForJson()
+    {
+        await using AppDbContext db = CreateContext();
+        var fake = new FakeChatClient((_, _) => Reply(SummaryJson));
+
+        await CreateService(db, fake, settings: new() { ["OpenAI:MaxTokens"] = "123" }).SummarizeArticleAsync(UserId,
+            new NewsArticleSummaryRequestDto { Title = "Futures fall", Description = "Futures fell." });
+
+        Assert.Equal(600, fake.LastOptions!.MaxOutputTokens);
+        Assert.Same(ChatResponseFormat.Json, fake.LastOptions.ResponseFormat);
+        string system = fake.LastMessages.Single(m => m.Role == ChatRole.System).Text;
+        Assert.Contains("JSON", system);
+        Assert.Contains("tldr", system);
+        Assert.Contains("keyPoints", system);
+        Assert.Contains("whyItMatters", system);
+        Assert.Contains("advice", system, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SummarizeArticleAsync_ReadsTheModelsJson_IntoTldrKeyPointsAndWhyItMatters_AndAPlainTextSummary()
+    {
+        await using AppDbContext db = CreateContext();
+        var fake = new FakeChatClient((_, _) => Reply(SummaryJson));
+
+        NewsArticleSummaryResponseDto result = await CreateService(db, fake).SummarizeArticleAsync(UserId,
+            new NewsArticleSummaryRequestDto { Title = "Futures fall", Description = "Futures fell." });
+
+        Assert.Equal("Futures fell after the vote.", result.Tldr);
+        Assert.Equal(["S&P 500 futures lost 0.6%.", "Yields eased."], result.KeyPoints);
+        Assert.Equal("Index funds would open lower.", result.WhyItMatters);
+        Assert.Equal("Futures fell after the vote.\n\n\u2022 S&P 500 futures lost 0.6%.\n\u2022 Yields eased.\n\nIndex funds would open lower.",
+            result.Summary);
+        Assert.Null(result.FixedText);
+    }
+
+    [Fact]
+    public async Task SummarizeArticleAsync_WhenTheModelAnswersProse_KeepsItAsTheTldrAndTheSummary()
+    {
+        await using AppDbContext db = CreateContext();
+        var fake = new FakeChatClient((_, _) => Reply("Futures fell after the vote, and yields eased."));
+
+        NewsArticleSummaryResponseDto result = await CreateService(db, fake).SummarizeArticleAsync(UserId,
+            new NewsArticleSummaryRequestDto { Title = "Futures fall", Description = "Futures fell." });
+
+        Assert.Equal("Futures fell after the vote, and yields eased.", result.Tldr);
+        Assert.Equal("Futures fell after the vote, and yields eased.", result.Summary);
+        Assert.Empty(result.KeyPoints);
+        Assert.Null(result.WhyItMatters);
+    }
+
+    [Fact]
+    public async Task SummarizeArticleAsync_WithAnArticleOfTheFeed_SummarizesTheTextTheFeedProvides_AndReportsItsCoverage()
+    {
+        await using AppDbContext db = CreateContext();
+        var fake = new FakeChatClient((_, _) => Reply(SummaryJson));
+        var news = new FakeNewsService(new NewsArticleText("Futures fall", "The full body of the story.",
+            NewsSummaryCoverage.FullArticle));
+
+        NewsArticleSummaryResponseDto result = await CreateService(db, fake, news: news).SummarizeArticleAsync(UserId,
+            new NewsArticleSummaryRequestDto { Title = "Futures fall", Description = "Futures fell.", Url = KnownUrl });
+
+        string user = fake.LastMessages.Single(m => m.Role == ChatRole.User).Text;
+        Assert.Contains("The full body of the story.", user);
+        Assert.DoesNotContain("Futures fell.", user);
+        Assert.Equal(NewsSummaryCoverage.FullArticle, result.Coverage);
+        Assert.Equal([KnownUrl], news.AskedUrls);
+    }
+
+    [Fact]
+    public async Task SummarizeArticleAsync_WithAnArticleTheFeedDoesNotKnow_SummarizesTheRequestsText_AsAnExcerpt()
+    {
+        await using AppDbContext db = CreateContext();
+        var fake = new FakeChatClient((_, _) => Reply(SummaryJson));
+        var news = new FakeNewsService(null);
+
+        NewsArticleSummaryResponseDto result = await CreateService(db, fake, news: news).SummarizeArticleAsync(UserId,
+            new NewsArticleSummaryRequestDto { Title = "Futures fall", Description = "Futures fell.", Url = "https://elsewhere.test/x" });
+
+        Assert.Contains("Futures fell.", fake.LastMessages.Single(m => m.Role == ChatRole.User).Text);
+        Assert.Equal(NewsSummaryCoverage.FeedExcerpt, result.Coverage);
+    }
+
+    [Fact]
+    public async Task SummarizeArticleAsync_WithOnlyATitle_ReportsTheHeadlineOnly_AndTellsTheModelSo()
+    {
+        await using AppDbContext db = CreateContext();
+        var fake = new FakeChatClient((_, _) => Reply(SummaryJson));
+
+        NewsArticleSummaryResponseDto result = await CreateService(db, fake).SummarizeArticleAsync(UserId,
+            new NewsArticleSummaryRequestDto { Title = "Futures fall" });
+
+        Assert.Equal(NewsSummaryCoverage.HeadlineOnly, result.Coverage);
+        Assert.Contains("headline", fake.LastMessages.Single(m => m.Role == ChatRole.User).Text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SummarizeArticleAsync_WhenSummarizationIsUnavailable_ReportsNoCoverage()
+    {
+        await using AppDbContext db = CreateContext();
+
+        NewsArticleSummaryResponseDto result = await CreateService(db, chatClient: null).SummarizeArticleAsync(UserId,
+            new NewsArticleSummaryRequestDto { Title = "Futures fall" });
+
+        Assert.Null(result.Coverage);
+        Assert.Null(result.Tldr);
+        Assert.NotNull(result.FixedText);
     }
 
     [Fact]
@@ -414,7 +552,7 @@ public class AiAssistantServiceTests
             });
 
         string userMessage = fake.LastMessages.Single(m => m.Role == ChatRole.User).Text;
-        Assert.EndsWith("Description: " + new string('a', 3999) + "b...", userMessage);
+        Assert.EndsWith("\n" + new string('a', 3999) + "b...", userMessage);
     }
 
     [Fact]
@@ -433,7 +571,7 @@ public class AiAssistantServiceTests
             });
 
         string userMessage = fake.LastMessages.Single(m => m.Role == ChatRole.User).Text;
-        Assert.EndsWith("Description: " + description, userMessage);
+        Assert.EndsWith("\n" + description, userMessage);
     }
 
     [Fact]
