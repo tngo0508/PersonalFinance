@@ -88,7 +88,7 @@ public sealed partial class ResearchNewsRenderingTests : IAsyncLifetime
     [
         "Budgeting, investing and retirement stories from trusted sources, newest first.",
         "Search headlines and sources", "Search news articles", "Filter by topic", "Filter by source", "All Sources",
-        "Last updated:", "Refresh news", "AI-generated summary", "Save article to watchlist", "Summarize with AI",
+        "Last updated:", "Refresh news", "via Reuters", "Save article to watchlist", "Summarize with AI",
         "My Watchlist", "Your watchlist and news sources", ">Sources<", ">Older<", "(opens in a new tab)",
         "Loading your saved articles", " article<"
     ];
@@ -165,7 +165,7 @@ public sealed partial class ResearchNewsRenderingTests : IAsyncLifetime
         [
             new NewsArticleDto
             {
-                Title = "Markets close higher", Url = "https://news.example/1", Source = "Example Wire",
+                Title = "Markets close higher", Url = "https://news.example/1", Source = "Example Wire", Publisher = "Reuters",
                 Category = "Investing", PublishedAt = new DateTime(2025, 12, 30, 14, 5, 0, DateTimeKind.Utc),
             },
         ],

@@ -18,4 +18,11 @@ public interface INewsService
     /// filters were rejected.
     /// </summary>
     Task<NewsFeedDto> GetFilterOptionsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the text an AI summary of the article at <paramref name="url"/> is written from: the article body when the
+    /// feed carried it or its page can be read, else the feed's excerpt, else the headline alone. Null when the URL is
+    /// not an article of the feed, so no page is ever fetched on a caller's say-so.
+    /// </summary>
+    Task<NewsArticleText?> GetArticleTextAsync(string url, CancellationToken cancellationToken = default);
 }

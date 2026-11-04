@@ -6,6 +6,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using PersonalFinance.ApiService.Features.Learning;
+using PersonalFinance.ApiService.Features.Watchlist;
 using PersonalFinance.ApiService.Infrastructure;
 using PersonalFinance.Data;
 using PersonalFinance.Data.Entities;
@@ -39,6 +40,15 @@ internal sealed class AiAssistantService : IAiAssistantService
     /// <summary>Enough output tokens for about 120 words, and no more.</summary>
     private const int PurposeNoteMaxOutputTokens = 220;
 
+    /// <summary>
+    /// Enough output tokens for a news summary's TL;DR, five key points and why-it-matters line, in Vietnamese too;
+    /// <c>OpenAI:SummaryMaxTokens</c> overrides it.
+    /// </summary>
+    private const int DefaultSummaryMaxOutputTokens = 600;
+
+    private const int MaxSummaryTitleLength = 500;
+    private const int MaxSummaryDescriptionLength = 4000;
+
     private readonly IBudgetDataProvider _budgetDataProvider;
     private readonly IChatClient? _chatClient;
     private readonly IConfiguration _configuration;
@@ -48,6 +58,7 @@ internal sealed class AiAssistantService : IAiAssistantService
     private readonly PersonalFinance.ApiService.Infrastructure.IRateLimiterService _rateLimiterService;
     private readonly IAiQuotaService _quotaService;
     private readonly ILearningLibraryService? _learning;
+    private readonly INewsService? _newsService;
 
     public AiAssistantService(
         AppDbContext dbContext,
@@ -57,9 +68,11 @@ internal sealed class AiAssistantService : IAiAssistantService
         IConfiguration configuration,
         IBudgetDataProvider budgetDataProvider,
         IChatClient? chatClient = null,
-        ILearningLibraryService? learning = null)
+        ILearningLibraryService? learning = null,
+        INewsService? newsService = null)
     {
         _learning = learning;
+        _newsService = newsService;
         _budgetDataProvider = budgetDataProvider;
         _chatClient = chatClient;
         _dbContext = dbContext;
@@ -516,29 +529,22 @@ internal sealed class AiAssistantService : IAiAssistantService
 
         try
         {
-            // Truncate description to avoid excessive token usage
-            string description = string.IsNullOrEmpty(request.Description)
-                ? string.Empty
-                : request.Description.Length > 4000
-                    ? string.Concat(request.Description.AsSpan(0, 4000), "...")
-                    : request.Description;
+            NewsArticleText article = await ResolveArticleTextAsync(request, cancellationToken);
 
-            // Build the system prompt — news only, no financial advice. The summary is in the reader's Language,
-            // whatever language the article is in (#381).
+            // The system prompt asks for a structured, news-only summary with no financial advice, in the reader's
+            // Language whatever language the article is in (#381).
             string summaryLanguage = await GetReplyLanguageAsync(userId, cancellationToken);
-            string systemPrompt =
-                $"You are a helpful news summarizer. Summarize the following news article in 2-3 concise sentences in plain {summaryLanguage}. " +
-                "Focus on the key facts and main points. Do not provide financial advice or recommendations.";
-
-            string userMessage = $"Title: {request.Title[..Math.Min(request.Title.Length, 500)]}\n\nDescription: {description}";
             ChatResponse response = await _chatClient.GetResponseAsync(
-                [new AiMessage(ChatRole.System, systemPrompt), new AiMessage(ChatRole.User, userMessage)],
+                [
+                    new AiMessage(ChatRole.System, SummarySystemPrompt(summaryLanguage)),
+                    new AiMessage(ChatRole.User, SummaryUserMessage(article)),
+                ],
                 new ChatOptions
                 {
                     ModelId = _modelName,
-                    MaxOutputTokens = _configuration.GetValue("OpenAI:MaxTokens", DefaultMaxCompletionTokens)
+                    MaxOutputTokens = _configuration.GetValue("OpenAI:SummaryMaxTokens", DefaultSummaryMaxOutputTokens),
+                    ResponseFormat = ChatResponseFormat.Json,
                 }, cancellationToken);
-            string summaryText = response.Text;
             int promptTokens = (int)(response.Usage?.InputTokenCount ?? 0);
             int completionTokens = (int)(response.Usage?.OutputTokenCount ?? 0);
             int cachedTokens = (int)(response.Usage?.CachedInputTokenCount ?? 0);
@@ -547,16 +553,16 @@ internal sealed class AiAssistantService : IAiAssistantService
 
             if (_logger.IsEnabled(LogLevel.Information))
             {
-                _logger.LogInformation("User {UserId} summarized a news article. Model: {Model}", userId, _modelName);
+                _logger.LogInformation("User {UserId} summarized a news article. Model: {Model}, coverage: {Coverage}",
+                    userId, _modelName, article.Coverage);
             }
 
-            return new NewsArticleSummaryResponseDto
-            {
-                Summary = summaryText,
-                Model = _modelName,
-                TimestampUtc = DateTime.UtcNow,
-                Disclaimer = AiAssistantMessages.Disclaimer
-            };
+            NewsArticleSummaryResponseDto summary = ParseSummary(response.Text);
+            summary.Coverage = article.Coverage;
+            summary.Model = _modelName;
+            summary.TimestampUtc = DateTime.UtcNow;
+            summary.Disclaimer = AiAssistantMessages.Disclaimer;
+            return summary;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -571,6 +577,142 @@ internal sealed class AiAssistantService : IAiAssistantService
                 Disclaimer = AiAssistantMessages.Disclaimer
             };
         }
+    }
+
+    /// <summary>
+    /// The text the summary is written from: what the news feed provides for the article when the request names one
+    /// of its articles (the body where it can be read), else the request's own description, else the headline alone.
+    /// </summary>
+    private async Task<NewsArticleText> ResolveArticleTextAsync(NewsArticleSummaryRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        if (_newsService is not null && !string.IsNullOrWhiteSpace(request.Url))
+        {
+            NewsArticleText? fromFeed = await _newsService.GetArticleTextAsync(request.Url, cancellationToken);
+            if (fromFeed is not null)
+            {
+                return fromFeed;
+            }
+        }
+
+        string title = request.Title[..Math.Min(request.Title.Length, MaxSummaryTitleLength)];
+        // Truncate description to avoid excessive token usage
+        string description = string.IsNullOrEmpty(request.Description)
+            ? string.Empty
+            : request.Description.Length > MaxSummaryDescriptionLength
+                ? string.Concat(request.Description.AsSpan(0, MaxSummaryDescriptionLength), "...")
+                : request.Description;
+        return description.Length == 0
+            ? new NewsArticleText(title, title, NewsSummaryCoverage.HeadlineOnly)
+            : new NewsArticleText(title, description, NewsSummaryCoverage.FeedExcerpt);
+    }
+
+    private static string SummarySystemPrompt(string summaryLanguage) =>
+        $"You are a news summarizer for a personal finance app. Write in plain {summaryLanguage}. " +
+        "Reply with JSON only, in this shape: {\"tldr\": string, \"keyPoints\": string[], \"whyItMatters\": string}. " +
+        "tldr: one sentence with the single most important fact of the story. " +
+        "keyPoints: two to five short sentences with the facts that matter, such as figures, dates and who did what. " +
+        "whyItMatters: one sentence on what the news means for a household's money, stated as fact. " +
+        "Use only what the text says. When only a headline is given, keep to what it states and say what it leaves " +
+        "unknown rather than inventing details. Do not provide financial advice, recommendations or calls to action.";
+
+    /// <summary>The title and the text, with a line saying how much of the article the text is.</summary>
+    private static string SummaryUserMessage(NewsArticleText article)
+    {
+        string coverage = article.Coverage switch
+        {
+            NewsSummaryCoverage.FullArticle => "Article text:",
+            NewsSummaryCoverage.FeedExcerpt => "Only the feed's short excerpt of the article is available:",
+            _ => "Only the headline is available; there is no article text.",
+        };
+        return article.Coverage == NewsSummaryCoverage.HeadlineOnly
+            ? $"Title: {article.Title}\n\n{coverage}"
+            : $"Title: {article.Title}\n\n{coverage}\n{article.Text}";
+    }
+
+    /// <summary>
+    /// The model's JSON as the structured fields plus a plain-text <see cref="NewsArticleSummaryResponseDto.Summary"/>;
+    /// an answer that is not that JSON is kept whole as the TL;DR and the summary.
+    /// </summary>
+    private static NewsArticleSummaryResponseDto ParseSummary(string text)
+    {
+        string trimmed = WithoutCodeFence(text).Trim();
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(trimmed);
+            JsonElement root = document.RootElement;
+            string? tldr = root.ValueKind == JsonValueKind.Object ? StringProperty(root, "tldr") : null;
+            if (!string.IsNullOrWhiteSpace(tldr))
+            {
+                List<string> keyPoints = FindProperty(root, "keyPoints") is { ValueKind: JsonValueKind.Array } points
+                    ? points.EnumerateArray()
+                        .Where(p => p.ValueKind == JsonValueKind.String)
+                        .Select(p => p.GetString()!.Trim())
+                        .Where(p => p.Length > 0)
+                        .ToList()
+                    : [];
+                string? why = StringProperty(root, "whyItMatters");
+                return new NewsArticleSummaryResponseDto
+                {
+                    Tldr = tldr.Trim(),
+                    KeyPoints = keyPoints,
+                    WhyItMatters = string.IsNullOrWhiteSpace(why) ? null : why.Trim(),
+                    Summary = FlattenSummary(tldr.Trim(), keyPoints, why),
+                };
+            }
+        }
+        catch (JsonException)
+        {
+            // Prose instead of JSON: shown as it is.
+        }
+
+        return new NewsArticleSummaryResponseDto { Tldr = trimmed, Summary = trimmed };
+    }
+
+    private static string FlattenSummary(string tldr, List<string> keyPoints, string? why)
+    {
+        var parts = new List<string> { tldr };
+        if (keyPoints.Count > 0)
+        {
+            parts.Add(string.Join("\n", keyPoints.Select(p => "• " + p)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(why))
+        {
+            parts.Add(why.Trim());
+        }
+
+        return string.Join("\n\n", parts);
+    }
+
+    private static string? StringProperty(JsonElement root, string name) =>
+        FindProperty(root, name) is { ValueKind: JsonValueKind.String } value ? value.GetString() : null;
+
+    /// <summary>The property named <paramref name="name"/> in any letter case; null when absent.</summary>
+    private static JsonElement? FindProperty(JsonElement root, string name)
+    {
+        foreach (JsonProperty property in root.EnumerateObject())
+        {
+            if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return property.Value;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>The text inside a Markdown code fence, when the model wrapped its JSON in one.</summary>
+    private static string WithoutCodeFence(string text)
+    {
+        string trimmed = text.Trim();
+        if (!trimmed.StartsWith("```", StringComparison.Ordinal) || !trimmed.EndsWith("```", StringComparison.Ordinal))
+        {
+            return trimmed;
+        }
+
+        int firstLineEnd = trimmed.IndexOf('\n');
+        return firstLineEnd < 0 ? trimmed : trimmed[(firstLineEnd + 1)..^3];
     }
 
     public async Task<PurposeNoteResponseDto> WritePurposeNoteAsync(string userId, PurposeNoteRequestDto request,

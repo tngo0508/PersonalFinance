@@ -27,6 +27,9 @@ public class NewsEndpointTests
 
         public Task<NewsFeedDto> GetFilterOptionsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new NewsFeedDto { Sources = [new NewsSourceDto { Name = "BBC Business" }], Topics = ["General"] });
+
+        public Task<NewsArticleText?> GetArticleTextAsync(string url, CancellationToken cancellationToken = default) =>
+            Task.FromResult<NewsArticleText?>(null);
     }
 
     [Fact]

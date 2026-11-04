@@ -15,6 +15,12 @@ public class NewsArticleDto
     /// <summary>The name of the news source (e.g., "CNN Business").</summary>
     public string Source { get; set; } = string.Empty;
 
+    /// <summary>
+    /// The publisher behind an aggregator's item ("Reuters" for a Google News item), shown beside the source; null
+    /// when the source is the publisher.
+    /// </summary>
+    public string? Publisher { get; set; }
+
     public string? ImageUrl { get; set; }
     public DateTime PublishedAt { get; set; }
 
